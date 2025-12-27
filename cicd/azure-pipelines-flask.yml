@@ -1,0 +1,50 @@
+trigger:
+- main
+
+variables:
+  dockerRegistryServiceConnection: '6617381e-c0c2-457b-8a16-175ed827fbe6'
+  imageRepository: 'hrms-flask'
+  containerRegistry: 'fmhrms.azurecr.io'
+  dockerfilePath: 'hrms-flask/Dockerfile'
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Test
+  displayName: 'Test Stage'
+  jobs:
+  - job: Test
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.10'
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r hrms-flask/requirements.txt
+      displayName: 'Install dependencies'
+    - script: |
+        cd hrms-flask
+        pytest
+      displayName: 'Run tests'
+
+- stage: Build
+  displayName: 'Build and push stage'
+  dependsOn: Test
+  condition: succeeded()
+  jobs:
+  - job: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest

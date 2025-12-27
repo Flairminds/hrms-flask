@@ -1,0 +1,24 @@
+from functools import wraps
+from flask import jsonify, request
+from flask_jwt_extended import get_jwt, verify_jwt_in_request
+
+def roles_required(*roles):
+    """
+    Decorator to restrict access to certain roles.
+    Checks if the 'role' claim in the JWT matches one of the allowed roles.
+    """
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            # Verify JWT exists in request
+            verify_jwt_in_request()
+            claims = get_jwt()
+            
+            # Check if user role is in the allowed roles list
+            user_role = claims.get("role")
+            if user_role not in roles:
+                return jsonify({"Message": "Access denied. Insufficient permissions."}), 403
+            
+            return fn(*args, **kwargs)
+        return decorator
+    return wrapper

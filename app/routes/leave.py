@@ -1,0 +1,31 @@
+from flask import Blueprint
+from ..controllers.leave_controller import LeaveController
+from ..utils.auth import roles_required
+from ..auth_config import ROLE_PERMISSIONS
+
+leave_bp = Blueprint('leave', __name__)
+
+@leave_bp.route('/leave-types-and-approver', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['get_types_and_approver'])
+def get_types_and_approver():
+    return LeaveController.get_types_and_approver()
+
+@leave_bp.route('/get-leave-details/<emp_id>', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['get_leave_details'])
+def get_leave_details(emp_id):
+    return LeaveController.get_leave_details(emp_id)
+
+@leave_bp.route('/insert-leave-transaction', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['leave']['insert_leave'])
+def insert_leave():
+    return LeaveController.insert_leave()
+
+@leave_bp.route('/update-status', methods=['PUT'])
+@roles_required(*ROLE_PERMISSIONS['leave']['update_status'])
+def update_status():
+    return LeaveController.update_status()
+
+@leave_bp.route('/get-holidays', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['get_holidays'])
+def get_holidays():
+    return LeaveController.get_holidays()
