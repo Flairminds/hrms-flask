@@ -73,3 +73,31 @@ class HRService:
             db.session.rollback()
             print(f"Error adding project: {e}")
             return None
+
+    @staticmethod
+    def get_employee_details_for_relieving_letter():
+        """Fetches employee details needed for a relieving letter."""
+        try:
+            result = db.session.execute(text("""
+                SELECT 
+                    e.EmployeeId,
+                    CONCAT(e.FirstName, ' ', e.LastName) AS EmployeeName,
+                    e.DateOfJoining,
+                    es.SubRoleName,
+                    e.PersonalEmail
+                FROM Employee e
+                LEFT JOIN EmployeeSubRole es ON e.SubRole = es.SubRoleId
+            """))
+            return [
+                {
+                    'EmployeeId': row[0],
+                    'EmployeeName': row[1],
+                    'DateOfJoining': row[2].isoformat() if row[2] else None,
+                    'SubRoleName': row[3],
+                    'PersonalEmail': row[4]
+                } for row in result
+            ]
+        except Exception as e:
+            print(f"Error fetching relieving letter details: {e}")
+            return []
+

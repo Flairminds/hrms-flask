@@ -55,3 +55,13 @@ class HRController:
             return jsonify({"Message": "Failed to add project"}), 500
         except Exception as e:
             return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+
+    @staticmethod
+    def get_employee_details_for_relieving_letter():
+        """Fetches employee details for relieving letter generation."""
+        try:
+            employees = HRService.get_employee_details_for_relieving_letter()
+            return jsonify({'status': 'success', 'data': employees}), 200
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+

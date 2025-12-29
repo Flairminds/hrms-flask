@@ -29,3 +29,9 @@ def update_status():
 @roles_required(*ROLE_PERMISSIONS['leave']['get_holidays'])
 def get_holidays():
     return LeaveController.get_holidays()
+
+@leave_bp.route('/leave-records-mail', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['update_status']) # Using update_status as a proxy for admin
+def send_leave_email_report():
+    return LeaveController.send_leave_email_report()
+

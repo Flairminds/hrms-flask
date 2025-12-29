@@ -52,3 +52,31 @@ class ProfileController:
             return jsonify({"Message": "Leave transaction not found or cannot be cancelled"}), 404
         except Exception as e:
             return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+
+    @staticmethod
+    def get_complete_details(emp_id):
+        try:
+            result = ProfileService.get_complete_employee_details(emp_id)
+            if not result:
+                return jsonify({"error": "Employee not found"}), 404
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    def increment_address_counter(emp_id):
+        try:
+            if ProfileService.increment_address_counter(emp_id):
+                return jsonify({'message': 'Counter incremented successfully'}), 200
+            return jsonify({'error': 'Failed to increment counter'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @staticmethod
+    def get_address_counter(emp_id):
+        try:
+            counter = ProfileService.get_address_counter(emp_id)
+            return jsonify({'counter': counter}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+

@@ -1,141 +1,240 @@
 # HRMS-LMS Flask Backend
 
-A comprehensive Human Resource Management and Leave Management System ported from .NET Core to Python Flask. The application follows an MVC architecture and implements robust security and role-based access control.
+A comprehensive Human Resource Management (HRM) and Leave Management System (LMS) with full resource allocation, performance tracking, and document lifecycle management.
 
 ## 🚀 Technology Stack
-- **Framework**: Flask (Python)
-- **Database**: SQL Server (via SQLAlchemy & pyodbc)
-- **Authentication**: JWT (Flask-JWT-Extended)
+- **Framework**: Flask 3.0 (Python)
+- **Database**: PostgreSQL (via SQLAlchemy 2.0 & psycopg2)
+- **Authentication**: JWT (Claims-based roles)
+- **Background Tasks**: APScheduler (Distributed cron for automated reports)
+- **Document Generation**: xhtml2pdf (Dynamic PDF rendering with Jinja2)
 - **Architecture**: MVC (Routes -> Controllers -> Services -> Models)
-- **Deployment**: Docker, Docker Compose, Azure Pipelines
+- **Logic Mapping**: Centralized RBAC in `app/auth_config.py`
 
 ---
 
-## 🏗 Project Structure
+## 🏗 Project Architecture & Structure
 ```
 hrms-flask/
 ├── app/
-│   ├── controllers/    # Request handling & response formatting
-│   ├── models/         # SQLAlchemy database models
-│   ├── routes/         # API endpoint definitions (Blueprints)
-│   ├── services/       # Core business logic & DB operations
-│   ├── utils/          # Helpers (Auth, Mail, OTP)
-│   ├── config.py       # App configuration
-│   └── auth_config.py  # RBAC permission mapping
-├── requirements.txt    # Dependencies
-├── Dockerfile          # Multi-stage production build
-└── run.py              # Application entry point
+│   ├── routes/         # API Blueprints (Grouped by functional component)
+│   ├── controllers/    # Request orchestration & JSON response formatting
+│   ├── services/       # Core Business Logic Layer (Separated from DB/Transports)
+│   ├── models/         # SQLAlchemy ORM and direct SQL execution wrappers
+│   ├── templates/      # Branded HTML templates for Relieving Letters & Email
+│   ├── static/         # Brand assets (Signatures, Corporate Logos)
+│   ├── utils/          # Middleware (RBAC decorators, Mail utilities, JWT helpers)
+│   ├── config.py       # Global settings, Feature flags, & Scheduler hooks
+│   └── auth_config.py  # Critical Role-to-Route permission matrix
+├── tests/              # Full test coverage suite
+└── run.py              # Central entry point
 ```
 
 ---
 
-## 📦 Modules & Logic
+## 📦 Module-wise Business Logic & Technical Specs
 
-### 1. Account Module
-Handles user identity and access management.
-- **Login**: Validates credentials against the `Employees` table.
-- **JWT Issuance**: Generates secure tokens with role claims upon successful login.
-- **OTP Subsystem**: Generates and sends 6-digit numeric OTPs via email for password resets (10-minute expiry).
-- **Password Reset**: Securely updates passwords after OTP verification.
-- **Employment Status Gatekeeping**: Prevents login for employees marked as "Relieved" or "Absconding".
+### 1. Account & Identity Management Module
+Handles the core security backbone, role-based identity, and credential recovery.
 
-### 2. Leave Module
-Manages the end-to-end leave lifecycle.
-- **Leave Application**: Supports multiple leave types and captures handover instructions.
-- **Complex Entitlements**: Logic for specialized categories like Comp-Off and Customer Holidays.
-- **Approval Workflow**: Routes requests to the assigned `LeaveApprover`.
-- **Leave Balance Engine**: Consumes stored procedures to calculate real-time balances and history.
-- **Holiday Management**: Centralized repository for active organizational holidays.
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/account.py` under the prefix `/account`.
+- **Controllers**: Logic orchestrated by `AccountController` in `app/controllers/account_controller.py`.
+- **Services**: Data-heavy operations isolated in `AccountService`.
+- **Models**: 
+    - `Employee`: Tracks `EmploymentStatus`, `Password`, and `EmployeeRole`.
+    - `OTPRequest`: Tracks recovery state including `ExpiryTime` and `IsVerified`.
 
-### 3. HR Functionality Module
-Administrative tools for employee management.
-- **Employee Directory**: Listing and advanced search of organizational personnel.
-- **Profile Upsertion**: Unified logic for creating and updating comprehensive employee records.
-- **Reporting**: Generates administrative monthly reports via SQL stored procedures.
-- **Project Tracking**: Management of internal and client projects.
-
-### 4. Asset & Inventory Module
-Tracks company-owned hardware and peripherals.
-- **Hardware Registry**: CRUD operations for PCs and systems.
-- **Asset Assignment**: Maps physical hardware to specific employees.
-- **Maintenance Logging**: Tracks service history, costs, and service centers for every asset.
-
-### 5. Employee Self-Service (Profile) Module
-Allows employees to manage their own data.
-- **Profile View**: Aggregates personal details, skills, and addresses.
-- **Self-Update**: Enables employees to keep their contact and emergency information current.
-- **Leave Cancellation**: Allows users to retract pending or approved leave requests.
-
-### 6. Performance & Feedback Module
-Facilitates employee growth and performance tracking.
-- **JSON Data Storage**: Goals, measures, and comments are stored as complex JSON blobs for flexibility.
-- **Performance Reporting**: Retrieves historical feedback and progress reports for individuals.
-- **Feedback Management**: Allows Leads and Admins to record performance reviews.
+#### **Business Logic & Rules**
+- **Multi-Identifier Login**: Authenticate using **Employee ID** or **Corporate Email Address**.
+- **Security Guardrails**: Logins for employees marked as **"Relieved"** or **"Absconding"** are blocked at the service level.
+- **OTP Lifecycle**:
+    - **Atomicity**: One active OTP per user.
+    - **Volatility**: 10-minute TTL.
+    - **Verification State**: Sequential flow (Verify -> Reset). Successful resets purge the OTP record.
 
 ---
 
-## ⚙️ Detailed Configuration Spec
+### 2. Organizational Management (HR) Module
+Administrative module for employee lifecycle and organizational data directory.
 
-The application uses a multi-layered configuration strategy involving environment variables, Python classes, and a central RBAC config.
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/hr.py`.
+- **Legacy Logic**: Executes complex stored procedures for payroll and monthly reporting.
 
-### 1. Environment Variables (`.env`)
-Required for connectivity and security:
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | SQLAlchemy connection string (pyodbc) | `mssql+pyodbc://user:pass@host/DB?driver=...` |
-| `SECRET_KEY` | Flask session & general encryption key | `a-very-long-random-string` |
-| `JWT_SECRET_KEY`| Key used for signing JWT tokens | `another-secure-random-string` |
-| `MAIL_SERVER` | SMTP server for notifications | `smtp.gmail.com` |
-| `MAIL_USERNAME` | Email account for sending OTPs | `hr@company.com` |
-| `MAIL_PASSWORD` | App-specific password for the email account | `xxxx xxxx xxxx xxxx` |
-
-### 2. Role-Based Access Control (`app/auth_config.py`)
-Permissions are defined in a central dictionary `ROLE_PERMISSIONS`. 
-- **Granular Control**: Can define permissions at the Blueprint level (e.g., `"hr": ["Admin", "HR"]`) or the Endpoint level (e.g., `"leave": {"update_status": ["Admin", "HR"]}`).
-- **Middleware**: The `@roles_required` decorator extracts the `role` claim from the JWT and validates it against this map before executing any controller logic.
+#### **Business Logic & Rules**
+- **Master Employee Registry**: Joins `Employees` and `EmployeeRole` for hierarchical lookup.
+- **Payroll Sync**: Executes `EXEC GetMonthlyReport @Month, @Year` for monthly billing cycles.
+- **Administrative Quality Gates**: HR holds exclusive rights to `upsert-employee` for sensitive PII changes.
 
 ---
 
-## 🏢 Business Logic Overview
+### 3. Project Management & Staffing
+The central directory for organizational initiatives and staffing requirements.
 
-### User Access & Security Rules
-- **Access Control**: The system automatically restricts access based on an employee's status. If an employee is marked as "Relieved" or "Absconding", they are immediately barred from logging into the portal, ensuring only active staff can access internal data.
-- **Secure Password Recovery**: When a user forgets their password, the system generates a temporary security code (OTP) and sends it to their registered corporate email. This code has a strict 10-minute validity window to ensure the recovery process remains secure.
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/project.py`.
+- **Registry**: Managed via the `ProjectList` table.
 
-### Leave & Time-Off Management
-- **Accurate Balance Tracking**: The system calculates leave balances by considering historical records, approved requests, and employee seniority. This ensures that the balance shown to the employee is always their current, real-time entitlement.
-- **Complex Leave Rules**: The portal handles special leave scenarios, such as "Comp-Off" (compensatory time off for extra work) and "Customer Holidays" (aligning with client calendars). These requests follow specific validation rules before they can be submitted for approval.
-- **Unified Transactions**: When applying for leave, the system ensures that the main request and any associated details (like specific holiday alignments) are processed together as a single, consistent action.
-
-### Performance & Goal Tracking
-- **Flexible Goal Setting**: The performance module allows managers to set varying numbers of goals and success measures for each employee. Instead of a rigid form, the system adapts to the specific needs of the department or role, allowing for personalized performance evaluation.
-- **Historical Feedback**: The system maintains a permanent record of all performance discussions and comments, allowing for longitudinal progress tracking over multiple review cycles.
-
-### HR Management & Data Integrity
-- **Centralized Profile Management**: HR can create or update employee records from a single interface. The system intelligently detects if an employee already exists and updates their existing record instead of creating duplicates, maintaining a "single source of truth" for all staff data.
-- **Integrated Reporting**: Monthly administrative reports are generated by aggregating attendance, employee status, and role information, providing HR with a ready-to-use summary of the corporate workforce.
+#### **Business Logic & Rules**
+- **Staffing Intent**: Uses a `Required` flag to signal active resource demand.
+- **Temporal Lifecycle**: `EndDate` tracking prevents allocation to completed projects.
 
 ---
 
-## 🛠 Setup & Execution
-1. **Environment**: Configure `.env` based on the template.
-2. **Local Run**: 
-   ```bash
-   pip install -r requirements.txt
-   python run.py
-   ```
-3. **Docker**:
-   ```bash
-   docker-compose up --build
-   ```
+### 4. Resource Allocation & Project Mapping
+Optimizes workforce loading and utilization tracking.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/allocation.py`.
+- **Services**: Uses raw SQL for atomic performance in the `EmployeeAllocations` junction table.
+
+#### **Business Logic & Rules**
+- **Categorical Assignment**: Mapping via `WorkCategoryID` (Dev, QA, Management).
+- **Capacity Loading**: Supports **Decimal Allocation** (e.g., 0.4 Load), allowing resource sharing across multiple projects.
+- **Data Integrity**: Forced whitespace-sanitization for IDs to ensure referential integrity.
 
 ---
 
-## 🧪 Testing
-The project includes a comprehensive test suite using `pytest`.
-- **Run Tests**:
-  ```bash
-  cd hrms-flask
-  pytest
-  ```
-- **Coverage**: Includes Account authentication, Leave management, HR admin tools, and RBAC middleware validation.
+### 5. Leave & Attendance Management Module
+Governs time-off, automated daily pulses, and entitlement tracking.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/leave.py`.
+- **Scheduler**: `APScheduler` triggers daily automated HTML email reports.
+
+#### **Business Logic & Rules**
+- **Entitlement Parity**: Fetches CL/SL/PL balances via legacy `.NET` stored procedures (`GetLeaveDetailsByEmployeeIdv2`).
+- **Comp-Off Atomic Bundling**: Child `CompOffTransactions` are flushed concurrently with the parent `LeaveTransaction`.
+- **Daily Automated Pulse**: Broadcasts approved leaves to management distribution lists at 8 AM and 9 AM.
+
+---
+
+### 6. Asset & Inventory Control Module
+Hardware lifecycle management and TCO (Total Cost of Ownership) tracking.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/assets.py`.
+- **Models**: `PC`, `Peripheral`, `AssetAssignment`, and `MaintenanceLog`.
+
+#### **Business Logic & Rules**
+- **Active Lifecycle**: Logical deletion via `IsActive` preserves historical assignment audits.
+- **Maintenance Auditing**: Polymorphic logging captures service costs for both laptops and auxiliary hardware.
+- **Assignment Lifecycle**: Tracks physical possession from `AssignmentDate` to `ReturnDate`.
+
+---
+
+### 7. Policy & Compliance Module
+Mandatory acknowledgement flows and disciplinary tracking.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/policy.py`.
+- **Audit Table**: `EmployeePolicyAcknowledgementStatus`.
+
+#### **Business Logic & Rules**
+- **6-Point Policy Matrix Matrix**: Tracks Leave, WFH, Exit, Salary, Probation, and Appraisal acknowledgements.
+- **Compliance Triggers**: Completion of the full suite triggers a formal email to HR.
+- **Warning Engine**: Tracks a quantitative `WarningCount` per employee.
+
+---
+
+### 8. Profile "Quality Gate" Module
+Employee self-service and data completeness enforcement.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/profile.py`.
+- **Audit Logic**: `ProfileService.get_complete_employee_details`.
+
+#### **Business Logic & Rules**
+- **10-Point Health Check**: Profiles remain "Incomplete" until Identity, Emergency, Competency, Residency, and Documents (6/6) are verified.
+- **Address Versioning**: Uses a `counter` field in `EmployeeAddress` to track PII volatility.
+
+---
+
+### 9. Capability & Lead Management Module
+Technical supervision and professional growth hierarchy.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/capability.py`.
+
+#### **Business Logic & Rules**
+- **CDL Status**: Unique mapping; prevents an employee from being promoted to a Lead multiple times.
+- **Cascaded Cleanup**: Revoking a Lead role automatically purges dependent employee assignments.
+
+---
+
+### 10. Skills Management & Taxonomy Module
+Competency dictionary and individual proficiency mapping.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/skills.py`.
+
+#### **Business Logic & Rules**
+- **3-Tier Taxonomy**: Segregates skills into **Primary**, **Secondary**, and **Cross-Tech**.
+- **The "Billing Ready" Pulse**: Toggles `isReady` flags to signal project preparedness.
+- **Full-Stack Preparedness**: Dedicated metric for end-to-end delivery capability.
+
+---
+
+### 11. Evaluators & Skill Performance
+The objective evaluation system for technical skills.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/evaluators.py`.
+
+#### **Business Logic & Rules**
+- **Evidential Scoring**: Explicit policy that scores lacking interview/test evidence are subject to dismissal.
+- **Reminder Engine**: Asynchronous HTML email reminders for pending assessments.
+
+---
+
+### 12. Review & Multi-Source Feedback
+Certification of technical competency by organizational leaders.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/review.py`.
+
+#### **Business Logic & Rules**
+- **Assigned Evaluator Security**: Reviews are blocked unless a formal Lead-Employee bond exists in the registry.
+- **Atomic Skill Injection**: Evaluators can add missing skills to profiles during active reviews.
+- **Consensus Storage**: Stores Evaluator scores independently of employee self-evaluations.
+
+---
+
+### 13. Performance Goals & Feedback
+Forward-looking growth tracking with data flexibility.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/goals.py` & `app/routes/feedback.py`.
+
+#### **Business Logic & Rules**
+- **JSON-Blob Architecture**: `Goals` and `Measures` are stored as JSON strings to avoid rigid schema constraints.
+- **Temporal Enforcement**: Target dates must be in the future; deduplication rules prevent duplicate active goals.
+
+---
+
+### 14. HR, Relieving & Document Lifecycle (Exit Process)
+Formal offboarding and sensitive document management.
+
+#### **Technical Implementation**
+- **Blueprints**: Defined in `app/routes/documents.py`.
+- **Engines**: `xhtml2pdf` (PDF) and `num2words` (Finance).
+
+#### **Business Logic & Rules**
+- **Relieving Engine**: Converts numeric salaries to words and dispatches TLS-secured PDFs to personal emails.
+- **3-Tier Document State Machine**:
+    - **Pending**: Uploaded, unverified.
+    - **Accepted**: Verified.
+    - **Rejected**: **Critical Purge Logic** follows; the binary blob is immediately deleted from the DB to ensure PII safety.
+
+---
+
+## ⚙️ Configuration Matrix (`.env`)
+| Variable | Logic Purpose |
+| :--- | :--- |
+| `DATABASE_URL` | SQLAlchemy connector for PostgreSQL |
+| `JWT_SECRET_KEY` | Token signing secret |
+| `MAIL_SERVER` / `PORT` | SMTP connectivity for OTPs and Reports |
+| `REPORT_TO_ADDRESSES`| Target recipients for automated daily summaries |
+| `UPLOAD_FOLDER` | Root for PDF generation and document uploads |
+| `SECRET_KEY` | Flask session and secure cookie signing |

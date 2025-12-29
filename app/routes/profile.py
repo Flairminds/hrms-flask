@@ -19,3 +19,19 @@ def update_profile_self(emp_id):
 @roles_required(*ROLE_PERMISSIONS['profile'])
 def cancel_leave():
     return ProfileController.cancel_leave()
+
+@profile_bp.route('/complete-details/<emp_id>', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['profile'])
+def get_complete_details(emp_id):
+    return ProfileController.get_complete_details(emp_id)
+
+@profile_bp.route('/increment-address-counter/<emp_id>', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['profile'])
+def increment_address_counter(emp_id):
+    return ProfileController.increment_address_counter(emp_id)
+
+@profile_bp.route('/get-address-counter/<emp_id>', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['profile'])
+def get_address_counter(emp_id):
+    return ProfileController.get_address_counter(emp_id)
+

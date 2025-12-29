@@ -24,3 +24,9 @@ def get_monthly_report():
 @roles_required(*ROLE_PERMISSIONS['hr'])
 def add_project():
     return HRController.add_project()
+
+@hr_bp.route('/employeeDetailsForRelievingLetter', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr'])
+def get_employee_details_for_relieving_letter():
+    return HRController.get_employee_details_for_relieving_letter()
+

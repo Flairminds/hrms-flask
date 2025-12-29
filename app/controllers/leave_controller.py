@@ -69,3 +69,15 @@ class LeaveController:
             return jsonify([{"HolidayDate": h.HolidayDate, "HolidayName": h.HolidayName} for h in holidays]), 200
         except Exception as e:
             return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+
+    @staticmethod
+    def send_leave_email_report():
+        """Trigger an immediate daily leave email report."""
+        from ..services.email_service import process_leave_email
+        try:
+            if process_leave_email():
+                return jsonify({"message": "Email sent successfully"}), 200
+            return jsonify({"message": "Failed to send email"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
