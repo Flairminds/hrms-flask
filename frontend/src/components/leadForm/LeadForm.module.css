@@ -1,0 +1,146 @@
+.main {
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  padding-top: 0.5rem;
+  overflow-x: hidden;
+  /* align-items: center; */
+}
+
+.inputImg {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.4rem;
+}
+
+.input {
+  width: 80%;
+  padding: 4px;
+  padding-right: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+}
+
+.nameDiv {
+  padding-bottom: 0.2rem;
+}
+
+.gridDiv {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.message {
+  color: red;
+  display: flex;
+  /* justify-content: start; */
+  /* font-size: 15px; */
+}
+
+.messageone {
+  color: red;
+ padding-left: 41%;
+}
+
+.addButtonContainer {
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  border: 1.4px solid #b3c7ff !important;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 550;
+  color: white;
+  margin-left: 10px;
+}
+
+.addButtonContainer:hover {
+  color: #5c6ac8 !important;
+  font-weight: 400;
+}
+
+.formatdiv {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 0.5rem;
+}
+/* LeadForm.module.css */
+
+/* Styles for the table container */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0.9rem; 
+  height: 500px; 
+  border-radius: 7%;/* Set the desired height for the table container */
+}
+
+/* Basic table styling */
+.customTable {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+}
+
+/* Table header styling */
+.customTable th {
+  padding: 8px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  background-color: #8ec5fc;
+    font-weight: 600;
+    font-size: 15px;
+  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+}
+
+/* Table cell styling */
+.customTable td {
+  border-bottom: 1px solid #dddddd;
+  padding: 8px;
+  text-align: center;
+  min-width: 18vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+}
+
+/* Hover effect for table rows */
+.customTable tr:hover {
+  background-color: #e9ecef;
+}
+.titleHeading {
+  font-weight: 600;
+  font-size: 1rem; /* Further reduced font size */
+  color: #0F6CBD;
+  padding-bottom: 0.4rem;
+}
+
+
+
+.customTable thead tr:first-child th:first-child {
+  border-top-left-radius: 9px;
+}
+
+.customTable thead tr:first-child th:last-child {
+  border-top-right-radius: 9px;
+}
+
+.customTable tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.customTable tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+
+.heading{
+  display: flex;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #34495e;
+  padding-bottom: 0.5rem !important;
+}

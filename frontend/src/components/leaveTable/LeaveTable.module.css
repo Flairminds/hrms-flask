@@ -1,0 +1,377 @@
+.main {
+  padding: 12px;
+  /* padding-bottom: 20px; */
+  /* overflow-y: scroll; */
+}
+
+.tableContainer {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+  max-height: 48vh;
+  /* border: 1px solid #b3c7ff; */
+}
+
+.employeeTable { 
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  background: linear-gradient(135deg, #b3c7ff, #697df7);
+}
+
+.employeeTable th {
+  padding: 8px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  background-color: #8ec5fc;
+    font-weight: 600;
+    font-size: 15px;
+  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.employeeTable td {
+  border-bottom: 1px solid #dddddd;
+  padding: 8px;
+  text-align: center;
+  min-width: 18vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+}
+
+
+.employeeTable .headRow .th:first-child {
+  border-top-left-radius: 9px;
+}
+
+.employeeTable .headRow .th:last-child {
+  border-top-right-radius: 9px;
+}
+
+.employeeTable .lastRow .totalRow:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.employeeTable .lastRow .totalRow:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background-color: #0056b3;
+}
+
+.dropDownDiv,
+.applyLeaveDiv {
+  /* Styles can be added as needed */
+}
+
+.heading {
+  font-weight: 500;
+  font-size: 1rem;
+  color: #34495e;
+  padding: 0 0 0 1.5rem;
+  /* padding-top: 0.3rem; */
+  /* padding-bottom: 0.3rem; */
+  /* padding-right: 0.5rem; */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.btnDiv {
+  padding-left: 4rem;
+}
+
+.addButton {
+  background-color: #007bff;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 7px;
+}
+
+.addButton:hover {
+  background-color: #8ec5fc;
+}
+
+.filterImg {
+  height: 50%;
+  width: 50%;
+  padding: 2px;
+  margin-left: 10px;
+  /* padding-left: ; */
+}
+
+.employeeTable thead tr:first-child th:first-child {
+  border-top-left-radius: 9px;
+}
+
+.employeeTable thead tr:first-child th:last-child {
+  border-top-right-radius: 9px;
+}
+
+.employeeTable tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.employeeTable tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+.leaveDiv {
+  display: flex;
+  flex-direction: row;
+  justify-content:space-between;
+  width: 100%;
+  /* background-color: red; */
+}
+
+
+.headingSelectDiv{
+  display: flex;
+  /* background-color: #008D8D; */
+  width: 100%;
+
+}
+
+.headingSelectDivNew{
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+.leaveStatus {
+  /* color: green; */
+  font-weight: bold;
+  color: green;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid green;
+  padding: 5px;
+}
+
+.pendingLeave {
+  /* font-weight: bold; */
+  cursor: pointer;
+  font-weight: bold;
+  color: #EFA300;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid #EFA300;
+  padding: 5px;
+}
+
+.approvedLeave {
+  /* font-weight: bold; */
+  cursor: pointer;
+  font-weight: bold;
+  color: green;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid green;
+  padding: 5px;
+}
+
+.pendingLeave:hover,
+.approvedLeave:hover,
+.rejectedLeave:hover,
+.canceledLeave:hover,
+.partialApprovedLeave {
+  transform: translateY(-3px);
+  transition: transform 0.1s ease;
+}
+
+.canceledLeave {
+  cursor: pointer;
+  font-weight: bold;
+  color: #008D8D;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid #008D8D;
+  padding: 5px;
+}
+
+.rejectedLeave {
+  cursor: pointer;
+  font-weight: bold;
+  /* color: #9D166B; */
+  color: red;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid red;
+  padding: 5px;
+}
+
+.cancelButton {
+  width: max-content !important;
+  background-color: red;
+  border-radius: 8px;
+  color: white;
+  border: none;
+  height: 2rem;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.titleDiv {
+  display: flex;
+  align-items: center;
+
+
+}
+
+.titleHeading {
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: #0F6CBD;
+  /* padding-bottom: 0.5rem; */
+}
+
+.btnDiv {
+  display: flex;
+  justify-content: end;
+  gap: 20px;
+  padding-right: 10px;
+}
+
+.btnStyle {
+  background-color: rgb(65, 181, 65);
+  color: white;
+}
+
+.btnStyle:hover {
+  background-color: rgb(115, 223, 115) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.Nobtn {
+  background-color: red;
+  color: white;
+}
+
+.Nobtn:hover {
+  background-color: rgb(247, 61, 61) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.partialApprovedLeave {
+  cursor: pointer;
+  font-weight: bold;
+  color: rgb(144, 231, 166);
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid  rgb(144, 231, 166);
+  padding: 5px;
+}
+
+.leaveDetails {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  /* overflow: auto; */
+}
+
+.leaveDetails h4 {
+  margin-bottom: 16px;
+  font-size: 24px;
+  border-bottom: 2px solid #b3c7ff; /* Add underline below title */
+  padding-bottom: 8px; /* Space between title text and underline */
+}
+
+.leaveDetailsRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 10px 70px 10px 0;
+  border-bottom: 1px solid #ddd; 
+  overflow: auto;
+}
+
+.leaveDetailsRow span {
+  width: 150px; 
+  white-space: nowrap; 
+}
+
+/* .leaveDetailsRow span {
+  flex: 1;
+  text-align: right;
+} */
+.disabledButton {
+  cursor: not-allowed;
+  opacity: 0.9;
+  background-color: #d3d3d3;
+  border: 1 px solid red;
+}
+
+.pendingLeaveBox {
+  font-weight: bold;
+  color: #EFA300;
+  border-radius: 5px;
+  border: 2px solid #EFA300;
+  padding: 5px;
+  width: 50px;
+  padding-left: 10%;
+}
+.canceledLeaveBox {
+  font-weight: bold;
+  color:  #008D8D;
+  border-radius: 5px;
+  border: 2px solid  #008D8D;
+  padding: 5px;
+  width: 50px;
+  padding-left: 11%;
+}
+.rejectedLeaveBox {
+  font-weight: bold;
+  color: #f10c0c;
+  border-radius: 5px;
+  border: 2px solid  #f10c0c;
+  padding: 5px;
+  width: 50px;
+  padding-left: 11%;
+}
+.approvedLeaveBox {
+  font-weight: bold;
+  color:green;
+  border-radius: 5px;
+  border: 2px solid green;
+  padding: 5px;
+  width: 50px;
+  padding-left: 9%;
+}
+.partialApprovedLeaveBox{
+  font-weight: bold;
+  color: rgb(144, 231, 166);
+  border-radius: 5px;
+  border: 2px solid  rgb(144, 231, 166);
+  padding: 5px;
+  width: 50px;
+  padding-left: 4%;
+}
+/* .leaveDetailsRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 10px 70px 10px 0;
+} */
+
+/* .leaveDetailsRow span {
+  width: 150px; 
+  white-space: nowrap; 
+} */
+
+.leaveDetailsTitle {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}

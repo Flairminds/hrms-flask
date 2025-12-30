@@ -1,0 +1,151 @@
+.mainContainer {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 20px;
+  overflow-y: hidden;
+  background-color: white;
+  /* background-color: #f8f9fa; */
+  height: 100%;
+}
+
+.message {
+  margin-bottom: 20px;
+  padding: 15px;
+  /* background-color: #e9ecef; */
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  text-align: left;
+  box-shadow: 0 4px 4px #b3c7ff;
+
+}
+
+.searchContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* margin-bottom: 20px; */
+}
+
+.searchInput {
+  /* padding: 10px 15px;   */
+  padding: 1rem;
+  /* font-size: 16px; */
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  outline: none;
+  width: 660px;
+  height: 30px
+    /* transition: border-color 0.3s; */
+}
+
+
+.searchInput:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
+.addButtonContainer {
+  padding: 1rem;
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  border: 1.4px solid #b3c7ff !important;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  font-size: 15px;
+  font-weight: 550;
+  margin-left: 5px;
+  color: white;
+}
+
+.addButtonContainer:hover{
+  color: #5c6ac8 !important;
+  font-weight: 400;
+}
+.downloadButton {
+  
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  border: 1.4px solid #b3c7ff !important;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  font-size: 15px;
+  font-weight: 550;
+  margin-left: 5px;
+  color: white;
+  text-decoration: none;
+  margin-left: 15px;
+  padding: 0.5rem;
+  border-radius: 7px;
+  border: none;
+
+}
+
+.downloadButton:hover{
+  color: #5c6ac8 !important;
+  font-weight: 400;
+}
+
+
+.tableContainer {
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  max-height: 400px;
+  width: 100%;
+  margin-top: 20px;
+  /* margin: 20px auto; */
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+  /* background-color: #fff; */
+}
+
+.table {
+  width: 80%;
+  border-collapse: collapse;
+}
+
+
+.th,
+.td {
+  border: 1px solid #dee2e6;
+  text-align: center;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.th {
+  background-color: #8EC5FC;
+  font-weight: bold;
+  position: sticky;
+}
+
+tr:hover {
+  /* background-color: #e9ecef; */
+}
+
+.heading {
+  color: #0F6CBD;
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+.headingText {
+
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.approveButton {
+  background-color: #5a75ce;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}

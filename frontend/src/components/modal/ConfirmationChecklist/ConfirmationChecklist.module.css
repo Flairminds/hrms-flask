@@ -1,0 +1,28 @@
+
+.heading{
+    padding-bottom: 5%;
+}
+.space{
+    padding: 5%;
+     font-family: 'Montserrat', 'sans-serif' !important;
+}
+
+.footerButtons {
+    display: flex;
+    justify-content:flex-start;
+    margin-top: 20px;
+    gap: 20px;
+}
+.approveButton{
+    background-color:green;
+    color: white;
+}
+
+.cancelButton{
+    background-color: red;
+    color: white;
+}
+.msg{
+    color: red;
+    padding-bottom: 2%;
+}

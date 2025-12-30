@@ -1,0 +1,44 @@
+.sider {
+  background: #001529;
+}
+
+.logo {
+  height: 32px;
+  margin: 16px;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.siteLayout {
+  background: #fff;
+}
+
+.header {
+  background: #fff;
+  padding: 0 24px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+.content {
+  margin: 24px;
+  padding: 24px;
+  background: #fff;
+  min-height: 280px;
+}
+
+.message {
+  text-align: center;
+  padding: 48px;
+}
+
+.message h3 {
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
+
+.message p {
+  color: #666;
+  font-size: 16px;
+} 

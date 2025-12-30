@@ -1,0 +1,162 @@
+.main{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow: hidden;
+    width: 100%;
+  }
+
+    
+    
+    .tableContainer {
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+      /* overflow-y: auto; */
+      border: 1px solid #DCDEDE;
+      border-radius: 8px;
+      width:100%;
+      overflow-x: auto;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow-y: auto;
+    }
+    
+    .stickyHeader {
+      position: sticky; 
+      top: 0; 
+      /* z-index: 1;  */
+      background-color:#8ec5fc;
+    }
+    
+    .th {
+      padding: 20px;
+      padding-left: 15px;
+      text-align: left;
+      color: white;
+      min-width: 12vh;
+      border-bottom: 1px solid #DCDEDE;
+      font-weight: 600;
+      font-size: 15px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+      color: black;
+    }
+    
+    .td {
+      padding: 15px;
+      padding-left: 15px;
+      text-align: left;
+      background-color: white;
+      border-bottom: 1px solid #DCDEDE;
+      font-weight: 400;
+      font-size: 14px;
+    
+    }
+     
+    .headRow .th:first-child {
+      border-top-left-radius: 9px;
+    }
+    
+    .headRow .th:last-child {
+      border-top-right-radius: 9px;
+    }
+    
+    .lastRow .totalRow:first-child {
+      border-bottom-left-radius: 8px;
+    }
+    
+    .lastRow .totalRow:last-child {
+      border-bottom-right-radius: 8px;
+    }
+  
+    .searchInput {
+      width: 100%;
+      /* max-width: 300px; */
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.3s ease-in-out;
+  }
+  
+  .searchInput:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  }
+
+  .downloadBtn{
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 0.8rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s, transform 0.3s;
+    gap: 5px;
+    margin-right:2px ;
+    margin-bottom: 0.2rem;
+  }
+  
+  .documentActions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .viewDownload {
+    display: flex;
+    gap: 8px;
+  }
+
+  .verificationButtons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .downloadBtn:hover {
+    background-color: #40a9ff;
+  }
+
+  .acceptBtn {
+    padding: 4px 8px;
+    background-color: #52c41a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .rejectBtn {
+    padding: 4px 8px;
+    background-color: #ff4d4f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .acceptBtn:hover, .rejectBtn:hover {
+    opacity: 0.8;
+  }
+
+  .statusBadge {
+    padding: 4px 8px;
+    background-color: #52c41a;
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 500;
+  }
+    

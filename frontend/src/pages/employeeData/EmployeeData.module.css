@@ -1,0 +1,177 @@
+.employeeData {
+    margin: 20px;
+    height: 97vh;
+    overflow-x: auto;
+}
+
+.empTable {
+    border: 1px solid #8ec5fc;
+    border-radius: 8px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.empTable thead>tr>th {
+    background-color: #8ec5fc !important;
+}
+
+
+
+.upperArea {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.statusButton {
+    margin: 10px;
+}
+
+.statusRelieved,
+.statusConfirmed,
+.statusAbsconding,
+.statusResigned,
+.statusActive,
+.statusIntern,
+.statusLWP,
+.statusNonFM,
+.statusProbation {
+    display: inline-block;
+    text-align: center;
+    line-height: 1.5;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    border: 2px solid;
+    padding: 5px;
+}
+
+.statusProbation {
+    color: violet;
+    border-color: violet;
+}
+
+.activeProbation {
+    color: white;
+    border: 1.4px solid violet !important;
+    background-color: violet;
+}
+
+.statusAbsconding {
+    color: #008D8D;
+    border-color: #008D8D;
+}
+
+.activeAbsconding {
+    color: white;
+    border: 1.4px solid#008D8D !important;
+    background-color: #008D8D;
+}
+
+.statusActive {
+    color: rgb(65, 238, 65) !important;
+    border-color: rgb(65, 238, 65) !important;
+}
+
+.activeActive {
+    color: white;
+    border: 1.4px solid rgb(65, 238, 65) !important;
+    background-color: rgb(65, 238, 65) !important;
+}
+
+.statusConfirmed {
+    color: green;
+    border-color: green;
+}
+
+.activeConfirmed {
+    color: white;
+    border: 1.4px solid green !important;
+    background-color: green;
+}
+
+.statusIntern {
+    color: #1b7b7b;
+    border-color: #1b7b7b;
+}
+
+.activeIntern {
+    color: white;
+    border: 1.4px solid #1b7b7b !important;
+    background-color: #1b7b7b;
+}
+
+.statusResigned {
+    color: red;
+    border-color: red;
+}
+
+.activeResigned {
+    color: white;
+    border: 1.4px solid red !important;
+    background-color: red;
+}
+
+.statusRelieved {
+    color: #EFA300;
+    border-color: #EFA300;
+}
+
+.activeRelieved {
+    color: white;
+    border: 1.4px solid#EFA300 !important;
+    background-color: #EFA300;
+}
+
+.statusLWP {
+    color: #ff4d4f;
+    border-color: #ff4d4f;
+}
+
+.activeLWP {
+    color: white;
+    border: 1.4px solid #ff4d4f !important;
+    background-color: #ff4d4f;
+}
+.statusNonFM{
+    color: #7dceef;
+    border-color: #7dceef;
+}
+.activeNonFM {
+    color: white;
+    border: 1.4px solid #7dceef !important;
+    background-color: #7dceef;
+}
+.addBtn{
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: white !important;
+}
+/* EmployeeData.module.css */
+
+.editButton {
+    background-color: #1890ff; 
+    border: none;
+    color: #fff; 
+    font-weight: 500;
+    border-radius: 4px;
+    padding: 8px 16px; 
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  
+  .editButton:hover {
+    background-color: #40a9ff; 
+    color: #fff; 
+  }
+  
+  .editButton:active {
+    background-color: #096dd9;
+    color: #fff; 
+  }
+  
+  .editButton:focus {
+    outline: none; 
+  }
+  
+  
+  

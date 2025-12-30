@@ -1,0 +1,13 @@
+.main{
+    /* box-shadow: 2px 2px 2px 1px #b3c7ff; */
+    /* box-shadow: 2px 2px 2px 2px #b3c7ff; */
+    /* border-radius: 8px; */
+    padding: 0.2rem 0 0.5rem 0.5rem;
+}
+
+.heading{
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #34495e;
+    padding-bottom: 0.3rem;
+}

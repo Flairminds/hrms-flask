@@ -1,0 +1,142 @@
+/* Main Container */
+.maint-page-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8f9ff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/*Card Layout*/
+.maint-card {
+  width: 95%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/*Title */
+.maint-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+/*Actions (Add + Search) */
+.maint-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Add Button */
+.maint-add-btn {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 15px;
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.maint-add-btn:hover {
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  transform: scale(1.05);
+}
+
+/* Search */
+.maint-search {
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 250px;
+}
+
+/* Table */
+.maint-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.maint-table th,
+.maint-table td {
+  text-align: center;
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.maint-table th {
+  background: #f3f4ff;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Alternate Row Color */
+.maint-table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* Action Buttons */
+.maint-table td .action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.maint-table td .action-buttons button {
+  flex: 1;
+  max-width: 80px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+}
+
+/* Edit Button */
+.maint-edit-btn {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+  border: none;
+}
+
+.maint-edit-btn:hover {
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  transform: scale(1.05);
+}
+
+/* Delete Button */
+.maint-delete-btn {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+  border: none;
+}
+
+.maint-delete-btn:hover {
+  background: linear-gradient(90deg, #dc2626, #f43f5e);
+  transform: scale(1.05);
+}
+
+/* Empty State */
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  font-style: italic;
+}
+
+/* Modal Form Layout */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}

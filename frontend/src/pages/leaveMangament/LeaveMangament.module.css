@@ -1,0 +1,283 @@
+.mainContainer {
+    display: flex;
+    align-items: start;
+    justify-content: start;
+    /* height: 100vh; */
+    width: 90%;
+    background-color: white;
+    /* padding: 0 1rem 1rem 1rem; */
+    padding: 1.5rem;
+    border: none;
+    overflow: hidden;
+    /* overflow-y: auto; */
+}
+
+.mainContainerDark {
+    display: flex;
+    align-items: start;
+    justify-content: start;
+    height: 100vh;
+    width: 100vw;
+    /* background-color: black; */
+    border: none;
+    overflow: hidden;
+}
+
+.layoutContainer {
+    background-color: green;
+    width: 15%;
+    height: 100%;
+}
+
+.leaveContainer {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0px 2px 2px 2px #b3c7ff;
+    padding :0.5%;
+}
+
+.typeOfLeave {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 15px;
+    color: white;
+    /* color: #0F6CBD;; */
+    /* font-weight: 600; */
+    font-family: Inter;
+    padding-top: 0.5rem;
+}
+
+.holidayContainer {
+    width: 50%;
+    max-height: 100%;
+    border-radius: 5px;
+    /* box-shadow: 4px 4px 4px 0px #b3c7ff; */
+    box-shadow: 0px 2px 2px 2px #b3c7ff;
+    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
+    overflow: hidden;
+    padding-bottom: 30px;
+    border-radius: 5px;
+    /* margin: 5px 5px; */
+    /* margin-left: 1px; */
+    background-color: white;
+    /* border: 3px solid blue; */
+
+}
+
+.progressWrapper {
+
+    font-family: Verdana;
+    padding: 1.1rem;
+    cursor: pointer;
+}
+
+
+
+.progressText {
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #34495e;
+    padding-left: 0rem;
+    /* padding-bottom: 0.3rem; */
+    /* padding-right: 0.5rem; */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.insideText {
+    font-size: 14px;
+    /* color: black !important; */
+    /* font-family: Verdana; */
+    margin-bottom: 10px;
+    font-weight: 500;
+    font-style: bold;
+}
+
+.leaveNumber{
+    font-size: 15px;
+    /* color: black !important; */
+}
+
+
+.holidayHeading {
+    margin-left: 30px;
+    text-align: start;
+    font-weight: 500;
+}
+
+.rowGap {
+    gap: 2px;
+}
+
+.tableContainer {
+    padding: 7px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    height: 200px;
+    border-collapse: collapse;
+    margin-bottom: 5px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+
+    /* border: 3px solid blue; */
+
+}
+
+.tableData {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px;
+    font-size: medium;
+    margin: 2px 16px;
+    border-radius: 5px;
+}
+
+.rightDiv {
+    width: 100%;
+    height: 100%;
+
+
+}
+
+.firstRow {
+    display: flex;
+    gap: 25px;
+    height: 35%;
+    width: 100%;
+}
+
+.teamAvailability {
+    margin: 10px;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 5px;
+    box-shadow: 0px 2px 2px 2px #b3c7ff;
+    background-color: white;
+}
+
+.team {
+    display: flex;
+    gap: 5px;
+    justify-content: space-between;
+    /* border: 3px solid blue; */
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 30px;
+    height: 80px;
+}
+
+.profilePhoto {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    /* border: 3px solid green; */
+    padding: 0px 10px;
+    flex: -1 -1 auto;
+}
+
+.profileImage {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* margin-left: 6px;    */
+    border: 3px solid green;
+
+}
+
+.profileNames {
+    font-size: larger;
+    /* border: 3px solid blue; */
+}
+
+.headerTeam {
+    /* border: 3px solid blue; */
+    /* margin: 1px; */
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+    /* background-color: red; */
+    height: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #EEEEEE;
+    border: 3px solid #8EC5FC;
+    border-radius: 10px;
+}
+
+
+.table {
+    background-color: red;
+}
+
+.leaveTable {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.addButton {
+    padding: 8px;
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: #fff !important;
+    border: 1.4px solid #b3c7ff !important;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1.4px solid transparent;
+    border: none !important;
+}
+
+.addButton:hover {
+    
+  color: #5c6ac8 !important;
+  background-color:#b3c7ff !important;
+  border: 1.4px solid #b3c7ff !important;
+  font-weight: 400;
+}
+
+.headingHolidays {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #34495e;
+    /* padding-bottom: 0.3rem; */
+    padding-right: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.btnDiv {
+    padding: 0.8rem;
+    width: 25%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.progressGroup {
+    width: 25%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* box-shadow: 10px 10px 10px -1px rgba(10,99,169,0.16),-10px -10px -10px -1px rgba(255,255,255,0.70) */
+}
+
+.noHolidaysMessage{
+    padding-left: 18px;
+    font-weight: 500;
+    font-size: 1rem;
+    color: #0F6CBD;
+ }

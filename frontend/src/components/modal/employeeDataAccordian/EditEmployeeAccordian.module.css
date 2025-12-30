@@ -1,0 +1,18 @@
+.btn{
+    background:linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: white !important;
+    margin-left: 0.4rem;
+    border: none !important;
+}
+.headingFirst{
+    font-weight: 500;
+}
+
+.nameDiv{
+    display: flex;
+    flex-direction: row;
+    /* justify-content: center; */
+    justify-content: space-between;
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+    gap: 20px;
+}

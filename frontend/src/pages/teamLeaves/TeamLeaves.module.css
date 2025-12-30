@@ -1,0 +1,36 @@
+.mainContainer {
+    width: 100%;
+    display: flex;
+    gap: 20px;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.filterContainer {
+    /* height: 20%; */
+    border: 1px solid red;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.searchContainer {
+    /* height: 10%; */
+    border: 1px solid red;
+    padding: 50px;
+}
+
+.leaveStatusDropdown {
+    width: 60%;
+}
+
+.leaveHeading {
+    /* display: flex;
+    justify-content: center; */
+    font-family: Verdana;
+    margin-top: 9px;
+
+}

@@ -1,0 +1,32 @@
+.downloadOptionsModal .ant-modal {
+    padding: 20px;    
+    width: 800px;
+    top: 20px; 
+    right: 20px; 
+    margin: 0;
+    position: absolute;
+    transform: none; 
+    width: 300px; 
+  }
+  
+  .downloadOptionsModal .ant-modal-footer {
+    display: none; 
+  }
+  
+  .downloadOptionsModal .download-button {
+    display: block;
+    margin-bottom: 10px;
+    width: 50%; 
+  }
+  
+  .downloadOptionsModal .ant-btn {
+    width: 100%; 
+    margin-bottom: 20px; 
+  }
+  
+  .downloadOptionsModal .ant-btn-icon-only {
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+  }
+  

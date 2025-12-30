@@ -1,0 +1,69 @@
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap; /* Ensures buttons stack on smaller screens */
+  align-items: center;
+}
+
+.editButton {
+  color: #1890ff !important; /* Ant Design primary blue */
+  font-weight: 500;
+  padding: 4px 8px !important;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.editButton:hover {
+  background-color: #e6f7ff !important; /* Light blue background on hover */
+  transform: scale(1.05);
+}
+
+.deleteButton {
+  color: #ff4d4f !important; /* Ant Design danger red */
+  font-weight: 500;
+  padding: 4px 8px !important;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.deleteButton:hover {
+  background-color: #fff1f0 !important; /* Light red background on hover */
+  transform: scale(1.05);
+}
+
+.reminderButton {
+  color: #52c41a !important; /* Ant Design success green */
+  font-weight: 500;
+  padding: 4px 8px !important;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.reminderButton:hover {
+  background-color: #f6ffed !important; /* Light green background on hover */
+  transform: scale(1.05);
+}
+
+.reminderButton .ant-btn-loading-icon {
+  color: #52c41a !important; /* Ensure loading icon matches button color */
+}
+
+.table {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Inspired by provided .card */
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .actionButtons {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .editButton, .deleteButton, .reminderButton {
+    width: 100%;
+    text-align: left;
+  }
+}

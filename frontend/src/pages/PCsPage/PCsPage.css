@@ -1,0 +1,116 @@
+/* Main container */
+.pc-page-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8f9ff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30px;
+}
+
+.pc-card {
+  width: 95%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Title */
+.pc-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+/* Action bar */
+.pc-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pc-add-btn {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 15px;
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+}
+
+.pc-search {
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 250px;
+}
+
+/* Table */
+.pc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.pc-table th,
+.pc-table td {
+  text-align: center;
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.pc-table th {
+  background: #f3f4ff;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Action buttons container */
+.pc-table td .action-buttons {
+  display: flex;
+  justify-content: center; 
+  gap: 10px; 
+}
+
+/* Optional: make buttons equal width */
+.pc-table td .action-buttons button {
+  flex: 1; 
+  max-width: 80px; 
+}
+/* Edit button */
+.pc-edit-btn {
+   color: rgb(21, 3, 59) !important;           
+  background: transparent !important; 
+  border: none !important;         
+  box-shadow: none !important; 
+}
+
+.pc-edit-btn:hover {
+color: rgb(17, 3, 44) !important;       
+  background: transparent !important;
+}
+/* Delete button — same size & style but red */
+.pc-delete-btn1 {
+  color: red !important;          
+  background: transparent !important; 
+  border: none !important;        
+  box-shadow: none !important;     
+}
+
+.pc-delete-btn1:hover {
+  color: darkred !important;       
+  background: transparent !important;
+}
+/* Empty state */
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #fd3030;
+}

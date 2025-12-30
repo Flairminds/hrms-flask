@@ -1,0 +1,32 @@
+/* HrLeaveManagement.module.css */
+
+.wrapper {
+    padding: 0.5%;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .tabContainer {
+    display: flex;
+    padding-bottom: 20px;
+    justify-content: center;
+  }
+  
+  .tabButton {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: border-bottom 0.3s ease-in-out;
+  }
+  
+  .activeTab {
+    border-bottom: 2px solid #b3c7ff;
+  }
+  
+  .contentContainer {
+    border-radius: 4px;
+    height:80;
+  }
+  

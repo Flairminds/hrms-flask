@@ -1,0 +1,110 @@
+.main {
+    width: 220px;
+    height: 100%;
+    background: linear-gradient(135deg, #b3c7ff, #697df7);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem 0.3rem 0.3rem 0;
+    border: none;
+    overflow-y: auto;
+    transition: width 0.3s ease-in-out;
+}
+
+/* Responsive sidebar - adjust width for smaller screens */
+@media (max-width: 768px) {
+    .main {
+        width: 180px;
+    }
+}
+
+@media (max-width: 576px) {
+    .main {
+        width: 60px;
+        /* Collapsed sidebar */
+        padding: 0.5rem;
+    }
+
+    .divs span,
+    .info {
+        display: none;
+        /* Hide text for smaller screens */
+    }
+}
+
+/* Sidebar items */
+.iconsSidebar {
+    height: 24px;
+    width: 24px;
+    transition: transform 0.3s ease;
+}
+
+.divs {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    padding: 10px 10px 15px 10px;
+    cursor: pointer;
+}
+
+.divs:hover {
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.divs:hover .iconsSidebar {
+    transform: scale(1.1);
+}
+
+.info,
+.divs span {
+    margin-left: 10px;
+    font-weight: 500;
+    font-size: 12px;
+    color: #343a40;
+    transition: color 0.3s ease;
+}
+
+.divs:hover .info,
+.divs:hover span {
+    color: rgb(12, 12, 12);
+}
+
+.active {
+    background-color: white;
+    color: black;
+    font-weight: bold;
+}
+
+
+.subMenu {
+    margin-left: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.subItem {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background 0.3s;
+}
+
+.subItem:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.activeParent {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive: Adjust item spacing for smaller screens */
+@media (max-width: 576px) {
+    .divs {
+        justify-content: center;
+        /* Center icons when text is hidden */
+        padding: 10px;
+    }
+}

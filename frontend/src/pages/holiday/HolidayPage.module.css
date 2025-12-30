@@ -1,0 +1,124 @@
+.mainContainer {
+  width: 100%;
+  margin: 1rem;
+}
+
+.mainBlock {
+  width: 50vw;
+  margin: auto;
+}
+
+.message {
+  padding: 15px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  text-align: left;
+}
+
+.searchContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.searchInput {
+  padding: 1.1rem;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  outline: none;
+}
+
+.csvBtn {
+  padding: 8px;
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  color: #fff !important;
+  border: 1.4px solid #b3c7ff !important;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  border: 1.4px solid transparent;
+  margin-left: 5px;
+}
+
+.csvBtn:hover {
+  color: #5c6ac8 !important;
+  background-color: #b3c7ff !important;
+  border: 1.4px solid #b3c7ff !important;
+  font-weight: 400;
+}
+
+.searchInput:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
+.downloadButton {
+  text-decoration: none;
+  color: #fff;
+}
+
+.tableDiv {
+  display: flex;
+  justify-content: center;
+}
+
+.tableContainer {
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid #DCDEDE;
+  width: 50vw;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  /* z-index: 1;  */
+  background: linear-gradient(135deg, #b3c7ff, #697df7);
+}
+
+.th {
+  padding: 10px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  background-color: #8ec5fc;
+  font-weight: 600;
+  font-size: 15px;
+  z-index: 1;
+}
+
+.td {
+  border-bottom: 1px solid #dddddd;
+  padding: 9px;
+  text-align: center;
+}
+
+.totalRow {
+  padding: 8px;
+  padding-left: 15px;
+  text-align: left;
+  border-bottom: 1px solid #DCDEDE;
+  font-weight: 400;
+  font-size: 14px;
+  background-color: #EEF6FC;
+}
+
+.heading {
+  color: #0F6CBD;
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.headingText {
+  font-size: 16px;
+}

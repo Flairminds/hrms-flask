@@ -1,0 +1,108 @@
+.inputDiv{
+    display: flex;
+    flex-direction: column;
+    padding-bottom:1rem ;
+}
+
+.inputDivSkill{
+  display: flex;
+  flex-direction: column;
+  /* justify-content: space-between; */
+  gap: 20px;
+  padding: 0.8rem 0.5rem 1rem 0.5rem;
+  border-bottom: 1px solid  #697df7;
+}
+
+.heading{
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #34495e;
+    padding-bottom: 0.3rem;
+}
+
+.headingSkill{
+  font-weight: 600;
+    font-size: 0.9rem;
+    color: #34495e;
+    padding-bottom: 0.3rem;
+    padding-right: 0.3rem;
+}
+
+.collapseDiv{
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+}
+
+.panelDiv{
+  display: flex;
+  flex-direction: column;
+}
+
+.btnEdit{
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1rem !important;
+  border-radius: 6px !important;
+}
+
+.btnEdit :hover{
+    background-color: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  color: #fff !important;
+  border: none !important;
+  /* padding: 0.75rem 1.5rem !important; */
+  font-size: 1rem !important;
+  border-radius: 6px !important;
+}
+
+.selectDiv{
+  display: flex;
+  background-color: #697df7;
+}
+
+
+.customdatepicker {
+  width: 60%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+.full-width {
+  width: 100%;
+}
+.customdatepicker:hover {
+  border-color: #40a9ff;
+}
+
+.customdatepicker:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 5px rgba(64, 169, 255, 0.5);
+}
+
+.customdatepicker::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+}
+
+.customdatepicker:disabled {
+  background: #f5f5f5;
+  color: #bfbfbf;
+  cursor: not-allowed;
+}
+
+.uploadDiv{
+  display: flex;
+  justify-content: space-between;
+}
+
+.deleteDiv{
+  display:flex ;
+}
+
+.docStatusDiv{
+  /* background-color: #40a9ff; */
+}

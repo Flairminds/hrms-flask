@@ -1,0 +1,14 @@
+.main {
+    width: 100%;
+    /* height:50% ; */
+  }
+  
+  .main.ant-picker-panel {
+    height: 250px;
+  }
+  
+  .main .ant-picker-cell-inner {
+    height: 50%;
+  }
+  
+  

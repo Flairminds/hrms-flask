@@ -1,0 +1,105 @@
+.main {
+  /* padding: 20px; */
+}
+
+.typeofLeaveDiv {
+  padding-bottom: 20px;
+}
+
+.headingApprover {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.datesContainer {
+  display: flex;
+  padding-bottom: 10px;
+}
+
+.dateDiv {
+  flex: 1;
+  min-width: 200px;
+}
+
+.heading {
+
+  display: block;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #34495e;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.desDiv {
+  padding-bottom: 20px;
+}
+
+.inputDes {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.approverDiv {
+  padding-bottom: 20px;
+}
+
+.footerButtons {
+  display: flex;
+  justify-content: center;
+  padding-top: 5%;
+}
+
+.approveButton {
+  background: linear-gradient(135deg, #b3c7ff, #697df7);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.approveButton:hover {
+  background-color: #7a99b4 !important;
+}
+
+.content {
+  padding: 20px;
+}
+
+.Timebox {
+  width: 88%;
+}
+
+.employeeName {
+  width: 100%;
+}
+
+.footerButtons {
+  display: flex;
+  justify-content: center;
+  padding-top: 5%;
+}
+
+.approveButton {
+  background-color: #5a75ce;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.nameIdDiv{
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  
+  gap: 20px;
+}

@@ -1,0 +1,43 @@
+.main{
+    background-color: #8ec5fc;
+
+}
+.btnStyle {
+    background: linear-gradient(135deg, #b3c7ff, #697df7);
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  .btnStyle:hover {
+    background-color: #7a99b4 !important;
+  }
+
+.submitBtn {
+  padding: 1rem;
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+  border: 1.4px solid #b3c7ff !important;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  font-size: 15px;
+  font-weight: 550;
+  margin-left: 5px;
+  color: white;
+}
+
+.submitBtn:hover{
+  color: #5c6ac8 !important;
+  font-weight: 400;
+}
+
+.inputDate{
+  /* background-color: #5c6ac8; */
+  border-radius: 8px;
+  border: 0.5px solid rgb(235, 222, 222);
+  padding: 5px;
+  cursor: pointer;
+}

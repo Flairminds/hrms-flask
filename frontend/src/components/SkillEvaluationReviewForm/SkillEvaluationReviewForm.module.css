@@ -1,0 +1,107 @@
+/* Review Form Container */
+.reviewForm {
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  margin: 8px 0;
+  transition: all 0.3s ease;
+}
+
+.reviewForm.disabled {
+  background-color: #f5f5f5;
+  opacity: 0.6;
+}
+
+.reviewForm.disabled .ant-input,
+.reviewForm.disabled .ant-input-number,
+.reviewForm.disabled .ant-checkbox-wrapper {
+  background-color: #e8e8e8 !important;
+  cursor: not-allowed !important;
+}
+
+.reviewForm .ant-form-item-label label {
+  font-weight: 500;
+  color: #434343;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.reviewForm .ant-input-textarea {
+  border-radius: 6px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s ease !important;
+}
+
+.reviewForm .ant-input-textarea:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.reviewForm .ant-input-number {
+  border-radius: 6px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s ease !important;
+}
+
+.reviewForm .ant-input-number:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.reviewForm .scoreFeedback {
+  color: #888;
+  font-weight: bold;
+  min-width: 200px;
+}
+
+.reviewButtons {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reviewButtons .ant-btn {
+  min-width: 80px;
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.reviewButtons .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.reviewButtons .ant-btn:disabled {
+  background-color: #d9d9d9 !important;
+  border-color: #d9d9d9 !important;
+  color: #888 !important;
+  cursor: not-allowed !important;
+}
+
+/* Add this if not present (from original SkillEvaluation.module.css) */
+.skillTable {
+  margin-bottom: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.skillTable .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 500;
+  color: #434343;
+  border-bottom: 2px solid #e8e8e8;
+}
+
+.skillTable .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.reviewedRow {
+  background: #f5f5f5;
+  opacity: 0.8;
+}

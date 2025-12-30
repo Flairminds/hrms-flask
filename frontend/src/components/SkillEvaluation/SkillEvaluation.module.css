@@ -1,0 +1,135 @@
+/* ========================= */
+/*  Base Container & Tables  */
+/* ========================= */
+.modalContainer {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.customTabs {
+  margin-top: 20px;
+}
+
+.customTabs .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+.customTabs .ant-tabs-tab {
+  padding: 12px 24px !important;
+  margin-right: 8px !important;
+  border-radius: 8px 8px 0 0 !important;
+  transition: all 0.3s ease !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid #e0e0e0 !important;
+  border-bottom: none !important;
+}
+
+.customTabs .ant-tabs-tab:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.customTabs .ant-tabs-tab-active {
+  background: white !important;
+  border-bottom: 2px solid white !important;
+  z-index: 1;
+  position: relative;
+}
+
+/* Tab Label Styles */
+.primaryTabLabel {
+  color: #262626;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.secondaryTabLabel {
+  color: #262626;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.crossTabLabel {
+  color: #262626;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Active Tab Label Styles */
+.customTabs .ant-tabs-tab-active .primaryTabLabel {
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+  font-weight: 600;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.customTabs .ant-tabs-tab-active .secondaryTabLabel {
+  background: rgba(255, 159, 67, 0.15);
+  color: #ff9f43;
+  font-weight: 600;
+  border: 1px solid rgba(255, 159, 67, 0.3);
+}
+
+.customTabs .ant-tabs-tab-active .crossTabLabel {
+  background: rgba(52, 231, 228, 0.15);
+  color: #34e7e4;
+  font-weight: 600;
+  border: 1px solid rgba(52, 231, 228, 0.3);
+}
+
+/* Hover effects for tab labels */
+.customTabs .ant-tabs-tab:hover .primaryTabLabel {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+}
+
+.customTabs .ant-tabs-tab:hover .secondaryTabLabel {
+  background: rgba(255, 159, 67, 0.08);
+  color: #ff9f43;
+}
+
+.customTabs .ant-tabs-tab:hover .crossTabLabel {
+  background: rgba(52, 231, 228, 0.08);
+  color: #34e7e4;
+}
+
+/* Tab Content Area */
+.customTabs .ant-tabs-content-holder {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 0 8px 8px 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Modal Styles */
+.ant-modal-content {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border-bottom: none !important;
+  padding: 20px 24px !important;
+}
+
+.ant-modal-title {
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 18px !important;
+}
+
+.ant-modal-close,
+.ant-modal-close:hover {
+  color: white !important;
+}

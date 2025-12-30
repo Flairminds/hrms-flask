@@ -1,0 +1,29 @@
+.main{
+    /* background-color: aqua; */
+    width: 100%;
+}
+
+.buttonContainer {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+
+  }
+  
+  .button {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: border-bottom 0.3s ease-in-out;
+  }
+  
+  .active {
+    border-bottom: 2px solid #b3c7ff; /* Adjust color and width as needed */
+  }
+  
+  .inactive {
+    border-bottom: 2px solid transparent;
+  }
+  

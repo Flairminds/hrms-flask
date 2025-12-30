@@ -1,0 +1,13 @@
+.approveButton{
+    background-color:green;
+    color: white;
+}
+
+.cancelButton{
+    background-color: red;
+    color: white;
+}
+
+.space{
+    padding: 1%;
+}
