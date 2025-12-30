@@ -1,17 +1,45 @@
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    """Base configuration with database pooling and proper environment setup."""
     
-    # If in testing mode or DATABASE_URL is not set, default to sqlite
-    if os.environ.get('TESTING') == 'True' or not SQLALCHEMY_DATABASE_URI:
+    # Secret Keys
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
+    
+    # Database Configuration with Connection Pooling
+    DATABASE_USERNAME = os.environ.get('DATABASE_USERNAME', 'postgres')
+    DATABASE_PASSWORD = quote_plus(os.environ.get('DATABASE_PASSWORD', ''))
+    DATABASE_NAME = os.environ.get('DATABASE_NAME', 'hrms_db')
+    DATABASE_HOST_NAME = os.environ.get('DATABASE_HOST_NAME', 'localhost')
+    DATABASE_PORT = os.environ.get('DATABASE_PORT', '5432')
+    
+    # Construct Database URI
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@"
+        f"{DATABASE_HOST_NAME}:{DATABASE_PORT}/{DATABASE_NAME}"
+    )
+    
+    # If in testing mode, override with in-memory SQLite
+    if os.environ.get('TESTING') == 'True':
         SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-        
+    
+    # SQLAlchemy Configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Connection Pool Settings for Production-Grade Performance
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': int(os.environ.get('DB_POOL_SIZE', 10)),           # Number of connections to maintain
+        'max_overflow': int(os.environ.get('DB_MAX_OVERFLOW', 20)),     # Max connections beyond pool_size
+        'pool_timeout': int(os.environ.get('DB_POOL_TIMEOUT', 30)),     # Timeout for getting connection (seconds)
+        'pool_recycle': int(os.environ.get('DB_POOL_RECYCLE', 1800)),  # Recycle connections after 30 min
+        'pool_pre_ping': True,                                           # Verify connections before using
+    }
+    
+    # Scheduler
     SCHEDULER_API_ENABLED = True
 
     
