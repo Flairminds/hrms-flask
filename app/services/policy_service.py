@@ -250,7 +250,7 @@ class PolicyService:
                     warning_count=new_count
                 )
                 db.session.add(policy_status)
-                Logger.debug("Created new policy status for warning count", employee_ id=employee_id)
+                Logger.debug("Created new policy status for warning count", employee_id=employee_id)
             else:
                 # Update existing record
                 policy_status.warning_count = new_count

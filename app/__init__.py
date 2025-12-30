@@ -38,22 +38,27 @@ def create_app(config_name):
     from .routes.policy import policy_bp
     from .routes.project import project_bp
     from .routes.allocation import allocation_bp
+    from .routes.health import health_bp
 
+    # Register health check blueprint at root level (no prefix)
+    app.register_blueprint(health_bp)
+    
+    # Register API blueprints
     app.register_blueprint(account_bp, url_prefix='/api/account')
     app.register_blueprint(leave_bp, url_prefix='/api/leave')
     app.register_blueprint(hr_bp, url_prefix='/api/hr-functionality')
-    app.register_blueprint(assets_bp, url_prefix='/api')
+    app.register_blueprint(assets_bp, url_prefix='/api/assets')
     app.register_blueprint(profile_bp, url_prefix='/api/employees-details')
     app.register_blueprint(feedback_bp, url_prefix='/api/lead-functionality')
-    app.register_blueprint(skills_bp, url_prefix='/api')
-    app.register_blueprint(goals_bp, url_prefix='/api')
-    app.register_blueprint(review_bp, url_prefix='/api')
-    app.register_blueprint(capability_bp, url_prefix='/api')
-    app.register_blueprint(documents_bp, url_prefix='/api')
-    app.register_blueprint(evaluators_bp, url_prefix='/api')
-    app.register_blueprint(policy_bp, url_prefix='/api')
-    app.register_blueprint(project_bp, url_prefix='/api')
-    app.register_blueprint(allocation_bp, url_prefix='/api')
+    app.register_blueprint(skills_bp, url_prefix='/api/skills')
+    app.register_blueprint(goals_bp, url_prefix='/api/goals')
+    app.register_blueprint(review_bp, url_prefix='/api/review')
+    app.register_blueprint(capability_bp, url_prefix='/api/capability')
+    app.register_blueprint(documents_bp, url_prefix='/api/documents')
+    app.register_blueprint(evaluators_bp, url_prefix='/api/evaluators')
+    app.register_blueprint(policy_bp, url_prefix='/api/policy')
+    app.register_blueprint(project_bp, url_prefix='/api/project')
+    app.register_blueprint(allocation_bp, url_prefix='/api/allocation')
 
 
     return app
