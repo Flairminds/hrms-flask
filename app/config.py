@@ -6,6 +6,11 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    
+    # If in testing mode or DATABASE_URL is not set, default to sqlite
+    if os.environ.get('TESTING') == 'True' or not SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+        
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SCHEDULER_API_ENABLED = True
 

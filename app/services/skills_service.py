@@ -1,8 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
+from ..models.hr import Employee, EmployeeSkill, Skill
+from ..utils.logger import Logger
 
 
 class SkillsService:
@@ -10,252 +13,317 @@ class SkillsService:
 
     @staticmethod
     def get_employee_skills_overview(limit: int = 1000):
-        """Return a basic list of employees with core details (Phase 2 get_employee_skills)."""
-        query = text(
-            """
-            SELECT
-                EmployeeId, FirstName, MiddleName, LastName,
-                DateOfBirth, ContactNumber, EmergencyContactNumber,
-                EmergencyContactPerson, EmergencyContactRelation,
-                Email, Gender, BloodGroup, DateOfJoining, CTC,
-                TeamLeadId, HighestQualification, EmploymentStatus,
-                PersonalEmail, SubRole, LobLead, IsLead
-            FROM Employee
-            LIMIT :limit
-            """
-        )
-        result = db.session.execute(query, {"limit": limit})
-        return [dict(row) for row in result.mappings()]
+        """Return a basic list of employees with core details using ORM."""
+        Logger.info("Retrieving employee skills overview", limit=limit)
+        try:
+            # Use SQLAlchemy ORM
+            employees = Employee.query.limit(limit).all()
+            
+            result = [
+                {
+                    "EmployeeId": emp.employee_id,
+                    "FirstName": emp.first_name,
+                    "MiddleName": emp.middle_name,
+                    "LastName": emp.last_name,
+                    "DateOfBirth": emp.date_of_birth,
+                    "ContactNumber": emp.contact_number,
+                    "EmergencyContactNumber": emp.emergency_contact_number,
+                    "EmergencyContactPerson": emp.emergency_contact_person,
+                    "EmergencyContactRelation": emp.emergency_contact_relation,
+                    "Email": emp.email,
+                    "Gender": emp.gender,
+                    "BloodGroup": emp.blood_group,
+                    "DateOfJoining": emp.date_of_joining,
+                    "CTC": emp.ctc,
+                    "TeamLeadId": emp.team_lead_id,
+                    "HighestQualification": emp.highest_qualification,
+                    "EmploymentStatus": emp.employment_status,
+                    "PersonalEmail": emp.personal_email,
+                    "SubRole": emp.sub_role,
+                    "LobLead": emp.lob_lead,
+                    "IsLead": emp.is_lead,
+                }
+                for emp in employees
+            ]
+            Logger.debug("Employee skills overview retrieved", count=len(result))
+            return result
+        except SQLAlchemyError as se:
+            Logger.error("Database error retrieving employee skills overview",
+                        error=str(se))
+            raise
+        except Exception as e:
+            Logger.error("Error retrieving employee skills overview",
+                        error=str(e))
+            raise
 
     @staticmethod
     def add_or_update_skills(payload: dict):
-        """Add or update multiple skills for an employee (Phase 2 add_or_update_skills)."""
-        if not payload:
-            raise ValueError("Request body is required")
+        """Add or update multiple skills for an employee using ORM."""
+        Logger.info("Adding or updating employee skills")
+        
+        try:
+            if not payload:
+                Logger.warning("Empty payload for add_or_update_skills")
+                raise ValueError("Request body is required")
 
-        employee_id = payload.get("EmployeeId")
-        skills = payload.get("skills", [])
-        qualification_year_month = payload.get("QualificationYearMonth")
-        full_stack_ready = payload.get("FullStackReady", 0)
+            employee_id = payload.get("EmployeeId")
+            skills = payload.get("skills", [])
+            qualification_year_month = payload.get("QualificationYearMonth")
+            full_stack_ready = payload.get("FullStackReady", 0)
 
-        if not employee_id or not skills:
-            raise ValueError("EmployeeId and skills are required")
+            if not employee_id or not skills:
+                Logger.warning("Missing employee_id or skills",
+                             employee_id_present=bool(employee_id),
+                             skills_present=bool(skills))
+                raise ValueError("EmployeeId and skills are required")
 
-        if qualification_year_month:
-            try:
-                datetime.strptime(qualification_year_month, "%Y-%m-%d")
-            except ValueError:
-                raise ValueError("Invalid QualificationYearMonth format. Expected YYYY-MM.")
-
-        # Update QualificationYearMonth on Employee
-        if qualification_year_month:
-            db.session.execute(
-                text(
-                    """
-                    UPDATE Employee
-                    SET QualificationYearMonth = :qualification_year_month
-                    WHERE EmployeeId = :employee_id
-                    """
-                ),
-                {
-                    "qualification_year_month": qualification_year_month,
-                    "employee_id": employee_id,
-                },
-            )
-
-        # Update FullStackReady on Employee
-        db.session.execute(
-            text(
-                """
-                UPDATE Employee
-                SET FullStackReady = :full_stack_ready
-                WHERE EmployeeId = :employee_id
-                """
-            ),
-            {"full_stack_ready": full_stack_ready, "employee_id": employee_id},
-        )
-
-        # Upsert skills
-        for skill in skills:
-            skill_id = skill.get("SkillId")
-            skill_level = skill.get("SkillLevel")
-            is_ready = skill.get("isReady", 0)
-            is_ready_date = skill.get("isReadyDate")
-            self_evaluation = skill.get("SelfEvaluation")
-
-            if not skill_id or not skill_level:
-                raise ValueError("Each skill must have SkillId and SkillLevel")
-
-            if is_ready_date:
+            if qualification_year_month:
                 try:
-                    if len(is_ready_date) == 10 and is_ready_date.count("-") == 2:
-                        datetime.strptime(is_ready_date, "%Y-%m-%d")
-                    else:
-                        is_ready_date = datetime.strptime(
-                            is_ready_date,
-                            "%a, %d %b %Y %H:%M:%S GMT",
-                        ).strftime("%Y-%m-%d")
+                    datetime.strptime(qualification_year_month, "%Y-%m-%d")
                 except ValueError:
-                    raise ValueError(f"Invalid date format: {is_ready_date}")
-            else:
-                is_ready_date = datetime.utcnow().strftime("%Y-%m-%d")
+                    Logger.warning("Invalid qualification date format",
+                                 qualification_year_month=qualification_year_month)
+                    raise ValueError("Invalid QualificationYearMonth format. Expected YYYY-MM.")
 
-            # Check if the skill already exists
-            exists = db.session.execute(
-                text(
-                    """
-                    SELECT COUNT(*) FROM EmployeeSkill
-                    WHERE EmployeeId = :employee_id AND SkillId = :skill_id
-                    """
-                ),
-                {"employee_id": employee_id, "skill_id": skill_id},
-            ).scalar()
+            # Get employee using ORM
+            employee = Employee.query.get(employee_id)
+            if not employee:
+                Logger.warning("Employee not found", employee_id=employee_id)
+                raise ValueError(f"Employee {employee_id} not found")
 
-            if exists and exists > 0:
-                # Update existing
-                db.session.execute(
-                    text(
-                        """
-                        UPDATE EmployeeSkill
-                        SET SkillLevel = :skill_level,
-                            isReady = :is_ready,
-                            isReadyDate = :is_ready_date,
-                            SelfEvaluation = :self_evaluation
-                        WHERE EmployeeId = :employee_id AND SkillId = :skill_id
-                        """
-                    ),
-                    {
-                        "employee_id": employee_id,
-                        "skill_id": skill_id,
-                        "skill_level": skill_level,
-                        "is_ready": is_ready,
-                        "is_ready_date": is_ready_date,
-                        "self_evaluation": self_evaluation,
-                    },
-                )
-            else:
-                # Insert new
-                db.session.execute(
-                    text(
-                        """
-                        INSERT INTO EmployeeSkill (
-                            EmployeeId, SkillId, SkillLevel, isReady, isReadyDate, SelfEvaluation
-                        )
-                        VALUES (:employee_id, :skill_id, :skill_level, :is_ready, :is_ready_date, :self_evaluation)
-                        """
-                    ),
-                    {
-                        "employee_id": employee_id,
-                        "skill_id": skill_id,
-                        "skill_level": skill_level,
-                        "is_ready": is_ready,
-                        "is_ready_date": is_ready_date,
-                        "self_evaluation": self_evaluation,
-                    },
-                )
+            # Update QualificationYearMonth on Employee using ORM
+            if qualification_year_month:
+                employee.qualification_year_month = qualification_year_month
 
-        db.session.commit()
+            # Update FullStackReady on Employee using ORM
+            employee.full_stack_ready = full_stack_ready
+
+            # Upsert skills using ORM
+            for skill in skills:
+                skill_id = skill.get("SkillId")
+                skill_level = skill.get("SkillLevel")
+                is_ready = skill.get("isReady", 0)
+                is_ready_date = skill.get("isReadyDate")
+                self_evaluation = skill.get("SelfEvaluation")
+
+                if not skill_id or not skill_level:
+                    Logger.warning("Skill missing required fields",
+                                 skill_id_present=bool(skill_id),
+                                 skill_level_present=bool(skill_level))
+                    raise ValueError("Each skill must have SkillId and SkillLevel")
+
+                if is_ready_date:
+                    try:
+                        if len(is_ready_date) == 10 and is_ready_date.count("-") == 2:
+                            datetime.strptime(is_ready_date, "%Y-%m-%d")
+                        else:
+                            is_ready_date = datetime.strptime(
+                                is_ready_date,
+                                "%a, %d %b %Y %H:%M:%S GMT",
+                            ).strftime("%Y-%m-%d")
+                    except ValueError:
+                        Logger.warning("Invalid date format for isReadyDate",
+                                     is_ready_date=is_ready_date)
+                        raise ValueError(f"Invalid date format: {is_ready_date}")
+                else:
+                    is_ready_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+                # Check if the skill already exists using ORM
+                existing_emp_skill = EmployeeSkill.query.filter_by(
+                    employee_id=employee_id,
+                    skill_id=skill_id
+                ).first()
+
+                if existing_emp_skill:
+                    # Update existing using ORM
+                    existing_emp_skill.skill_level = skill_level
+                    existing_emp_skill.is_ready = is_ready
+                    existing_emp_skill.is_ready_date = is_ready_date
+                    existing_emp_skill.self_evaluation = self_evaluation
+                    Logger.debug("Updated existing skill",
+                               employee_id=employee_id,
+                               skill_id=skill_id)
+                else:
+                    # Insert new using ORM
+                    new_emp_skill = EmployeeSkill(
+                        employee_id=employee_id,
+                        skill_id=skill_id,
+                        skill_level=skill_level,
+                        is_ready=is_ready,
+                        is_ready_date=is_ready_date,
+                        self_evaluation=self_evaluation
+                    )
+                    db.session.add(new_emp_skill)
+                    Logger.debug("Added new skill",
+                               employee_id=employee_id,
+                               skill_id=skill_id)
+
+            db.session.commit()
+            Logger.info("Employee skills updated successfully",
+                       employee_id=employee_id,
+                       skill_count=len(skills))
+                       
+        except ValueError:
+            db.session.rollback()
+            raise
+        except SQLAlchemyError as se:
+            db.session.rollback()
+            Logger.error("Database error updating employee skills",
+                        error=str(se))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating employee skills",
+                        error=str(e))
+            raise
 
     @staticmethod
     def get_employee_skills_for_employee(employee_id: str):
-        """Fetch skills and qualification info for a single employee (Phase 2 get_employee_skills/<id>)."""
-        query = text(
-            """
-            SELECT e.EmployeeId, e.QualificationYearMonth, e.FullStackReady,
-                   es.SkillId, es.SkillLevel, es.SelfEvaluation,
-                   s.SkillName, es.isReady, es.isReadyDate
-            FROM Employee e
-            LEFT JOIN EmployeeSkill es ON e.EmployeeId = es.EmployeeId
-            LEFT JOIN Skill s ON es.SkillId = s.SkillId
-            WHERE e.EmployeeId = :employee_id
-            """
-        )
-        result = db.session.execute(query, {"employee_id": employee_id})
+        """Fetch skills and qualification info for a single employee using ORM."""
+        Logger.info("Retrieving skills for employee", employee_id=employee_id)
+        
+        try:
+            # Get employee with skills using ORM JOIN
+            employee = Employee.query.filter_by(employee_id=employee_id).first()
+            
+            if not employee:
+                Logger.debug("Employee not found, returning empty skills",
+                           employee_id=employee_id)
+                return {
+                    "EmployeeId": employee_id,
+                    "QualificationYearMonth": None,
+                    "FullStackReady": None,
+                    "skills": [],
+                }
 
-        rows = result.fetchall()
-        skills = []
-        qualification_year_month = None
-        full_stack_ready = None
+            # Get skills with JOIN using ORM
+            employee_skills = db.session.query(
+                EmployeeSkill.skill_id,
+                EmployeeSkill.skill_level,
+                EmployeeSkill.self_evaluation,
+                Skill.skill_name,
+                EmployeeSkill.is_ready,
+                EmployeeSkill.is_ready_date
+            ).join(
+                Skill,
+                EmployeeSkill.skill_id == Skill.skill_id
+            ).filter(
+                EmployeeSkill.employee_id == employee_id
+            ).all()
 
-        for row in rows:
-            row_dict = dict(zip(result.keys(), row))
-
-            if qualification_year_month is None:
-                qualification_year_month = row_dict.pop("QualificationYearMonth", None)
-
-            if full_stack_ready is None:
-                full_stack_ready = row_dict.pop("FullStackReady", None)
-
-            if row_dict.get("SkillId"):
+            skills = []
+            for skill_row in employee_skills:
                 skills.append(
                     {
-                        "SkillId": row_dict["SkillId"],
-                        "SkillLevel": row_dict["SkillLevel"],
-                        "SkillName": row_dict["SkillName"],
-                        "isReady": int(row_dict["isReady"]),
-                        "isReadyDate": row_dict["isReadyDate"],
-                        "SelfEvaluation": row_dict["SelfEvaluation"],
+                        "SkillId": skill_row.skill_id,
+                        "SkillLevel": skill_row.skill_level,
+                        "SkillName": skill_row.skill_name,
+                        "isReady": int(skill_row.is_ready) if skill_row.is_ready else 0,
+                        "isReadyDate": skill_row.is_ready_date,
+                        "SelfEvaluation": skill_row.self_evaluation,
                     }
                 )
 
-        return {
-            "EmployeeId": employee_id,
-            "QualificationYearMonth": qualification_year_month,
-            "FullStackReady": full_stack_ready,
-            "skills": skills,
-        }
+            result = {
+                "EmployeeId": employee_id,
+                "QualificationYearMonth": employee.qualification_year_month,
+                "FullStackReady": employee.full_stack_ready,
+                "skills": skills,
+            }
+            Logger.debug("Employee skills retrieved",
+                       employee_id=employee_id,
+                       skill_count=len(skills))
+            return result
+            
+        except SQLAlchemyError as se:
+            Logger.error("Database error retrieving employee skills",
+                        employee_id=employee_id,
+                        error=str(se))
+            raise
+        except Exception as e:
+            Logger.error("Error retrieving employee skills",
+                        employee_id=employee_id,
+                        error=str(e))
+            raise
 
     @staticmethod
     def get_employees_with_skills():
-        """Fetch employees and group their skills by Primary/Secondary/CrossTech (Phase 2 /api/employees)."""
-        query = text(
-            """
-            SELECT
-                e.EmployeeId, e.FirstName, e.LastName, e.DateOfJoining,
-                e.TeamLeadId, e.SubRole, e.LobLead, e.IsLead, e.FullStackReady,
-                es.SkillId, s.SkillName, es.SkillLevel, es.isReady, es.isReadyDate, es.SelfEvaluation
-            FROM Employee e
-            LEFT JOIN EmployeeSkill es ON e.EmployeeId = es.EmployeeId
-            LEFT JOIN Skill s ON es.SkillId = s.SkillId
-            """
-        )
+        """Fetch employees and group their skills by Primary/Secondary/CrossTech using ORM."""
+        Logger.info("Retrieving all employees with skills")
+        
+        try:
+            # Use ORM query with LEFT JOIN
+            results = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.last_name,
+                Employee.date_of_joining,
+                Employee.team_lead_id,
+                Employee.sub_role,
+                Employee.lob_lead,
+                Employee.is_lead,
+                Employee.full_stack_ready,
+                EmployeeSkill.skill_id,
+                Skill.skill_name,
+                EmployeeSkill.skill_level,
+                EmployeeSkill.is_ready,
+                EmployeeSkill.is_ready_date,
+                EmployeeSkill.self_evaluation
+            ).outerjoin(
+                EmployeeSkill,
+                Employee.employee_id == EmployeeSkill.employee_id
+            ).outerjoin(
+                Skill,
+                EmployeeSkill.skill_id == Skill.skill_id
+            ).all()
 
-        result = db.session.execute(query)
-        employees_dict = {}
+            employees_dict = {}
 
-        for row in result.mappings():
-            emp_id = row["EmployeeId"]
-            if emp_id not in employees_dict:
-                employees_dict[emp_id] = {
-                    "EmployeeId": emp_id,
-                    "FirstName": row["FirstName"],
-                    "LastName": row["LastName"],
-                    "DateOfJoining": row["DateOfJoining"].strftime("%a, %d %b %Y %H:%M:%S GMT") if row["DateOfJoining"] else None,
-                    "TeamLeadId": row["TeamLeadId"],
-                    "SubRole": row["SubRole"],
-                    "LobLead": row["LobLead"],
-                    "IsLead": row["IsLead"],
-                    "FullStackReady": bool(row["FullStackReady"]),
-                    "Skills": {"Primary": [], "Secondary": [], "CrossTechSkill": []},
+            for row in results:
+                emp_id = row.employee_id
+                if emp_id not in employees_dict:
+                    employees_dict[emp_id] = {
+                        "EmployeeId": emp_id,
+                        "FirstName": row.first_name,
+                        "LastName": row.last_name,
+                        "DateOfJoining": row.date_of_joining.strftime("%a, %d %b %Y %H:%M:%S GMT") if row.date_of_joining else None,
+                        "TeamLeadId": row.team_lead_id,
+                        "SubRole": row.sub_role,
+                        "LobLead": row.lob_lead,
+                        "IsLead": row.is_lead,
+                        "FullStackReady": bool(row.full_stack_ready),
+                        "Skills": {"Primary": [], "Secondary": [], "CrossTechSkill": []},
+                    }
+
+                skill_level = row.skill_level
+                skill_entry = {
+                    "SkillId": row.skill_id,
+                    "SkillName": row.skill_name,
+                    "isReady": row.is_ready,
+                    "isReadyDate": row.is_ready_date,
+                    "SelfEvaluation": row.self_evaluation,
                 }
 
-            skill_level = row["SkillLevel"]
-            skill_entry = {
-                "SkillId": row["SkillId"],
-                "SkillName": row["SkillName"],
-                "isReady": row["isReady"],
-                "isReadyDate": row["isReadyDate"],
-                "SelfEvaluation": row["SelfEvaluation"],
-            }
+                if not row.skill_id:
+                    continue
 
-            if not row["SkillId"]:
-                continue
+                if skill_level == "Primary":
+                    employees_dict[emp_id]["Skills"]["Primary"].append(skill_entry)
+                elif skill_level == "Secondary":
+                    employees_dict[emp_id]["Skills"]["Secondary"].append(skill_entry)
+                elif skill_level == "Cross Tech Skill":
+                    employees_dict[emp_id]["Skills"]["CrossTechSkill"].append(skill_entry)
 
-            if skill_level == "Primary":
-                employees_dict[emp_id]["Skills"]["Primary"].append(skill_entry)
-            elif skill_level == "Secondary":
-                employees_dict[emp_id]["Skills"]["Secondary"].append(skill_entry)
-            elif skill_level == "Cross Tech Skill":
-                employees_dict[emp_id]["Skills"]["CrossTechSkill"].append(skill_entry)
+            result = list(employees_dict.values())
+            Logger.info("Employees with skills retrieved", employee_count=len(result))
+            return result
+            
+        except SQLAlchemyError as se:
+            Logger.error("Database error retrieving employees with skills",
+                        error=str(se))
+            raise
+        except Exception as e:
+            Logger.error("Error retrieving employees with skills",
+                        error=str(e))
+            raise
 
-        return list(employees_dict.values())

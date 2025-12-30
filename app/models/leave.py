@@ -13,16 +13,28 @@ class LeaveTransaction(BaseModel):
     __tablename__ = 'leave_transaction'
     leave_tran_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     employee_id = db.Column(db.String(20))
+    comments = db.Column(db.Text)
     leave_type = db.Column(db.Integer)
     from_date = db.Column(db.DateTime)
     to_date = db.Column(db.DateTime)
     duration = db.Column(db.String(20))
-    no_of_days = db.Column(db.Numeric(5, 2))
-    comments = db.Column(db.Text)
-    leave_status = db.Column(db.String(50), default='Pending')
-    applied_by = db.Column(db.String(50))
-    approved_by = db.Column(db.String(50))
+    no_of_days = db.Column(db.Numeric(5, 2))  # Mapped to 'NoOfDays' in some places
+    applied_leave_count = db.Column(db.Numeric(5, 2))  # Mapped to 'AppliedLeaveCount' in SP
     hand_over_comments = db.Column(db.Text)
+    applied_by = db.Column(db.String(50))
+    application_date = db.Column(db.DateTime)
+    approved_by = db.Column(db.String(50))
+    approved_date = db.Column(db.DateTime)
+    approval_comment = db.Column(db.String(255))
+    leave_status = db.Column(db.String(50), default='Pending')
+    attachments = db.Column(db.LargeBinary)
+    is_billable = db.Column(db.Boolean)
+    have_customer_approval = db.Column(db.String(50))
+    is_customer_approval_required = db.Column(db.Boolean)
+    is_communicated_to_team = db.Column(db.Boolean)
+    second_approval_comment = db.Column(db.String(255))
+    second_approver_date = db.Column(db.DateTime)
+    is_for_second_approval = db.Column(db.Boolean)
 
 
 class CompOffTransaction(BaseModel):

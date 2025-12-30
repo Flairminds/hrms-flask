@@ -1,13 +1,22 @@
+import os
 import pytest
+
+# SET TESTING MODE BEFORE ANY OTHER IMPORTS
+os.environ["TESTING"] = "True"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
 from app import create_app, db
 from flask_jwt_extended import create_access_token
 
 @pytest.fixture
-def app():
-    app = create_app('dev') # Use dev config, but we will mock DB anyway
+def app(monkeypatch):
+    # Force sqlite for testing to avoid pyodbc issues in CI/Test envs
+    monkeypatch.setenv("TESTING", "True")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+    
+    app = create_app('dev')
     app.config.update({
         "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", # Use in-memory for some logic, but usually we mock session.execute
         "JWT_SECRET_KEY": "test-secret"
     })
 

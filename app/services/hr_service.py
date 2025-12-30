@@ -1,103 +1,131 @@
-from ..models.hr import db, Employee, EmployeeAddress, EmployeeSkill, Project, Skill
-from sqlalchemy import text
-from datetime import datetime
+from typing import List, Dict, Any
+from .hr.employee_service import EmployeeService
+from .hr.role_service import RoleService
+from .hr.access_service import AccessService
+from .hr.report_service import ReportService
 
 class HRService:
-    """Service class for HR operations like employee management, project tracking, and reporting."""
+    """
+    Facade for HR related services.
+    Delegates calls to specialized sub-modules in the 'hr' package.
+    """
 
+    # Employee related
     @staticmethod
     def get_all_employees():
-        """
-        Retrieves a list of all active employees with their roles.
-        Mirrors the 'GetAllEmployees' logic from the .NET backend.
-        """
-        try:
-            query = text("""
-                SELECT e.EmployeeId, e.FirstName, e.LastName, e.Email, e.ContactNumber, 
-                       e.EmploymentStatus, r.RoleName
-                FROM Employees e
-                LEFT JOIN EmployeeRole r ON e.EmployeeRole = r.RoleId
-            """)
-            return db.session.execute(query).fetchall()
-        except Exception as e:
-            print(f"Error fetching all employees: {e}")
-            return []
+        return EmployeeService.get_all_employees()
 
     @staticmethod
     def upsert_employee(data):
-        """
-        Creates or updates an employee record. 
-        Note: This is a simplified version of the logic in the .NET stored procedures.
-        """
-        try:
-            employee = Employee.query.get(data.get('EmployeeId'))
-            if not employee:
-                employee = Employee(EmployeeId=data.get('EmployeeId'))
-                db.session.add(employee)
-                
-            # Updating employee fields
-            employee.FirstName = data.get('FirstName')
-            employee.LastName = data.get('LastName')
-            employee.Email = data.get('Email')
-            # ... update additional fields as per the .NET implementation ...
-            
-            db.session.commit()
-            return employee.EmployeeId
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error in upsert_employee: {e}")
-            raise e
-
-    @staticmethod
-    def get_monthly_report(month, year):
-        """
-        Generates a monthly report for attendance/payroll.
-        Executes the 'GetMonthlyReport' stored procedure.
-        """
-        try:
-            query = text("EXEC GetMonthlyReport @Month=:month, @Year=:year")
-            return db.session.execute(query, {"month": month, "year": year}).fetchall()
-        except Exception as e:
-            print(f"Error generating monthly report: {e}")
-            return []
-
-    @staticmethod
-    def add_project(name, description):
-        """Adds a new project to the organizational directory."""
-        try:
-            new_project = Project(ProjectName=name, Description=description)
-            db.session.add(new_project)
-            db.session.commit()
-            return new_project.ProjectId
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error adding project: {e}")
-            return None
+        return EmployeeService.upsert_employee(data)
 
     @staticmethod
     def get_employee_details_for_relieving_letter():
-        """Fetches employee details needed for a relieving letter."""
-        try:
-            result = db.session.execute(text("""
-                SELECT 
-                    e.EmployeeId,
-                    CONCAT(e.FirstName, ' ', e.LastName) AS EmployeeName,
-                    e.DateOfJoining,
-                    es.SubRoleName,
-                    e.PersonalEmail
-                FROM Employee e
-                LEFT JOIN EmployeeSubRole es ON e.SubRole = es.SubRoleId
-            """))
-            return [
-                {
-                    'EmployeeId': row[0],
-                    'EmployeeName': row[1],
-                    'DateOfJoining': row[2].isoformat() if row[2] else None,
-                    'SubRoleName': row[3],
-                    'PersonalEmail': row[4]
-                } for row in result
-            ]
-        except Exception as e:
-            print(f"Error fetching relieving letter details: {e}")
-            return []
+        return EmployeeService.get_employee_details_for_relieving_letter()
 
+    @staticmethod
+    def get_employee_lateral_hires():
+        return EmployeeService.get_employee_lateral_hires()
+
+    @staticmethod
+    def update_lateral_hire(employee_id, lateral_hire):
+        return EmployeeService.update_lateral_hire(employee_id, lateral_hire)
+
+    @staticmethod
+    def get_employee_exempt_data():
+        return EmployeeService.get_employee_exempt_data()
+
+    @staticmethod
+    def insert_lateral_exempt_data(employee_id, from_date, to_date, shift_start_from_time):
+        return EmployeeService.insert_lateral_exempt_data(employee_id, from_date, to_date, shift_start_from_time)
+
+    @staticmethod
+    def update_employee_details(employee_data):
+        return EmployeeService.update_employee_details(employee_data)
+
+    @staticmethod
+    def update_employee_by_self(employee_id, update_data):
+        return EmployeeService.update_employee_by_self(employee_id, update_data)
+
+    @staticmethod
+    def get_all_employees_details():
+        return EmployeeService.get_all_employees_details()
+
+    @staticmethod
+    def get_employee_with_address_and_skills(emp_id):
+        return EmployeeService.get_employee_with_address_and_skills(emp_id)
+
+    @staticmethod
+    def insert_employee(employee_data):
+        return EmployeeService.insert_employee(employee_data)
+
+    @staticmethod
+    def cancel_leave(leave_tran_id, leave_status='Cancel'):
+        return EmployeeService.cancel_leave(leave_tran_id, leave_status)
+
+    # Role / Org related
+    @staticmethod
+    def get_all_skills():
+        return RoleService.get_all_skills()
+
+    @staticmethod
+    def get_employee_sub_roles():
+        return RoleService.get_employee_sub_roles()
+
+    @staticmethod
+    def get_designations():
+        return RoleService.get_designations()
+
+    @staticmethod
+    def get_bands():
+        return RoleService.get_bands()
+
+    @staticmethod
+    def insert_designation(designation_name):
+        return RoleService.insert_designation(designation_name)
+
+    @staticmethod
+    def get_sub_roles():
+        return RoleService.get_sub_roles()
+
+    @staticmethod
+    def insert_sub_role(sub_role_name):
+        return RoleService.insert_sub_role(sub_role_name)
+
+    @staticmethod
+    def update_team_lead(employee_id, team_lead_id):
+        return RoleService.update_team_lead(employee_id, team_lead_id)
+
+    @staticmethod
+    def get_employees_with_team_lead(team_lead_id):
+        return RoleService.get_employees_with_team_lead(team_lead_id)
+
+    @staticmethod
+    def get_team_leads():
+        return RoleService.get_team_leads()
+
+    @staticmethod
+    def insert_team_lead(employee_id):
+        return RoleService.insert_team_lead(employee_id)
+
+    @staticmethod
+    def get_lob_leads():
+        return RoleService.get_lob_leads()
+
+    @staticmethod
+    def insert_lob_lead(lob_lead, lob):
+        return RoleService.insert_lob_lead(lob_lead, lob)
+
+    # Access / Credentials related
+    @staticmethod
+    def upsert_employee_credentials(employee_id, password, role_id, email):
+        return AccessService.upsert_employee_credentials(employee_id, password, role_id, email)
+
+    @staticmethod
+    def get_employee_accessibility_details():
+        return AccessService.get_employee_accessibility_details()
+
+    # Report related
+    @staticmethod
+    def get_monthly_report(month, year):
+        return ReportService.get_monthly_report(month, year)

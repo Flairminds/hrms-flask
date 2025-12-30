@@ -1,9 +1,12 @@
 from typing import Dict
 
-from sqlalchemy import text
+from sqlalchemy import text, func
+from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
+from ..models.hr import Employee, EmployeePolicyAcknowledgementStatus
 from ..utils.mail_util import MailUtil
+from ..utils.logger import Logger
 
 
 class PolicyService:
@@ -13,244 +16,276 @@ class PolicyService:
 
     @staticmethod
     def get_policy_acknowledgment(employee_id: str) -> Dict:
-        result = db.session.execute(
-            text(
-                """
-                SELECT 
-                    EmployeeId,
-                    LeavePolicyAcknowledged,
-                    WorkFromHomePolicyAcknowledged,
-                    ExitPolicyAndProcessAcknowledged,
-                    SalaryAdvanceRecoveryPolicyAcknowledged,
-                    ProbationToConfirmationPolicyAcknowledged,
-                    SalaryAndAppraisalPolicyAcknowledged
-                FROM EmployeePolicyAcknowledgementStatus
-                WHERE EmployeeId = :employee_id
-                """
-            ),
-            {"employee_id": employee_id},
-        ).fetchone()
+        """Retrieves policy acknowledgement status for an employee using ORM."""
+        Logger.info("Retrieving policy acknowledgement status", employee_id=employee_id)
+        
+        try:
+            # Use SQLAlchemy ORM
+            policy_status = EmployeePolicyAcknowledgementStatus.query.filter_by(
+                employee_id=employee_id
+            ).first()
 
-        if not result:
-            raise ValueError("Employee not found")
+            if not policy_status:
+                Logger.warning("Policy status not found for employee", employee_id=employee_id)
+                raise ValueError("Employee not found")
 
-        return {
-            "EmployeeId": result.EmployeeId,
-            "LeavePolicyAcknowledged": bool(result.LeavePolicyAcknowledged),
-            "WorkFromHomePolicyAcknowledged": bool(
-                result.WorkFromHomePolicyAcknowledged
-            ),
-            "ExitPolicyAndProcessAcknowledged": bool(
-                result.ExitPolicyAndProcessAcknowledged
-            ),
-            "SalaryAdvanceRecoveryPolicyAcknowledged": bool(
-                result.SalaryAdvanceRecoveryPolicyAcknowledged
-            ),
-            "ProbationToConfirmationPolicyAcknowledged": bool(
-                result.ProbationToConfirmationPolicyAcknowledged
-            ),
-            "SalaryAndAppraisalPolicyAcknowledged": bool(
-                result.SalaryAndAppraisalPolicyAcknowledged
-            ),
-        }
+            Logger.debug("Policy acknowledgement retrieved", employee_id=employee_id)
+            return {
+                "EmployeeId": policy_status.employee_id,
+                "LeavePolicyAcknowledged": bool(policy_status.leave_policy_acknowledged),
+                "WorkFromHomePolicyAcknowledged": bool(
+                    policy_status.work_from_home_policy_acknowledged
+                ),
+                "ExitPolicyAndProcessAcknowledged": bool(
+                    policy_status.exit_policy_and_process_acknowledged
+                ),
+                "SalaryAdvanceRecoveryPolicyAcknowledged": bool(
+                    policy_status.salary_advance_recovery_policy_acknowledged
+                ),
+                "ProbationToConfirmationPolicyAcknowledged": bool(
+                    policy_status.probation_to_confirmation_policy_acknowledged
+                ),
+                "SalaryAndAppraisalPolicyAcknowledged": bool(
+                    policy_status.salary_and_appraisal_policy_acknowledged
+                ),
+            }
+        except ValueError:
+            raise
+        except SQLAlchemyError as se:
+            Logger.error("Database error retrieving policy acknowledgement",
+                        employee_id=employee_id,
+                        error=str(se))
+            raise
+        except Exception as e:
+            Logger.error("Unexpected error retrieving policy acknowledgement",
+                        employee_id=employee_id,
+                        error=str(e))
+            raise
 
     @staticmethod
     def update_policy_acknowledgment(
         employee_id: str, policy_name: str, acknowledged: bool
     ) -> None:
-        if not employee_id or not policy_name:
-            raise ValueError("employeeId and policyName are required")
+        """Updates policy acknowledgement status for an employee using ORM."""
+        Logger.info("Updating policy acknowledgement",
+                   employee_id=employee_id,
+                   policy_name=policy_name,
+                   acknowledged=acknowledged)
+        
+        try:
+            if not employee_id or not policy_name:
+                Logger.warning("Missing required parameters for policy update",
+                             employee_id_present=bool(employee_id),
+                             policy_name_present=bool(policy_name))
+                raise ValueError("employeeId and policyName are required")
 
-        policy_column_map = {
-            "Leave Policy": "LeavePolicyAcknowledged",
-            "Work From Home Policy": "WorkFromHomePolicyAcknowledged",
-            "Exit Policy & Process": "ExitPolicyAndProcessAcknowledged",
-            "Salary Advance & Recovery Policy": "SalaryAdvanceRecoveryPolicyAcknowledged",
-            "Probation To Confirmation Policy": "ProbationToConfirmationPolicyAcknowledged",
-            "Salary and appraisal process Policy": "SalaryAndAppraisalPolicyAcknowledged",
-        }
+            policy_column_map = {
+                "Leave Policy": "leave_policy_acknowledged",
+                "Work From Home Policy": "work_from_home_policy_acknowledged",
+                "Exit Policy & Process": "exit_policy_and_process_acknowledged",
+                "Salary Advance & Recovery Policy": "salary_advance_recovery_policy_acknowledged",
+                "Probation To Confirmation Policy": "probation_to_confirmation_policy_acknowledged",
+                "Salary and appraisal process Policy": "salary_and_appraisal_policy_acknowledged",
+            }
 
-        if policy_name not in policy_column_map:
-            raise ValueError("Invalid policy name")
+            if policy_name not in policy_column_map:
+                Logger.warning("Invalid policy name", policy_name=policy_name)
+                raise ValueError("Invalid policy name")
 
-        column_name = policy_column_map[policy_name]
+            column_name = policy_column_map[policy_name]
 
-        with db.session.begin():
-            count = db.session.execute(
-                text(
-                    """
-                    SELECT COUNT(*)
-                    FROM EmployeePolicyAcknowledgementStatus
-                    WHERE EmployeeId = :employee_id
-                    """
-                ),
-                {"employee_id": employee_id},
-            ).scalar()
+            # Use SQLAlchemy ORM for upsert
+            policy_status = EmployeePolicyAcknowledgementStatus.query.filter_by(
+                employee_id=employee_id
+            ).first()
 
-            if count == 0:
-                db.session.execute(
-                    text(
-                        f"""
-                        INSERT INTO EmployeePolicyAcknowledgementStatus
-                        (EmployeeId, {column_name})
-                        VALUES (:employee_id, :acknowledged)
-                        """
-                    ),
-                    {"employee_id": employee_id, "acknowledged": acknowledged},
-                )
+            if not policy_status:
+                # Insert new record
+                policy_status = EmployeePolicyAcknowledgementStatus(employee_id=employee_id)
+                setattr(policy_status, column_name, acknowledged)
+                db.session.add(policy_status)
+                Logger.debug("Created new policy status record", employee_id=employee_id)
             else:
-                db.session.execute(
-                    text(
-                        f"""
-                        UPDATE EmployeePolicyAcknowledgementStatus
-                        SET {column_name} = :acknowledged
-                        WHERE EmployeeId = :employee_id
-                        """
-                    ),
-                    {"employee_id": employee_id, "acknowledged": acknowledged},
-                )
+                # Update existing record
+                setattr(policy_status, column_name, acknowledged)
+                Logger.debug("Updated existing policy status", employee_id=employee_id)
+
+            db.session.commit()
+            Logger.info("Policy acknowledgement updated successfully",
+                       employee_id=employee_id,
+                       policy_name=policy_name)
+                       
+        except ValueError:
+            db.session.rollback()
+            raise
+        except SQLAlchemyError as se:
+            db.session.rollback()
+            Logger.error("Database error updating policy acknowledgement",
+                        employee_id=employee_id,
+                        policy_name=policy_name,
+                        error=str(se))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Unexpected error updating policy acknowledgement",
+                        employee_id=employee_id,
+                        policy_name=policy_name,
+                        error=str(e))
+            raise
 
     @staticmethod
     def send_policy_email(employee_id: str) -> Dict:
-        if not employee_id:
-            raise ValueError("Employee ID is required")
+        """Sends policy acknowledgement notification email using ORM."""
+        Logger.info("Sending policy acknowledgement email", employee_id=employee_id)
+        
+        try:
+            if not employee_id:
+                Logger.warning("Missing employee ID for policy email")
+                raise ValueError("Employee ID is required")
 
-        # Employee details
-        employee_result = db.session.execute(
-            text(
-                """
-                SELECT FirstName, LastName, Email
-                FROM Employee
-                WHERE EmployeeId = :employee_id
-                """
-            ),
-            {"employee_id": employee_id},
-        ).fetchone()
+            # Employee details using ORM
+            employee = Employee.query.filter_by(employee_id=employee_id).first()
 
-        if not employee_result:
-            raise ValueError("Employee not found")
+            if not employee:
+                Logger.warning("Employee not found for policy email", employee_id=employee_id)
+                raise ValueError("Employee not found")
 
-        # Policy status
-        policy_result = db.session.execute(
-            text(
-                """
-                SELECT 
-                    LeavePolicyAcknowledged,
-                    WorkFromHomePolicyAcknowledged,
-                    ExitPolicyAndProcessAcknowledged,
-                    SalaryAdvanceRecoveryPolicyAcknowledged,
-                    ProbationToConfirmationPolicyAcknowledged,
-                    SalaryAndAppraisalPolicyAcknowledged
-                FROM EmployeePolicyAcknowledgementStatus
-                WHERE EmployeeId = :employee_id
-                """
-            ),
-            {"employee_id": employee_id},
-        ).fetchone()
+            # Policy status using ORM
+            policy_status = EmployeePolicyAcknowledgementStatus.query.filter_by(
+                employee_id=employee_id
+            ).first()
 
-        if not policy_result:
-            raise ValueError("Policy acknowledgment status not found")
+            if not policy_status:
+                Logger.warning("Policy status not found", employee_id=employee_id)
+                raise ValueError("Policy acknowledgment status not found")
 
-        all_acknowledged = all(
-            [
-                policy_result.LeavePolicyAcknowledged,
-                policy_result.WorkFromHomePolicyAcknowledged,
-                policy_result.ExitPolicyAndProcessAcknowledged,
-                policy_result.SalaryAdvanceRecoveryPolicyAcknowledged,
-                policy_result.ProbationToConfirmationPolicyAcknowledged,
-                policy_result.SalaryAndAppraisalPolicyAcknowledged,
-            ]
-        )
+            all_acknowledged = all(
+                [
+                    policy_status.leave_policy_acknowledged,
+                    policy_status.work_from_home_policy_acknowledged,
+                    policy_status.exit_policy_and_process_acknowledged,
+                    policy_status.salary_advance_recovery_policy_acknowledged,
+                    policy_status.probation_to_confirmation_policy_acknowledged,
+                    policy_status.salary_and_appraisal_policy_acknowledged,
+                ]
+            )
 
-        if not all_acknowledged:
-            raise ValueError("Not all policies are acknowledged")
+            if not all_acknowledged:
+                Logger.warning("Not all policies acknowledged", employee_id=employee_id)
+                raise ValueError("Not all policies are acknowledged")
 
-        employee_name = f"{employee_result.FirstName} {employee_result.LastName}"
-        subject = f"Policy Acknowledgment - {employee_name}"
-        body = f"""
-            <html>
-                <body>
-                    <h3>Policy Acknowledgment Notification</h3>
-                    <p>Employee {employee_name} (ID: {employee_id}) has acknowledged all company policies.</p>
-                    <p>All policies have been read and acknowledged:</p>
-                    <ul>
-                        <li>Leave Policy</li>
-                        <li>Work From Home Policy</li>
-                        <li>Exit Policy & Process</li>
-                        <li>Salary Advance & Recovery Policy</li>
-                        <li>Probation To Confirmation Policy</li>
-                        <li>Salary and Appraisal Process Policy</li>
-                    </ul>
-                </body>
-            </html>
-        """
+            employee_name = f"{employee.first_name} {employee.last_name}"
+            subject = f"Policy Acknowledgment - {employee_name}"
+            body = f"""
+                <html>
+                    <body>
+                        <h3>Policy Acknowledgment Notification</h3>
+                        <p>Employee {employee_name} (ID: {employee_id}) has acknowledged all company policies.</p>
+                        <p>All policies have been read and acknowledged:</p>
+                        <ul>
+                            <li>Leave Policy</li>
+                            <li>Work From Home Policy</li>
+                            <li>Exit Policy & Process</li>
+                            <li>Salary Advance & Recovery Policy</li>
+                            <li>Probation To Confirmation Policy</li>
+                            <li>Salary and Appraisal Process Policy</li>
+                        </ul>
+                    </body>
+                </html>
+            """
 
-        ok = MailUtil.send_email("hr@flairminds.com", subject, body, is_html=True)
-        if not ok:
-            raise RuntimeError("Failed to send policy email")
+            # Use configuration for HR email (could be moved to config/constants)
+            hr_email = "hr@flairminds.com"  # TODO: Move to configuration
+            ok = MailUtil.send_email(hr_email, subject, body, is_html=True)
+            if not ok:
+                Logger.error("Failed to send policy acknowledgement email",
+                           employee_id=employee_id,
+                           employee_name=employee_name)
+                raise RuntimeError("Failed to send policy email")
 
-        return {"employeeId": employee_id, "employeeName": employee_name}
+            Logger.info("Policy acknowledgement email sent successfully",
+                       employee_id=employee_id,
+                       employee_name=employee_name)
+            return {"employeeId": employee_id, "employeeName": employee_name}
+            
+        except ValueError:
+            raise
+        except RuntimeError:
+            raise
+        except SQLAlchemyError as se:
+            Logger.error("Database error sending policy email",
+                        employee_id=employee_id,
+                        error=str(se))
+            raise
+        except Exception as e:
+            Logger.error("Unexpected error sending policy email",
+                        employee_id=employee_id,
+                        error=str(e))
+            raise
 
     # ---------------- Warning Count -----------------
 
     @staticmethod
     def update_warning_count(employee_id: str) -> int:
-        if not employee_id:
-            raise ValueError("Employee ID is required")
+        """Updates warning count for an employee using ORM."""
+        Logger.info("Updating warning count", employee_id=employee_id)
+        
+        try:
+            if not employee_id:
+                Logger.warning("Missing employee ID for warning count update")
+                raise ValueError("Employee ID is required")
 
-        with db.session.begin():
-            result = db.session.execute(
-                text(
-                    """
-                    SELECT COALESCE(WarningCount, 0) as WarningCount
-                    FROM EmployeePolicyAcknowledgementStatus
-                    WHERE EmployeeId = :employee_id
-                    """
-                ),
-                {"employee_id": employee_id},
-            ).fetchone()
+            # Use SQLAlchemy ORM for upsert
+            policy_status = EmployeePolicyAcknowledgementStatus.query.filter_by(
+                employee_id=employee_id
+            ).first()
 
-            current_count = result.WarningCount if result else 0
+            current_count = policy_status.warning_count if policy_status else 0
             new_count = current_count + 1
 
-            if not result:
-                db.session.execute(
-                    text(
-                        """
-                        INSERT INTO EmployeePolicyAcknowledgementStatus
-                        (EmployeeId, WarningCount)
-                        VALUES (:employee_id, :warning_count)
-                        """
-                    ),
-                    {"employee_id": employee_id, "warning_count": new_count},
+            if not policy_status:
+                # Insert new record
+                policy_status = EmployeePolicyAcknowledgementStatus(
+                    employee_id=employee_id,
+                    warning_count=new_count
                 )
+                db.session.add(policy_status)
+                Logger.debug("Created new policy status for warning count", employee_ id=employee_id)
             else:
-                db.session.execute(
-                    text(
-                        """
-                        UPDATE EmployeePolicyAcknowledgementStatus
-                        SET WarningCount = :warning_count
-                        WHERE EmployeeId = :employee_id
-                        """
-                    ),
-                    {"employee_id": employee_id, "warning_count": new_count},
-                )
+                # Update existing record
+                policy_status.warning_count = new_count
+                Logger.debug("Updated warning count", employee_id=employee_id)
 
-        return new_count
+            db.session.commit()
+            Logger.info("Warning count updated",
+                       employee_id=employee_id,
+                       new_count=new_count)
+            return new_count
+            
+        except ValueError:
+            db.session.rollback()
+            raise
+        except SQLAlchemyError as se:
+            db.session.rollback()
+            Logger.error("Database error updating warning count",
+                        employee_id=employee_id,
+                        error=str(se))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Unexpected error updating warning count",
+                        employee_id=employee_id,
+                        error=str(e))
+            raise
 
     @staticmethod
     def get_warning_count(employee_id: str) -> int:
-        result = db.session.execute(
-            text(
-                """
-                SELECT COALESCE(WarningCount, 0) as WarningCount
-                FROM EmployeePolicyAcknowledgementStatus
-                WHERE EmployeeId = :employee_id
-                """
-            ),
-            {"employee_id": employee_id},
-        ).fetchone()
+        """Retrieves warning count for an employee using ORM."""
+        policy_status = EmployeePolicyAcknowledgementStatus.query.filter_by(
+            employee_id=employee_id
+        ).first()
 
-        if not result:
+        if not policy_status:
             return 0
-        return result.WarningCount
+        return policy_status.warning_count or 0
+
