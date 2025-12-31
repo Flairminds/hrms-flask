@@ -21,3 +21,7 @@ def verify_otp():
 # No roles_required here as user might not be logged in to reset password
 def reset_password():
     return AccountController.reset_password()
+
+@account_bp.route('/me', methods=['GET'])
+def get_current_user():
+    return AccountController.get_current_user()

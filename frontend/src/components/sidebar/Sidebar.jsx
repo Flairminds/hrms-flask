@@ -10,7 +10,7 @@ import logOutIcon from "../../assets/sidebarIcons/logoutIcon.svg";
 import teamLeadIcon from "../../assets/sidebarIcons/teamLead.svg";
 import axiosInstance, { getWarningCount } from '../../services/api';
 import Cookies from 'js-cookie';
-import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { getAllEmployeeEvaluators } from '../../services/api';
 // import skillEvaluationIcon from "../../assets/sidebarIcons/skillEvaluation.svg"; // New icon for Skill 
 import goalIcon from "../../assets/sidebarIcons/goal-icon.svg";
@@ -22,6 +22,7 @@ import systemIcon from "../../assets/sidebarIcons/skills.svg"; // any icon for S
 export const Sidebar = ({ isRole }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [activePath, setActivePath] = useState(location.pathname);
   const [warningCount, setWarningCount] = useState(0);
   const [areAllPoliciesAcknowledged, setAreAllPoliciesAcknowledged] = useState(false);
@@ -94,17 +95,15 @@ export const Sidebar = ({ isRole }) => {
     setActivePath(location.pathname);
   }, [location.pathname]);
 
-  const removeCookie = (name) => {
-    const pastDate = new Date(0).toUTCString();
-    document.cookie = `${name}=; expires=${pastDate}; path=/;`;
-  };
-
-  const handleRefresh = () => {
-    removeCookie('isAuthenticated');
-    removeCookie('role');
-    removeCookie('employeeId');
+  const handleLogout = () => {
+    // Clear all localStorage items
     localStorage.removeItem('loginEmail');
     localStorage.removeItem('loginPassword');
+
+    // Call AuthContext logout which clears cookies and user state
+    logout();
+
+    // Navigate to login page
     navigate('/login');
   };
 
@@ -121,7 +120,7 @@ export const Sidebar = ({ isRole }) => {
   //         <img src={policyIconIcon} className={stylesSidebar.iconsSidebar} alt="Company Policy" />
   //         <span>Company Policy</span>
   //       </div>
-  //       <div className={stylesSidebar.divs} onClick={handleRefresh}>
+  //       <div className={stylesSidebar.divs} onClick={handleLogout}>
   //         <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
   //         <span>Log Out</span>
   //       </div>
@@ -140,7 +139,7 @@ export const Sidebar = ({ isRole }) => {
           <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
           <span className={stylesSidebar.info}>Personal Info</span>
         </div>
-        <div className={stylesSidebar.divs} onClick={handleRefresh}>
+        <div className={stylesSidebar.divs} onClick={handleLogout}>
           <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
           <span>Log Out</span>
         </div>
@@ -277,7 +276,7 @@ export const Sidebar = ({ isRole }) => {
         </>
       )}
 
-      <div className={stylesSidebar.divs} onClick={handleRefresh}>
+      <div className={stylesSidebar.divs} onClick={handleLogout}>
         <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
         <span>Log Out</span>
       </div>

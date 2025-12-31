@@ -1,25 +1,23 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './LoginPage.module.css';
 import FMLogonew from '../../assets/login/FMLogonew.png';
-import axiosInstance from '../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/context';
-import { setCookie } from '../../util/CookieSet';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { loginUser } from '../../services/api';
 
-export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) => {
+export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [validationMessage, setValidationMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loader, setLoader] = useState(false);
 
-  const [loader, setLoader] = useState(false)
-  // const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleEmailChange = (event) => {
@@ -39,32 +37,41 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
   };
 
   const handleSubmit = async (event) => {
-    setLoader(true)
+    setLoader(true);
     event.preventDefault();
 
     if (!email || !password) {
       toast.error('Please enter both email and password');
+      setLoader(false);
       return;
     }
+
     setValidationMessage('');
+
     try {
       const response = await loginUser(email, password);
-      setIsRole(response.data.roleName)
-      const roleName = response.data.roleName
+      const { accessToken, employeeId, roleName, email: userEmail, fullName } = response.data;
 
-      const employeeId = response.data.employeeId;
-      setCookie('isAuthenticated', 'true');
-      setCookie('role', roleName);
-      setCookie('employeeId', employeeId);
-      setIsAuthenticated(true);
+      // Store accessToken in cookie and user data in context
+      const userData = {
+        employeeId,
+        roleName,
+        email: userEmail,
+        fullName
+      };
+
+      login(accessToken, userData);
+
+      toast.success('Login successful!');
       navigate('/personalInfo');
     } catch (error) {
-      console.error('There was a problem with the axios operation:', error);
+      console.error('There was a problem with the login operation:', error);
       toast.error('Login failed. Please check your credentials and try again.');
     } finally {
       setLoader(false);
     }
   };
+
   useEffect(() => {
     const storedEmail = localStorage.getItem('loginEmail');
     const storedPassword = localStorage.getItem('loginPassword');
@@ -133,19 +140,6 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
                 <span onClick={handleShowPasswordChange} className={styles.eyeIcon}>
                   {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                 </span>
-              </div>
-
-              <div className={styles.rememberMeContainer}>
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onChange={handleRememberMeChange}
-                  className={styles.checkbox}
-                />
-                <label htmlFor="rememberMe" className={styles.checkboxLabel}>
-                  Remember Me
-                </label>
               </div>
 
               <div className={styles.resetPassword}>

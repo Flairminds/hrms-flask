@@ -7,7 +7,7 @@ and password reset operations.
 
 from typing import Tuple
 from flask import request, jsonify, Response
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 from ..services.account_service import AccountService
 from ..utils.mail_util import MailUtil
@@ -374,4 +374,82 @@ class AccountController:
                         error_type=type(e).__name__)
             return jsonify({
                 "message": "An error occurred while resetting password. Please try again."
+            }), 500
+
+    @staticmethod
+    @jwt_required()
+    def get_current_user() -> Tuple[Response, int]:
+        """
+        Retrieves current authenticated user details from JWT token.
+        
+        Uses JWT token from Authorization header to fetch user information.
+        Requires valid JWT token in request headers.
+        
+        Headers:
+            Authorization: Bearer <jwt_token>
+        
+        Returns:
+            Success (200):
+            {
+                "status": "success",
+                "data": {
+                    "employeeId": "EMP001",
+                    "roleName": "Admin",
+                    "email": "user@example.com",
+                    "fullName": "John Doe",
+                    "employmentStatus": "Active"
+                }
+            }
+            
+            Error (401): Missing or invalid token
+            Error (404): User not found
+            Error (500): Server error
+        
+        Example:
+            >>> # GET /api/account/me
+            >>> # Headers: {"Authorization": "Bearer eyJ0eXAi..."}
+        
+        Note:
+            - Automatically validates JWT token via @jwt_required decorator
+            - Returns user details without sensitive information
+        """
+        Logger.info("Get current user request received")
+        
+        try:
+            # Get employee ID from JWT token
+            employee_id = get_jwt_identity()
+            
+            if not employee_id:
+                Logger.warning("Get current user failed - no identity in token")
+                return jsonify({
+                    "status": "error",
+                    "message": "Invalid token"
+                }), 401
+            
+            Logger.debug("Fetching current user details", employee_id=employee_id)
+            
+            # Get user details from service
+            user_details = AccountService.get_user_details(employee_id)
+            
+            if not user_details:
+                Logger.warning("Get current user failed - user not found", employee_id=employee_id)
+                return jsonify({
+                    "status": "error",
+                    "message": "User not found"
+                }), 404
+            
+            Logger.info("Current user details retrieved", employee_id=employee_id)
+            
+            return jsonify({
+                "status": "success",
+                "data": user_details
+            }), 200
+            
+        except Exception as e:
+            Logger.error("Unexpected error getting current user", 
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "status": "error",
+                "message": "An error occurred while fetching user details"
             }), 500

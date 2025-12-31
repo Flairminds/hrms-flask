@@ -1,6 +1,7 @@
 import OTP from 'antd/es/input/OTP';
 import axios from 'axios';
 import moment from "moment";
+import { getCookie } from '../util/CookieSet';
 
 // Use environment variable for API base URL
 // In development: http://localhost:5000/api (via proxy)
@@ -15,6 +16,34 @@ export const axiosInstance = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+// Add request interceptor to include JWT token in all requests
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = getCookie('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token expiration
+axiosInstance.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, redirect to login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // 1.Login Api:- Authenticates a user with username and password. Returns a login token/session on success.
 export const loginUser = (username, password) => {

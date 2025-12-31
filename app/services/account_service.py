@@ -495,3 +495,70 @@ class AccountService:
         otp = ''.join(secrets.choice(string.digits) for _ in range(length))
         Logger.debug("OTP generated", length=length)
         return otp
+
+    @staticmethod
+    def get_user_details(employee_id: str) -> dict:
+        """
+        Retrieves user details by employee ID.
+        
+        Fetches user information from database including role, email, and employment status.
+        
+        Args:
+            employee_id: Employee ID to lookup
+        
+        Returns:
+            Dictionary containing user details:
+            {
+                'employeeId': 'EMP001',
+                'roleName': 'Admin',
+                'email': 'user@example.com',
+                'fullName': 'John Doe',
+                'employmentStatus': 'Active'
+            }
+            Returns None if user not found
+        
+        Example:
+            >>> user = AccountService.get_user_details('EMP001')
+            >>> print(user['roleName'])
+            'Admin'
+        """
+        Logger.info("Fetching user details", employee_id=employee_id)
+        
+        try:
+            # Fetch user details using SQLAlchemy ORM
+            user_data = db.session.query(
+                Employee.employee_id,
+                (Employee.first_name + ' ' + Employee.last_name).label('full_name'),
+                Employee.email,
+                MasterRole.role_name,
+                Employee.employment_status
+            ).join(
+                EmployeeRole,
+                Employee.employee_id == EmployeeRole.employee_id
+            ).join(
+                MasterRole,
+                EmployeeRole.role_id == MasterRole.role_id
+            ).filter(
+                Employee.employee_id == employee_id
+            ).first()
+            
+            if not user_data:
+                Logger.warning("User details not found", employee_id=employee_id)
+                return None
+            
+            Logger.debug("User details retrieved", employee_id=employee_id)
+            
+            return {
+                'employeeId': user_data.employee_id,
+                'roleName': user_data.role_name,
+                'email': user_data.email,
+                'fullName': user_data.full_name,
+                'employmentStatus': user_data.employment_status
+            }
+            
+        except Exception as e:
+            Logger.error("Error fetching user details", 
+                        employee_id=employee_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return None
