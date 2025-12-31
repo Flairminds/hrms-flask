@@ -50,19 +50,6 @@ function PersonalInfoPage() {
 
   const years = ["2025", "2024", "2023", "2022"]
 
-  const getEmployeeRoles = async () => {
-    try {
-      const response = await getCompanyRoles();
-      if (Array.isArray(response.data)) {
-        setRoles(response.data);
-      } else {
-        console.error('Expected an array from getEmployeeRoles');
-      }
-    } catch (error) {
-      console.error('Error fetching Employee roles:', error);
-    }
-  };
-
   const fetchEmployeeData = async () => {
     try {
       const employeeId = user?.employeeId;
@@ -92,7 +79,6 @@ function PersonalInfoPage() {
 
   useEffect(() => {
     fetchEmployeeData();
-    getEmployeeRoles();
   }, []);
 
   const handleResumeClick = () => {
@@ -232,7 +218,6 @@ function PersonalInfoPage() {
       const employeeId = user?.employeeId;
       if (!employeeId) return;
       const response = await getSkillsForEmp(employeeId);
-      console.log(response, "raju");
       setHighestQualificationYearMonth(response.data.QualificationYearMonth)
       setFullStackReady(response.data.FullStackReady)
     } catch (error) {
@@ -412,7 +397,7 @@ function PersonalInfoPage() {
               <div className={styles.infoItem}><strong>Gender:</strong> {employeeData.gender}</div>
               <div className={styles.infoItem}><strong>Blood Group:</strong> {employeeData.blood_group || 'N/A'}</div>
               <div className={styles.infoItem}><strong>Band:</strong> {employeeData.designation_name}</div>
-              <div className={styles.infoItem}><strong>Employee Role:</strong> {employeeRole(employeeData.employee_sub_role)}</div>
+              <div className={styles.infoItem}><strong>Employee Role:</strong>{employeeData.employee_sub_role}</div>
               <div className={styles.infoItem}>
                 <strong>Date of Joining:</strong>
                 {new Date(employeeData.date_of_joining).toLocaleDateString('en-GB', {

@@ -120,7 +120,7 @@ export const getLeaveDetails = (employeeId, year) => {
 
 // 6.Get Holid  ay details- Retrieves the list of company holidays.
 export const holidayListData = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/Leave/GetHolidays`)
+  const res = axiosInstance.get(`${API_BASE_URL}/leave/get-holidays`)
   return res;
 }
 

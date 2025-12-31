@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { LoginPage } from './pages/login/LoginPage.jsx';
@@ -30,7 +30,7 @@ import AssignmentsPage from "./pages/AssignmentsPage/AssignmentsPage.jsx";
 import MaintenancePage from "./pages/MaintenanceManagementPage/MaintenancePage.jsx";
 
 function AppRoutes() {
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
 
     return (
         <Routes>
@@ -41,8 +41,8 @@ function AppRoutes() {
             }} />
 
             {/* Public Routes */}
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={isAuthenticated ? <Navigate to="/personal-info" replace /> : <LoginPage />} />
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/personal-info" replace /> : <LoginPage />} />
             <Route path="/resetPassword" element={<ResetPassword />} />
 
             {/* Protected Routes */}
@@ -55,7 +55,7 @@ function AppRoutes() {
                 <Route path="holiday" element={<HolidayPage />} />
                 <Route path="personal-info" element={<PersonalInfo />} />
                 <Route path="dashboard1" element={<Dashboard />} />
-                <Route path="companyPolicy" element={<PolicyPage />} />
+                <Route path="company-policy" element={<PolicyPage />} />
                 <Route path="goalSeetingForm" element={<GoalSettingForm />} />
                 <Route path="teamLeaveManagement" element={<TeamLeaves isRole={user?.roleName} />} />
                 <Route path="HRLeaveManagement" element={<HRLeaveManagement />} />

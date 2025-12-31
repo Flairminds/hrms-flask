@@ -193,8 +193,8 @@ class LeaveController:
             Logger.info("Holidays retrieved successfully", count=len(holidays))
             
             return jsonify([{
-                "HolidayDate": h.HolidayDate,
-                "HolidayName": h.HolidayName
+                "holiday_date": h.holiday_date,
+                "holiday_name": h.holiday_name
             } for h in holidays]), 200
             
         except Exception as e:

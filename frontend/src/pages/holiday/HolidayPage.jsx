@@ -13,20 +13,7 @@ function HolidayPage() {
   const getHolidayList = async () => {
     try {
       const res = await holidayListData();
-
-      // Define the date range
-      const startDate = new Date("2025-05-01");
-      const endDate = new Date("2026-03-04");
-
-      // Convert date strings to Date objects and filter
-      const filteredData = res.data.filter((holiday) => {
-        const holidayDateParts = holiday.holidayDate.split('-'); // ["01", "05", "2025"]
-        const formattedDate = new Date(`${holidayDateParts[2]}-${holidayDateParts[1]}-${holidayDateParts[0]}`);
-
-        return formattedDate >= startDate && formattedDate <= endDate;
-      });
-
-      setHolidayData(filteredData);
+      setHolidayData(res.data);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching holiday data:', err);
@@ -35,7 +22,6 @@ function HolidayPage() {
     }
   };
 
-
   useEffect(() => {
     getHolidayList();
   }, []);
@@ -43,8 +29,8 @@ function HolidayPage() {
   const filteredHolidays = searchQuery
     ? holidayData.filter(
       (holiday) =>
-        holiday.holidayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        holiday.holidayDate.includes(searchQuery)
+        holiday.holiday_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        holiday.holiday_date.includes(searchQuery)
     )
     : holidayData;
 
@@ -77,8 +63,8 @@ function HolidayPage() {
             <CSVLink
               data={filteredHolidays}
               headers={[
-                { label: 'Holiday Date', key: 'holidayDate' },
-                { label: 'Holiday Name', key: 'holidayName' },
+                { label: 'Holiday Date', key: 'holiday_date' },
+                { label: 'Holiday Name', key: 'holiday_name' },
               ]}
               filename="holiday_list.csv"
               className={styles.downloadButton}
@@ -101,9 +87,9 @@ function HolidayPage() {
               </thead>
               <tbody>
                 {filteredHolidays.map((holiday) => (
-                  <tr key={`${holiday.holidayDate}-${holiday.holidayName}`}>
-                    <td className={styles.td}>{convertDate(holiday.holidayDate)} ({getWeekDay(holiday.holidayDate)})</td>
-                    <td className={styles.td}>{holiday.holidayName}</td>
+                  <tr key={`${holiday.holiday_date}-${holiday.holiday_name}`}>
+                    <td className={styles.td}>{convertDate(holiday.holiday_date)} ({getWeekDay(holiday.holiday_date)})</td>
+                    <td className={styles.td}>{holiday.holiday_name}</td>
                   </tr>
                 ))}
               </tbody>

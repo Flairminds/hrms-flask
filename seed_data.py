@@ -245,6 +245,34 @@ def seed_master_designation():
     db.session.execute(designation_sql)
     print("✓ Master designation seeded")
 
+def seed_holidays():
+    """Seeds holidays"""
+    print("Seeding holidays")
+    holiday_sql = text("""
+        INSERT INTO holiday (holiday_date, holiday_name, added_by, added_on) VALUES
+        ('2024-05-01', N'Maharashtra Day', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-06-17', N'Bakri Eid', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-08-15', N'Independence Day', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-09-17', N'Anant Chaturthi', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-10-02', N'Gandhi Jayanti', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-10-12', N'Dussehra', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-10-31', N'Diwali', N'manager', '2024-10-16 07:29:02.930'),
+        ('2024-11-01', N'Diwali', N'manager', '2024-10-16 07:29:02.930'),
+        ('2025-01-01', N'New Year', N'manager', '2024-10-16 07:29:02.930'),
+        ('2025-01-26', N'Republic Day', N'manager', '2024-10-16 07:29:02.930'),
+        ('2025-05-01', N'Maharashtra Day', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-08-15', N'Independence Day', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-08-27', N'Ganesh Jayanti', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-10-02', N'Dussehra/ Gandhi Jayanti', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-10-20', N'Diwali', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-10-21', N'Diwali', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-10-22', N'Diwali', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2025-12-25', N'Christmas', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2026-01-26', N'Republic Day', N'Manager', '2025-03-28 07:09:01.273'),
+        ('2026-03-04', N'Holi', N'Manager', '2025-03-28 07:09:01.273');
+    """)
+    db.session.execute(holiday_sql)
+    print("✓ Holidays seeded")
 
 def seed_all():
     """Seeds all master data tables."""
@@ -257,6 +285,7 @@ def seed_all():
         seed_master_sub_roles()
         seed_master_skills()
         seed_master_designation()
+        seed_holidays()
         
         db.session.commit()
         

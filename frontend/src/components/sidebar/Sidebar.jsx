@@ -164,7 +164,7 @@ export const Sidebar = ({ isRole }) => {
             <img src={holidayListIcon} className={stylesSidebar.iconsSidebar} alt="Holiday List" />
             <span>Holiday List</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/companyPolicy') ? stylesSidebar.active : ''}`} onClick={() => navigate('/companyPolicy')}>
+          <div className={`${stylesSidebar.divs} ${isActive('/company-policy') ? stylesSidebar.active : ''}`} onClick={() => navigate('/company-policy')}>
             <img src={policyIconIcon} className={stylesSidebar.iconsSidebar} alt="Company Policy" />
             <span>Company Policy</span>
           </div>

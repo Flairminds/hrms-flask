@@ -497,7 +497,7 @@ class EmployeeService:
             ResidentialAddr = db.aliased(EmployeeAddress)
             PermanentAddr = db.aliased(EmployeeAddress)
             employee_query = db.session.query(
-                Employee, ResidentialAddr, PermanentAddr, MasterDesignation.designation_name.label('designation_name'), EmployeeDocuments.document_link.label('resume_link')
+                Employee, ResidentialAddr, PermanentAddr, MasterDesignation.designation_name.label('designation_name'), EmployeeDocuments.document_link.label('resume_link'), MasterSubRole.sub_role_name.label('employee_sub_role')
             ).outerjoin(
                 ResidentialAddr, and_(Employee.employee_id == ResidentialAddr.employee_id, ResidentialAddr.address_type == 'Residential')
             ).outerjoin(
@@ -508,12 +508,14 @@ class EmployeeService:
                 EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
             ).outerjoin(
                 MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
             ).filter(Employee.employee_id == emp_id).first()
             
             if not employee_query or not employee_query[0]:
                 raise LookupError(f"Employee {emp_id} not found")
             
-            employee, res_addr, perm_addr, employee_designation, resume_link = employee_query
+            employee, res_addr, perm_addr, employee_designation, resume_link, employee_sub_role = employee_query
             def format_date(date_obj): return date_obj.strftime('%d %b %Y') if date_obj else None
             
             addresses = {}
@@ -562,7 +564,7 @@ class EmployeeService:
                 'emergency_contact_relation': employee.emergency_contact_relation or '',
                 'email': employee.email or '',
                 'gender': employee.gender or '',
-                'employee_sub_role': employee.sub_role,
+                'employee_sub_role': employee_sub_role,
                 'designation_name': employee_designation,
                 'blood_group': employee.blood_group or '',
                 'date_of_joining': format_date(employee.date_of_joining),

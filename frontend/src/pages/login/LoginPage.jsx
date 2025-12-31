@@ -17,8 +17,14 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loader, setLoader] = useState(false);
 
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/personal-info');
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
@@ -72,15 +78,6 @@ export const LoginPage = () => {
     }
   };
 
-  useEffect(() => {
-    const storedEmail = localStorage.getItem('loginEmail');
-    const storedPassword = localStorage.getItem('loginPassword');
-
-    if (storedEmail && storedPassword) {
-      setEmail(storedEmail);
-      setPassword(storedPassword);
-    }
-  }, []);
   return (
     <div className={styles.container}>
       <ToastContainer
