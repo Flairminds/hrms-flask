@@ -1,4 +1,4 @@
-from ..models.hr import db, Employee, EmployeeAddress, Skill, EmployeeSkill
+from ..models.hr import db, Employee, EmployeeAddress, MasterSkill, EmployeeSkill
 from ..models.leave import LeaveTransaction
 from ..models.documents import EmployeeDocumentsBinary
 from sqlalchemy import text, func
@@ -21,12 +21,12 @@ class ProfileService:
             
             # Fetch skills with their names using ORM JOIN
             skills = db.session.query(
-                Skill.skill_id,
-                Skill.skill_name,
+                MasterSkill.skill_id,
+                MasterSkill.skill_name,
                 EmployeeSkill.skill_level
             ).join(
                 EmployeeSkill,
-                Skill.skill_id == EmployeeSkill.skill_id
+                MasterSkill.skill_id == EmployeeSkill.skill_id
             ).filter(
                 EmployeeSkill.employee_id == emp_id
             ).all()
@@ -97,11 +97,11 @@ class ProfileService:
             # Get skills using ORM
             skills = db.session.query(
                 EmployeeSkill.skill_id,
-                Skill.skill_name,
+                MasterSkill.skill_name,
                 EmployeeSkill.skill_level
             ).join(
-                Skill,
-                EmployeeSkill.skill_id == Skill.skill_id
+                MasterSkill,
+                EmployeeSkill.skill_id == MasterSkill.skill_id
             ).filter(
                 EmployeeSkill.employee_id == employee_id
             ).all()

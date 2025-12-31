@@ -5,7 +5,7 @@ from datetime import datetime, date
 from werkzeug.security import generate_password_hash
 
 from ... import db
-from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, Skill,
+from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, MasterSkill,
                           LateralAndExempt, Lob, Designation, MasterSubRole, 
                           EmployeeCredentials, EmployeeRole, MasterRole, ProjectAllocation,
                           EmployeeDesignation, EmployeeDocuments)
@@ -374,9 +374,9 @@ class EmployeeService:
                     leave_approver = approver.name if approver else None
                 
                 skills_ranked = db.session.query(
-                    Skill.skill_name,
+                    MasterSkill.skill_name,
                     EmployeeSkill.skill_level
-                ).join(Skill, EmployeeSkill.skill_id == Skill.skill_id).filter(
+                ).join(MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id).filter(
                     EmployeeSkill.employee_id == emp_id
                 ).order_by(EmployeeSkill.skill_level.desc()).all()
                 
@@ -546,8 +546,8 @@ class EmployeeService:
                         'permanent_zipcode': perm_addr.zip_code or ''
                     })
 
-            skills_query = db.session.query(EmployeeSkill.skill_id, Skill.skill_name, EmployeeSkill.skill_level).join(
-                Skill, EmployeeSkill.skill_id == Skill.skill_id).filter(EmployeeSkill.employee_id == emp_id).all()
+            skills_query = db.session.query(EmployeeSkill.skill_id, MasterSkill.skill_name, EmployeeSkill.skill_level).join(
+                MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id).filter(EmployeeSkill.employee_id == emp_id).all()
             
             return {
                 'employee_id': employee.employee_id,
@@ -590,7 +590,7 @@ class EmployeeService:
         """
         Logger.info("Executing InsertEmployee logic")
         required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 
-                          'date_of_joining', 'sub_role', 'band', 'password']
+                          'date_of_joining', 'sub_role', 'band', 'password', 'role_id']
         missing = [f for f in required_fields if not employee_data.get(f)]
         if missing: 
             raise ValueError(f"Missing required fields: {', '.join(missing)}")
@@ -663,6 +663,10 @@ class EmployeeService:
             
             # Create employee designation
             db.session.add(EmployeeDesignation(employee_id=employee_id, designation_id=employee_data['band']))
+            
+            # Create employee role
+            db.session.add(EmployeeRole(employee_id=employee_id, role_id=employee_data['role_id']))
+            Logger.info("Employee role assigned", employee_id=employee_id, role_id=employee_data['role_id'])
             
             # Create employee credentials with hashed password
             password_hash = generate_password_hash(

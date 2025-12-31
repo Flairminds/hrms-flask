@@ -5,7 +5,8 @@ import moment from "moment";
 // Use environment variable for API base URL
 // In development: http://localhost:5000/api (via proxy)
 // In production: /api (relative path, same origin)
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE_URL = 'http://localhost:5000/api';
 
 // Axios instance using environment-based API base URL
 export const axiosInstance = axios.create({
@@ -15,22 +16,9 @@ export const axiosInstance = axios.create({
   }
 });
 
-// Legacy API URLs - will be migrated to use API_BASE_URL
-const ApiURL = 'https://hrms.flairminds.com/api';
-
-// Flask API URL (production only)
-export const APIURLFlask = 'https://hrms-flask.azurewebsites.net/api';
-
-// Flask API URL (local only)
-// export const APIURLFlask = "http://127.0.0.1:7000/api";
-
-
-// export default axiosInstance;
-
-
 // 1.Login Api:- Authenticates a user with username and password. Returns a login token/session on success.
 export const loginUser = (username, password) => {
-  const res = axios.post(`${ApiURL}/Account/Login`, {
+  const res = axios.post(`${API_BASE_URL}/account/login`, {
     username: username,
     password: password
   });
@@ -39,19 +27,19 @@ export const loginUser = (username, password) => {
 
 // 2.Get Employee Details :-Fetches detailed information for a given employee by their ID.
 export const getEmployeeDetails = (employeeId) => {
-  return axios.get(`${ApiURL}/EmployeesDetails/${employeeId}`);
+  return axios.get(`${API_BASE_URL}/EmployeesDetails/${employeeId}`);
 };
 
 // 3.Get Cards Details - Retrieves leave card details for a specific employee (leave balances, history, etc).
 export const getLeaveCardDetails = (employeeId) => {
-  const res = axios.get(`${ApiURL}/Leave/LeavesCard/${employeeId}`)
+  const res = axios.get(`${API_BASE_URL}/Leave/LeavesCard/${employeeId}`)
   return res;
 }
 
 // Submits a new leave application/transaction for an employee.
 export const insertLeaveTransaction = async (payload) => {
   const defaultApprover = "Parag Khandekar";
-  const res = await axios.post(`${ApiURL}/Leave/InsertLeaveTransaction`, {
+  const res = await axios.post(`${API_BASE_URL}/Leave/InsertLeaveTransaction`, {
     "employeeId": payload.employeeId,
     "comments": payload.comments,
     "leaveType": payload.leaveType,
@@ -85,7 +73,7 @@ export const insertLeaveTransaction = async (payload) => {
 
 // Gets available leave types and the approver for a given employee.
 export const getTypeApprover = (employeeId) => {
-  const res = axios.get(`${ApiURL}/Leave/LeaveTypesAndApprover/`, {
+  const res = axios.get(`${API_BASE_URL}/Leave/LeaveTypesAndApprover/`, {
     params: { "EmpId": `${employeeId}` }
   });
   return res;
@@ -93,7 +81,7 @@ export const getTypeApprover = (employeeId) => {
 
 // 5.Get Leave Details- Retrieves all leave details for an employee for a given year (used for leave history/report).
 export const getLeaveDetails = (employeeId, year) => {
-  return axios.get(`${ApiURL}/Leave/GetLeaveDetails/${employeeId}?year=${year}`, {
+  return axios.get(`${API_BASE_URL}/Leave/GetLeaveDetails/${employeeId}?year=${year}`, {
     headers: {
       'Accept': '*/*'
     }
@@ -103,19 +91,19 @@ export const getLeaveDetails = (employeeId, year) => {
 
 // 6.Get Holid  ay details- Retrieves the list of company holidays.
 export const holidayListData = () => {
-  const res = axios.get(`${ApiURL}/Leave/GetHolidays`)
+  const res = axios.get(`${API_BASE_URL}/Leave/GetHolidays`)
   return res;
 }
 
 // 7.GetTeamLead :  Gets the team lead for a specific employee and year.
 export const getTeamLead = (employeeId, year) => {
-  return axios.get(`${ApiURL}/Leave/teamlead/${employeeId}?year=${year}`);
+  return axios.get(`${API_BASE_URL}/Leave/teamlead/${employeeId}?year=${year}`);
 };
 
 
 // 8.Leave transaction
 export const leaveTransaction = (employeeId, comments, leaveType, fromDate, toDate, handOverComments, leaveStatus) => {
-  const res = axios.post(`${ApiURL}/Leave/teamlead/`, {
+  const res = axios.post(`${API_BASE_URL}/Leave/teamlead/`, {
     "employeeId": employeeId,
     "comments": `${comments}`,
     "leaveType": num,
@@ -130,7 +118,7 @@ export const leaveTransaction = (employeeId, comments, leaveType, fromDate, toDa
 
 // 9.update Leave status - Updates the status of a leave transaction (approve, reject, etc) by the approver.
 export const updateLeaveStatus = (leaveTranId, leaveStatus, approverComment, isBillable, isCommunicatedToTeam, isCustomerApprovalRequired, approvedById) => {
-  const res = axios.put(`${ApiURL}/Leave/UpdateStatus/`, {
+  const res = axios.put(`${API_BASE_URL}/Leave/UpdateStatus/`, {
     "leaveTranId": leaveTranId,
     "leaveStatus": `${leaveStatus}`,
     "approverComment": `${approverComment}`,
@@ -143,7 +131,7 @@ export const updateLeaveStatus = (leaveTranId, leaveStatus, approverComment, isB
 }
 
 // export const leaveTransaction = (employeeId) =>{
-//   const res = axios.post(`${ApiURL}/Leave/teamlead/`,{
+//   const res = axios.post(`${API_BASE_URL}/Leave/teamlead/`,{
 //     params : {"EmpId" : `${employeeId}`}
 //   })
 //   return res;
@@ -161,7 +149,7 @@ export const cancelLeave = (leaveTranId) => {
 
 // 12. Assign Lead to Employee : Assigns a team lead to an employee.
 export const postEmployeeId = (selectedEmployee, selectedLead) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/AssignLeadToEmp`, {
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/AssignLeadToEmp`, {
     empId: selectedEmployee,
     leadId: selectedLead
   });
@@ -170,7 +158,7 @@ export const postEmployeeId = (selectedEmployee, selectedLead) => {
 
 // 13. Get Employee Report : Retrieves an employee's performance report.
 export const GetEmployeeReport = (employeeId) => {
-  const res = axios.get(`${ApiURL}/LeadFunctionality/GetEmpReport`, {
+  const res = axios.get(`${API_BASE_URL}/LeadFunctionality/GetEmpReport`, {
     params: { empid: employeeId }
   });
   return res
@@ -178,7 +166,7 @@ export const GetEmployeeReport = (employeeId) => {
 
 // Submits a new employee report form (lead functionality).
 export const postForm = (formData) => {
-  const res = axios.post(`${ApiURL}/LeadFunctionality/AddEmpReport`,
+  const res = axios.post(`${API_BASE_URL}/LeadFunctionality/AddEmpReport`,
     formData
   );
   return res
@@ -186,7 +174,7 @@ export const postForm = (formData) => {
 
 // 15. Get Latency Data : Retrieves lateral hire data for employees.
 export const getLatencyData = () => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/lateralhires`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/lateralhires`)
   return res
 }
 
@@ -205,19 +193,19 @@ export const addExemptLeave = (payload) => {
 
 // Retrieves all exempt leave records.
 export const getExemptData = () => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/exemptdata`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/exemptdata`)
   return res
 }
 
 // Retrieves all leave records for a given year.
 export const allLeaveRecords = async (year) => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/allleaverecords/?year=${year}`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/allleaverecords/?year=${year}`)
   return res;
 }
 
 // Updates the team lead for an employee.
 export const updateApprover = async (employeeId, teamLeadId) => {
-  const res = await axios.put(`${ApiURL}/HRFunctionality/updateApprover`, {
+  const res = await axios.put(`${API_BASE_URL}/HRFunctionality/updateApprover`, {
     employeeId: employeeId,
     teamLeadId: teamLeadId
   });
@@ -226,111 +214,111 @@ export const updateApprover = async (employeeId, teamLeadId) => {
 
 // Retrieves accessibility details for employees.
 export const getaccessbilitydetails = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getaccessbilitydetails`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getaccessbilitydetails`)
   return res;
 
 }
 
 // Adds accessibility details for an employee.
 export const addAccessibility = (payload) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/accessbility`, payload)
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/accessbility`, payload)
   return res;
 };
 
 // Retrieves all company bands.
 export const getCompanyBands = () => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/getbands`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/getbands`)
   return res;
 }
 
 // Retrieves all company roles.
 export const getCompanyRoles = () => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/getsubrole`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/getsubrole`)
   return res;
 }
 
 // Inserts a new employee record.
 export const insertEmployee = async (payload) => {
-  const res = await axios.post(`${ApiURL}/EmployeesDetails/InsertEmployee`, payload)
+  const res = await axios.post(`${API_BASE_URL}/EmployeesDetails/InsertEmployee`, payload)
   return res;
 }
 
 // Retrieves all company bands.
 export const getBands1 = () => {
-  const res = axios.get(`${ApiURL}/EmployeesDetails/Bands`)
+  const res = axios.get(`${API_BASE_URL}/EmployeesDetails/Bands`)
   return res;
 }
 
 // Retrieves all company roles.
 export const getRoles1 = () => {
-  const res = axios.get(`${ApiURL}/EmployeesDetails/SubRoles`)
+  const res = axios.get(`${API_BASE_URL}/EmployeesDetails/SubRoles`)
   return res;
 }
 
 // Retrieves all LOB leads.
 export const getLobLead = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getlobleads`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getlobleads`)
   return res;
 }
 
 // Adds a new LOB lead.
 export const addLobLead = (payload) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/lobleads`, payload)
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/lobleads`, payload)
   return res;
 };
 
 // Retrieves all company bands.
 export const getBands = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getbands`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getbands`)
   return res;
 }
 
 // Adds a new band (level/grade) to the company.
 export const addBands = (Band) => {
   const payload = { Band };
-  return axios.post(`${ApiURL}/HRFunctionality/AddBand`, payload);
+  return axios.post(`${API_BASE_URL}/HRFunctionality/AddBand`, payload);
 };
 
 // Adds a new holiday to the company holiday list.
 export const addHolidays = (payload) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/AddHoliday`, payload)
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/AddHoliday`, payload)
   return res;
 };
 
 // Retrieves the list of company subroles (HR view).
 export const getRoles = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getsubrole`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getsubrole`)
   return res;
 }
 
 // Adds a new subrole to the company.
 export const addRole = (roleName) => {
   const payload = { subRole: roleName };
-  return axios.post(`${ApiURL}/HRFunctionality/addsubrole`, payload);
+  return axios.post(`${API_BASE_URL}/HRFunctionality/addsubrole`, payload);
 };
 
 // Retrieves the list of team leads.
 export const getTeamLeadList = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getteamlead`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getteamlead`)
   return res;
 }
 
 // Adds a new team lead to the company.
 export const addTeamLead = (payload) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/addteamlead`, payload)
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/addteamlead`, payload)
   return res;
 }
 
 // Retrieves all employee data.
 export const getAllEmployeeData = () => {
   // debugger;
-  const res = axios.get(`${ApiURL}/EmployeesDetails/AllEmployeeDetails2`)
+  const res = axios.get(`${API_BASE_URL}/EmployeesDetails/AllEmployeeDetails2`)
   return res;
 }
 
 // Updates personal details for an employee (self-service).
 export const editPersonalDetails = (payload, employeeId) => {
-  const res = axios.put(`${ApiURL}/EmployeesDetails/UpdateEmployeeDetailsBySelf/${employeeId}`, payload
+  const res = axios.put(`${API_BASE_URL}/EmployeesDetails/UpdateEmployeeDetailsBySelf/${employeeId}`, payload
   );
   return res;
 }
@@ -351,7 +339,7 @@ export const updateEmployeeDetailsByHR = async (payload, employeeId) => {
   //console.log("payload ID:", payload);
 
   try {
-    const res = await axios.put(`${ApiURL}/HRFunctionality/UpdateEmployeeDetailsByHR/${employeeId}`, payload);
+    const res = await axios.put(`${API_BASE_URL}/HRFunctionality/UpdateEmployeeDetailsByHR/${employeeId}`, payload);
     // console.log("✅ Backend Response:", res.data); // <-- log it here
     return res;
   } catch (error) {
@@ -364,13 +352,13 @@ export const updateEmployeeDetailsByHR = async (payload, employeeId) => {
 
 // Retrieves the list of project names for HR.
 export const getProjectNameForHR = async () => {
-  const res = await axios.get(`${ApiURL}/HRFunctionality/getprojectname`)
+  const res = await axios.get(`${API_BASE_URL}/HRFunctionality/getprojectname`)
   return res;
 }
 
 // Retrieves the monthly report for a given month and year.
 export const getMonthlyReport = (month, year) => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/monthly-report?month=${month}&year=${year}`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/monthly-report?month=${month}&year=${year}`)
   return res;
 }
 
@@ -381,19 +369,19 @@ export const getAllEmployeeSkills = () => {
 
 // Gets the list of all projects.
 export const getProjectsDetails = () => {
-  const res = axios.get(`${ApiURL}/HRFunctionality/getallprojectdetails`);
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/getallprojectdetails`);
   return res;
 };
 
 // Adds a new project to the company.
 export const addProjects = (payload) => {
-  const res = axios.post(`${ApiURL}/HRFunctionality/AddProject`, payload)
+  const res = axios.post(`${API_BASE_URL}/HRFunctionality/AddProject`, payload)
   return res;
 }
 
 // Updates a project's details.
 export const updateProject = (payload, projectId) => {
-  const res = axios.put(`${ApiURL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
+  const res = axios.put(`${API_BASE_URL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
   );
   return res;
 }
@@ -414,14 +402,14 @@ export const resetPassword = (email, OTP, password) => {
     "newPassword": password
   }
   console.log("formData", formData);
-  const res = axios.post(`${ApiURL}/Account/ResetPassword`, formData);
+  const res = axios.post(`${API_BASE_URL}/Account/ResetPassword`, formData);
   return res;
 }
 export const sendOTP = (username) => {
-  return axios.post(`${ApiURL}/Account/SendOtp`, { username });
+  return axios.post(`${API_BASE_URL}/Account/SendOtp`, { username });
 };
 export const VerifyOtp = (otp) => {
-  return axios.post(`${ApiURL}/Account/VerifyOtp`, { otp });
+  return axios.post(`${API_BASE_URL}/Account/VerifyOtp`, { otp });
 };
 export const ResetPassword = (newPassword) => {
   return axios.post('/api/Account/ResetPassword', {
@@ -582,7 +570,7 @@ export const getCompleteEmployeeDetails = (employeeId) => {
 
 // Assign multiple evaluators to an employee
 export const assignEvaluators = (empId, evaluatorIds) => {
-  return axios.post(`${APIURLFlask}/HRFunctionality/AssignEvaluatorsToEmp`, {
+  return axios.post(`${API_BASE_URL}/HRFunctionality/AssignEvaluatorsToEmp`, {
     empId,
     evaluatorIds
   })
@@ -590,12 +578,12 @@ export const assignEvaluators = (empId, evaluatorIds) => {
 
 
 export const getAllEmployeeEvaluators = () => {
-  return axios.get(`${APIURLFlask}/HRFunctionality/GetAllEmployeeEvaluators`);
+  return axios.get(`${API_BASE_URL}/HRFunctionality/GetAllEmployeeEvaluators`);
 };
 
 // DELETE evaluator mapping for an employee
 export const deleteEvaluators = (empId) => {
-  return axios.delete(`${APIURLFlask}/HRFunctionality/DeleteEvaluators`, {
+  return axios.delete(`${API_BASE_URL}/HRFunctionality/DeleteEvaluators`, {
     data: { empId }  // `data` is required for DELETE body
   });
 };
@@ -604,28 +592,28 @@ export const deleteEvaluators = (empId) => {
 
 // Enhanced getAssignedEmployeesSkills to include assigned employees and grouped skills
 export const getAssignedEmployeesSkills = () => {
-  const res = axios.get(`${APIURLFlask}/employees/skills`);
+  const res = axios.get(`${API_BASE_URL}/employees/skills`);
   return res;
 };
 
 // New API: Submit evaluator review for each skill
 export const submitSkillReview = (payload) => {
-  return axios.post(`${APIURLFlask}/skills/review`, payload);
+  return axios.post(`${API_BASE_URL}/skills/review`, payload);
 };
 
 // New API: Submit evaluator review for each skill
 export const submitSkillReviewBatch = (payload) => {
-  return axios.post(`${APIURLFlask}/reviews/submit-batch`, payload);
+  return axios.post(`${API_BASE_URL}/reviews/submit-batch`, payload);
 };
 
 // New API: Add new skill to an employee
 export const addNewSkill = (payload) => {
-  return axios.post(`${APIURLFlask}/skills/add`, payload);
+  return axios.post(`${API_BASE_URL}/skills/add`, payload);
 };
 
 // New API: Fetch review statuses for skills
 export const getSkillReviewStatuses = (employeeId, evaluatorId) => {
-  return axios.get(`${APIURLFlask}/skills/review/status`, {
+  return axios.get(`${API_BASE_URL}/skills/review/status`, {
     params: { employeeId, evaluatorId }  // ✅ pass both
   });
 };
@@ -634,12 +622,12 @@ export const getSkillReviewStatuses = (employeeId, evaluatorId) => {
 
 // New API: Update review status for a skill
 export const updateSkillReviewStatus = (payload) => {
-  return axios.put(`${APIURLFlask}/skills/review/status`, payload);
+  return axios.put(`${API_BASE_URL}/skills/review/status`, payload);
 };
 
 
 export const sendEvaluatorReminder = (empId, evaluatorIds) => {
-  return axios.post(`${APIURLFlask}/HRFunctionality/SendEvaluatorReminder`, { empId, evaluatorIds });
+  return axios.post(`${API_BASE_URL}/HRFunctionality/SendEvaluatorReminder`, { empId, evaluatorIds });
 };
 
 
@@ -648,7 +636,7 @@ export const sendEvaluatorReminder = (empId, evaluatorIds) => {
 
 // 10.Get Employee List : Retrieves a list of all employees.
 // export const getEmployeeList = () => {
-//   const res = axios.get(`${ApiURL}/HRFunctionality/GetAllEmployees`)
+//   const res = axios.get(`${API_BASE_URL}/HRFunctionality/GetAllEmployees`)
 //   return res
 // }
 
@@ -659,12 +647,12 @@ export const getEmployeeList = () => {
 }
 
 export const getEmployeeListForEvaluators = (EvaluatorId) => {
-  const res = axios.get(`${APIURLFlask}/HRFunctionality/GetAllEmployeesForEvaluators/${EvaluatorId}`)
+  const res = axios.get(`${API_BASE_URL}/HRFunctionality/GetAllEmployeesForEvaluators/${EvaluatorId}`)
   return res
 }
 
 export const createGoal = (payload) => {
-  return axiosInstance.post(`${APIURLFlask}/goals`, payload, {
+  return axiosInstance.post(`${API_BASE_URL}/goals`, payload, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -673,7 +661,7 @@ export const createGoal = (payload) => {
 };
 
 export const getEmployeeGoals = (employeeId) => {
-  return axiosInstance.get(`${APIURLFlask}/goals/employee/${employeeId}`, {
+  return axiosInstance.get(`${API_BASE_URL}/goals/employee/${employeeId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -682,7 +670,7 @@ export const getEmployeeGoals = (employeeId) => {
 };
 
 export const updateGoal = (goalId, payload) => {
-  return axiosInstance.put(`${APIURLFlask}/goals/${goalId}`, payload, {
+  return axiosInstance.put(`${API_BASE_URL}/goals/${goalId}`, payload, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -691,7 +679,7 @@ export const updateGoal = (goalId, payload) => {
 };
 
 export const deleteGoal = (goalId) => {
-  return axiosInstance.delete(`${APIURLFlask}/goals/${goalId}`, {
+  return axiosInstance.delete(`${API_BASE_URL}/goals/${goalId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -703,7 +691,7 @@ export const deleteGoal = (goalId) => {
 
 // Get Assigned Capability Leads: Retrieves a list of all assigned capability leads
 export const getAssignedCapabilityLeads = () => {
-  return axios.get(`${APIURLFlask}/assigned-capability-leads`, {
+  return axios.get(`${API_BASE_URL}/assigned-capability-leads`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -713,7 +701,7 @@ export const getAssignedCapabilityLeads = () => {
 
 // Create Assigned Capability Lead: Creates a new assigned capability lead
 export const createAssignedCapabilityLead = (payload) => {
-  return axios.post(`${APIURLFlask}/assigned-capability-leads`, payload, {
+  return axios.post(`${API_BASE_URL}/assigned-capability-leads`, payload, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -723,7 +711,7 @@ export const createAssignedCapabilityLead = (payload) => {
 
 // Update Assigned Capability Lead: Updates an existing assigned capability lead
 export const updateAssignedCapabilityLead = (id, payload) => {
-  return axios.put(`${APIURLFlask}/assigned-capability-leads/${id}`, payload, {
+  return axios.put(`${API_BASE_URL}/assigned-capability-leads/${id}`, payload, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -733,7 +721,7 @@ export const updateAssignedCapabilityLead = (id, payload) => {
 
 // Delete Assigned Capability Lead: Deletes an assigned capability lead
 export const deleteAssignedCapabilityLead = (id) => {
-  return axios.delete(`${APIURLFlask}/assigned-capability-leads/${id}`, {
+  return axios.delete(`${API_BASE_URL}/assigned-capability-leads/${id}`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -743,7 +731,7 @@ export const deleteAssignedCapabilityLead = (id) => {
 
 // Get Capability Leads: Fetches all capability development leads
 export const getCapabilityLeads = () => {
-  return axios.get(`${APIURLFlask}/capability-leads`, {
+  return axios.get(`${API_BASE_URL}/capability-leads`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -753,7 +741,7 @@ export const getCapabilityLeads = () => {
 
 // Create Capability Lead: Adds a new capability development lead
 export const createCapabilityLead = (leadData) => {
-  return axios.post(`${APIURLFlask}/capability-leads`, leadData, {
+  return axios.post(`${API_BASE_URL}/capability-leads`, leadData, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -764,7 +752,7 @@ export const createCapabilityLead = (leadData) => {
 
 // // Update Capability Lead: Updates an existing capability development lead
 // export const updateCapabilityLead = (id, leadData) => {
-//   return axios.put(`${APIURLFlask}/capability-leads/${id}`, leadData, {
+//   return axios.put(`${API_BASE_URL}/capability-leads/${id}`, leadData, {
 //     headers: {
 //       'Content-Type': 'application/json',
 //       'Accept': 'application/json',
@@ -774,7 +762,7 @@ export const createCapabilityLead = (leadData) => {
 
 // Delete Capability Lead: Deletes a capability development lead
 export const deleteCapabilityLead = (id) => {
-  return axios.delete(`${APIURLFlask}/capability-leads/${id}`, {
+  return axios.delete(`${API_BASE_URL}/capability-leads/${id}`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -791,7 +779,7 @@ export const deleteCapabilityLead = (id) => {
 
 // Fetch employee details for relieving letter dropdown
 export const getEmployeeDetailsForRelievingLetter = () => {
-  return axios.get(`${APIURLFlask}/employeeDetailsForRelievingLetter`, {
+  return axios.get(`${API_BASE_URL}/employeeDetailsForRelievingLetter`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -801,7 +789,7 @@ export const getEmployeeDetailsForRelievingLetter = () => {
 
 // Fetch all relieving letters for HR
 export const getHrRelievingLetters = () => {
-  return axios.get(`${APIURLFlask}/hrRelievingLetters`, {
+  return axios.get(`${API_BASE_URL}/hrRelievingLetters`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -811,7 +799,7 @@ export const getHrRelievingLetters = () => {
 
 // Fetch all generated relieving letters
 export const getRelievingLetters = () => {
-  return axios.get(`${APIURLFlask}/relieving-letters`, {
+  return axios.get(`${API_BASE_URL}/relieving-letters`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -821,7 +809,7 @@ export const getRelievingLetters = () => {
 
 // Create a new relieving letter
 export const createRelievingLetter = (letterData) => {
-  return axios.post(`${APIURLFlask}/create-relieving-letter`, letterData, {
+  return axios.post(`${API_BASE_URL}/create-relieving-letter`, letterData, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -831,7 +819,7 @@ export const createRelievingLetter = (letterData) => {
 
 // Update an existing relieving letter
 export const updateRelievingLetter = (letterId, letterData) => {
-  return axios.put(`${APIURLFlask}/relievingLetter/${letterId}`, letterData, {
+  return axios.put(`${API_BASE_URL}/relievingLetter/${letterId}`, letterData, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -841,7 +829,7 @@ export const updateRelievingLetter = (letterId, letterData) => {
 
 // Send relieving letter email
 export const sendRelievingLetterEmail = (letterId) => {
-  return axios.post(`${APIURLFlask}/sendRelievingLetterEmail/${letterId}`, {}, {
+  return axios.post(`${API_BASE_URL}/sendRelievingLetterEmail/${letterId}`, {}, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -853,7 +841,7 @@ export const sendRelievingLetterEmail = (letterId) => {
 
 // Download a relieving letter PDF
 export const downloadRelievingLetter = (id) => {
-  return axios.get(`${APIURLFlask}/download-relieving-letter/${id}`, {
+  return axios.get(`${API_BASE_URL}/download-relieving-letter/${id}`, {
     responseType: 'blob',
     headers: {
       'Accept': 'application/pdf',
@@ -863,25 +851,25 @@ export const downloadRelievingLetter = (id) => {
 
 // Get all PCs
 export const getAllPCs = () => {
-  const res = axios.get(`${ApiURL}/PCs`);
+  const res = axios.get(`${API_BASE_URL}/PCs`);
   return res;
 };
 
 //Update PC
 export const updatePC = (pcId, pcData) => {
-  const res = axios.put(`${ApiURL}/PCs`, pcData);
+  const res = axios.put(`${API_BASE_URL}/PCs`, pcData);
   return res;
 };
 
 //  Delete PC
 export const deletePC = (pcId) => {
-  const res = axios.delete(`${ApiURL}/PCs/${pcId}`);
+  const res = axios.delete(`${API_BASE_URL}/PCs/${pcId}`);
   return res;
 };
 
 //handle edit
 export const handleEdit = (pcId) => {
-  const res = axios.delete(`${ApiURL}/PCs}`);
+  const res = axios.delete(`${API_BASE_URL}/PCs}`);
   return res;
 };
 
@@ -889,7 +877,7 @@ export const handleEdit = (pcId) => {
 //  Fetch all assignments
 export const fetchAssignments = async () => {
   try {
-    const res = await axios.get(`${ApiURL}/api/Assignments`);
+    const res = await axios.get(`${API_BASE_URL}/api/Assignments`);
     return res.data;
   } catch (err) {
     console.error("Error fetching assignments:", err);
@@ -900,7 +888,7 @@ export const fetchAssignments = async () => {
 //  Add a new assignment
 export const addAssignment = async (assignmentData) => {
   try {
-    const res = await axios.post(`${ApiURL}/api/Assignments`, assignmentData);
+    const res = await axios.post(`${API_BASE_URL}/api/Assignments`, assignmentData);
     return res.data;
   } catch (err) {
     console.error("Error adding assignment:", err);
@@ -911,7 +899,7 @@ export const addAssignment = async (assignmentData) => {
 // Update an assignment
 export const updateAssignment = async (assignmentID, assignmentData) => {
   try {
-    const res = await axios.put(`${ApiURL}/api/Assignments/${assignmentID}`, assignmentData);
+    const res = await axios.put(`${API_BASE_URL}/api/Assignments/${assignmentID}`, assignmentData);
     return res.data;
   } catch (err) {
     console.error("Error updating assignment:", err);
@@ -922,7 +910,7 @@ export const updateAssignment = async (assignmentID, assignmentData) => {
 //  Delete an assignment
 export const deleteAssignment = async (assignmentID) => {
   try {
-    const res = await axios.delete(`${ApiURL}/api/Assignments/${assignmentID}`);
+    const res = await axios.delete(`${API_BASE_URL}/api/Assignments/${assignmentID}`);
     return res.data;
   } catch (err) {
     console.error("Error deleting assignment:", err);

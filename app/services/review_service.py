@@ -6,7 +6,7 @@ from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
-from ..models.hr import Employee, EmployeeSkill, Skill, EmployeeEvaluators, EmployeeSkillReview
+from ..models.hr import Employee, EmployeeSkill, MasterSkill, EmployeeEvaluators, EmployeeSkillReview
 from ..utils.logger import Logger
 
 
@@ -30,7 +30,7 @@ class ReviewService:
                 func.coalesce(EmployeeSkill.skill_level, 'Secondary').label('skill_level'),
                 EmployeeSkill.self_evaluation,
                 EmployeeSkill.is_ready,
-                Skill.skill_name,
+                MasterSkill.skill_name,
                 EmployeeSkillReview.evaluator_id.label('reviewed_by_id'),
                 func.coalesce(
                     Evaluator.first_name.concat(' ').concat(Evaluator.last_name), 
@@ -41,8 +41,8 @@ class ReviewService:
                 EmployeeSkill,
                 Employee.employee_id == EmployeeSkill.employee_id
             ).outerjoin(
-                Skill,
-                EmployeeSkill.skill_id == Skill.skill_id
+                MasterSkill,
+                EmployeeSkill.skill_id == MasterSkill.skill_id
             ).outerjoin(
                 EmployeeSkillReview,
                 (EmployeeSkillReview.employee_id == Employee.employee_id) &
@@ -118,13 +118,13 @@ class ReviewService:
                     Evaluator.first_name.concat(' ').concat(Evaluator.last_name),
                     ''
                 ).label('evaluator_name'),
-                Skill.skill_name,
+                MasterSkill.skill_name,
                 EmployeeSkillReview.is_new,
                 EmployeeSkill.self_evaluation,
                 EmployeeSkill.skill_level
             ).join(
-                Skill,
-                Skill.skill_id == EmployeeSkillReview.skill_id
+                MasterSkill,
+                MasterSkill.skill_id == EmployeeSkillReview.skill_id
             ).outerjoin(
                 Evaluator,
                 Evaluator.employee_id == EmployeeSkillReview.evaluator_id
@@ -303,7 +303,7 @@ class ReviewService:
                 raise PermissionError("Evaluator not assigned to employee")
 
             # Check if skill exists using ORM
-            existing_skill = Skill.query.filter_by(skill_name=skill_name).first()
+            existing_skill = MasterSkill.query.filter_by(skill_name=skill_name).first()
             if existing_skill:
                 skill_id = existing_skill.skill_id
                 Logger.debug("Using existing skill", skill_id=skill_id)
@@ -452,7 +452,7 @@ class ReviewService:
         """Retrieves all master skills using ORM."""
         Logger.info("Retrieving master skills")
         try:
-            skills = Skill.query.filter_by(is_master_skill=True).all()
+            skills = MasterSkill.query.filter_by(is_master_skill=True).all()
             Logger.debug("Master skills retrieved", count=len(skills))
             return [
                 {"SkillId": skill.skill_id, "SkillName": skill.skill_name}

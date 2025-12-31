@@ -84,8 +84,8 @@ class AccountController:
                 Logger.warning("Login request missing JSON body")
                 return jsonify({"message": "Request body must be JSON"}), 400
             
-            username = data.get('Username', '').strip()
-            password = data.get('Password', '')
+            username = data.get('username', '').strip()
+            password = data.get('password', '')
             
             # Validate required fields
             if not username or not password:

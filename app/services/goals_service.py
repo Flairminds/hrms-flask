@@ -4,7 +4,7 @@ from typing import Dict, List
 from sqlalchemy import text, func, case
 
 from .. import db
-from ..models.hr import Employee, EmployeeGoal, Skill, LeadAssignedByHR
+from ..models.hr import Employee, EmployeeGoal, MasterSkill, LeadAssignedByHR
 from ..utils.logger import Logger
 
 class GoalsService:
@@ -34,15 +34,15 @@ class GoalsService:
 
         # Resolve / create skill using ORM
         if custom_skill_name:
-            existing_skill = Skill.query.filter_by(
+            existing_skill = MasterSkill.query.filter_by(
                 skill_name=custom_skill_name,
                 skill_type='Other'
             ).first()
             
             if not existing_skill:
                 # Get max skill_id and create new skill
-                max_skill_id = db.session.query(func.max(Skill.skill_id)).scalar() or 0
-                new_skill = Skill(
+                max_skill_id = db.session.query(func.max(MasterSkill.skill_id)).scalar() or 0
+                new_skill = MasterSkill(
                     skill_id=max_skill_id + 1,
                     skill_name=custom_skill_name,
                     skill_type='Other'
@@ -54,7 +54,7 @@ class GoalsService:
                 skill_id = existing_skill.skill_id
         else:
             # Validate existing skill using ORM
-            existing_skill = Skill.query.filter_by(skill_id=skill_id).first()
+            existing_skill = MasterSkill.query.filter_by(skill_id=skill_id).first()
             if not existing_skill:
                 raise ValueError(f"Skill {skill_id} not found")
 
@@ -127,20 +127,20 @@ class GoalsService:
             EmployeeGoal.employee_id,
             (EmployeeAlias.first_name + ' ' + EmployeeAlias.last_name).label('employee_name'),
             EmployeeGoal.skill_id,
-            Skill.skill_name,
+            MasterSkill.skill_name,
             EmployeeGoal.target_date,
             EmployeeGoal.set_by_employee_id,
             (SetByAlias.first_name + ' ' + SetByAlias.last_name).label('set_by_name'),
             case(
                 (EmployeeGoal.employee_id == EmployeeGoal.set_by_employee_id, 'self_'),
                 else_='others_'
-            ).concat(Skill.skill_type).label('goal_type')
+            ).concat(MasterSkill.skill_type).label('goal_type')
         ).join(
             EmployeeAlias,
             EmployeeGoal.employee_id == EmployeeAlias.employee_id
         ).join(
-            Skill,
-            EmployeeGoal.skill_id == Skill.skill_id
+            MasterSkill,
+            EmployeeGoal.skill_id == MasterSkill.skill_id
         ).join(
             SetByAlias,
             EmployeeGoal.set_by_employee_id == SetByAlias.employee_id
@@ -188,14 +188,14 @@ class GoalsService:
 
         # Handle custom skill using ORM
         if custom_skill_name:
-            existing_skill = Skill.query.filter_by(
+            existing_skill = MasterSkill.query.filter_by(
                 skill_name=custom_skill_name,
                 skill_type='Other'
             ).first()
             
             if not existing_skill:
-                max_skill_id = db.session.query(func.max(Skill.skill_id)).scalar() or 0
-                new_skill = Skill(
+                max_skill_id = db.session.query(func.max(MasterSkill.skill_id)).scalar() or 0
+                new_skill = MasterSkill(
                     skill_id=max_skill_id + 1,
                     skill_name=custom_skill_name,
                     skill_type='Other'
@@ -207,7 +207,7 @@ class GoalsService:
                 skill_id = existing_skill.skill_id
         elif skill_id:
             # Validate existing skill using ORM
-            existing_skill = Skill.query.filter_by(skill_id=skill_id).first()
+            existing_skill = MasterSkill.query.filter_by(skill_id=skill_id).first()
             if not existing_skill:
                 raise ValueError(f"Skill {skill_id} not found")
 

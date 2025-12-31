@@ -9,6 +9,7 @@ import { AuthContext } from '../../context/context';
 import { setCookie } from '../../util/CookieSet';
 import { Button } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { loginUser } from '../../services/api';
 
 export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) => {
   const [email, setEmail] = useState('');
@@ -16,8 +17,8 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
   const [rememberMe, setRememberMe] = useState(true);
   const [validationMessage, setValidationMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
-  const[loader,setLoader]= useState(false)
+
+  const [loader, setLoader] = useState(false)
   // const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -36,7 +37,7 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
   const handleRememberMeChange = (event) => {
     setRememberMe(event.target.checked);
   };
- 
+
   const handleSubmit = async (event) => {
     setLoader(true)
     event.preventDefault();
@@ -47,11 +48,7 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
     }
     setValidationMessage('');
     try {
-      const username = email;
-      const response = await axiosInstance.post('/Account/Login', {
-        username: email,
-        password: password,
-      });      
+      const response = await loginUser(email, password);
       setIsRole(response.data.roleName)
       const roleName = response.data.roleName
 
@@ -59,25 +56,14 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
       setCookie('isAuthenticated', 'true');
       setCookie('role', roleName);
       setCookie('employeeId', employeeId);
-      if (rememberMe) {
-        localStorage.setItem('loginEmail', email);
-        localStorage.setItem('loginPassword', password);
-        setCookie('employeeId', employeeId);
-      } else {
-        localStorage.removeItem('loginEmail');
-        localStorage.removeItem('loginPassword');
-        setCookie('employeeId', employeeId);
-      }
-      setEmail('');
-      setPassword('');
       setIsAuthenticated(true);
       navigate('/personalInfo');
     } catch (error) {
       console.error('There was a problem with the axios operation:', error);
       toast.error('Login failed. Please check your credentials and try again.');
-    }finally {
-      setLoader(false); 
-  }
+    } finally {
+      setLoader(false);
+    }
   };
   useEffect(() => {
     const storedEmail = localStorage.getItem('loginEmail');
@@ -103,9 +89,9 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
       <div className={styles.midContainer}>
         <div className={styles.imageContainer}>
           <div className={styles.headingContainer}>
-          <div className={styles.heading}>
+            <div className={styles.heading}>
               {/* <b>Flairminds</b> */}
-              <img src="https://media.giphy.com/media/26xBKuuVuNxp8seTS/giphy.gif" style={{height:"200px",width:"200px"}} alt="GIF" />
+              <img src="https://media.giphy.com/media/26xBKuuVuNxp8seTS/giphy.gif" style={{ height: "200px", width: "200px" }} alt="GIF" />
             </div>
             <div className={styles.companySlogan}>
               <p>
@@ -137,15 +123,15 @@ export const LoginPage = ({ setIsRole, isAuthenticated, setIsAuthenticated }) =>
               <div className={styles.inputContainer1}>
                 <label htmlFor="password"></label>
                 <input
-                    type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   value={password}
                   placeholder="Password"
                   onChange={handlePasswordChange}
                   className={styles.input}
                 />
-                 <span onClick={handleShowPasswordChange} className={styles.eyeIcon}>
-                  {showPassword ?  <EyeOutlined />  : <EyeInvisibleOutlined />}
+                <span onClick={handleShowPasswordChange} className={styles.eyeIcon}>
+                  {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                 </span>
               </div>
 

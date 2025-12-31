@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 0ccb6d5e2842
+Revision ID: 5ce6343d70be
 Revises: 
-Create Date: 2025-12-31 12:30:38.797222
+Create Date: 2025-12-31 13:02:47.594456
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0ccb6d5e2842'
+revision = '5ce6343d70be'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -283,6 +283,21 @@ def upgrade():
     sa.PrimaryKeyConstraint('role_id'),
     sa.UniqueConstraint('role_name', name='uq_role_name')
     )
+    op.create_table('master_skills',
+    sa.Column('skill_id', sa.Integer(), nullable=False),
+    sa.Column('skill_name', sa.String(length=100), nullable=False),
+    sa.Column('skill_type', sa.String(length=50), nullable=False),
+    sa.Column('skill_category', sa.String(length=255), nullable=True),
+    sa.Column('is_master_skill', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('skill_id'),
+    sa.UniqueConstraint('skill_name', name='uq_skill_name')
+    )
     op.create_table('master_sub_role',
     sa.Column('sub_role_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('sub_role_name', sa.String(length=100), nullable=True),
@@ -364,20 +379,6 @@ def upgrade():
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('project_id')
-    )
-    op.create_table('skill',
-    sa.Column('skill_id', sa.Integer(), nullable=False),
-    sa.Column('skill_name', sa.String(length=100), nullable=False),
-    sa.Column('skill_type', sa.String(length=50), nullable=False),
-    sa.Column('skill_category', sa.String(length=255), nullable=True),
-    sa.Column('is_master_skill', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('skill_id')
     )
     op.create_table('wfh_check_list',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
@@ -684,7 +685,7 @@ def upgrade():
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['set_by_employee_id'], ['employee.employee_id'], ),
-    sa.ForeignKeyConstraint(['skill_id'], ['skill.skill_id'], ),
+    sa.ForeignKeyConstraint(['skill_id'], ['master_skills.skill_id'], ),
     sa.PrimaryKeyConstraint('goal_id')
     )
     op.create_table('employee_policy_acknowledgement_status',
@@ -764,7 +765,7 @@ def upgrade():
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
-    sa.ForeignKeyConstraint(['skill_id'], ['skill.skill_id'], ),
+    sa.ForeignKeyConstraint(['skill_id'], ['master_skills.skill_id'], ),
     sa.PrimaryKeyConstraint('employee_skill_id'),
     sa.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill')
     )
@@ -948,13 +949,13 @@ def downgrade():
     op.drop_table('comp_off_transaction')
     op.drop_table('work_categories')
     op.drop_table('wfh_check_list')
-    op.drop_table('skill')
     op.drop_table('project_list')
     op.drop_table('peripherals')
     op.drop_table('pcs')
     op.drop_table('pc_assignments')
     op.drop_table('otp_requests')
     op.drop_table('master_sub_role')
+    op.drop_table('master_skills')
     op.drop_table('master_role')
     op.drop_table('lob')
     op.drop_table('leave_type_master')

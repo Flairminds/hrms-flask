@@ -4,7 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
-from ..models.hr import Employee, EmployeeSkill, Skill
+from ..models.hr import Employee, EmployeeSkill, MasterSkill
 from ..utils.logger import Logger
 
 
@@ -201,12 +201,12 @@ class SkillsService:
                 EmployeeSkill.skill_id,
                 EmployeeSkill.skill_level,
                 EmployeeSkill.self_evaluation,
-                Skill.skill_name,
+                MasterSkill.skill_name,
                 EmployeeSkill.is_ready,
                 EmployeeSkill.is_ready_date
             ).join(
-                Skill,
-                EmployeeSkill.skill_id == Skill.skill_id
+                MasterSkill,
+                EmployeeSkill.skill_id == MasterSkill.skill_id
             ).filter(
                 EmployeeSkill.employee_id == employee_id
             ).all()
@@ -264,7 +264,7 @@ class SkillsService:
                 Employee.is_lead,
                 Employee.full_stack_ready,
                 EmployeeSkill.skill_id,
-                Skill.skill_name,
+                MasterSkill.skill_name,
                 EmployeeSkill.skill_level,
                 EmployeeSkill.is_ready,
                 EmployeeSkill.is_ready_date,
@@ -273,8 +273,8 @@ class SkillsService:
                 EmployeeSkill,
                 Employee.employee_id == EmployeeSkill.employee_id
             ).outerjoin(
-                Skill,
-                EmployeeSkill.skill_id == Skill.skill_id
+                MasterSkill,
+                EmployeeSkill.skill_id == MasterSkill.skill_id
             ).all()
 
             employees_dict = {}

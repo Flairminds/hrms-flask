@@ -57,13 +57,18 @@ class EmployeeAddress(BaseModel):
     )
 
 
-class Skill(BaseModel):
-    __tablename__ = 'skill'
+class MasterSkill(BaseModel):
+    __tablename__ = 'master_skills'
     skill_id = db.Column(db.Integer, primary_key=True)
     skill_name = db.Column(db.String(100), nullable=False)
     skill_type = db.Column(db.String(50), nullable=False, default='Technical')
     skill_category = db.Column(db.String(255))
     is_master_skill = db.Column(db.Boolean)
+
+    __table_args__ = (
+        db.UniqueConstraint('skill_name', name='uq_skill_name'),
+        {}
+    )
 
 
 class EmployeeSkill(BaseModel):
@@ -81,7 +86,7 @@ class EmployeeSkill(BaseModel):
     __table_args__ = (
         db.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill'),
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
-        db.ForeignKeyConstraint(['skill_id'], ['skill.skill_id']),
+        db.ForeignKeyConstraint(['skill_id'], ['master_skills.skill_id']),
         {}
     )
 
@@ -233,7 +238,7 @@ class EmployeeGoal(BaseModel):
     __tablename__ = 'employee_goal'
     goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    skill_id = db.Column(db.Integer, db.ForeignKey('skill.skill_id'), nullable=False)
+    skill_id = db.Column(db.Integer, db.ForeignKey('master_skills.skill_id'), nullable=False)
     target_date = db.Column(db.DateTime, nullable=False)
     set_by_employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     created_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())

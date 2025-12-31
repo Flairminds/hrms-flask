@@ -110,8 +110,8 @@ class AccountService:
                 EmployeeRole,
                 Employee.employee_id == EmployeeRole.employee_id
             ).join(
-                Role,
-                EmployeeRole.role_id == Role.role_id
+                MasterRole,
+                EmployeeRole.role_id == MasterRole.role_id
             ).filter(
                 or_(Employee.employee_id == username, Employee.email == username)
             ).first()

@@ -3,7 +3,7 @@ from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from ... import db
-from ...models.hr import (Employee, Skill, EmployeeSkill, Designation, 
+from ...models.hr import (Employee, MasterSkill, EmployeeSkill, Designation, 
                           MasterSubRole, EmployeeRole, MasterRole, Lob)
 from ...utils.logger import Logger
 
@@ -12,7 +12,7 @@ class RoleService:
     def get_all_skills() -> List[Dict[str, Any]]:
         """Retrieves all available skills."""
         try:
-            skills = Skill.query.with_entities(Skill.skill_id, Skill.skill_name).all()
+            skills = MasterSkill.query.with_entities(MasterSkill.skill_id, MasterSkill.skill_name).all()
             return [{'skill_id': s.skill_id, 'skill_name': s.skill_name} for s in skills]
         except Exception as e:
             Logger.error("Error fetching all skills", error=str(e))
