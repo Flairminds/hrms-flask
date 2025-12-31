@@ -5,11 +5,12 @@ This module provides business logic for login validation, OTP generation/verific
 and password reset operations.
 """
 
-import random
+import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..models.account import db, OTPRequest
 from ..models.hr import Employee, EmployeeRole, Role, EmployeeCredentials
@@ -20,6 +21,7 @@ from sqlalchemy import or_, and_
 # OTP Configuration Constants
 OTP_LENGTH = 6
 OTP_EXPIRY_MINUTES = 10
+OTP_MAX_ATTEMPTS = 5
 
 
 class AccountService:
@@ -93,13 +95,14 @@ class AccountService:
         Logger.info("Validating user credentials", username=username)
         
         try:
-            # Use SQLAlchemy ORM with joins
-            result = db.session.query(
+            # Fetch user with credentials using SQLAlchemy ORM
+            user_data = db.session.query(
                 Employee.employee_id,
                 (Employee.first_name + ' ' + Employee.last_name).label('full_name'),
                 Employee.email,
                 Role.role_name,
-                Employee.employment_status
+                Employee.employment_status,
+                EmployeeCredentials.password_hash
             ).join(
                 EmployeeCredentials,
                 Employee.employee_id == EmployeeCredentials.employee_id
@@ -110,19 +113,31 @@ class AccountService:
                 Role,
                 EmployeeRole.role_id == Role.role_id
             ).filter(
-                and_(
-                    or_(Employee.employee_id == username, Employee.email == username),
-                    EmployeeCredentials.password == password
-                )
+                or_(Employee.employee_id == username, Employee.email == username)
             ).first()
             
-            if result:
-                Logger.info("User validation successful", 
-                           username=username, 
-                           employee_id=result.employee_id,
-                           role=result.role_name)
-            else:
-                Logger.warning("User validation failed - invalid credentials", username=username)
+            if not user_data:
+                Logger.warning("User validation failed - user not found", username=username)
+                return None
+            
+            # Verify password hash
+            if not check_password_hash(user_data.password_hash, password):
+                Logger.warning("User validation failed - invalid password", username=username)
+                return None
+            
+            # Create result tuple without password_hash
+            result = type('UserData', (), {
+                'employee_id': user_data.employee_id,
+                'full_name': user_data.full_name,
+                'email': user_data.email,
+                'role_name': user_data.role_name,
+                'employment_status': user_data.employment_status
+            })()
+            
+            Logger.info("User validation successful", 
+                       username=username, 
+                       employee_id=result.employee_id,
+                       role=result.role_name)
             
             return result
             
@@ -228,12 +243,13 @@ class AccountService:
             if deleted_count > 0:
                 Logger.debug("Deleted existing OTPs", username=username, count=deleted_count)
             
-            # Create new OTP record
+            # Create new OTP record with timezone-aware datetime
             new_otp = OTPRequest(
                 username=username,
                 otp=otp,
-                expiry_time=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
-                is_verified=False
+                expiry_time=datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES),
+                is_verified=False,
+                attempt_count=0
             )
             db.session.add(new_otp)
             db.session.commit()
@@ -300,17 +316,35 @@ class AccountService:
                 Logger.warning("OTP not found", username=username)
                 return False
             
-            if otp_request.expiry_time <= datetime.utcnow():
-                Logger.warning("OTP expired", 
+            # Check if maximum attempts exceeded
+            if otp_request.attempt_count >= OTP_MAX_ATTEMPTS:
+                Logger.warning("OTP max attempts exceeded", 
                               username=username,
-                              expired_at=otp_request.expiry_time.isoformat())
+                              attempts=otp_request.attempt_count)
                 return False
             
-            # Mark OTP as verified
+            # Check if OTP expired (using timezone-aware comparison)
+            current_time = datetime.now(timezone.utc)
+            if otp_request.expiry_time <= current_time:
+                # Increment attempt count even for expired OTP
+                otp_request.attempt_count += 1
+                db.session.commit()
+                Logger.warning("OTP expired", 
+                              username=username,
+                              expired_at=otp_request.expiry_time.isoformat(),
+                              attempts=otp_request.attempt_count)
+                return False
+            
+            # Increment attempt count
+            otp_request.attempt_count += 1
+            
+            # Mark OTP as verified on successful verification
             otp_request.is_verified = True
             db.session.commit()
             
-            Logger.info("OTP verified successfully", username=username)
+            Logger.info("OTP verified successfully", 
+                       username=username,
+                       attempts=otp_request.attempt_count)
             return True
             
         except SQLAlchemyError as e:
@@ -331,35 +365,42 @@ class AccountService:
         """
         Resets user password and cleans up used OTP.
         
-        Updates employee password in credentials table and deletes
+        Updates employee password in credentials table (with secure hashing) and deletes
         associated OTP records after successful reset.
         
         Args:
             username: Employee ID or email of user
-            new_password: New password (should be hashed in production)
+            new_password: New password in plain text (will be hashed before storage)
         
         Returns:
             True if password reset successful, False if user not found or error
         
         Raises:
-            ValueError: If username or new_password is empty
+            ValueError: If username or new_password is empty or password is too weak
         
         Example:
-            >>> if AccountService.reset_password('john@example.com', 'new_password'):
+            >>> if AccountService.reset_password('john@example.com', 'SecurePass123!'):
             ...     send_confirmation_email(email)
         
         Note:
-            This method does not validate password strength.
-            Caller should validate password meets security requirements.
+            Password is hashed using werkzeug.security before storage.
             All OTPs for user are deleted after successful reset.
         
         Security:
-            Password should be hashed before storing. Current implementation
-            stores plain text - THIS IS INSECURE AND SHOULD BE FIXED.
+            - Password is hashed using PBKDF2-SHA256 (werkzeug default)
+            - Minimum password length enforced (8 characters)
+            - Hash includes salt for additional security
         """
         if not username or not new_password:
             Logger.error("Password reset attempted with empty username or password")
             raise ValueError("Username and new password are required")
+        
+        # Validate password strength (minimum 8 characters)
+        if len(new_password) < 8:
+            Logger.warning("Password reset failed - password too short", 
+                          username=username,
+                          password_length=len(new_password))
+            raise ValueError("Password must be at least 8 characters long")
         
         Logger.info("Resetting password", username=username)
         
@@ -373,8 +414,7 @@ class AccountService:
                 Logger.warning("Password reset failed - employee not found", username=username)
                 return False
             
-            # TODO: Hash password before storing (SECURITY ISSUE)
-            # Update password in credentials table
+            # Update password in credentials table with secure hash
             credentials = EmployeeCredentials.query.filter_by(
                 employee_id=employee.employee_id
             ).first()
@@ -385,7 +425,12 @@ class AccountService:
                             employee_id=employee.employee_id)
                 return False
             
-            credentials.password = new_password
+            # Hash password before storing (SECURITY: using PBKDF2-SHA256)
+            credentials.password_hash = generate_password_hash(
+                new_password,
+                method='pbkdf2:sha256',
+                salt_length=16
+            )
             
             # Clean up OTPs after successful reset
             deleted_otps = OTPRequest.query.filter_by(username=username).delete()
@@ -416,9 +461,10 @@ class AccountService:
     @staticmethod
     def generate_otp(length: int = OTP_LENGTH) -> str:
         """
-        Generates a random numeric OTP.
+        Generates a cryptographically secure random numeric OTP.
         
-        Creates a cryptographically random OTP string consisting only of digits.
+        Creates a cryptographically secure random OTP string consisting only of digits
+        using the secrets module for enhanced security.
         
         Args:
             length: Length of OTP to generate. Defaults to OTP_LENGTH (6).
@@ -437,13 +483,15 @@ class AccountService:
             >>> print(otp.isdigit())
             True
         
-        Note:
-            Uses random.choices which is cryptographically secure enough
-            for OTPs. For production, consider using secrets module.
+        Security:
+            Uses secrets module which is cryptographically secure and suitable
+            for managing data such as passwords, account authentication, security
+            tokens, and related secrets.
         """
         if length < 4 or length > 10:
             raise ValueError("OTP length must be between 4 and 10")
         
-        otp = ''.join(random.choices(string.digits, k=length))
+        # Use secrets module for cryptographically secure random number generation
+        otp = ''.join(secrets.choice(string.digits) for _ in range(length))
         Logger.debug("OTP generated", length=length)
         return otp

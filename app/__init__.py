@@ -1,4 +1,5 @@
-from flask import Flask
+import os
+from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -8,12 +9,36 @@ db = SQLAlchemy()
 migrate = Migrate()
 
 def create_app(config_name):
-    app = Flask(__name__)
+    # Determine frontend build folder path
+    frontend_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
+    
+    # Check if production build exists
+    has_build = os.path.exists(frontend_folder) and os.path.exists(os.path.join(frontend_folder, 'index.html'))
+    
+    # Configure Flask to serve React build if it exists
+    if has_build:
+        app = Flask(
+            __name__,
+            static_folder=frontend_folder,
+            static_url_path='',
+            template_folder=frontend_folder
+        )
+        print(f"✓ Frontend build found at: {frontend_folder}")
+    else:
+        app = Flask(__name__)
+        print(f"⚠ No frontend build found at: {frontend_folder}")
+        print("  Run 'cd frontend && npm run build' to create production build")
+    
     app.config.from_object(config_by_name[config_name])
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
+    
+    # Enable CORS for development (when React runs on different port)
+    # In production with same origin, CORS is not needed
+    if not has_build or config_name == 'dev':
+        CORS(app)
+        print("✓ CORS enabled for development")
     
     # Initialize Scheduler
     from .services.scheduler_service import scheduler, register_jobs
@@ -49,7 +74,7 @@ def create_app(config_name):
     # Register API blueprints
     app.register_blueprint(account_bp, url_prefix='/api/account')
     app.register_blueprint(leave_bp, url_prefix='/api/leave')
-    app.register_blueprint(hr_bp, url_prefix='/api/hr-functionality')
+    app.register_blueprint(hr_bp, url_prefix='/api/hr')
     app.register_blueprint(assets_bp, url_prefix='/api/assets')
     app.register_blueprint(profile_bp, url_prefix='/api/employees-details')
     app.register_blueprint(feedback_bp, url_prefix='/api/lead-functionality')
@@ -63,5 +88,22 @@ def create_app(config_name):
     app.register_blueprint(project_bp, url_prefix='/api/project')
     app.register_blueprint(allocation_bp, url_prefix='/api/allocation')
 
+    # Serve React App (if production build exists)
+    if has_build:
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_react_app(path):
+            # If path is for API, it's already handled by blueprints
+            # This catch-all route handles:
+            # 1. Static assets (JS, CSS, images)
+            # 2. React Router routes (serve index.html)
+            
+            # If file exists in build folder, serve it (static assets)
+            if path and os.path.exists(os.path.join(app.static_folder, path)):
+                return send_from_directory(app.static_folder, path)
+            
+            # Otherwise serve index.html for React Router to handle
+            return send_from_directory(app.static_folder, 'index.html')
 
     return app
+

@@ -15,6 +15,11 @@ def get_all_employees():
 def upsert_employee():
     return HRController.upsert_employee()
 
+@hr_bp.route('/insert-employee', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['hr'])
+def insert_employee():
+    return HRController.insert_employee()
+
 @hr_bp.route('/monthly-report', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr'])
 def get_monthly_report():

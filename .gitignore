@@ -5,3 +5,7 @@ __pycache__
 .pytest_cache
 uploads
 .flaskenv
+
+# React build output
+frontend/dist/
+frontend/.env.local

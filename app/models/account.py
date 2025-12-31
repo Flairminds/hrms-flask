@@ -10,4 +10,5 @@ class OTPRequest(BaseModel):
     otp = db.Column(db.String(10), nullable=False)
     expiry_time = db.Column(db.DateTime, nullable=False)
     is_verified = db.Column(db.Boolean, default=False)
+    attempt_count = db.Column(db.Integer, default=0, nullable=False)
 

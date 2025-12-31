@@ -2,19 +2,21 @@ import OTP from 'antd/es/input/OTP';
 import axios from 'axios';
 import moment from "moment";
 
-// Axios instance using production API base URL
+// Use environment variable for API base URL
+// In development: http://localhost:5000/api (via proxy)
+// In production: /api (relative path, same origin)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Axios instance using environment-based API base URL
 export const axiosInstance = axios.create({
-  baseURL: 'https://hrms.flairminds.com/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Direct API URL (if needed elsewhere)
+// Legacy API URLs - will be migrated to use API_BASE_URL
 const ApiURL = 'https://hrms.flairminds.com/api';
-//const ApiURL = 'http://localhost:8091/api';
-
-
 
 // Flask API URL (production only)
 export const APIURLFlask = 'https://hrms-flask.azurewebsites.net/api';
@@ -36,7 +38,7 @@ export const loginUser = (username, password) => {
 }
 
 // 2.Get Employee Details :-Fetches detailed information for a given employee by their ID.
-export const getEmployeeDetails = (employeeId) => { 
+export const getEmployeeDetails = (employeeId) => {
   return axios.get(`${ApiURL}/EmployeesDetails/${employeeId}`);
 };
 
@@ -321,16 +323,16 @@ export const addTeamLead = (payload) => {
 
 // Retrieves all employee data.
 export const getAllEmployeeData = () => {
- // debugger;
+  // debugger;
   const res = axios.get(`${ApiURL}/EmployeesDetails/AllEmployeeDetails2`)
   return res;
 }
 
 // Updates personal details for an employee (self-service).
-export const editPersonalDetails =(payload,employeeId) =>{
-  const res =  axios.put(`${ApiURL}/EmployeesDetails/UpdateEmployeeDetailsBySelf/${employeeId}`, payload
+export const editPersonalDetails = (payload, employeeId) => {
+  const res = axios.put(`${ApiURL}/EmployeesDetails/UpdateEmployeeDetailsBySelf/${employeeId}`, payload
   );
-  return res;  
+  return res;
 }
 
 // Updates employee details for an employee (HR service).
@@ -338,10 +340,10 @@ export const updateEmployeeDetailsByHR = async (payload, employeeId) => {
   const updatedPayload = {
     updateEmployeeDetails: {
       ...payload,
-    dateOfResignation: payload.dateOfResignation ? moment(payload.dateOfResignation).format('YYYY-MM-DD') : null,
-internshipEndDate: payload.internshipEndDate ? moment(payload.internshipEndDate).format('YYYY-MM-DD') : null,
-lwd: payload.lwd ? moment(payload.lwd).format('YYYY-MM-DD') : null,
-probationEndDate: payload.probationEndDate ? moment(payload.probationEndDate).format('YYYY-MM-DD') : null,
+      dateOfResignation: payload.dateOfResignation ? moment(payload.dateOfResignation).format('YYYY-MM-DD') : null,
+      internshipEndDate: payload.internshipEndDate ? moment(payload.internshipEndDate).format('YYYY-MM-DD') : null,
+      lwd: payload.lwd ? moment(payload.lwd).format('YYYY-MM-DD') : null,
+      probationEndDate: payload.probationEndDate ? moment(payload.probationEndDate).format('YYYY-MM-DD') : null,
     }
   };
 
@@ -349,13 +351,13 @@ probationEndDate: payload.probationEndDate ? moment(payload.probationEndDate).fo
   //console.log("payload ID:", payload);
 
   try {
-  const res = await axios.put(`${ApiURL}/HRFunctionality/UpdateEmployeeDetailsByHR/${employeeId}`, payload);
- // console.log("✅ Backend Response:", res.data); // <-- log it here
-  return res;
-} catch (error) {
- 
-  throw error;
-}
+    const res = await axios.put(`${ApiURL}/HRFunctionality/UpdateEmployeeDetailsByHR/${employeeId}`, payload);
+    // console.log("✅ Backend Response:", res.data); // <-- log it here
+    return res;
+  } catch (error) {
+
+    throw error;
+  }
 };
 
 
@@ -367,7 +369,7 @@ export const getProjectNameForHR = async () => {
 }
 
 // Retrieves the monthly report for a given month and year.
-export const getMonthlyReport = (month,year) => {
+export const getMonthlyReport = (month, year) => {
   const res = axios.get(`${ApiURL}/HRFunctionality/monthly-report?month=${month}&year=${year}`)
   return res;
 }
@@ -390,10 +392,10 @@ export const addProjects = (payload) => {
 }
 
 // Updates a project's details.
-export const updateProject=(payload,projectId) =>{
-  const res =  axios.put(`${ApiURL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
+export const updateProject = (payload, projectId) => {
+  const res = axios.put(`${ApiURL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
   );
-  return res;  
+  return res;
 }
 
 // Gets the roles of an employee.
@@ -405,17 +407,17 @@ export const getEmployeeRoles = (employeeId) => {
 };
 
 // Resets a user's password.
-export const resetPassword = (email,OTP,password) => {
+export const resetPassword = (email, OTP, password) => {
   const formData = {
     "username": email,
     "otp": OTP,
     "newPassword": password
   }
-  console.log("formData",formData);
-  const res = axios.post(`${ApiURL}/Account/ResetPassword`,formData);
+  console.log("formData", formData);
+  const res = axios.post(`${ApiURL}/Account/ResetPassword`, formData);
   return res;
 }
-export const sendOTP = (username) => { 
+export const sendOTP = (username) => {
   return axios.post(`${ApiURL}/Account/SendOtp`, { username });
 };
 export const VerifyOtp = (otp) => {
@@ -428,10 +430,10 @@ export const ResetPassword = (newPassword) => {
 };
 
 // Retrieves salary data for a given month and year.
-export const viewSalaryData = (month,year) => {
+export const viewSalaryData = (month, year) => {
   const res = axios.post(`https://salary-slip-backend.azurewebsites.net/api/retrieve_by_month`, {
-    year:year,
-    month:month
+    year: year,
+    month: month
   })
   return res;
 }
@@ -440,7 +442,7 @@ export const viewSalaryData = (month,year) => {
 export const uploadSalarySlip = (selectedFiles) => {
   const formData = new FormData();
   formData.append('file', selectedFiles);
-  const res = axios.post(`https://salary-slip-backend.azurewebsites.net/api/upload`,formData,{
+  const res = axios.post(`https://salary-slip-backend.azurewebsites.net/api/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data', // This is automatically set when using FormData
     },
@@ -449,52 +451,52 @@ export const uploadSalarySlip = (selectedFiles) => {
 }
 
 // Downloads a salary slip in PDF format.
-export const downloadSalarySlip = (employeeId,month,year) => {
+export const downloadSalarySlip = (employeeId, month, year) => {
   const res = axios.post(`https://salary-slip-backend.azurewebsites.net/api/download_employee_details_viaPDF`, {
-    year:year,
-    month:month,
-    employee_id:employeeId
+    year: year,
+    month: month,
+    employee_id: employeeId
   })
   return res;
 }
 
 // Downloads a salary slip via email.
-export const downloadSalarySlipViaEmail = (employeeId,month,year) => {
+export const downloadSalarySlipViaEmail = (employeeId, month, year) => {
   const res = axios.post(`https://salary-slip-backend.azurewebsites.net/api/download_employee_details_email`, {
-    year:year,
-    month:month,
-    employee_id:employeeId
+    year: year,
+    month: month,
+    employee_id: employeeId
   })
   return res;
 }
 
 // Adds or updates a skill for an employee.
 export const addUpdateSkill = (payload) => {
-  const res =  axios.post(`https://hrms-flask.azurewebsites.net/api/add-update-skills`, payload, {
+  const res = axios.post(`https://hrms-flask.azurewebsites.net/api/add-update-skills`, payload, {
     headers: {
       // "Accept":"application/json",
       // "Content-Type": "application/x-www-form-urlencoded", // Avoid "application/json"
     }
-  }); 
+  });
   return res
 };
 
 // Gets the skills of an employee.
-export const getSkillsForEmp =(employeeId) =>{
-  const res =  axios.get(`https://hrms-flask.azurewebsites.net/api/employee-skills/${employeeId}`
+export const getSkillsForEmp = (employeeId) => {
+  const res = axios.get(`https://hrms-flask.azurewebsites.net/api/employee-skills/${employeeId}`
   );
-  return res;  
+  return res;
 }
 
 // Gets the skills of all employees.
-export const getSkillsForAllEmp =() =>{
-  const res =  axios.get(`https://hrms-flask.azurewebsites.net/api/employees`
+export const getSkillsForAllEmp = () => {
+  const res = axios.get(`https://hrms-flask.azurewebsites.net/api/employees`
   );
-  return res;  
+  return res;
 }
 
 // Gets the documents of an employee.
-export const getDocuments = (employeeId,docType) => {
+export const getDocuments = (employeeId, docType) => {
   return axios.get(`https://hrms-flask.azurewebsites.net/api/get-document/${employeeId}/${docType}`, {
     responseType: "blob",
   });
@@ -502,24 +504,24 @@ export const getDocuments = (employeeId,docType) => {
 
 // Deletes a document for an employee.
 export const deleteDocument = (employeeId, docType) => {
-  const res =  axios.delete("https://hrms-flask.azurewebsites.net/api/delete-document", {
+  const res = axios.delete("https://hrms-flask.azurewebsites.net/api/delete-document", {
     // headers: { "Content-Type": "application/json" },
     withCredentials: true,
     params: { employeeId, docType }, // Sending as query params
-  }); 
+  });
   return res;
 };
 
 // Gets the document status of an employee.
 export const getDocStatus = (employeeId) => {
-  const res = axios.get(`https://hrms-flask.azurewebsites.net/api/document-status/${employeeId}`, 
+  const res = axios.get(`https://hrms-flask.azurewebsites.net/api/document-status/${employeeId}`,
   );
   return res;
 };
 
 // Gets the document records of all employees.
 export const getEmpDocRecords = () => {
-  const res = axios.get("https://hrms-flask.azurewebsites.net/api/all-employees", 
+  const res = axios.get("https://hrms-flask.azurewebsites.net/api/all-employees",
   );
   return res;
 };
@@ -579,8 +581,8 @@ export const getCompleteEmployeeDetails = (employeeId) => {
 
 
 // Assign multiple evaluators to an employee
-export const assignEvaluators  = (empId, evaluatorIds) =>{
-  return axios.post(`${APIURLFlask}/HRFunctionality/AssignEvaluatorsToEmp`,{ 
+export const assignEvaluators = (empId, evaluatorIds) => {
+  return axios.post(`${APIURLFlask}/HRFunctionality/AssignEvaluatorsToEmp`, {
     empId,
     evaluatorIds
   })

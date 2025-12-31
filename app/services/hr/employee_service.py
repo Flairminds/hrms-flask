@@ -1,7 +1,8 @@
 from typing import List, Dict, Any, Optional
-from sqlalchemy import text, func, case
+from sqlalchemy import text, func, case, or_, and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from datetime import datetime, date
+from werkzeug.security import generate_password_hash
 
 from ... import db
 from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, Skill,
@@ -607,16 +608,66 @@ class EmployeeService:
     @staticmethod
     def insert_employee(employee_data: Dict[str, Any]) -> str:
         """
-        Inserts new employee with addresses and skills.
+        Inserts new employee with addresses, skills, and credentials.
+        Checks for duplicate employees based on email, first name, last name, and contact number.
+        
+        Args:
+            employee_data: Dictionary containing employee information including:
+                - password: Plain text password (will be hashed)
+                - All other standard employee fields
+        
+        Returns:
+            employee_id: The newly created employee ID
+        
+        Raises:
+            ValueError: If duplicate employee found or required fields missing
         """
         Logger.info("Executing InsertEmployee logic")
-        required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 'date_of_joining', 'sub_role', 'band']
+        required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 
+                          'date_of_joining', 'sub_role', 'band', 'password']
         missing = [f for f in required_fields if not employee_data.get(f)]
-        if missing: raise ValueError(f"Missing required fields: {', '.join(missing)}")
+        if missing: 
+            raise ValueError(f"Missing required fields: {', '.join(missing)}")
+        
+        # Validate password strength
+        password = employee_data.get('password')
+        if len(password) < 8:
+            raise ValueError("Password must be at least 8 characters long")
         
         try:
+            # Check for duplicate employee
+            existing_employee = Employee.query.filter(
+                or_(
+                    and_(
+                        Employee.email == employee_data['email'],
+                        Employee.first_name == employee_data['first_name'],
+                        Employee.last_name == employee_data['last_name']
+                    ),
+                    and_(
+                        Employee.contact_number == employee_data['contact_number'],
+                        Employee.first_name == employee_data['first_name'],
+                        Employee.last_name == employee_data['last_name']
+                    )
+                )
+            ).first()
+            
+            if existing_employee:
+                Logger.warning(
+                    "Duplicate employee found",
+                    email=employee_data['email'],
+                    contact=employee_data['contact_number'],
+                    name=f"{employee_data['first_name']} {employee_data['last_name']}"
+                )
+                raise ValueError(
+                    f"Employee already exists with the same email, first name, last name, and/or contact number. "
+                    f"Existing employee ID: {existing_employee.employee_id}"
+                )
+            
+            # Generate new employee ID
             sequence_val = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[Employee_Seq]")).scalar()
             employee_id = f"EMP{sequence_val}"
+            
+            # Create employee record
             new_employee = Employee(
                 employee_id=employee_id, first_name=employee_data['first_name'], middle_name=employee_data.get('middle_name'),
                 last_name=employee_data['last_name'], date_of_birth=employee_data['date_of_birth'], contact_number=employee_data['contact_number'],
@@ -629,19 +680,43 @@ class EmployeeService:
                 probation_end_date=employee_data.get('probation_end_date')
             )
             db.session.add(new_employee)
+            
+            # Create employee designation
             db.session.add(EmployeeDesignation(employee_id=employee_id, designation_id=employee_data['band']))
             
+            # Create employee credentials with hashed password
+            password_hash = generate_password_hash(
+                password,
+                method='pbkdf2:sha256',
+                salt_length=16
+            )
+            new_credentials = EmployeeCredentials(
+                employee_id=employee_id,
+                password=password,  # Store plain text as per existing schema (backward compatibility)
+                password_hash=password_hash  # Store secure hash
+            )
+            db.session.add(new_credentials)
+            Logger.info("Employee credentials created", employee_id=employee_id)
+            
+            # Handle addresses
             addresses = employee_data.get('addresses')
             if addresses:
                 db.session.add(EmployeeAddress(employee_id=employee_id, address_type='Residential', state=addresses.get('residential_state'), city=addresses.get('residential_city'), address1=addresses.get('residential_address1'), address2=addresses.get('residential_address2'), is_same_permanant=addresses.get('is_same_permanant', False), zip_code=addresses.get('residential_zipcode')))
                 if not addresses.get('is_same_permanant', False):
                     db.session.add(EmployeeAddress(employee_id=employee_id, address_type='Permanent', state=addresses.get('permanent_state'), city=addresses.get('permanent_city'), address1=addresses.get('permanent_address1'), address2=addresses.get('permanent_address2'), is_same_permanant=False, zip_code=addresses.get('permanent_zipcode')))
             
+            # Handle skills
             for skill in employee_data.get('skills', []):
                 db.session.add(EmployeeSkill(employee_id=employee_id, skill_id=skill.get('skill_id'), skill_level=skill.get('skill_level')))
             
             db.session.commit()
+            Logger.info("Employee inserted successfully", employee_id=employee_id)
             return employee_id
+            
+        except ValueError as ve:
+            # Don't rollback for validation errors
+            Logger.warning("Validation error during employee insertion", error=str(ve))
+            raise ve
         except Exception as e:
             db.session.rollback()
             Logger.critical("Error inserting employee", error=str(e))

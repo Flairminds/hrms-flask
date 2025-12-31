@@ -180,7 +180,8 @@ class EmployeeAllocations(BaseModel):
 class EmployeeCredentials(BaseModel):
     __tablename__ = 'employee_credentials'
     employee_id = db.Column(db.String(20), primary_key=True)
-    password = db.Column(db.String(50), primary_key=True)
+    password = db.Column(db.String(50), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     
     __table_args__ = (
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),

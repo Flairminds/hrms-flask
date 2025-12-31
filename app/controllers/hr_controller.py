@@ -71,6 +71,47 @@ class HRController:
             }), 500
 
     @staticmethod
+    def insert_employee():
+        """
+        Creates a new employee with credentials.
+        
+        Validates required fields, checks for duplicates, and creates employee
+        with addresses, skills, and hashed password credentials.
+        """
+        Logger.info("Insert employee request received")
+        
+        try:
+            data = request.get_json()
+            if not data:
+                Logger.warning("Empty request body for insert employee")
+                return jsonify({"message": "Request body is required"}), 400
+            
+            # Call the service method which handles validation and duplicate checking
+            employee_id = EmployeeService.insert_employee(data)
+            
+            Logger.info("Employee inserted successfully", employee_id=employee_id)
+            
+            return jsonify({
+                "message": "Employee created successfully",
+                "employee_id": employee_id
+            }), 201
+            
+        except ValueError as ve:
+            # Handle validation errors (missing fields, duplicates, weak password)
+            Logger.warning("Validation error in insert employee",
+                          error=str(ve),
+                          data_keys=list(data.keys()) if data else [])
+            return jsonify({"message": str(ve)}), 400
+            
+        except Exception as e:
+            Logger.error("Unexpected error inserting employee",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "message": "An error occurred while creating employee. Please try again."
+            }), 500
+
+    @staticmethod
     def get_monthly_report():
         """Generates a CSV or JSON report for a specific month and year."""
         Logger.info("Get monthly report request received")
