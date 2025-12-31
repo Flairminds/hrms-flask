@@ -7,7 +7,7 @@ class ProjectService:
     
     @staticmethod
     def get_projects():
-        """Retrieves all projects from ProjectList."""
+        """Retrieves all projects from the ProjectList table."""
         Logger.info("Retrieving all projects from ProjectList")
         try:
             result = db.session.execute(text("SELECT ProjectID, ProjectName, EndDate, Required FROM ProjectList"))
@@ -20,7 +20,7 @@ class ProjectService:
 
     @staticmethod
     def add_project(name, end_date, required):
-        """Adds a new project to the ProjectList."""
+        """Adds a new project to the ProjectList table."""
         Logger.info("Adding new project", project_name=name)
         try:
             db.session.execute(
@@ -36,7 +36,7 @@ class ProjectService:
 
     @staticmethod
     def delete_project(project_id):
-        """Deletes a project from ProjectList."""
+        """Deletes a project from the ProjectList table."""
         Logger.info("Deleting project", project_id=project_id)
         try:
             db.session.execute(text("DELETE FROM ProjectList WHERE ProjectID = :pid"), {"pid": project_id})
@@ -51,10 +51,7 @@ class ProjectService:
 
     @staticmethod
     def get_all_projects():
-        """
-        Retrieves all projects with their details including lead information.
-        Returns project name, client, lead name, and lead ID.
-        """
+        """Retrieves all projects with lead information via employee JOIN."""
         try:
             query = text("""
                 SELECT p.project_name, p.client, 
@@ -78,10 +75,7 @@ class ProjectService:
 
     @staticmethod
     def get_project_names():
-        """
-        Retrieves simple list of project IDs and names.
-        Returns project ID and project name.
-        """
+        """Retrieves project IDs and names for dropdowns and autocomplete."""
         try:
             query = text("SELECT project_id, project_name FROM project")
             result = db.session.execute(query).fetchall()
@@ -97,17 +91,7 @@ class ProjectService:
 
     @staticmethod
     def insert_project(project_name, client, lead_by):
-        """
-        Inserts a new project and returns the auto-generated project ID.
-        
-        Args:
-            project_name: Name of the project
-            client: Client name
-            lead_by: Employee ID of the project lead
-            
-        Returns:
-            The newly created project ID, or None if failed
-        """
+        """Inserts a new project and returns the auto-generated project ID."""
         try:
             query = text("""
                 INSERT INTO project (project_name, client, lead_by)
@@ -131,19 +115,10 @@ class ProjectService:
     @staticmethod
     def update_project(project_id: int, project_name: str = None, client: str = None, lead_by: str = None) -> int:
         """
-        Updates an existing project following stored procedure '[dbo].[UpdateProjectDetails]' logic.
-        Implements selective updates: only updates if values are not null, not empty, and not 'string'.
-        
-        Args:
-            project_id: ID of the project to update
-            project_name: New project name (optional)
-            client: New client name (optional)
-            lead_by: New lead employee ID (optional)
-            
-        Returns:
-            int: 1 for success, -1 if project not found
+        Updates project with selective field validation.
+        Returns 1 on success, -1 if project not found.
         """
-        Logger.info("Executing UpdateProjectDetails logic", project_id=project_id)
+        Logger.info("Updating project details", project_id=project_id)
         
         try:
             # 1. Fetch project and check existence
@@ -152,7 +127,7 @@ class ProjectService:
                 Logger.warning("Project not found for update", project_id=project_id)
                 return -1
             
-            # 2. Selective Update Logic (replicates CASE in SP)
+            # 2. Selective Update Logic (migrated from legacy stored procedure logic)
             # Conditions: IS NOT NULL AND != '' AND != 'string'
             def is_valid_update(val):
                 return val is not None and str(val).strip() != '' and str(val).lower() != 'string'

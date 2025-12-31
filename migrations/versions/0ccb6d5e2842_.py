@@ -1,8 +1,8 @@
-"""initial migration
+"""empty message
 
-Revision ID: 121edd9acae8
+Revision ID: 0ccb6d5e2842
 Revises: 
-Create Date: 2025-12-30 18:41:09.288328
+Create Date: 2025-12-31 12:30:38.797222
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '121edd9acae8'
+revision = '0ccb6d5e2842'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,22 +21,22 @@ def upgrade():
     op.create_table('client',
     sa.Column('client_id', sa.Integer(), nullable=False),
     sa.Column('clientname', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('client_id')
     )
     op.create_table('designation',
     sa.Column('designation_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('designation_name', sa.String(length=255), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('designation_id')
     )
@@ -44,11 +44,11 @@ def upgrade():
     sa.Column('document_id', sa.Integer(), nullable=False),
     sa.Column('document_name', sa.String(length=100), nullable=False),
     sa.Column('document_type', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('document_id')
     )
@@ -67,22 +67,22 @@ def upgrade():
     sa.Column('variables', sa.Numeric(precision=15, scale=2), nullable=False),
     sa.Column('pdf_path', sa.String(length=255), nullable=False),
     sa.Column('employee_email', sa.String(length=100), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('employee_score_card',
     sa.Column('employee_id', sa.String(length=10), nullable=False),
     sa.Column('score_card_link', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('employee_id')
     )
@@ -93,36 +93,25 @@ def upgrade():
     sa.Column('emp_id', sa.String(length=10), nullable=True),
     sa.Column('emp_name', sa.String(length=100), nullable=True),
     sa.Column('shift_start_from_time', sa.Time(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('employee_sub_role',
-    sa.Column('sub_role_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('sub_role_name', sa.String(length=100), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('sub_role_id')
     )
     op.create_table('holiday',
     sa.Column('holiday_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('holiday_date', sa.Date(), nullable=False),
     sa.Column('holiday_name', sa.String(length=255), nullable=False),
     sa.Column('added_by', sa.String(length=255), nullable=False),
-    sa.Column('added_on', sa.DateTime(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('added_on', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('holiday_id')
     )
@@ -134,11 +123,11 @@ def upgrade():
     sa.Column('application_date', sa.Date(), nullable=True),
     sa.Column('is_carry_forword', sa.Boolean(), nullable=True),
     sa.Column('insert_date', sa.Date(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_transaction_id')
     )
@@ -152,11 +141,11 @@ def upgrade():
     sa.Column('wfh_count', sa.Numeric(precision=4, scale=2), nullable=True),
     sa.Column('sick_leave_count', sa.Numeric(precision=4, scale=2), nullable=True),
     sa.Column('carry_forward_balance', sa.Numeric(precision=4, scale=2), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('employee_id')
     )
@@ -169,11 +158,11 @@ def upgrade():
     sa.Column('approved_by', sa.String(length=100), nullable=True),
     sa.Column('approved_date', sa.Date(), nullable=True),
     sa.Column('is_carry_forworded', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_type_id', 'employee_id')
     )
@@ -202,11 +191,11 @@ def upgrade():
     sa.Column('second_approval_comment', sa.String(length=255), nullable=True),
     sa.Column('second_approver_date', sa.DateTime(), nullable=True),
     sa.Column('is_for_second_approval', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_tran_id')
     )
@@ -236,22 +225,22 @@ def upgrade():
     sa.Column('second_approval_comment', sa.String(length=255), nullable=True),
     sa.Column('second_approver_date', sa.Date(), nullable=True),
     sa.Column('is_for_second_approval', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_tran_id')
     )
     op.create_table('leave_type',
     sa.Column('leave_type_id', sa.Integer(), nullable=False),
     sa.Column('leave_type_name', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_type_id')
     )
@@ -263,24 +252,47 @@ def upgrade():
     sa.Column('requires_customer_approval', sa.Boolean(), nullable=True),
     sa.Column('leave_cards_flag', sa.Boolean(), nullable=True),
     sa.Column('quarterly_allocation', sa.Numeric(precision=18, scale=0), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_type_id')
     )
     op.create_table('lob',
     sa.Column('lob_lead', sa.String(length=50), nullable=False),
     sa.Column('lob', sa.String(length=55), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('lob_lead')
+    )
+    op.create_table('master_role',
+    sa.Column('role_id', sa.Integer(), nullable=False),
+    sa.Column('role_name', sa.String(length=100), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('role_id'),
+    sa.UniqueConstraint('role_name', name='uq_role_name')
+    )
+    op.create_table('master_sub_role',
+    sa.Column('sub_role_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('sub_role_name', sa.String(length=100), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('sub_role_id')
     )
     op.create_table('otp_requests',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -288,11 +300,12 @@ def upgrade():
     sa.Column('otp', sa.String(length=10), nullable=False),
     sa.Column('expiry_time', sa.DateTime(), nullable=False),
     sa.Column('is_verified', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('attempt_count', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -302,11 +315,11 @@ def upgrade():
     sa.Column('pc_name', sa.String(length=50), nullable=False),
     sa.Column('assignment_date', sa.Date(), nullable=False),
     sa.Column('return_date', sa.Date(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('assignment_id')
     )
@@ -316,11 +329,11 @@ def upgrade():
     sa.Column('type', sa.String(length=100), nullable=False),
     sa.Column('purchase_date', sa.Date(), nullable=True),
     sa.Column('warranty_till', sa.Date(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('pcid')
     )
@@ -331,11 +344,11 @@ def upgrade():
     sa.Column('model', sa.String(length=100), nullable=True),
     sa.Column('serial_number', sa.String(length=100), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('peripheral_id')
     )
@@ -344,24 +357,13 @@ def upgrade():
     sa.Column('project_name', sa.String(length=255), nullable=False),
     sa.Column('required', sa.Boolean(), nullable=False),
     sa.Column('end_date', sa.Date(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('project_id')
-    )
-    op.create_table('role',
-    sa.Column('role_id', sa.Integer(), nullable=False),
-    sa.Column('role_name', sa.String(length=100), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('role_id')
     )
     op.create_table('skill',
     sa.Column('skill_id', sa.Integer(), nullable=False),
@@ -369,33 +371,33 @@ def upgrade():
     sa.Column('skill_type', sa.String(length=50), nullable=False),
     sa.Column('skill_category', sa.String(length=255), nullable=True),
     sa.Column('is_master_skill', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('skill_id')
     )
     op.create_table('wfh_check_list',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('from_date', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('employee_id')
     )
     op.create_table('work_categories',
     sa.Column('category_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('category_name', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('category_id'),
     sa.UniqueConstraint('category_name')
@@ -405,11 +407,11 @@ def upgrade():
     sa.Column('leave_tran_id', sa.Integer(), nullable=True),
     sa.Column('comp_off_date', sa.DateTime(), nullable=True),
     sa.Column('duration', sa.String(length=20), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
     sa.PrimaryKeyConstraint('comp_off_id')
@@ -417,16 +419,17 @@ def upgrade():
     op.create_table('customer_holiday',
     sa.Column('leave_tran_id', sa.Integer(), nullable=False),
     sa.Column('worked_date', sa.String(length=200), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
     sa.PrimaryKeyConstraint('leave_tran_id')
     )
     op.create_table('employee',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('first_name', sa.String(length=50), nullable=False),
     sa.Column('middle_name', sa.String(length=50), nullable=True),
@@ -458,16 +461,19 @@ def upgrade():
     sa.Column('privilege_leaves', sa.Integer(), nullable=True),
     sa.Column('sick_leaves', sa.Integer(), nullable=True),
     sa.Column('remaining_leaves', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['lob_lead'], ['lob.lob_lead'], ),
-    sa.ForeignKeyConstraint(['sub_role'], ['employee_sub_role.sub_role_id'], ),
-    sa.PrimaryKeyConstraint('employee_id')
+    sa.ForeignKeyConstraint(['sub_role'], ['master_sub_role.sub_role_id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('employee', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_employee_employee_id'), ['employee_id'], unique=True)
+
     op.create_table('maintenance',
     sa.Column('maintenance_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('pcid', sa.Integer(), nullable=False),
@@ -475,11 +481,11 @@ def upgrade():
     sa.Column('maintenance_date', sa.Date(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('notes', sa.String(length=500), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['pcid'], ['pcs.pcid'], ),
     sa.PrimaryKeyConstraint('maintenance_id')
@@ -489,11 +495,11 @@ def upgrade():
     sa.Column('from_time', sa.String(length=5), nullable=True),
     sa.Column('to_time', sa.String(length=5), nullable=True),
     sa.Column('reason_for_working_late', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
     sa.PrimaryKeyConstraint('leave_tran_id')
@@ -501,13 +507,13 @@ def upgrade():
     op.create_table('capability_development_lead',
     sa.Column('capability_development_lead_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=False),
-    sa.Column('created_date', sa.DateTime(), nullable=False),
+    sa.Column('created_date', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_date', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('capability_development_lead_id'),
@@ -520,11 +526,11 @@ def upgrade():
     sa.Column('is_used', sa.Boolean(), nullable=True),
     sa.Column('leave_tran_id', sa.Integer(), nullable=True),
     sa.Column('comp_off_time', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
@@ -545,11 +551,11 @@ def upgrade():
     sa.Column('adhar_verified', sa.Boolean(), nullable=True),
     sa.Column('grad_verified', sa.Boolean(), nullable=True),
     sa.Column('resume_verified', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['emp_id'], ['employee.employee_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('doc_id'),
@@ -562,13 +568,13 @@ def upgrade():
     sa.Column('goals', sa.Text(), nullable=True),
     sa.Column('measures', sa.Text(), nullable=True),
     sa.Column('comments', sa.Text(), nullable=True),
-    sa.Column('added_date', sa.DateTime(), nullable=True),
+    sa.Column('added_date', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.Column('targeted_date', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['emp_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('feedback_id')
@@ -583,11 +589,11 @@ def upgrade():
     sa.Column('is_same_permanant', sa.Boolean(), nullable=True),
     sa.Column('zip_code', sa.String(length=6), nullable=True),
     sa.Column('counter', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'address_type')
@@ -598,11 +604,11 @@ def upgrade():
     sa.Column('project_id', sa.Integer(), nullable=True),
     sa.Column('work_category_id', sa.Integer(), nullable=True),
     sa.Column('allocation', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project_list.project_id'], ),
@@ -612,23 +618,24 @@ def upgrade():
     op.create_table('employee_credentials',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('password', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('password_hash', sa.String(length=256), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
-    sa.PrimaryKeyConstraint('employee_id', 'password')
+    sa.PrimaryKeyConstraint('employee_id')
     )
     op.create_table('employee_designation',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('designation_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'designation_id')
@@ -637,11 +644,11 @@ def upgrade():
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('document_id', sa.Integer(), nullable=False),
     sa.Column('document_link', sa.String(length=1000), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'document_id')
@@ -650,12 +657,12 @@ def upgrade():
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('emp_id', sa.String(length=20), nullable=False),
     sa.Column('evaluator_id', sa.String(length=20), nullable=False),
-    sa.Column('assigned_on', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('assigned_on', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['emp_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['evaluator_id'], ['employee.employee_id'], ),
@@ -667,13 +674,13 @@ def upgrade():
     sa.Column('skill_id', sa.Integer(), nullable=False),
     sa.Column('target_date', sa.DateTime(), nullable=False),
     sa.Column('set_by_employee_id', sa.String(length=20), nullable=False),
-    sa.Column('created_on', sa.DateTime(), nullable=False),
+    sa.Column('created_on', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('modified_on', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['set_by_employee_id'], ['employee.employee_id'], ),
@@ -689,11 +696,11 @@ def upgrade():
     sa.Column('probation_to_confirmation_policy_acknowledged', sa.Boolean(), nullable=True),
     sa.Column('salary_and_appraisal_policy_acknowledged', sa.Boolean(), nullable=True),
     sa.Column('warning_count', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id')
@@ -706,11 +713,11 @@ def upgrade():
     sa.Column('from_date', sa.Date(), nullable=False),
     sa.Column('to_date', sa.Date(), nullable=True),
     sa.Column('comments', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'company_name')
@@ -718,11 +725,11 @@ def upgrade():
     op.create_table('employee_project',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'project_id')
@@ -730,17 +737,18 @@ def upgrade():
     op.create_table('employee_role',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('role_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
-    sa.ForeignKeyConstraint(['role_id'], ['role.role_id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['master_role.role_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'role_id')
     )
     op.create_table('employee_skill',
+    sa.Column('employee_skill_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=False),
     sa.Column('skill_id', sa.Integer(), nullable=False),
     sa.Column('skill_level', sa.String(length=50), nullable=True),
@@ -749,14 +757,16 @@ def upgrade():
     sa.Column('self_evaluation', sa.Numeric(precision=5, scale=2), nullable=True),
     sa.Column('score_by_lead', sa.Numeric(precision=5, scale=2), nullable=True),
     sa.Column('full_stack_ready', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
-    sa.PrimaryKeyConstraint('employee_id', 'skill_id')
+    sa.ForeignKeyConstraint(['skill_id'], ['skill.skill_id'], ),
+    sa.PrimaryKeyConstraint('employee_skill_id'),
+    sa.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill')
     )
     op.create_table('lateral_and_exempt',
     sa.Column('employee_id', sa.String(length=20), nullable=False),
@@ -764,11 +774,11 @@ def upgrade():
     sa.Column('to_date', sa.Date(), nullable=True),
     sa.Column('shift_start_from_time', sa.String(length=20), nullable=True),
     sa.Column('lateral_hire', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id')
@@ -776,11 +786,11 @@ def upgrade():
     op.create_table('lead_assigned_by_hr',
     sa.Column('emp_id', sa.String(length=20), nullable=False),
     sa.Column('lead_id', sa.String(length=20), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['emp_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['lead_id'], ['employee.employee_id'], ),
@@ -794,11 +804,11 @@ def upgrade():
     sa.Column('application_date', sa.Date(), nullable=True),
     sa.Column('is_carry_forword', sa.Boolean(), nullable=True),
     sa.Column('insert_date', sa.Date(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('leave_transaction_id')
@@ -812,11 +822,11 @@ def upgrade():
     sa.Column('approved_by', sa.String(length=100), nullable=True),
     sa.Column('approved_date', sa.Date(), nullable=True),
     sa.Column('is_carry_forworded', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('leave_type_id', 'employee_id')
@@ -826,11 +836,11 @@ def upgrade():
     sa.Column('project_name', sa.String(length=100), nullable=False),
     sa.Column('client', sa.String(length=50), nullable=True),
     sa.Column('lead_by', sa.String(length=20), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['lead_by'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('project_id')
@@ -839,13 +849,13 @@ def upgrade():
     sa.Column('capability_development_lead_assignment_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('assigned_employee_id', sa.String(length=20), nullable=False),
     sa.Column('capability_development_lead_id', sa.Integer(), nullable=False),
-    sa.Column('created_date', sa.DateTime(), nullable=False),
+    sa.Column('created_date', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_date', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['assigned_employee_id'], ['employee.employee_id'], onupdate='CASCADE'),
     sa.ForeignKeyConstraint(['capability_development_lead_id'], ['capability_development_lead.capability_development_lead_id'], ondelete='CASCADE'),
@@ -861,13 +871,13 @@ def upgrade():
     sa.Column('comments', sa.String(length=500), nullable=True),
     sa.Column('is_ready', sa.Boolean(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('review_date', sa.DateTime(), nullable=False),
+    sa.Column('review_date', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('is_new', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['evaluator_id'], ['employee.employee_id'], ),
@@ -885,11 +895,11 @@ def upgrade():
     sa.Column('project_allocation', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('project_billing', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('employee_role', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=20), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
     sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['project_id'], ['project.project_id'], ),
@@ -930,18 +940,22 @@ def downgrade():
     op.drop_table('capability_development_lead')
     op.drop_table('working_late')
     op.drop_table('maintenance')
+    with op.batch_alter_table('employee', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_employee_employee_id'))
+
     op.drop_table('employee')
     op.drop_table('customer_holiday')
     op.drop_table('comp_off_transaction')
     op.drop_table('work_categories')
     op.drop_table('wfh_check_list')
     op.drop_table('skill')
-    op.drop_table('role')
     op.drop_table('project_list')
     op.drop_table('peripherals')
     op.drop_table('pcs')
     op.drop_table('pc_assignments')
     op.drop_table('otp_requests')
+    op.drop_table('master_sub_role')
+    op.drop_table('master_role')
     op.drop_table('lob')
     op.drop_table('leave_type_master')
     op.drop_table('leave_type')
@@ -951,7 +965,6 @@ def downgrade():
     op.drop_table('leave_management')
     op.drop_table('leave_audit2')
     op.drop_table('holiday')
-    op.drop_table('employee_sub_role')
     op.drop_table('employee_shift_details')
     op.drop_table('employee_score_card')
     op.drop_table('employee_relieving_letters')

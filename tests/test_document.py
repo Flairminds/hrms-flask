@@ -5,7 +5,7 @@ from datetime import datetime
 from werkzeug.datastructures import FileStorage
 
 from app import db
-from app.models.hr import Employee, EmployeeSubRole, EmployeeRelievingLetters
+from app.models.hr import Employee, MasterSubRole, EmployeeRelievingLetters
 from app.models.documents import EmployeeDocumentsBinary
 from app.services.document import RelievingLetterService, EmployeeDocumentService
 
@@ -13,7 +13,7 @@ from app.services.document import RelievingLetterService, EmployeeDocumentServic
 def setup_data(app):
     with app.app_context():
         # Setup sub-role
-        role = EmployeeSubRole(sub_role_id=1, sub_role_name="Software Engineer")
+        role = MasterSubRole(sub_role_id=1, sub_role_name="Software Engineer")
         db.session.add(role)
         
         # Setup employee

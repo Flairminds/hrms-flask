@@ -7,7 +7,7 @@ from ... import db
 from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, LeaveType, 
                            LeaveOpeningTransaction, LeaveAudit, CompensatoryOff, WorkingLate,
                            CustomerHoliday)
-from ...models.hr import Employee, LateralAndExempt, EmployeeRole, Role
+from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
 from ...utils.logger import Logger
 from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus
 from .leave_utils import LeaveUtils
@@ -588,10 +588,10 @@ class LeaveQueryService:
         try:
             roles = db.session.query(
                 EmployeeRole.employee_id,
-                Role.role_name
+                MasterRole.role_name
             ).join(
-                Role,
-                EmployeeRole.role_id == Role.role_id
+                MasterRole,
+                EmployeeRole.role_id == MasterRole.role_id
             ).filter(
                 EmployeeRole.employee_id == employee_id
             ).order_by(

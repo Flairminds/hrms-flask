@@ -21,7 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
-from ..models.hr import Employee, EmployeeSubRole
+from ..models.hr import Employee, MasterSubRole
 from ..models.leave import LeaveTransaction, LeaveType
 from ..utils.logger import Logger
 from ..utils.constants import LeaveStatus, LeaveTypeID, EmailConfig

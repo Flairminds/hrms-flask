@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from sqlalchemy import text
 from ... import db
-from ...models.hr import (Employee, EmployeeCredentials, EmployeeRole, Role)
+from ...models.hr import (Employee, EmployeeCredentials, EmployeeRole, MasterRole)
 from ...utils.logger import Logger
 
 class AccessService:
@@ -55,12 +55,12 @@ class AccessService:
         try:
             results = db.session.query(
                 (Employee.first_name + ' ' + Employee.last_name).label('employee_name'),
-                Role.role_name,
+                MasterRole.role_name,
                 Employee.email,
                 EmployeeCredentials.password,
                 Employee.employee_id
             ).join(EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
-            ).join(Role, EmployeeRole.role_id == Role.role_id
+            ).join(MasterRole, EmployeeRole.role_id == MasterRole.role_id
             ).join(EmployeeCredentials, Employee.employee_id == EmployeeCredentials.employee_id
             ).all()
             

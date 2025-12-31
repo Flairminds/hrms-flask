@@ -17,31 +17,31 @@ function PersonalInfoPage() {
   const [bandsData, setBandsData] = useState([]);
   const [error, setError] = useState(null);
   const [isEditModal, setIsEditModal] = useState(false);
-  const [roles, setRoles]=useState([]);
+  const [roles, setRoles] = useState([]);
 
-  const[isSalarySlipModal,setIsSalarySlipModal]=useState(false)
+  const [isSalarySlipModal, setIsSalarySlipModal] = useState(false)
   const [currentStep, setCurrentStep] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const[loader,setLoader]= useState(false)
+  const [loader, setLoader] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
-  const[month,setMonth]=useState([])
-  const[year,setYear]=useState([])
-  const[loginEMPId,setloginEMPID]=useState("")
-  const[loaderSlip,setLoaderSlip]=useState(false)
-  const[highestQualificationYearMonth,setHighestQualificationYearMonth] =useState(null)
-  const[fullStackReady,setFullStackReady]=useState(false)
+  const [month, setMonth] = useState([])
+  const [year, setYear] = useState([])
+  const [loginEMPId, setloginEMPID] = useState("")
+  const [loaderSlip, setLoaderSlip] = useState(false)
+  const [highestQualificationYearMonth, setHighestQualificationYearMonth] = useState(null)
+  const [fullStackReady, setFullStackReady] = useState(false)
 
-  
+
   const [isMissingInfoModal, setIsMissingInfoModal] = useState(false);
   console.log(isMissingInfoModal, "isMissingInfoModal");
-  
+
   const [missingInfoMessage, setMissingInfoMessage] = useState('');
   const [countPersonalInfo, setCountPersonalInfo] = useState(0);
-  const[warningMessage,setWarningMessage]=useState(null)
+  const [warningMessage, setWarningMessage] = useState(null)
   const [isLoading, setIsLoading] = useState(true);
-  console.log(countPersonalInfo,"countPersonalInfo");
-  
+  console.log(countPersonalInfo, "countPersonalInfo");
+
   const employeeIdCookie = getCookie('employeeId');
   const [documentStatus, setDocumentStatus] = useState({});
   const [documentStatusDetails, setDocumentStatusDetails] = useState(null);
@@ -52,7 +52,7 @@ function PersonalInfoPage() {
     "November", "December",
   ];
 
-  const years=["2025","2024","2023","2022"]
+  const years = ["2025", "2024", "2023", "2022"]
   const getCompanyBandsData = async () => {
     try {
       const response = await getCompanyBands();
@@ -92,21 +92,21 @@ function PersonalInfoPage() {
 
   const checkCompleteEmployeeDetails = async () => {
     console.log("checkCompleteEmployeeDetails called");
-    
+
     try {
       setIsLoading(true);
       const employeeId = getCookie('employeeId');
       const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
       console.log('responsegb', response.data);
       setWarningMessage(response.data.status);
-      
+
       setCountPersonalInfo(response.data.data.Addresses[0].counter);
       setMissingInfoMessage(response.data.message);
-      
+
       // Always show modal if status is false
       if (response.data && response.data.status === false) {
         console.log('Missing information detected:', response.data);
-        
+
         setIsMissingInfoModal(true);
       }
     } catch (error) {
@@ -159,7 +159,7 @@ function PersonalInfoPage() {
     setIsEditModal(true);
   };
 
-  const getBandName = (bandNumber) => {  
+  const getBandName = (bandNumber) => {
     if (Array.isArray(bandsData)) {
       const band = bandsData.find(b => b.DesignationId === bandNumber);
       return band?.Band;
@@ -167,7 +167,7 @@ function PersonalInfoPage() {
     return 'N/A';
   };
 
-  const employeeRole = (RoleId) => { 
+  const employeeRole = (RoleId) => {
     if (Array.isArray(roles)) {
       const role = roles.find(b => b.SubRoleId === RoleId);
       return role?.Role || 'N/A';
@@ -175,7 +175,7 @@ function PersonalInfoPage() {
     return 'N/A';
   };
 
-  
+
 
   const steps = [
     {
@@ -193,7 +193,7 @@ function PersonalInfoPage() {
       icon: <CreditCardOutlined />,
       description: 'Download Salary Slip.',
     },
-    
+
   ];
 
   const handleNext = () => {
@@ -227,43 +227,42 @@ function PersonalInfoPage() {
   const handleSubmit = async (event) => {
     setLoader(true)
     event.preventDefault();
-  
-      if (!email || !password) {
-        message.error('Please enter both email and password');
-        return;
+
+    if (!email || !password) {
+      message.error('Please enter both email and password');
+      return;
+    }
+    // setValidationMessage('');
+    try {
+      // const username = email;
+      const response = await axiosInstance.post('/Account/Login', {
+        username: email,
+        password: password,
+      });
+      if (response.status === 200) {
+        message.success('Login successful!');
+        setCurrentStep(1); // Move to the next step
+        setloginEMPID(response.data.employeeId)
       }
-      // setValidationMessage('');
-      try {
-        // const username = email;
-        const response = await axiosInstance.post('/Account/Login', {
-          username: email,
-          password: password,
-        });
-        if (response.status === 200) {
-          message.success('Login successful!');
-          setCurrentStep(1); // Move to the next step
-          setloginEMPID(response.data.employeeId)
-        }
-        
-      } catch (error) {
-        console.error('There was a problem with the axios operation:', error);
-        message.error('Login failed. Please check your credentials and try again.');
-      }finally {
-        setLoader(false); 
+
+    } catch (error) {
+      console.error('There was a problem with the axios operation:', error);
+      message.error('Login failed. Please check your credentials and try again.');
+    } finally {
+      setLoader(false);
     }
-    }
-  
-  
+  }
+
+
   const handleDownloadSalarySlip = async () => {
-    if(loginEMPId === employeeData.employeeId)
-    {
+    if (loginEMPId === employeeData.employeeId) {
       setLoaderSlip(true);
       try {
-        
+
         const res = await downloadSalarySlipViaEmail(employeeData.employeeId, month, year);
-        console.log(res,"resrses");
-        
-        
+        console.log(res, "resrses");
+
+
         if (res.status === 200) {
           message.success("Email sent successfully.");
         } else {
@@ -271,134 +270,134 @@ function PersonalInfoPage() {
         }
       } catch (error) {
         console.log(error);
-        
-        message.error("Data not available " +error.response.data.message  );
-      }finally{
+
+        message.error("Data not available " + error.response.data.message);
+      } finally {
         setYear([])
         setMonth([])
         setLoaderSlip(false)
         setIsSalarySlipModal(false)
         setCurrentStep(0)
-  
+
       }
     }
-    else{
+    else {
       message.error("Your login ID and Salary Id does not match")
     }
-      
-    };
 
-    const fetchSkills = async () => {
-      try {
-        const response = await getSkillsForEmp(employeeIdCookie);
-        console.log(response,"raju");
-        setHighestQualificationYearMonth(response.data.QualificationYearMonth)
-        setFullStackReady(response.data.FullStackReady)
-      } catch (error) {
-        console.error("Error fetching skills:", error);
-        console.log("reaju2");
-        
+  };
+
+  const fetchSkills = async () => {
+    try {
+      const response = await getSkillsForEmp(employeeIdCookie);
+      console.log(response, "raju");
+      setHighestQualificationYearMonth(response.data.QualificationYearMonth)
+      setFullStackReady(response.data.FullStackReady)
+    } catch (error) {
+      console.error("Error fetching skills:", error);
+      console.log("reaju2");
+
+    }
+  };
+
+  useEffect(() => {
+
+
+    fetchSkills();
+
+
+  }, [])
+
+  const fetchDocuments = async (docType) => {
+    console.log("docType", docType);
+
+    try {
+      const response = await getDocuments(employeeIdCookie, docType);
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to download: ${response.statusText}`);
       }
-    };
 
-    useEffect(() =>{
-      
-    
-      fetchSkills();
-      
-    
-     },[])
+      const blob = new Blob([response.data], { type: "application/pdf" });
 
-     const fetchDocuments = async (docType) => {
-      console.log("docType", docType);
-      
-      try {
-        const response = await getDocuments(employeeIdCookie,docType);
-    
-        if (response.status !== 200) {
-          throw new Error(`Failed to download: ${response.statusText}`);
-        }
-    
-        const blob = new Blob([response.data], { type: "application/pdf" });
-    
-        // ✅ Create URL and trigger download
-        const fileURL = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = fileURL;
-        link.download = "document.pdf"; // File name
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    
-        // ✅ Clean up object URL after some time
-        setTimeout(() => URL.revokeObjectURL(fileURL), 1000);
-    
-        message.success("Download started");
-      } catch (error) {
-        console.error("Error downloading document:", error);
-    
-        // ✅ Check if error response exists
-        if (error.response) {
-          if (error.response.status === 404) {
-            message.warning("Document not available");
-            return;
-          } else {
-            message.error(`Error downloading document: ${error.response.statusText}`);
-          }
+      // ✅ Create URL and trigger download
+      const fileURL = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = "document.pdf"; // File name
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // ✅ Clean up object URL after some time
+      setTimeout(() => URL.revokeObjectURL(fileURL), 1000);
+
+      message.success("Download started");
+    } catch (error) {
+      console.error("Error downloading document:", error);
+
+      // ✅ Check if error response exists
+      if (error.response) {
+        if (error.response.status === 404) {
+          message.warning("Document not available");
+          return;
         } else {
-          message.error("Network error or server is down");
+          message.error(`Error downloading document: ${error.response.statusText}`);
         }
+      } else {
+        message.error("Network error or server is down");
       }
-    };
+    }
+  };
 
-    const fetchDocumentsView = async (docType) => {
-      try {
-        const response = await getDocuments(employeeIdCookie, docType);
-    
-        if (response.status !== 200) {
-          throw new Error(`Failed to fetch document: ${response.statusText}`);
-        }
-    
-        const blob = new Blob([response.data], { type: "application/pdf" });
-    
-        const fileURL = window.URL.createObjectURL(blob);
-    
-        window.open(fileURL, "_blank");
-    
-        setTimeout(() => URL.revokeObjectURL(fileURL), 5000);
-    
-      } catch (error) {
-        console.error("Error fetching document:", error);
-    
-        if (error.response) {
-          if (error.response.status === 404) {
-            message.warning("Document not available");
-            return;
-          } else {
-            message.error(`Error fetching document: ${error.response.statusText}`);
-          }
-        } else {
-          message.error("Network error or server is down");
-        }
+  const fetchDocumentsView = async (docType) => {
+    try {
+      const response = await getDocuments(employeeIdCookie, docType);
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to fetch document: ${response.statusText}`);
       }
-    };
-    
-    
-    const documentTypes = [
-      { key: "tenth", label: "10th Marksheet" },
-      { key: "twelve", label: "12th Marksheet" },
-      { key: "adhar", label: "Aadhar Card" },
-      { key: "pan", label: "Pan Card" },
-      { key: "grad", label: "Graduation Degree" },
-      { key :"resume", label: "FM Resume" },
-    ];
-  
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+
+      const fileURL = window.URL.createObjectURL(blob);
+
+      window.open(fileURL, "_blank");
+
+      setTimeout(() => URL.revokeObjectURL(fileURL), 5000);
+
+    } catch (error) {
+      console.error("Error fetching document:", error);
+
+      if (error.response) {
+        if (error.response.status === 404) {
+          message.warning("Document not available");
+          return;
+        } else {
+          message.error(`Error fetching document: ${error.response.statusText}`);
+        }
+      } else {
+        message.error("Network error or server is down");
+      }
+    }
+  };
+
+
+  const documentTypes = [
+    { key: "tenth", label: "10th Marksheet" },
+    { key: "twelve", label: "12th Marksheet" },
+    { key: "adhar", label: "Aadhar Card" },
+    { key: "pan", label: "Pan Card" },
+    { key: "grad", label: "Graduation Degree" },
+    { key: "resume", label: "FM Resume" },
+  ];
+
 
   const handleModalOk = async () => {
     try {
       const employeeId = getCookie('employeeId');
       const response = await axiosInstance.post(`https://hrms-flask.azurewebsites.net/api/increment-address-counter/${employeeId}`);
-      if(countPersonalInfo === 4) {
+      if (countPersonalInfo === 4) {
         window.location.reload();
       }
       console.log(response, "response");
@@ -412,22 +411,22 @@ function PersonalInfoPage() {
 
   return (
     <div className={styles.employeeDetailsContainer}>
-         {!isLoading && countPersonalInfo <= 3 && countPersonalInfo >= 0 && !warningMessage &&(
-  <div style={{ marginBottom: '16px', color: 'red' }}>
-    Kindly note: You have {3 - countPersonalInfo} attempts remaining to fill the required information .
+      {!isLoading && countPersonalInfo <= 3 && countPersonalInfo >= 0 && !warningMessage && (
+        <div style={{ marginBottom: '16px', color: 'red' }}>
+          Kindly note: You have {3 - countPersonalInfo} attempts remaining to fill the required information .
 
-    Your account remains active while you still have remaining attempts. However, access to certain HRMS features will be temporarily restricted if you exhaust your attempts.
+          Your account remains active while you still have remaining attempts. However, access to certain HRMS features will be temporarily restricted if you exhaust your attempts.
 
-    Please ensure all required steps are completed promptly. Once done, full access will be automatically restored.
-  </div>
-)}
+          Please ensure all required steps are completed promptly. Once done, full access will be automatically restored.
+        </div>
+      )}
 
-{countPersonalInfo > 3 && (
-  <div style={{ marginBottom: '16px', color: 'red', fontWeight: 'bold' }}>
-    ⚠️ You have exceeded the maximum number of allowed attempts. Due to non-compliance, access to certain HRMS other options has been blocked. 
-    To regain access, please fill in the missing information you will able to access all the HRMS features.
-  </div>
-)}
+      {countPersonalInfo > 3 && (
+        <div style={{ marginBottom: '16px', color: 'red', fontWeight: 'bold' }}>
+          ⚠️ You have exceeded the maximum number of allowed attempts. Due to non-compliance, access to certain HRMS other options has been blocked.
+          To regain access, please fill in the missing information you will able to access all the HRMS features.
+        </div>
+      )}
       <div className={styles.profileResumeContainer}>
         <div className={styles.profilePicture}>
           <img
@@ -454,7 +453,7 @@ function PersonalInfoPage() {
             <div className={styles.infoItem}><strong>Middle Name:</strong> {employeeData.middleName || 'N/A'}</div>
             <div className={styles.infoItem}><strong>Last Name:</strong> {employeeData.lastName}</div>
             <div className={styles.infoItem}>
-              <strong>Date of Birth:</strong> 
+              <strong>Date of Birth:</strong>
               {new Date(employeeData.dateOfBirth).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
@@ -470,69 +469,69 @@ function PersonalInfoPage() {
             <div className={styles.infoItem}><strong>Gender:</strong> {employeeData.gender}</div>
             <div className={styles.infoItem}><strong>Blood Group:</strong> {employeeData.bloodGroup || 'N/A'}</div>
             <div className={styles.infoItem}><strong>Band:</strong> {getBandName(employeeData.band)}</div>
-            <div className={styles.infoItem}><strong>Employee Role:</strong> {employeeRole(employeeData.employeeSubRole)}</div>
+            <div className={styles.infoItem}><strong>Employee Role:</strong> {employeeRole(employeeData.MasterSubRole)}</div>
             <div className={styles.infoItem}>
-              <strong>Date of Joining:</strong> 
+              <strong>Date of Joining:</strong>
               {new Date(employeeData.dateOfJoining).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
               })}
             </div>
-          <div className={styles.infoItem}><strong>Highest Qualification:</strong> {employeeData.highestQualification}</div>
-          <div className={styles.infoItem}><strong>Highest Qualification Year-Month:</strong> {highestQualificationYearMonth}</div>
-          <div className={styles.infoItem}>
-            <strong>Full Stack Ready:</strong> {fullStackReady ? "Yes" : "No"}
-          </div>
+            <div className={styles.infoItem}><strong>Highest Qualification:</strong> {employeeData.highestQualification}</div>
+            <div className={styles.infoItem}><strong>Highest Qualification Year-Month:</strong> {highestQualificationYearMonth}</div>
+            <div className={styles.infoItem}>
+              <strong>Full Stack Ready:</strong> {fullStackReady ? "Yes" : "No"}
+            </div>
 
-          <div className={styles.addressSection}>
-            <h6 className={styles.headingContainer}>Documents</h6>
-            {documentTypes.map(({ key, label }) => {
-              const docStatus = documentStatusDetails?.documents?.[key];
-              return (
-                <div key={key} className={styles.infoItem}>
-                  <div className={styles.documentRow}>
-                    <div><strong>{label}:</strong></div>
-                    <div className={styles.documentActions}>
-                      <div className={styles.documentStatus}>
-                        Status: {
-                          docStatus ? (
-                            <span style={{ 
-                              color: docStatus.status === 'Accepted' ? 'green' : 
-                                     docStatus.status === 'Rejected' ? 'red' : 
-                                     docStatus.status === 'Pending' ? 'orange' : 'gray'
-                            }}>
-                              {docStatus.status}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'gray' }}>Not Uploaded</span>
-                          )
-                        }
-                      </div>
-                      <div className={styles.documentButtons}>
-                        <Button 
-                          className={styles.resumeButton} 
-                          onClick={() => fetchDocuments(key)}
-                          disabled={!docStatus?.uploaded}
-                        >
-                          Download
-                        </Button>
-                        <Button 
-                          className={styles.resumeButton} 
-                          onClick={() => fetchDocumentsView(key)}
-                          disabled={!docStatus?.uploaded}
-                        >
-                          View
-                        </Button>
+            <div className={styles.addressSection}>
+              <h6 className={styles.headingContainer}>Documents</h6>
+              {documentTypes.map(({ key, label }) => {
+                const docStatus = documentStatusDetails?.documents?.[key];
+                return (
+                  <div key={key} className={styles.infoItem}>
+                    <div className={styles.documentRow}>
+                      <div><strong>{label}:</strong></div>
+                      <div className={styles.documentActions}>
+                        <div className={styles.documentStatus}>
+                          Status: {
+                            docStatus ? (
+                              <span style={{
+                                color: docStatus.status === 'Accepted' ? 'green' :
+                                  docStatus.status === 'Rejected' ? 'red' :
+                                    docStatus.status === 'Pending' ? 'orange' : 'gray'
+                              }}>
+                                {docStatus.status}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'gray' }}>Not Uploaded</span>
+                            )
+                          }
+                        </div>
+                        <div className={styles.documentButtons}>
+                          <Button
+                            className={styles.resumeButton}
+                            onClick={() => fetchDocuments(key)}
+                            disabled={!docStatus?.uploaded}
+                          >
+                            Download
+                          </Button>
+                          <Button
+                            className={styles.resumeButton}
+                            onClick={() => fetchDocumentsView(key)}
+                            disabled={!docStatus?.uploaded}
+                          >
+                            View
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-            
+
             {/* Residential Address Section */}
             {employeeData.addresses && (
               <div className={styles.addressSection}>
@@ -587,7 +586,7 @@ function PersonalInfoPage() {
         fetchSkills={fetchSkills}
       />
 
-    <Modal
+      <Modal
         open={isSalarySlipModal}
         title="Download Salary Slip"
         onCancel={handleCancelModal}
@@ -642,16 +641,16 @@ function PersonalInfoPage() {
                       {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                     </span>
                   </div>
-                  
+
                 </div>
 
                 <Button
                   type="submit"
                   onClick={handleSubmit}
                   className="submitButton"
-                  
+
                 >
-                
+
                 </Button>
               </form>
             </div>
@@ -667,29 +666,29 @@ function PersonalInfoPage() {
           {currentStep === 2 && (
             <div style={{ textAlign: 'center' }}>
               <div className={styles.nameDiv}>
-                      
-                       <Select placeholder="Select Month" style={{ width: 200 }}
-                          onChange={(value) => setMonth(value)} >
-                          {months.map((month, index) => (
-                            <Option key={index} value={month}>
-                              {month}
-                            </Option>
-                          ))}
-                        </Select>
-                        <Select placeholder="Select Year" style={{ width: 200 }}
-                         onChange={(value) => setYear(value)}
-                        >
-                          {years.map((year, index) => (
-                            <Option key={index} value={year}>
-                              {year}
-                            </Option>
-                          ))}
-                        </Select>
-                    </div>
-                    <div className={styles.btnDivSlip}>
-                      <Button type="primary"  className={styles.nextBtn} onClick={handleDownloadSalarySlip}>Download Salary Slip</Button>
-                    </div>
-                    </div>
+
+                <Select placeholder="Select Month" style={{ width: 200 }}
+                  onChange={(value) => setMonth(value)} >
+                  {months.map((month, index) => (
+                    <Option key={index} value={month}>
+                      {month}
+                    </Option>
+                  ))}
+                </Select>
+                <Select placeholder="Select Year" style={{ width: 200 }}
+                  onChange={(value) => setYear(value)}
+                >
+                  {years.map((year, index) => (
+                    <Option key={index} value={year}>
+                      {year}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+              <div className={styles.btnDivSlip}>
+                <Button type="primary" className={styles.nextBtn} onClick={handleDownloadSalarySlip}>Download Salary Slip</Button>
+              </div>
+            </div>
           )}
         </div>
       </Modal>
@@ -720,20 +719,20 @@ function PersonalInfoPage() {
 
             Please ensure all required steps are completed promptly. Once done, full access will be automatically restored.
 
-            Any other personal info which is field in but which may have, add changed should be updated such as phone number,addresa etc 
-                <p>If you do not fulfill the following requirements, your HRMS account will be blocked after 19/06/2025, and you will not be able to log in, regardless of how many attempts you have left </p>
-        
+            Any other personal info which is field in but which may have, add changed should be updated such as phone number,addresa etc
+            <p>If you do not fulfill the following requirements, your HRMS account will be blocked after 19/06/2025, and you will not be able to log in, regardless of how many attempts you have left </p>
+
           </div>
         )}
 
         {countPersonalInfo > 3 && (
           <div style={{ marginBottom: '16px', color: 'red', fontWeight: 'bold' }}>
-            ⚠️ You have exceeded the maximum number of allowed attempts. Due to non-compliance, access to certain HRMS other options has been blocked. 
+            ⚠️ You have exceeded the maximum number of allowed attempts. Due to non-compliance, access to certain HRMS other options has been blocked.
             To regain access, please fill in the missing information you will able to access all the HRMS features.
 
-             Any other personal info which is field in but which may have, add changed should be updated such as phone number, addresa etc
+            Any other personal info which is field in but which may have, add changed should be updated such as phone number, addresa etc
 
-             <p>If you do not fulfill the following requirements, your HRMS account will be blocked after 19/06/2025, and you will not be able to log in, regardless of how many attempts you have left </p>
+            <p>If you do not fulfill the following requirements, your HRMS account will be blocked after 19/06/2025, and you will not be able to log in, regardless of how many attempts you have left </p>
           </div>
         )}
         <div>

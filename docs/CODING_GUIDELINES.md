@@ -907,92 +907,200 @@ query = f"SELECT * FROM employee WHERE employee_id = '{employee_id}'"  # DANGERO
 
 ## Documentation Standards
 
-### Comprehensive Docstring Requirements
+### Concise Docstring Requirements
 
-Every public function, method, and class MUST have a docstring following Google style guide.
+Every public function, method, and class MUST have a brief, clear docstring that describes what it does.
 
-#### 1. Function Docstrings - Complete Format
+#### 1. Function Docstrings - Keep It Simple
 
 ```python
-# ✅ EXCELLENT - Complete Google-style docstring
-def create_employee_with_skills(
-    emp_data: Dict[str, Any],
-    skills: List[str],
-    approver_id: str,
-    send_email: bool = True
-) -> Tuple[str, bool]:
+# ✅ EXCELLENT - Concise and clear
+def get_employee(emp_id: str) -> Optional[Dict]:
+    """Retrieves employee details by ID."""
+    employee = Employee.query.filter_by(employee_id=emp_id).first()
+    if not employee:
+        return None
+    return employee.to_dict()
+
+def create_employee(emp_data: Dict[str, Any]) -> str:
+    """Creates a new employee and returns the generated employee ID."""
+    employee = Employee(**emp_data)
+    db.session.add(employee)
+    db.session.commit()
+    return employee.employee_id
+
+def update_project(project_id: int, **kwargs) -> bool:
+    """Updates project fields selectively, ignoring null/empty values."""
+    project = Project.query.get(project_id)
+    if not project:
+        return False
+    for key, value in kwargs.items():
+        if value:  # Only update non-empty values
+            setattr(project, key, value)
+    db.session.commit()
+    return True
+
+# ✅ GOOD - Two lines for complex operations
+def transfer_employee_with_approvals(emp_id: str, new_dept: str, transfer_date: date) -> bool:
     """
-    Creates a new employee record with associated skills and sends welcome email.
+    Transfers employee to new department with manager approval.
+    Updates all related records including leaves, allocations, and access permissions.
+    """
+    # Implementation
+    pass
+
+# ❌ BAD - Too verbose with unnecessary details
+def get_employee(emp_id: str) -> Optional[Dict]:
+    """
+    Retrieves employee details by ID.
     
-    This function performs a complete employee onboarding by creating the employee
-    record, assigning skills, setting up initial permissions, and optionally sending
-    a welcome email. All operations are performed in a single transaction.
+    This function queries the employee table using SQLAlchemy ORM
+    and returns a dictionary representation of the employee record.
     
     Args:
-        emp_data: Dictionary containing employee information with keys:
-            - first_name (str): Employee's first name (required)
-            - last_name (str): Employee's last name (required)
-            - email (str): Valid email address (required)
-            - date_of_joining (str): Date in YYYY-MM-DD format (required)
-            - department_id (str): Department identifier (optional)
-            - designation (str): Job title (optional)
-        skills: List of skill IDs to assign to the employee. Empty list is allowed.
-        approver_id: Employee ID of the immediate supervisor/approver. Must be
-            an active employee with proper permissions.
-        send_email: If True, sends a welcome email to the new employee. Default True.
-            Email sending failures will be logged but won't fail the operation.
-    
+        emp_id: The unique employee identifier string
+        
     Returns:
-        Tuple containing:
-        - str: The newly created employee ID
-        - bool: True if email was sent successfully, False otherwise
-    
+        Dictionary containing employee information or None if not found
+        
     Raises:
-        ValueError: If required fields are missing or invalid:
-            - Empty or missing first_name, last_name, or email
-            - Invalid email format
-            - Invalid date format for date_of_joining
-            - Future date for date_of_joining
-        LookupError: If approver_id doesn't exist or is inactive
-        IntegrityError: If employee with same email already exists
-        DatabaseError: If database operation fails
-    
+        DatabaseError: If query fails
+        
     Example:
-        >>> emp_data = {
-        ...     'first_name': 'John',
-        ...     'last_name': 'Doe',
-        ...     'email': 'john.doe@company.com',
-        ...     'date_of_joining': '2025-01-15'
-        ... }
-        >>> skills = ['SKILL001', 'SKILL002']
-        >>> emp_id, email_sent = create_employee_with_skills(
-        ...     emp_data, skills, 'MGR001', send_email=True
-        ... )
-        >>> print(f"Created employee: {emp_id}, Email sent: {email_sent}")
-        Created employee: EMP123, Email sent: True
-    
-    Note:
-        - Transaction is atomic: if any step fails, entire operation rolls back
-        - Duplicate emails are not allowed system-wide
-        - Skills are assigned with default 'Secondary' level
-        - Welcome email includes login credentials (auto-generated)
-    
-    See Also:
-        update_employee_skills: For modifying skills after creation
-        deactivate_employee: For employee offboarding
+        >>> emp = get_employee('EMP001')
+        >>> print(emp['name'])
     """
-    # Implementation here
+    # ❌ Docstring is longer than the actual code!
     pass
 
-# ❌ BAD - Minimal or missing docstring
-def create_employee(emp_data, skills, approver_id):
-    """Creates employee."""  # ❌ Too brief, no details
-    pass
-
-def create_employee(emp_data, skills, approver_id):
-    # ❌ Missing docstring entirely
+# ❌ BAD - Missing docstring
+def get_employee(emp_id):
     pass
 ```
+
+#### 2. Class Docstrings
+
+```python
+# ✅ EXCELLENT - Brief class description
+class EmployeeService:
+    """Handles employee CRUD operations and lifecycle management."""
+    
+    @staticmethod
+    def get_all_employees():
+        """Returns list of all active employees."""
+        pass
+
+# ✅ GOOD - Two lines for complex services
+class ReviewService:
+    """
+    Manages skill reviews and evaluations.
+    Handles review creation, updates, and aggregation of scores.
+    """
+    pass
+
+# ❌ BAD - Too verbose
+class EmployeeService:
+    """
+    Service layer for employee-related business operations.
+    
+    This service handles all employee CRUD operations, skill management,
+    and employee lifecycle events (onboarding, transfers, offboarding).
+    All methods use SQLAlchemy ORM and centralized logging.
+    
+    Attributes:
+        None (all methods are static)
+    
+    Example Usage:
+        >>> emp_id = EmployeeService.create_employee(emp_data)
+        >>> employee = EmployeeService.get_employee('EMP001')
+    """
+    # ❌ Too much information
+    pass
+```
+
+#### 3. Important Rules
+
+**✅ DO:**
+- Keep docstrings to 1-2 lines maximum
+- Describe what the function DOES, not how it works
+- Focus on the current implementation
+- Use simple, clear language
+- Use type hints instead of documenting parameter types
+
+**❌ DON'T:**
+- Include Args, Returns, Raises sections (type hints cover this)
+- Add examples in docstrings (code should be self-explanatory)
+- Reference legacy systems, stored procedures, or migration details
+- Explain implementation details (put those in code comments)
+- Write docstrings longer than the function itself
+
+#### 4. Type Hints Replace Verbose Docs
+
+```python
+# ✅ EXCELLENT - Type hints + concise docstring
+def save_review(
+    employee_id: str,
+    skill_id: str,
+    score: float,
+    evaluator_id: str,
+    comments: Optional[str] = None
+) -> Dict[str, Any]:
+    """Saves or updates a skill review for an employee."""
+    # Type hints tell you what parameters are needed
+    # Docstring tells you what it does
+    pass
+
+# ❌ BAD - Repeating what type hints already say
+def save_review(
+    employee_id: str,
+    skill_id: str,
+    score: float,
+    evaluator_id: str,
+    comments: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Saves or updates a skill review.
+    
+    Args:
+        employee_id (str): Employee being reviewed
+        skill_id (str): Skill being evaluated  
+        score (float): Evaluation score
+        evaluator_id (str): Employee conducting review
+        comments (Optional[str]): Feedback text
+        
+    Returns:
+        Dict[str, Any]: Review data dictionary
+    """
+    # ❌ All of this is already in the type hints!
+    pass
+```
+
+#### 5. When to Use Comments Instead
+
+Use inline comments for implementation details, not docstrings:
+
+```python
+def update_employee_selective(emp_id: str, updates: Dict) -> bool:
+    """Updates employee with selective field validation."""
+    
+    employee = Employee.query.get(emp_id)
+    if not employee:
+        return False
+    
+    # Only update fields that are not null, empty, or the string 'string'
+    # This replicates legacy stored procedure logic
+    for field, value in updates.items():
+        if value and str(value).lower() != 'string':
+            setattr(employee, field, value)
+    
+    db.session.commit()
+    return True
+```
+
+**Key Points:**
+- Docstring: What the function does (1 line)
+- Comments: How/why specific logic works
+- Legacy references: In comments, not docstrings
 
 #### 2. Class Docstrings
 

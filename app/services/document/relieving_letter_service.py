@@ -13,7 +13,7 @@ from xhtml2pdf import pisa
 from num2words import num2words
 
 from ... import db
-from ...models.hr import Employee, EmployeeSubRole, EmployeeRelievingLetters
+from ...models.hr import Employee, MasterSubRole, EmployeeRelievingLetters
 from ...utils.logger import Logger
 from .document_utils import DocumentUtils
 
@@ -29,11 +29,11 @@ class RelievingLetterService:
                 Employee.employee_id,
                 (Employee.first_name + ' ' + Employee.last_name).label('employee_name'),
                 Employee.date_of_joining,
-                EmployeeSubRole.sub_role_name,
+                MasterSubRole.sub_role_name,
                 Employee.personal_email
             ).outerjoin(
-                EmployeeSubRole,
-                Employee.sub_role == EmployeeSubRole.sub_role_id
+                MasterSubRole,
+                Employee.sub_role == MasterSubRole.sub_role_id
             ).all()
             
             employees = [

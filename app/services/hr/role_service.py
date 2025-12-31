@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ... import db
 from ...models.hr import (Employee, Skill, EmployeeSkill, Designation, 
-                          EmployeeSubRole, EmployeeRole, Role, Lob)
+                          MasterSubRole, EmployeeRole, MasterRole, Lob)
 from ...utils.logger import Logger
 
 class RoleService:
@@ -22,8 +22,8 @@ class RoleService:
     def get_employee_sub_roles() -> List[Dict[str, Any]]:
         """Retrieves all employee sub-roles."""
         try:
-            sub_roles = EmployeeSubRole.query.with_entities(
-                EmployeeSubRole.sub_role_id, EmployeeSubRole.sub_role_name).all()
+            sub_roles = MasterSubRole.query.with_entities(
+                MasterSubRole.sub_role_id, MasterSubRole.sub_role_name).all()
             return [{'sub_role_id': sr.sub_role_id, 'sub_role_name': sr.sub_role_name} for sr in sub_roles]
         except Exception as e:
             Logger.error("Error fetching sub-roles", error=str(e))
@@ -67,7 +67,7 @@ class RoleService:
     def insert_sub_role(sub_role_name: str) -> bool:
         """Inserts a new sub-role."""
         try:
-            sub_role = EmployeeSubRole(sub_role_name=sub_role_name)
+            sub_role = MasterSubRole(sub_role_name=sub_role_name)
             db.session.add(sub_role)
             db.session.commit()
             return True

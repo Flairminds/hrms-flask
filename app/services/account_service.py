@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..models.account import db, OTPRequest
-from ..models.hr import Employee, EmployeeRole, Role, EmployeeCredentials
+from ..models.hr import Employee, EmployeeRole, MasterRole, EmployeeCredentials
 from ..utils.logger import Logger
 from sqlalchemy import or_, and_
 
@@ -100,7 +100,7 @@ class AccountService:
                 Employee.employee_id,
                 (Employee.first_name + ' ' + Employee.last_name).label('full_name'),
                 Employee.email,
-                Role.role_name,
+                MasterRole.role_name,
                 Employee.employment_status,
                 EmployeeCredentials.password_hash
             ).join(

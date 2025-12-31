@@ -1,13 +1,14 @@
 from .. import db
+from sqlalchemy import text
 
 
 class AuditMixin:
     """Mixin to add audit columns to all models"""
-    created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     created_by = db.Column(db.String(20))  # Employee ID
     modified_at = db.Column(db.DateTime, onupdate=db.func.now())
     modified_by = db.Column(db.String(20))  # Employee ID
-    is_deleted = db.Column(db.Boolean, nullable=False, default=False)
+    is_deleted = db.Column(db.Boolean, nullable=False, server_default=text('false'))
     deleted_at = db.Column(db.DateTime)
 
 

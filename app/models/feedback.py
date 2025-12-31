@@ -11,5 +11,5 @@ class EmpFeedBackData(BaseModel):
     goals = db.Column(db.Text)
     measures = db.Column(db.Text)
     comments = db.Column(db.Text)
-    added_date = db.Column(db.DateTime, default=db.func.now())
+    added_date = db.Column(db.DateTime, server_default=db.func.now())
     targeted_date = db.Column(db.DateTime)

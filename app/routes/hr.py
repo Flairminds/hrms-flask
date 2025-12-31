@@ -16,7 +16,7 @@ def upsert_employee():
     return HRController.upsert_employee()
 
 @hr_bp.route('/insert-employee', methods=['POST'])
-@roles_required(*ROLE_PERMISSIONS['hr'])
+# @roles_required(*ROLE_PERMISSIONS['hr'])
 def insert_employee():
     return HRController.insert_employee()
 

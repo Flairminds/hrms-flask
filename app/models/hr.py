@@ -5,7 +5,8 @@ from .base import BaseModel
 
 class Employee(BaseModel):
     __tablename__ = 'employee'
-    employee_id = db.Column(db.String(20), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), unique=True, nullable=False, index=True)
     first_name = db.Column(db.String(50), nullable=False)
     middle_name = db.Column(db.String(50))
     last_name = db.Column(db.String(50), nullable=False)
@@ -23,7 +24,7 @@ class Employee(BaseModel):
     team_lead_id = db.Column(db.String(20))
     highest_qualification = db.Column(db.String(100))
     employment_status = db.Column(db.String(50))
-    sub_role = db.Column(db.Integer, db.ForeignKey('employee_sub_role.sub_role_id'))
+    sub_role = db.Column(db.Integer, db.ForeignKey('master_sub_role.sub_role_id'))
     lob_lead = db.Column(db.String(50), db.ForeignKey('lob.lob_lead'))
     is_lead = db.Column(db.Boolean, default=False)
     qualification_year_month = db.Column(db.String(10))
@@ -67,8 +68,9 @@ class Skill(BaseModel):
 
 class EmployeeSkill(BaseModel):
     __tablename__ = 'employee_skill'
-    employee_id = db.Column(db.String(20), primary_key=True)
-    skill_id = db.Column(db.Integer, primary_key=True)
+    employee_skill_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), nullable=False)
+    skill_id = db.Column(db.Integer, nullable=False)
     skill_level = db.Column(db.String(50))
     is_ready = db.Column(db.Boolean, nullable=False, default=False)
     is_ready_date = db.Column(db.DateTime)
@@ -77,7 +79,9 @@ class EmployeeSkill(BaseModel):
     full_stack_ready = db.Column(db.Boolean, default=False)
     
     __table_args__ = (
+        db.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill'),
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
+        db.ForeignKeyConstraint(['skill_id'], ['skill.skill_id']),
         {}
     )
 
@@ -98,8 +102,8 @@ class ProjectList(BaseModel):
     end_date = db.Column(db.Date, nullable=False)
 
 
-class EmployeeSubRole(BaseModel):
-    __tablename__ = 'employee_sub_role'
+class MasterSubRole(BaseModel):
+    __tablename__ = 'master_sub_role'
     sub_role_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sub_role_name = db.Column(db.String(100))
 
@@ -156,10 +160,15 @@ class Lob(BaseModel):
     lob = db.Column(db.String(55), nullable=False)
 
 
-class Role(BaseModel):
-    __tablename__ = 'role'
+class MasterRole(BaseModel):
+    __tablename__ = 'master_role'
     role_id = db.Column(db.Integer, primary_key=True)
     role_name = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('role_name', name='uq_role_name'),
+        {}
+    )
 
 
 class WorkCategories(BaseModel):
@@ -217,7 +226,7 @@ class EmployeeEvaluators(BaseModel):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     emp_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     evaluator_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    assigned_on = db.Column(db.DateTime, default=db.func.now())
+    assigned_on = db.Column(db.DateTime, server_default=db.func.now())
 
 
 class EmployeeGoal(BaseModel):
@@ -227,7 +236,7 @@ class EmployeeGoal(BaseModel):
     skill_id = db.Column(db.Integer, db.ForeignKey('skill.skill_id'), nullable=False)
     target_date = db.Column(db.DateTime, nullable=False)
     set_by_employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    created_on = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    created_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     modified_on = db.Column(db.DateTime)
 
 
@@ -278,7 +287,7 @@ class EmployeeRole(BaseModel):
     
     __table_args__ = (
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
-        db.ForeignKeyConstraint(['role_id'], ['role.role_id']),
+        db.ForeignKeyConstraint(['role_id'], ['master_role.role_id']),
         {}
     )
 
@@ -293,7 +302,7 @@ class EmployeeSkillReview(BaseModel):
     comments = db.Column(db.String(500))
     is_ready = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String(50), nullable=False, default='Not Reviewed')
-    review_date = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    review_date = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     is_new = db.Column(db.Boolean, nullable=False, default=False)
     
     __table_args__ = (
@@ -352,7 +361,7 @@ class CapabilityDevelopmentLead(BaseModel):
     __tablename__ = 'capability_development_lead'
     capability_development_lead_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, unique=True)
-    created_date = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    created_date = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     updated_date = db.Column(db.DateTime)
 
 
@@ -361,7 +370,7 @@ class CapabilityDevelopmentLeadAssignment(BaseModel):
     capability_development_lead_assignment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     assigned_employee_id = db.Column(db.String(20), nullable=False)
     capability_development_lead_id = db.Column(db.Integer, db.ForeignKey('capability_development_lead.capability_development_lead_id', ondelete='CASCADE'), nullable=False)
-    created_date = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    created_date = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     updated_date = db.Column(db.DateTime)
     
     __table_args__ = (

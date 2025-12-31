@@ -51,7 +51,7 @@ class Holiday(BaseModel):
     holiday_date = db.Column(db.Date, nullable=False)
     holiday_name = db.Column(db.String(255), nullable=False)
     added_by = db.Column(db.String(255), nullable=False, default='manager')
-    added_on = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    added_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
 
 
 class LeaveAudit2(BaseModel):

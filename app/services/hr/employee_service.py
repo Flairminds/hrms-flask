@@ -6,8 +6,8 @@ from werkzeug.security import generate_password_hash
 
 from ... import db
 from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, Skill,
-                          LateralAndExempt, Lob, Designation, EmployeeSubRole, 
-                          EmployeeCredentials, EmployeeRole, Role, ProjectAllocation,
+                          LateralAndExempt, Lob, Designation, MasterSubRole, 
+                          EmployeeCredentials, EmployeeRole, MasterRole, ProjectAllocation,
                           EmployeeDesignation, EmployeeDocuments)
 from ...models.leave import LeaveTransaction, LeaveOpeningTransaction
 from ...utils.logger import Logger
@@ -16,10 +16,7 @@ from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear
 class EmployeeService:
     @staticmethod
     def get_all_employees():
-        """
-        Retrieves a list of all active employees with their roles using ORM.
-        Mirrors the 'GetAllEmployees' logic from the .NET backend.
-        """
+        """Retrieves all active employees with their roles."""
         try:
             Logger.info("Fetching all active employees")
             employees = db.session.query(
@@ -27,11 +24,11 @@ class EmployeeService:
                 Employee.first_name,
                 Employee.middle_name,
                 Employee.last_name,
-                Role.role_name
+                MasterRole.role_name
             ).join(
                 EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
             ).join(
-                Role, EmployeeRole.role_id == Role.role_id
+                MasterRole, EmployeeRole.role_id == MasterRole.role_id
             ).filter(
                 Employee.employment_status != 'Terminated'
             ).all()
@@ -49,10 +46,7 @@ class EmployeeService:
 
     @staticmethod
     def upsert_employee(data):
-        """
-        Creates or updates an employee record. 
-        Note: This is a simplified version of the logic in the .NET stored procedures.
-        """
+        """Creates or updates an employee record."""
         try:
             emp_id = data.get('EmployeeId')
             employee = Employee.query.get(emp_id) if emp_id else None
@@ -76,7 +70,7 @@ class EmployeeService:
 
     @staticmethod
     def get_employee_details_for_relieving_letter():
-        """Fetches employee details needed for a relieving letter using ORM."""
+        """Fetches employee details for relieving letter generation."""
         try:
             Logger.info("Fetching employee details for relieving letter")
             # This is a specific report logic - might need refinement
@@ -87,10 +81,7 @@ class EmployeeService:
 
     @staticmethod
     def get_employee_lateral_hires():
-        """
-        Retrieves all employees with their lateral hire status using ORM.
-        Returns employee ID, full name, and lateral hire flag.
-        """
+        """Retrieves all employees with their lateral hire status."""
         try:
             results = db.session.query(
                 Employee.employee_id,
@@ -115,10 +106,7 @@ class EmployeeService:
 
     @staticmethod
     def update_lateral_hire(employee_id, lateral_hire):
-        """
-        Updates or inserts lateral hire status for an employee using ORM.
-        Returns True if successful, False otherwise.
-        """
+        """Updates or inserts lateral hire status for an employee."""
         try:
             record = LateralAndExempt.query.filter_by(employee_id=employee_id).first()
             if record:
@@ -136,10 +124,7 @@ class EmployeeService:
 
     @staticmethod
     def get_employee_exempt_data():
-        """
-        Retrieves exempt employee data with date ranges and shift times using ORM.
-        Only returns records with valid from_date.
-        """
+        """Retrieves exempt employee data with date ranges and shift times."""
         try:
             results = db.session.query(
                 Employee.employee_id,
@@ -170,10 +155,7 @@ class EmployeeService:
 
     @staticmethod
     def insert_lateral_exempt_data(employee_id, from_date, to_date, shift_start_from_time):
-        """
-        Inserts lateral exempt data for an employee using ORM.
-        Returns True if successful, False otherwise.
-        """
+        """Inserts lateral exempt data for an employee."""
         try:
             record = LateralAndExempt(
                 employee_id=employee_id,
@@ -192,8 +174,8 @@ class EmployeeService:
     @staticmethod
     def update_employee_details(employee_data: Dict[str, Any]) -> int:
         """
-        Comprehensive employee update with project allocations using ORM.
-        Migrated from C# using stored procedure '[dbo].[UpdateEmployeeDetails]'.
+        Updates employee details including designations, documents, and project allocations.
+        Returns 1 on success, -1 if employee not found.
         """
         emp_id = employee_data.get('employee_id')
         Logger.info("Executing UpdateEmployeeDetails logic", employee_id=emp_id)
@@ -281,7 +263,7 @@ class EmployeeService:
     def update_employee_by_self(employee_id: str, update_data: Dict[str, Any]) -> int:
         """
         Updates employee's own editable fields (contact, addresses, skills).
-        Migrated from C# using stored procedure '[dbo].[UpdateEmployeeDetailsBySelf]'.
+        Returns 1 on success, -1 if employee not found.
         """
         if not employee_id or not employee_id.strip():
             raise ValueError("Employee ID is required")
@@ -347,10 +329,7 @@ class EmployeeService:
 
     @staticmethod
     def get_all_employees_details() -> List[Dict[str, Any]]:
-        """
-        Retrieves comprehensive details for all employees.
-        Migrated from C# using SP logic.
-        """
+        """Retrieves comprehensive details for all employees including skills, leaves, and allocations."""
         Logger.info("Fetching all employees comprehensive details")
         try:
             from sqlalchemy import Integer
@@ -368,12 +347,12 @@ class EmployeeService:
                 Employee.last_working_date.label('lwd'),
                 Employee.lwp,
                 Employee.lob_lead.label('lob_lead_id'),
-                EmployeeSubRole.sub_role_name.label('role'),
+                MasterSubRole.sub_role_name.label('role'),
                 (LobLeadAlias.first_name + ' ' + LobLeadAlias.last_name).label('lob_lead_name'),
                 Designation.designation_name.label('band')
             ).outerjoin(
-                EmployeeSubRole,
-                Employee.sub_role == EmployeeSubRole.sub_role_id
+                MasterSubRole,
+                Employee.sub_role == MasterSubRole.sub_role_id
             ).outerjoin(
                 LobLeadAlias,
                 Employee.lob_lead == LobLeadAlias.employee_id
@@ -467,11 +446,11 @@ class EmployeeService:
                 project_allocations = db.session.query(
                     Project.project_name,
                     ProjectAllocation.project_allocation.label('bandwidth_allocation'),
-                    EmployeeSubRole.sub_role_name.label('project_role')
+                    MasterSubRole.sub_role_name.label('project_role')
                 ).select_from(ProjectAllocation).outerjoin(
                     Project, ProjectAllocation.project_id == Project.project_id
                 ).outerjoin(
-                    EmployeeSubRole, ProjectAllocation.employee_role == EmployeeSubRole.sub_role_id
+                    MasterSubRole, ProjectAllocation.employee_role == MasterSubRole.sub_role_id
                 ).filter(ProjectAllocation.employee_id == emp_id).all()
                 
                 result.append({
@@ -509,9 +488,7 @@ class EmployeeService:
 
     @staticmethod
     def get_employee_with_address_and_skills(emp_id: str) -> Dict[str, Any]:
-        """
-        Retrieves comprehensive employee details with addresses and skills.
-        """
+        """Retrieves comprehensive employee details with addresses and skills."""
         if not emp_id or not emp_id.strip():
             raise ValueError("Employee ID is required")
         Logger.info("Fetching employee details with address and skills", employee_id=emp_id)
@@ -608,19 +585,8 @@ class EmployeeService:
     @staticmethod
     def insert_employee(employee_data: Dict[str, Any]) -> str:
         """
-        Inserts new employee with addresses, skills, and credentials.
-        Checks for duplicate employees based on email, first name, last name, and contact number.
-        
-        Args:
-            employee_data: Dictionary containing employee information including:
-                - password: Plain text password (will be hashed)
-                - All other standard employee fields
-        
-        Returns:
-            employee_id: The newly created employee ID
-        
-        Raises:
-            ValueError: If duplicate employee found or required fields missing
+        Creates new employee with addresses, skills, and hashed credentials.
+        Checks for duplicates based on email/name/contact before insertion.
         """
         Logger.info("Executing InsertEmployee logic")
         required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 
@@ -663,9 +629,23 @@ class EmployeeService:
                     f"Existing employee ID: {existing_employee.employee_id}"
                 )
             
-            # Generate new employee ID
-            sequence_val = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[Employee_Seq]")).scalar()
-            employee_id = f"EMP{sequence_val}"
+            
+            # Generate new employee ID using autoincrement id field
+            latest_employee = db.session.query(Employee.id).order_by(
+                Employee.id.desc()
+            ).first()
+            
+            if latest_employee:
+                # Use the latest autoincrement id to generate next employee_id
+                latest_id_str = latest_employee.employee_id
+                latest_id_num = int(latest_id_str.replace('EMP', ''))
+                new_id_num = latest_id_num + 1
+            else:
+                # First employee ever
+                new_id_num = 1
+            
+            employee_id = f"EMP{new_id_num}"
+            Logger.info("Generated new employee ID", employee_id=employee_id, id_number=new_id_num)
             
             # Create employee record
             new_employee = Employee(
@@ -724,7 +704,7 @@ class EmployeeService:
 
     @staticmethod
     def cancel_leave(leave_tran_id: int, leave_status: str = 'Cancel') -> bool:
-        """Cancels a leave transaction."""
+        """Cancels a leave transaction by updating its status."""
         try:
             leave = LeaveTransaction.query.get(leave_tran_id)
             if not leave: raise LookupError(f"Leave transaction {leave_tran_id} not found")
