@@ -137,8 +137,8 @@ class Client(BaseModel):
     clientname = db.Column(db.String(50))
 
 
-class Designation(BaseModel):
-    __tablename__ = 'designation'
+class MasterDesignation(BaseModel):
+    __tablename__ = 'master_designation'
     designation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     designation_name = db.Column(db.String(255), nullable=False)
 
@@ -210,6 +210,7 @@ class EmployeeDesignation(BaseModel):
     
     __table_args__ = (
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
+        db.ForeignKeyConstraint(['designation_id'], ['master_designation.designation_id']),
         {}
     )
 

@@ -219,3 +219,68 @@ class HRController:
                 'status': 'error',
                 'message': 'An error occurred while fetching employee details. Please try again.'
             }), 500
+
+    @staticmethod
+    def get_employee_with_address_and_skills(employee_id: str):
+        """
+        Retrieves comprehensive employee details including addresses and skills.
+        
+        Fetches complete employee profile with residential/permanent addresses
+        and associated skills for a given employee ID.
+        
+        Args:
+            employee_id: Employee ID from URL path parameter
+        
+        Returns:
+            200: Employee details with addresses and skills
+            400: Invalid or missing employee ID
+            404: Employee not found
+            500: Server error
+        """
+        Logger.info("Get employee with address and skills request received", employee_id=employee_id)
+        
+        try:
+            if not employee_id or not employee_id.strip():
+                Logger.warning("Empty employee ID provided")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Employee ID is required'
+                }), 400
+            
+            employee_data = EmployeeService.get_employee_with_address_and_skills(employee_id)
+            
+            Logger.info("Employee details with addresses and skills retrieved", 
+                       employee_id=employee_id)
+            
+            return jsonify({
+                'status': 'success',
+                'data': employee_data
+            }), 200
+            
+        except ValueError as ve:
+            Logger.warning("Validation error fetching employee details",
+                          employee_id=employee_id,
+                          error=str(ve))
+            return jsonify({
+                'status': 'error',
+                'message': str(ve)
+            }), 400
+            
+        except LookupError as le:
+            Logger.warning("Employee not found",
+                          employee_id=employee_id,
+                          error=str(le))
+            return jsonify({
+                'status': 'error',
+                'message': f'Employee {employee_id} not found'
+            }), 404
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching employee with address and skills",
+                        employee_id=employee_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                'status': 'error',
+                'message': 'An error occurred while fetching employee details. Please try again.'
+            }), 500

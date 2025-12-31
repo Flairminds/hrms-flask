@@ -63,7 +63,7 @@ export const LoginPage = () => {
       login(accessToken, userData);
 
       toast.success('Login successful!');
-      navigate('/personalInfo');
+      navigate('/personal-info');
     } catch (error) {
       console.error('There was a problem with the login operation:', error);
       toast.error('Login failed. Please check your credentials and try again.');

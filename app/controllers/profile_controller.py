@@ -14,13 +14,13 @@ class ProfileController:
                 
             e = profile['employee']
             return jsonify({
-                "EmployeeId": e.EmployeeId,
-                "FirstName": e.FirstName,
-                "LastName": e.LastName,
-                "Email": e.Email,
-                "ContactNumber": e.ContactNumber,
-                "Skills": [{"SkillName": s.SkillName, "Level": s.SkillLevel} for s in profile['skills']],
-                "Addresses": [{"Type": a.AddressType, "City": a.City, "State": a.State} for a in profile['addresses']]
+                "employee_id": e.employee_id,
+                "first_name": e.first_name,
+                "last_name": e.last_name,
+                "email": e.email,
+                "contact_number": e.contact_number,
+                "skills": [{"skill_name": s.skill_name, "level": s.skill_level} for s in profile['skills']],
+                "addresses": [{"type": a.address_type, "city": a.city, "state": a.state} for a in profile['addresses']]
             }), 200
         except Exception as e:
             return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500

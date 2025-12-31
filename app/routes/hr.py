@@ -35,3 +35,7 @@ def add_project():
 def get_employee_details_for_relieving_letter():
     return HRController.get_employee_details_for_relieving_letter()
 
+@hr_bp.route('/employee-details/<employee_id>', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr'])
+def get_employee_with_address_and_skills(employee_id):
+    return HRController.get_employee_with_address_and_skills(employee_id)

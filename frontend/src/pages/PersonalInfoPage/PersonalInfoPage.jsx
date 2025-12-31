@@ -3,7 +3,7 @@ import styles from './PersonalInfoPage.module.css';
 import defaultProfile from '../../assets/profile/prof.svg';
 import editIcon from "../../assets/HR/edit.svg";
 import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp } from '../../services/api';
-import { getCookie } from '../../util/CookieSet';
+import { useAuth } from '../../context/AuthContext';
 import { EditPersonalDetails } from '../../components/modal/editPersonalDetails/EditPersonalDetails';
 import { Modal, Button, Steps, message, Select } from 'antd';
 import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
@@ -13,6 +13,7 @@ const { Step } = Steps;
 const { Option } = Select;
 
 function PersonalInfoPage() {
+  const { user } = useAuth();
   const [employeeData, setEmployeeData] = useState(null);
   const [bandsData, setBandsData] = useState([]);
   const [error, setError] = useState(null);
@@ -31,18 +32,13 @@ function PersonalInfoPage() {
   const [loaderSlip, setLoaderSlip] = useState(false)
   const [highestQualificationYearMonth, setHighestQualificationYearMonth] = useState(null)
   const [fullStackReady, setFullStackReady] = useState(false)
-
-
   const [isMissingInfoModal, setIsMissingInfoModal] = useState(false);
-  console.log(isMissingInfoModal, "isMissingInfoModal");
 
   const [missingInfoMessage, setMissingInfoMessage] = useState('');
   const [countPersonalInfo, setCountPersonalInfo] = useState(0);
   const [warningMessage, setWarningMessage] = useState(null)
   const [isLoading, setIsLoading] = useState(true);
-  console.log(countPersonalInfo, "countPersonalInfo");
 
-  const employeeIdCookie = getCookie('employeeId');
   const [documentStatus, setDocumentStatus] = useState({});
   const [documentStatusDetails, setDocumentStatusDetails] = useState(null);
 
@@ -53,18 +49,6 @@ function PersonalInfoPage() {
   ];
 
   const years = ["2025", "2024", "2023", "2022"]
-  const getCompanyBandsData = async () => {
-    try {
-      const response = await getCompanyBands();
-      if (Array.isArray(response.data)) {
-        setBandsData(response.data);
-      } else {
-        console.error('Expected an array from getCompanyBands');
-      }
-    } catch (error) {
-      console.error('Error fetching company bands:', error);
-    }
-  };
 
   const getEmployeeRoles = async () => {
     try {
@@ -81,9 +65,13 @@ function PersonalInfoPage() {
 
   const fetchEmployeeData = async () => {
     try {
-      const employeeId = getCookie('employeeId');
+      const employeeId = user?.employeeId;
+      if (!employeeId) {
+        console.error('No employee ID available from context');
+        return;
+      }
       const response = await getEmployeeDetails(employeeId);
-      setEmployeeData(response.data);
+      setEmployeeData(response.data.data);
     } catch (error) {
       console.error('Error fetching employee data:', error);
       setError(error.message || 'Error fetching employee data');
@@ -91,60 +79,20 @@ function PersonalInfoPage() {
   };
 
   const checkCompleteEmployeeDetails = async () => {
-    console.log("checkCompleteEmployeeDetails called");
-
-    try {
-      setIsLoading(true);
-      const employeeId = getCookie('employeeId');
-      const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
-      console.log('responsegb', response.data);
-      setWarningMessage(response.data.status);
-
-      setCountPersonalInfo(response.data.data.Addresses[0].counter);
-      setMissingInfoMessage(response.data.message);
-
-      // Always show modal if status is false
-      if (response.data && response.data.status === false) {
-        console.log('Missing information detected:', response.data);
-
-        setIsMissingInfoModal(true);
-      }
-    } catch (error) {
-      console.error('Error checking employee details:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
   };
 
   const fetchDocumentStatus = async () => {
-    try {
-      const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-verification-status/${employeeIdCookie}`);
-      if (response.data && response.data.documents) {
-        setDocumentStatus(response.data.documents);
-      }
-    } catch (error) {
-      console.error('Error fetching document status:', error);
-    }
+    // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-verification-status/${employeeId}`);
   };
 
   const fetchDocumentStatusDetails = async () => {
-    try {
-      const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-status-details/${employeeIdCookie}`);
-      if (response.data) {
-        setDocumentStatusDetails(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching document status details:', error);
-    }
+    // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-status-details/${employeeId}`);
   };
 
   useEffect(() => {
     fetchEmployeeData();
-    getCompanyBandsData();
     getEmployeeRoles();
-    checkCompleteEmployeeDetails();
-    fetchDocumentStatus();
-    fetchDocumentStatusDetails();
   }, []);
 
   const handleResumeClick = () => {
@@ -157,14 +105,6 @@ function PersonalInfoPage() {
 
   const handleEditModal = () => {
     setIsEditModal(true);
-  };
-
-  const getBandName = (bandNumber) => {
-    if (Array.isArray(bandsData)) {
-      const band = bandsData.find(b => b.DesignationId === bandNumber);
-      return band?.Band;
-    }
-    return 'N/A';
   };
 
   const employeeRole = (RoleId) => {
@@ -289,7 +229,9 @@ function PersonalInfoPage() {
 
   const fetchSkills = async () => {
     try {
-      const response = await getSkillsForEmp(employeeIdCookie);
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+      const response = await getSkillsForEmp(employeeId);
       console.log(response, "raju");
       setHighestQualificationYearMonth(response.data.QualificationYearMonth)
       setFullStackReady(response.data.FullStackReady)
@@ -312,7 +254,9 @@ function PersonalInfoPage() {
     console.log("docType", docType);
 
     try {
-      const response = await getDocuments(employeeIdCookie, docType);
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+      const response = await getDocuments(employeeId, docType);
 
       if (response.status !== 200) {
         throw new Error(`Failed to download: ${response.statusText}`);
@@ -352,7 +296,9 @@ function PersonalInfoPage() {
 
   const fetchDocumentsView = async (docType) => {
     try {
-      const response = await getDocuments(employeeIdCookie, docType);
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+      const response = await getDocuments(employeeId, docType);
 
       if (response.status !== 200) {
         throw new Error(`Failed to fetch document: ${response.statusText}`);
@@ -394,18 +340,7 @@ function PersonalInfoPage() {
 
 
   const handleModalOk = async () => {
-    try {
-      const employeeId = getCookie('employeeId');
-      const response = await axiosInstance.post(`https://hrms-flask.azurewebsites.net/api/increment-address-counter/${employeeId}`);
-      if (countPersonalInfo === 4) {
-        window.location.reload();
-      }
-      console.log(response, "response");
-      setIsMissingInfoModal(false);
-    } catch (error) {
-      console.error('Error incrementing counter:', error);
-      message.error('Failed to update counter');
-    }
+    // const response = await axiosInstance.post(`https://hrms-flask.azurewebsites.net/api/increment-address-counter/${employeeId}`);
   };
 
 
@@ -428,154 +363,163 @@ function PersonalInfoPage() {
         </div>
       )}
       <div className={styles.profileResumeContainer}>
-        <div className={styles.profilePicture}>
+        <div className={styles.profileDetailsDiv}>
           <img
+            className={styles.profileImage}
             src={defaultProfile}
             alt="Profile"
           />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+            <div>
+              <span style={{ fontSize: '18px' }}>{employeeData?.last_name ? employeeData?.first_name + " " + employeeData?.last_name : employeeData?.first_name}</span>
+              <span>, {user?.roleName}</span>
+            </div>
+            <div>{employeeData?.email}</div>
+            <div>{employeeData?.contact_number}</div>
+          </div>
         </div>
         {/* <div className={styles.resumeButton}>
           <button onClick={handleResumeClick}>View Resume</button>
           <button onClick={() => setIsSalarySlipModal(true)}>Download Salary Slip</button>
         </div> */}
-      </div>
 
-      <div className={styles.personalInfoContainer}>
-        <div className={styles.headingContainer}>
-          <h5>Employee Personal Information</h5>
-          <img className={styles.img} onClick={handleEditModal} src={editIcon} alt="Edit Icon" />
+        <div onClick={handleEditModal} style={{ cursor: 'pointer', float: 'right' }}>
+          <img width={15} height={15} src={editIcon} alt="Edit Icon" />
+          <span style={{ marginLeft: '5px' }} >Edit Profile</span>
         </div>
 
-        {employeeData ? (
-          <div className={styles.infoFields}>
-            <div className={styles.infoItem}><strong>Employee ID:</strong> {employeeData.employeeId}</div>
-            <div className={styles.infoItem}><strong>First Name:</strong> {employeeData.firstName}</div>
-            <div className={styles.infoItem}><strong>Middle Name:</strong> {employeeData.middleName || 'N/A'}</div>
-            <div className={styles.infoItem}><strong>Last Name:</strong> {employeeData.lastName}</div>
-            <div className={styles.infoItem}>
-              <strong>Date of Birth:</strong>
-              {new Date(employeeData.dateOfBirth).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              })}
-            </div>
-            <div className={styles.infoItem}><strong>Contact Number:</strong> {employeeData.contactNumber}</div>
-            <div className={styles.infoItem}><strong>Emergency Contact Person:</strong> {employeeData.emergencyContactPerson}</div>
-            <div className={styles.infoItem}><strong>Emergency Contact Relation:</strong> {employeeData.emergencyContactRelation}</div>
-            <div className={styles.infoItem}><strong>Emergency Contact Number:</strong> {employeeData.emergencyContactNumber}</div>
-            <div className={styles.infoItem}><strong>Email:</strong> {employeeData.email}</div>
-            <div className={styles.infoItem}><strong>Personal Email:</strong> {employeeData.personalEmail || 'N/A'}</div>
-            <div className={styles.infoItem}><strong>Gender:</strong> {employeeData.gender}</div>
-            <div className={styles.infoItem}><strong>Blood Group:</strong> {employeeData.bloodGroup || 'N/A'}</div>
-            <div className={styles.infoItem}><strong>Band:</strong> {getBandName(employeeData.band)}</div>
-            <div className={styles.infoItem}><strong>Employee Role:</strong> {employeeRole(employeeData.MasterSubRole)}</div>
-            <div className={styles.infoItem}>
-              <strong>Date of Joining:</strong>
-              {new Date(employeeData.dateOfJoining).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              })}
-            </div>
-            <div className={styles.infoItem}><strong>Highest Qualification:</strong> {employeeData.highestQualification}</div>
-            <div className={styles.infoItem}><strong>Highest Qualification Year-Month:</strong> {highestQualificationYearMonth}</div>
-            <div className={styles.infoItem}>
-              <strong>Full Stack Ready:</strong> {fullStackReady ? "Yes" : "No"}
-            </div>
+        <div className={styles.personalInfoContainer}>
+          {employeeData ? (
+            <div className={styles.infoFields}>
+              <div className={styles.infoItem}><strong>Employee ID:</strong> {employeeData.employee_id}</div>
+              <div className={styles.infoItem}><strong>First Name:</strong> {employeeData.first_name}</div>
+              <div className={styles.infoItem}><strong>Middle Name:</strong> {employeeData.middle_name || 'N/A'}</div>
+              <div className={styles.infoItem}><strong>Last Name:</strong> {employeeData.last_name}</div>
+              <div className={styles.infoItem}>
+                <strong>Date of Birth:</strong>
+                {new Date(employeeData.date_of_birth).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                })}
+              </div>
+              <div className={styles.infoItem}><strong>Contact Number:</strong> {employeeData.contact_number}</div>
+              <div className={styles.infoItem}><strong>Emergency Contact Person:</strong> {employeeData.emergency_contact_person}</div>
+              <div className={styles.infoItem}><strong>Emergency Contact Relation:</strong> {employeeData.emergency_contact_relation}</div>
+              <div className={styles.infoItem}><strong>Emergency Contact Number:</strong> {employeeData.emergency_contact_number}</div>
+              <div className={styles.infoItem}><strong>Email:</strong> {employeeData.email}</div>
+              <div className={styles.infoItem}><strong>Personal Email:</strong> {employeeData.personal_email || 'N/A'}</div>
+              <div className={styles.infoItem}><strong>Gender:</strong> {employeeData.gender}</div>
+              <div className={styles.infoItem}><strong>Blood Group:</strong> {employeeData.blood_group || 'N/A'}</div>
+              <div className={styles.infoItem}><strong>Band:</strong> {employeeData.designation_name}</div>
+              <div className={styles.infoItem}><strong>Employee Role:</strong> {employeeRole(employeeData.employee_sub_role)}</div>
+              <div className={styles.infoItem}>
+                <strong>Date of Joining:</strong>
+                {new Date(employeeData.date_of_joining).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                })}
+              </div>
+              <div className={styles.infoItem}><strong>Highest Qualification:</strong> {employeeData.highest_qualification}</div>
+              <div className={styles.infoItem}><strong>Highest Qualification Year-Month:</strong> {highestQualificationYearMonth}</div>
+              <div className={styles.infoItem}>
+                <strong>Full Stack Ready:</strong> {fullStackReady ? "Yes" : "No"}
+              </div>
 
-            <div className={styles.addressSection}>
-              <h6 className={styles.headingContainer}>Documents</h6>
-              {documentTypes.map(({ key, label }) => {
-                const docStatus = documentStatusDetails?.documents?.[key];
-                return (
-                  <div key={key} className={styles.infoItem}>
-                    <div className={styles.documentRow}>
-                      <div><strong>{label}:</strong></div>
-                      <div className={styles.documentActions}>
-                        <div className={styles.documentStatus}>
-                          Status: {
-                            docStatus ? (
-                              <span style={{
-                                color: docStatus.status === 'Accepted' ? 'green' :
-                                  docStatus.status === 'Rejected' ? 'red' :
-                                    docStatus.status === 'Pending' ? 'orange' : 'gray'
-                              }}>
-                                {docStatus.status}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'gray' }}>Not Uploaded</span>
-                            )
-                          }
-                        </div>
-                        <div className={styles.documentButtons}>
-                          <Button
-                            className={styles.resumeButton}
-                            onClick={() => fetchDocuments(key)}
-                            disabled={!docStatus?.uploaded}
-                          >
-                            Download
-                          </Button>
-                          <Button
-                            className={styles.resumeButton}
-                            onClick={() => fetchDocumentsView(key)}
-                            disabled={!docStatus?.uploaded}
-                          >
-                            View
-                          </Button>
+              <div className={styles.addressSection}>
+                <h6 className={styles.headingContainer}>Documents</h6>
+                {documentTypes.map(({ key, label }) => {
+                  const docStatus = documentStatusDetails?.documents?.[key];
+                  return (
+                    <div key={key} className={styles.infoItem}>
+                      <div className={styles.documentRow}>
+                        <div><strong>{label}:</strong></div>
+                        <div className={styles.documentActions}>
+                          <div className={styles.documentStatus}>
+                            Status: {
+                              docStatus ? (
+                                <span style={{
+                                  color: docStatus.status === 'Accepted' ? 'green' :
+                                    docStatus.status === 'Rejected' ? 'red' :
+                                      docStatus.status === 'Pending' ? 'orange' : 'gray'
+                                }}>
+                                  {docStatus.status}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'gray' }}>Not Uploaded</span>
+                              )
+                            }
+                          </div>
+                          <div className={styles.documentButtons}>
+                            <Button
+                              className={styles.resumeButton}
+                              onClick={() => fetchDocuments(key)}
+                              disabled={!docStatus?.uploaded}
+                            >
+                              Download
+                            </Button>
+                            <Button
+                              className={styles.resumeButton}
+                              onClick={() => fetchDocumentsView(key)}
+                              disabled={!docStatus?.uploaded}
+                            >
+                              View
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-
-            {/* Residential Address Section */}
-            {employeeData.addresses && (
-              <div className={styles.addressSection}>
-                <h6 className={styles.headingContainer}>Residential Address</h6>
-                <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.residentialAddressType || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.residentialAddress1 || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.residentialAddress2 || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.residentialCity || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.residentialState || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.residentialZipcode || 'N/A'}</div>
+                  );
+                })}
               </div>
-            )}
 
-            {/* Permanent Address Section */}
-            {employeeData.addresses && (
-              <div className={styles.addressSection}>
-                <h6 className={styles.headingContainer}>Permanent Address</h6>
-                <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.permanentAddressType || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.permanentAddress1 || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.permanentAddress2 || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.permanentCity || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.permanentState || 'N/A'}</div>
-                <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.permanentZipcode || 'N/A'}</div>
-              </div>
-            )}
 
-            {/* Skills Section */}
-            <div className={styles.skillsSection}>
-              <h6 className={styles.headingContainer}>Skills</h6>
-              {employeeData.skills && employeeData.skills.length > 0 ? (
-                employeeData.skills.map((skill, index) => (
-                  <div className={styles.infoItem} key={index}>
-                    <strong>{skill.skillLevel}:</strong> {skill.skillName}
-                  </div>
-                ))
-              ) : (
-                <div className={styles.infoItem}> <strong>No Skills</strong> </div>
+              {/* Residential Address Section */}
+              {employeeData.addresses && (
+                <div className={styles.addressSection}>
+                  <h6 className={styles.headingContainer}>Residential Address</h6>
+                  <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.residential_address_type || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.residential_address1 || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.residential_address2 || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.residential_city || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.residential_state || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.residential_zipcode || 'N/A'}</div>
+                </div>
               )}
-            </div>
 
-          </div>
-        ) : (
-          <div>Loading...</div>
-        )}
+              {/* Permanent Address Section */}
+              {employeeData.addresses && (
+                <div className={styles.addressSection}>
+                  <h6 className={styles.headingContainer}>Permanent Address</h6>
+                  <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.permanent_address_type || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.permanent_address1 || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.permanent_address2 || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.permanent_city || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.permanent_state || 'N/A'}</div>
+                  <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.permanent_zipcode || 'N/A'}</div>
+                </div>
+              )}
+
+              {/* Skills Section */}
+              <div className={styles.skillsSection}>
+                <h6 className={styles.headingContainer}>Skills</h6>
+                {employeeData.skills && employeeData.skills.length > 0 ? (
+                  employeeData.skills.map((skill, index) => (
+                    <div className={styles.infoItem} key={index}>
+                      <strong>{skill.skill_level}:</strong> {skill.skill_name}
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.infoItem}> <strong>No Skills</strong> </div>
+                )}
+              </div>
+
+            </div>
+          ) : (
+            <div>Loading...</div>
+          )}
+        </div>
       </div>
 
       <EditPersonalDetails

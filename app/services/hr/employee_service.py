@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash
 
 from ... import db
 from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, MasterSkill,
-                          LateralAndExempt, Lob, Designation, MasterSubRole, 
+                          LateralAndExempt, Lob, MasterDesignation, MasterSubRole, 
                           EmployeeCredentials, EmployeeRole, MasterRole, ProjectAllocation,
                           EmployeeDesignation, EmployeeDocuments)
 from ...models.leave import LeaveTransaction, LeaveOpeningTransaction
@@ -349,7 +349,7 @@ class EmployeeService:
                 Employee.lob_lead.label('lob_lead_id'),
                 MasterSubRole.sub_role_name.label('role'),
                 (LobLeadAlias.first_name + ' ' + LobLeadAlias.last_name).label('lob_lead_name'),
-                Designation.designation_name.label('band')
+                MasterDesignation.designation_name.label('band')
             ).outerjoin(
                 MasterSubRole,
                 Employee.sub_role == MasterSubRole.sub_role_id
@@ -357,8 +357,8 @@ class EmployeeService:
                 LobLeadAlias,
                 Employee.lob_lead == LobLeadAlias.employee_id
             ).outerjoin(
-                Designation,
-                Employee.designation_id == Designation.designation_id
+                MasterDesignation,
+                Employee.designation_id == MasterDesignation.designation_id
             ).order_by(
                 func.cast(func.replace(Employee.employee_id, 'EMP', ''), Integer).asc()
             ).all()
@@ -497,9 +497,7 @@ class EmployeeService:
             ResidentialAddr = db.aliased(EmployeeAddress)
             PermanentAddr = db.aliased(EmployeeAddress)
             employee_query = db.session.query(
-                Employee, ResidentialAddr, PermanentAddr,
-                EmployeeDocuments.document_link.label('resume_link'),
-                EmployeeDesignation.designation_id.label('designation_id')
+                Employee, ResidentialAddr, PermanentAddr, MasterDesignation.designation_name.label('designation_name'), EmployeeDocuments.document_link.label('resume_link')
             ).outerjoin(
                 ResidentialAddr, and_(Employee.employee_id == ResidentialAddr.employee_id, ResidentialAddr.address_type == 'Residential')
             ).outerjoin(
@@ -508,12 +506,14 @@ class EmployeeService:
                 EmployeeDocuments, and_(Employee.employee_id == EmployeeDocuments.employee_id, EmployeeDocuments.document_id == 1)
             ).outerjoin(
                 EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+            ).outerjoin(
+                MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
             ).filter(Employee.employee_id == emp_id).first()
             
             if not employee_query or not employee_query[0]:
                 raise LookupError(f"Employee {emp_id} not found")
             
-            employee, res_addr, perm_addr, resume_link, designation_id = employee_query
+            employee, res_addr, perm_addr, employee_designation, resume_link = employee_query
             def format_date(date_obj): return date_obj.strftime('%d %b %Y') if date_obj else None
             
             addresses = {}
@@ -563,7 +563,7 @@ class EmployeeService:
                 'email': employee.email or '',
                 'gender': employee.gender or '',
                 'employee_sub_role': employee.sub_role,
-                'band': designation_id,
+                'designation_name': employee_designation,
                 'blood_group': employee.blood_group or '',
                 'date_of_joining': format_date(employee.date_of_joining),
                 'ctc': float(employee.ctc) if employee.ctc else 0.0,
@@ -572,7 +572,8 @@ class EmployeeService:
                 'resume_link': resume_link or '',
                 'lwp': employee.lwp or 0,
                 'internship_end_date': format_date(employee.internship_end_date),
-                'lwd': format_date(employee.last_working_date),
+                # last working date
+                'lwd': format_date(employee.lwd),
                 'date_of_resignation': format_date(employee.date_of_resignation),
                 'probation_end_date': format_date(employee.probation_end_date),
                 'addresses': addresses,

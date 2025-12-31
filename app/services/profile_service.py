@@ -48,10 +48,10 @@ class ProfileService:
             if not employee:
                 return False
                 
-            employee.contact_number = data.get('ContactNumber')
-            employee.emergency_contact_number = data.get('EmergencyContactNumber')
-            employee.emergency_contact_person = data.get('EmergencyContactPerson')
-            employee.emergency_contact_relation = data.get('EmergencyContactRelation')
+            employee.contact_number = data.get('contact_number')
+            employee.emergency_contact_number = data.get('emergency_contact_number')
+            employee.emergency_contact_person = data.get('emergency_contact_person')
+            employee.emergency_contact_relation = data.get('emergency_contact_relation')
             
             # TODO: Implement additional profile update logic as needed
             

@@ -133,8 +133,8 @@ export const Sidebar = ({ isRole }) => {
     return (
       <div className={stylesSidebar.main}>
         <div
-          className={`${stylesSidebar.divs} ${isActive('/personalInfo') ? stylesSidebar.active : ''}`}
-          onClick={() => navigate('/personalInfo')}
+          className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`}
+          onClick={() => navigate('/personal-info')}
         >
           <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
           <span className={stylesSidebar.info}>Personal Info</span>
@@ -152,7 +152,7 @@ export const Sidebar = ({ isRole }) => {
     <div className={stylesSidebar.main}>
       {(isRole === "Employee" || isRole === "Lead" || isRole === "Intern" || isRole === 'Manager' || isRole === "HR") && (
         <>
-          <div className={`${stylesSidebar.divs} ${isActive('/personalInfo') ? stylesSidebar.active : ''}`} onClick={() => navigate('/personalInfo')}>
+          <div className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`} onClick={() => navigate('/personal-info')}>
             <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
             <span className={stylesSidebar.info}>Personal Info</span>
           </div>

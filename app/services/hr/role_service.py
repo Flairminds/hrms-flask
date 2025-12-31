@@ -3,7 +3,7 @@ from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from ... import db
-from ...models.hr import (Employee, MasterSkill, EmployeeSkill, Designation, 
+from ...models.hr import (Employee, MasterSkill, EmployeeSkill, MasterDesignation, 
                           MasterSubRole, EmployeeRole, MasterRole, Lob)
 from ...utils.logger import Logger
 
@@ -33,8 +33,8 @@ class RoleService:
     def get_designations() -> List[Dict[str, Any]]:
         """Retrieves all available designations."""
         try:
-            designations = Designation.query.with_entities(
-                Designation.designation_id, Designation.designation_name).all()
+            designations = MasterDesignation.query.with_entities(
+                MasterDesignation.designation_id, MasterDesignation.designation_name).all()
             return [{'designation_id': d.designation_id, 'designation_name': d.designation_name} for d in designations]
         except Exception as e:
             Logger.error("Error fetching designations", error=str(e))

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5ce6343d70be
+Revision ID: c0c6e428938f
 Revises: 
-Create Date: 2025-12-31 13:02:47.594456
+Create Date: 2025-12-31 16:50:06.970056
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5ce6343d70be'
+revision = 'c0c6e428938f'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,17 +28,6 @@ def upgrade():
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('client_id')
-    )
-    op.create_table('designation',
-    sa.Column('designation_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('designation_name', sa.String(length=255), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('designation_id')
     )
     op.create_table('document',
     sa.Column('document_id', sa.Integer(), nullable=False),
@@ -270,6 +259,17 @@ def upgrade():
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('lob_lead')
+    )
+    op.create_table('master_designation',
+    sa.Column('designation_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('designation_name', sa.String(length=255), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('designation_id')
     )
     op.create_table('master_role',
     sa.Column('role_id', sa.Integer(), nullable=False),
@@ -638,6 +638,7 @@ def upgrade():
     sa.Column('modified_by', sa.String(length=20), nullable=True),
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['designation_id'], ['master_designation.designation_id'], ),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'designation_id')
     )
@@ -957,6 +958,7 @@ def downgrade():
     op.drop_table('master_sub_role')
     op.drop_table('master_skills')
     op.drop_table('master_role')
+    op.drop_table('master_designation')
     op.drop_table('lob')
     op.drop_table('leave_type_master')
     op.drop_table('leave_type')
@@ -970,6 +972,5 @@ def downgrade():
     op.drop_table('employee_score_card')
     op.drop_table('employee_relieving_letters')
     op.drop_table('document')
-    op.drop_table('designation')
     op.drop_table('client')
     # ### end Alembic commands ###

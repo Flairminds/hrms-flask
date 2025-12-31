@@ -222,6 +222,30 @@ def seed_master_skills():
     print("✓ Master skills seeded")
 
 
+def seed_master_designation():
+    """Seeds master designations"""
+    print("Seeding master designations")
+
+    designation_sql = text("""
+        INSERT INTO master_designation (designation_name) VALUES
+        (N'Technology Lead'),
+        (N'Sr Project / Service Manager'),
+        (N'Sr. Project / Service Lead (SPL)'),
+        (N'Associate Technology Architect'),
+        (N'Project / Service Lead (PL)'),
+        (N'Lead Coordinator'),
+        (N'Module / Team Lead'),
+        (N'Project / Service Manager (PM)'),
+        (N'Intern (I)'),
+        (N'Sr. Associate (SA)'),
+        (N'Associate (A)'),
+        (N'Trainee Associate (TA)'),
+        (N'Finance');
+    """)
+    db.session.execute(designation_sql)
+    print("✓ Master designation seeded")
+
+
 def seed_all():
     """Seeds all master data tables."""
     print("\n" + "="*50)
@@ -232,6 +256,7 @@ def seed_all():
         seed_master_roles()
         seed_master_sub_roles()
         seed_master_skills()
+        seed_master_designation()
         
         db.session.commit()
         

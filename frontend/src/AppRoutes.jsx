@@ -53,7 +53,7 @@ function AppRoutes() {
             }>
                 <Route path="leave" element={<LeaveManagementPage />} />
                 <Route path="holiday" element={<HolidayPage />} />
-                <Route path="personalInfo" element={<PersonalInfo />} />
+                <Route path="personal-info" element={<PersonalInfo />} />
                 <Route path="dashboard1" element={<Dashboard />} />
                 <Route path="companyPolicy" element={<PolicyPage />} />
                 <Route path="goalSeetingForm" element={<GoalSettingForm />} />
@@ -75,6 +75,7 @@ function AppRoutes() {
                 <Route path="PCsPage" element={<PCsPage />} />
                 <Route path="Assignments" element={<AssignmentsPage />} />
                 <Route path="Maintenance" element={<MaintenancePage />} />
+                <Route path="*" element={<span>404 Not Found</span>} />
             </Route>
         </Routes>
     );
