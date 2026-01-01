@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: c0c6e428938f
+Revision ID: 101a19864aed
 Revises: 
-Create Date: 2025-12-31 16:50:06.970056
+Create Date: 2026-01-01 16:49:43.136511
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c0c6e428938f'
+revision = '101a19864aed'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -155,39 +155,6 @@ def upgrade():
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_type_id', 'employee_id')
     )
-    op.create_table('leave_transaction',
-    sa.Column('leave_tran_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('employee_id', sa.String(length=20), nullable=True),
-    sa.Column('comments', sa.Text(), nullable=True),
-    sa.Column('leave_type', sa.Integer(), nullable=True),
-    sa.Column('from_date', sa.DateTime(), nullable=True),
-    sa.Column('to_date', sa.DateTime(), nullable=True),
-    sa.Column('duration', sa.String(length=20), nullable=True),
-    sa.Column('no_of_days', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('applied_leave_count', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('hand_over_comments', sa.Text(), nullable=True),
-    sa.Column('applied_by', sa.String(length=50), nullable=True),
-    sa.Column('application_date', sa.DateTime(), nullable=True),
-    sa.Column('approved_by', sa.String(length=50), nullable=True),
-    sa.Column('approved_date', sa.DateTime(), nullable=True),
-    sa.Column('approval_comment', sa.String(length=255), nullable=True),
-    sa.Column('leave_status', sa.String(length=50), nullable=True),
-    sa.Column('attachments', sa.LargeBinary(), nullable=True),
-    sa.Column('is_billable', sa.Boolean(), nullable=True),
-    sa.Column('have_customer_approval', sa.String(length=50), nullable=True),
-    sa.Column('is_customer_approval_required', sa.Boolean(), nullable=True),
-    sa.Column('is_communicated_to_team', sa.Boolean(), nullable=True),
-    sa.Column('second_approval_comment', sa.String(length=255), nullable=True),
-    sa.Column('second_approver_date', sa.DateTime(), nullable=True),
-    sa.Column('is_for_second_approval', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('leave_tran_id')
-    )
     op.create_table('leave_transaction2',
     sa.Column('leave_tran_id', sa.Integer(), nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=True),
@@ -222,33 +189,6 @@ def upgrade():
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('leave_tran_id')
     )
-    op.create_table('leave_type',
-    sa.Column('leave_type_id', sa.Integer(), nullable=False),
-    sa.Column('leave_type_name', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('leave_type_id')
-    )
-    op.create_table('leave_type_master',
-    sa.Column('leave_type_id', sa.Integer(), nullable=False),
-    sa.Column('leave_name', sa.String(length=100), nullable=True),
-    sa.Column('yearly_allocation', sa.Integer(), nullable=True),
-    sa.Column('monthly_allocation', sa.Integer(), nullable=True),
-    sa.Column('requires_customer_approval', sa.Boolean(), nullable=True),
-    sa.Column('leave_cards_flag', sa.Boolean(), nullable=True),
-    sa.Column('quarterly_allocation', sa.Numeric(precision=18, scale=0), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('leave_type_id')
-    )
     op.create_table('lob',
     sa.Column('lob_lead', sa.String(length=50), nullable=False),
     sa.Column('lob', sa.String(length=55), nullable=False),
@@ -270,6 +210,22 @@ def upgrade():
     sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('designation_id')
+    )
+    op.create_table('master_leave_types',
+    sa.Column('leave_type_id', sa.Integer(), nullable=False),
+    sa.Column('leave_name', sa.String(length=100), nullable=True),
+    sa.Column('yearly_allocation', sa.Integer(), nullable=True),
+    sa.Column('monthly_allocation', sa.Integer(), nullable=True),
+    sa.Column('requires_customer_approval', sa.Boolean(), nullable=True),
+    sa.Column('leave_cards_flag', sa.Boolean(), nullable=True),
+    sa.Column('quarterly_allocation', sa.Numeric(precision=18, scale=0), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('leave_type_id')
     )
     op.create_table('master_role',
     sa.Column('role_id', sa.Integer(), nullable=False),
@@ -403,32 +359,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('category_id'),
     sa.UniqueConstraint('category_name')
     )
-    op.create_table('comp_off_transaction',
-    sa.Column('comp_off_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('leave_tran_id', sa.Integer(), nullable=True),
-    sa.Column('comp_off_date', sa.DateTime(), nullable=True),
-    sa.Column('duration', sa.String(length=20), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
-    sa.PrimaryKeyConstraint('comp_off_id')
-    )
-    op.create_table('customer_holiday',
-    sa.Column('leave_tran_id', sa.Integer(), nullable=False),
-    sa.Column('worked_date', sa.String(length=200), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
-    sa.PrimaryKeyConstraint('leave_tran_id')
-    )
     op.create_table('employee',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=False),
@@ -491,20 +421,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['pcid'], ['pcs.pcid'], ),
     sa.PrimaryKeyConstraint('maintenance_id')
     )
-    op.create_table('working_late',
-    sa.Column('leave_tran_id', sa.Integer(), nullable=False),
-    sa.Column('from_time', sa.String(length=5), nullable=True),
-    sa.Column('to_time', sa.String(length=5), nullable=True),
-    sa.Column('reason_for_working_late', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
-    sa.PrimaryKeyConstraint('leave_tran_id')
-    )
     op.create_table('capability_development_lead',
     sa.Column('capability_development_lead_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('employee_id', sa.String(length=20), nullable=False),
@@ -519,23 +435,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('capability_development_lead_id'),
     sa.UniqueConstraint('employee_id')
-    )
-    op.create_table('compensatory_off',
-    sa.Column('comp_off_id', sa.Integer(), nullable=False),
-    sa.Column('employee_id', sa.String(length=20), nullable=True),
-    sa.Column('comp_off_date', sa.Date(), nullable=True),
-    sa.Column('is_used', sa.Boolean(), nullable=True),
-    sa.Column('leave_tran_id', sa.Integer(), nullable=True),
-    sa.Column('comp_off_time', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_by', sa.String(length=20), nullable=True),
-    sa.Column('modified_at', sa.DateTime(), nullable=True),
-    sa.Column('modified_by', sa.String(length=20), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
-    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
-    sa.PrimaryKeyConstraint('comp_off_id')
     )
     op.create_table('emp_documents',
     sa.Column('doc_id', sa.Integer(), autoincrement=True, nullable=False),
@@ -833,6 +732,43 @@ def upgrade():
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.PrimaryKeyConstraint('leave_type_id', 'employee_id')
     )
+    op.create_table('leave_transaction',
+    sa.Column('leave_tran_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('employee_id', sa.String(length=20), nullable=True),
+    sa.Column('comments', sa.Text(), nullable=True),
+    sa.Column('leave_type', sa.Integer(), nullable=True),
+    sa.Column('from_date', sa.DateTime(), nullable=True),
+    sa.Column('to_date', sa.DateTime(), nullable=True),
+    sa.Column('duration', sa.String(length=20), nullable=True),
+    sa.Column('no_of_days', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('applied_leave_count', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('hand_over_comments', sa.Text(), nullable=True),
+    sa.Column('applied_by', sa.String(length=20), nullable=True),
+    sa.Column('application_date', sa.DateTime(), nullable=True),
+    sa.Column('approved_by', sa.String(length=20), nullable=True),
+    sa.Column('approved_date', sa.DateTime(), nullable=True),
+    sa.Column('approval_comment', sa.String(length=255), nullable=True),
+    sa.Column('leave_status', sa.String(length=50), nullable=True),
+    sa.Column('attachments', sa.LargeBinary(), nullable=True),
+    sa.Column('is_billable', sa.Boolean(), nullable=True),
+    sa.Column('is_customer_approved', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('is_customer_approval_required', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('is_communicated_to_team', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('second_approval_comment', sa.String(length=255), nullable=True),
+    sa.Column('second_approval_date', sa.DateTime(), nullable=True),
+    sa.Column('second_approval_by', sa.String(length=20), nullable=True),
+    sa.Column('is_for_second_approval', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['applied_by'], ['employee.employee_id'], ),
+    sa.ForeignKeyConstraint(['approved_by'], ['employee.employee_id'], ),
+    sa.ForeignKeyConstraint(['second_approval_by'], ['employee.employee_id'], ),
+    sa.PrimaryKeyConstraint('leave_tran_id')
+    )
     op.create_table('project',
     sa.Column('project_id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('project_name', sa.String(length=100), nullable=False),
@@ -863,6 +799,49 @@ def upgrade():
     sa.ForeignKeyConstraint(['capability_development_lead_id'], ['capability_development_lead.capability_development_lead_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('capability_development_lead_assignment_id'),
     sa.UniqueConstraint('assigned_employee_id', 'capability_development_lead_id', name='uq_capability_development_lead_assignment_employee_lead')
+    )
+    op.create_table('comp_off_transaction',
+    sa.Column('comp_off_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('leave_tran_id', sa.Integer(), nullable=True),
+    sa.Column('comp_off_date', sa.DateTime(), nullable=True),
+    sa.Column('duration', sa.String(length=20), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
+    sa.PrimaryKeyConstraint('comp_off_id')
+    )
+    op.create_table('compensatory_off',
+    sa.Column('comp_off_id', sa.Integer(), nullable=False),
+    sa.Column('employee_id', sa.String(length=20), nullable=True),
+    sa.Column('comp_off_date', sa.Date(), nullable=True),
+    sa.Column('is_used', sa.Boolean(), nullable=True),
+    sa.Column('leave_tran_id', sa.Integer(), nullable=True),
+    sa.Column('comp_off_time', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
+    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
+    sa.PrimaryKeyConstraint('comp_off_id')
+    )
+    op.create_table('customer_holiday',
+    sa.Column('leave_tran_id', sa.Integer(), nullable=False),
+    sa.Column('worked_date', sa.String(length=200), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
+    sa.PrimaryKeyConstraint('leave_tran_id')
     )
     op.create_table('employee_skill_review',
     sa.Column('review_id', sa.String(length=36), nullable=False),
@@ -907,19 +886,38 @@ def upgrade():
     sa.ForeignKeyConstraint(['project_id'], ['project.project_id'], ),
     sa.PrimaryKeyConstraint('employee_id', 'project_id')
     )
+    op.create_table('working_late',
+    sa.Column('leave_tran_id', sa.Integer(), nullable=False),
+    sa.Column('from_time', sa.String(length=5), nullable=True),
+    sa.Column('to_time', sa.String(length=5), nullable=True),
+    sa.Column('reason_for_working_late', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_by', sa.String(length=20), nullable=True),
+    sa.Column('modified_at', sa.DateTime(), nullable=True),
+    sa.Column('modified_by', sa.String(length=20), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['leave_tran_id'], ['leave_transaction.leave_tran_id'], ),
+    sa.PrimaryKeyConstraint('leave_tran_id')
+    )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('working_late')
     op.drop_table('project_allocation')
     with op.batch_alter_table('employee_skill_review', schema=None) as batch_op:
         batch_op.drop_index('ix_employee_skill_review_evaluator')
         batch_op.drop_index('ix_employee_skill_review_employee_skill')
 
     op.drop_table('employee_skill_review')
+    op.drop_table('customer_holiday')
+    op.drop_table('compensatory_off')
+    op.drop_table('comp_off_transaction')
     op.drop_table('capability_development_lead_assignment')
     op.drop_table('project')
+    op.drop_table('leave_transaction')
     op.drop_table('leave_opening_transaction')
     op.drop_table('leave_audit')
     op.drop_table('lead_assigned_by_hr')
@@ -938,16 +936,12 @@ def downgrade():
     op.drop_table('employee_address')
     op.drop_table('emp_feedback_data')
     op.drop_table('emp_documents')
-    op.drop_table('compensatory_off')
     op.drop_table('capability_development_lead')
-    op.drop_table('working_late')
     op.drop_table('maintenance')
     with op.batch_alter_table('employee', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_employee_employee_id'))
 
     op.drop_table('employee')
-    op.drop_table('customer_holiday')
-    op.drop_table('comp_off_transaction')
     op.drop_table('work_categories')
     op.drop_table('wfh_check_list')
     op.drop_table('project_list')
@@ -958,12 +952,10 @@ def downgrade():
     op.drop_table('master_sub_role')
     op.drop_table('master_skills')
     op.drop_table('master_role')
+    op.drop_table('master_leave_types')
     op.drop_table('master_designation')
     op.drop_table('lob')
-    op.drop_table('leave_type_master')
-    op.drop_table('leave_type')
     op.drop_table('leave_transaction2')
-    op.drop_table('leave_transaction')
     op.drop_table('leave_opening_transaction_testing')
     op.drop_table('leave_management')
     op.drop_table('leave_audit2')

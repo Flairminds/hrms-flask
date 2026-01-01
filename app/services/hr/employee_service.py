@@ -634,7 +634,7 @@ class EmployeeService:
             
             
             # Generate new employee ID using autoincrement id field
-            latest_employee = db.session.query(Employee.id).order_by(
+            latest_employee = db.session.query(Employee.id, Employee.employee_id).order_by(
                 Employee.id.desc()
             ).first()
             
@@ -653,7 +653,10 @@ class EmployeeService:
             
             # Find default team lead (HR)
             hr_employee = Employee.query.filter_by(email=EmailConfig.DEFAULT_TEAM_LEAD_EMAIL).first()
-            default_team_lead_id = hr_employee.employee_id
+            if hr_employee:
+                default_team_lead_id = hr_employee.employee_id
+            else:
+                default_team_lead_id = None
             
             # Create employee record
             new_employee = Employee(

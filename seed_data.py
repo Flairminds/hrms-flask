@@ -27,7 +27,6 @@ def seed_master_roles():
     db.session.execute(roles_sql)
     print("✓ Master roles seeded")
 
-
 def seed_master_sub_roles():
     """Seeds master sub-roles table."""
     print("Seeding master sub-roles...")
@@ -221,7 +220,6 @@ def seed_master_skills():
     db.session.execute(skills_sql)
     print("✓ Master skills seeded")
 
-
 def seed_master_designation():
     """Seeds master designations"""
     print("Seeding master designations")
@@ -274,6 +272,55 @@ def seed_holidays():
     db.session.execute(holiday_sql)
     print("✓ Holidays seeded")
 
+def seed_hr_employee():
+    """Seeds an HR employee with complete profile including addresses and skills."""
+    print("Seeding HR employee...")
+    
+    from app.services.hr.employee_service import EmployeeService
+    
+    hr_employee_data = {
+        "first_name": "HR",
+        "last_name": "Manager",
+        "email": "hr@flairminds.com",
+        "contact_number": "1234567890",
+        "password": "SecurePass123!",
+        "date_of_birth": "2022-04-01",
+        "date_of_joining": "2022-04-01",
+        "sub_role": 15,
+        "role_id": 3,
+        "band": 37
+    }
+    
+    try:
+        employee_id = EmployeeService.insert_employee(hr_employee_data)
+        print(f"✓ HR employee seeded successfully (ID: {employee_id})")
+    except Exception as e:
+        print(f"✗ Error seeding HR employee: {str(e)}")
+        raise
+
+def seed_leave_types():
+    """Seeds leave types"""
+    print("Seeding leave types")
+    leave_type_sql = text("""
+        INSERT INTO master_leave_types (leave_name, yearly_allocation, monthly_allocation, requires_customer_approval, leave_cards_flag, quarterly_allocation) VALUES
+        (N'Sick/Emergency Leave', 8, 0, false, true, 2),
+        (N'Privilege Leave', 12, 1, false, true, NULL),
+        (N'Work From Home', 36, 0, false, true, NULL),
+        (N'Customer Approved Comp-off', 0, 0, true, false, NULL),
+        (N'Customer Approved Work From Home', 0, 0, true, false, NULL),
+        (N'Customer Holiday', 0, 0, true, false, NULL),
+        (N'Working Late Today', 0, 0, false, false, NULL),
+        (N'Visiting Client Location', 0, 0, false, false, NULL),
+        (N'Casual Leave', 0, 0, false, false, NULL),
+        (N'Swap Leave', 0, 0, false, false, NULL),
+        (N'Exempt Work From Home', 0, 0, false, false, NULL),
+        (N'Unpaid Sick/Emergency Leave', 0, 0, false, true, NULL),
+        (N'Unpaid Privilege Leave', 0, 0, false, true, NULL),
+        (N'Missed Door Entry', 12, 0, false, true, 3);
+    """)
+    db.session.execute(leave_type_sql)
+    print("✓ Leave types seeded")
+
 def seed_all():
     """Seeds all master data tables."""
     print("\n" + "="*50)
@@ -286,6 +333,8 @@ def seed_all():
         seed_master_skills()
         seed_master_designation()
         seed_holidays()
+        seed_leave_types()
+        seed_hr_employee()
         
         db.session.commit()
         

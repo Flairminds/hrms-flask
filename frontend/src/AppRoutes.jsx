@@ -28,6 +28,7 @@ import { RelievingLetter } from './pages/RelievingLetter/RelievingLetter.jsx'
 import PCsPage from './pages/PCsPage/PCsPage.jsx';
 import AssignmentsPage from "./pages/AssignmentsPage/AssignmentsPage.jsx";
 import MaintenancePage from "./pages/MaintenanceManagementPage/MaintenancePage.jsx";
+import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
 
 function AppRoutes() {
     const { user, isAuthenticated } = useAuth();
@@ -43,6 +44,7 @@ function AppRoutes() {
             {/* Public Routes */}
             <Route path="/login" element={isAuthenticated ? <Navigate to="/personal-info" replace /> : <LoginPage />} />
             <Route path="/resetPassword" element={<ResetPassword />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Protected Routes */}
             <Route path="/" element={

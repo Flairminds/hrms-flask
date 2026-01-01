@@ -22,7 +22,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
 from ..models.hr import Employee, MasterSubRole
-from ..models.leave import LeaveTransaction, LeaveType
+from ..models.leave import LeaveTransaction, MasterLeaveTypes
 from ..utils.logger import Logger
 from ..utils.constants import LeaveStatus, LeaveTypeID, EmailConfig
 
@@ -118,13 +118,13 @@ class EmailService:
                 Employee.first_name,
                 Employee.last_name,
                 LeaveTransaction.leave_status,
-                LeaveType.leave_name
+                MasterLeaveTypes.leave_name
             ).join(
                 Employee,
                 LeaveTransaction.applied_by == Employee.employee_id
             ).join(
-                LeaveType,
-                LeaveTransaction.leave_type == LeaveType.leave_type_id
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
             ).filter(
                 LeaveTransaction.from_date <= current_date_str,
                 LeaveTransaction.to_date >= current_date_str,
@@ -260,13 +260,13 @@ class EmailService:
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
                 LeaveTransaction.leave_status,
-                LeaveType.leave_name
+                MasterLeaveTypes.leave_name
             ).join(
                 LeaveTransaction,
                 Employee.employee_id == LeaveTransaction.applied_by
             ).join(
-                LeaveType,
-                LeaveTransaction.leave_type == LeaveType.leave_type_id
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
             ).filter(
                 LeaveTransaction.from_date <= current_date_str,
                 LeaveTransaction.to_date >= current_date_str,

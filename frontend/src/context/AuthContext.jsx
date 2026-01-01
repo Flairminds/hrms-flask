@@ -17,6 +17,27 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [routePermissions, setRoutePermissions] = useState({});
+
+    // Fetch route permissions from backend
+    const fetchRoutePermissions = async () => {
+        try {
+            const accessToken = getCookie('accessToken');
+            if (!accessToken) return;
+
+            const response = await axios.get(`${API_BASE_URL}/auth/route-permissions`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            if (response.data.status === 'success') {
+                setRoutePermissions(response.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch route permissions:', error);
+        }
+    };
 
     // Fetch current user from accessToken
     const fetchCurrentUser = async () => {
@@ -37,6 +58,9 @@ export const AuthProvider = ({ children }) => {
                 const userData = response.data.data;
                 setUser(userData);
                 setIsAuthenticated(true);
+
+                // Fetch route permissions after successful authentication
+                await fetchRoutePermissions();
             }
         } catch (error) {
             console.error('Failed to fetch current user:', error);
@@ -49,6 +73,19 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Helper to check if user has access to a route
+    const hasRouteAccess = (path) => {
+        if (!user || !routePermissions) return false;
+
+        const allowedRoles = routePermissions[path];
+
+        // If route is not configured, allow access (backward compatibility)
+        if (!allowedRoles) return true;
+
+        // Check if user's role is in the allowed roles list
+        return allowedRoles.includes(user.roleName);
+    };
+
     // Initialize user session on mount
     useEffect(() => {
         fetchCurrentUser();
@@ -59,6 +96,8 @@ export const AuthProvider = ({ children }) => {
         setCookie('accessToken', accessToken, 7); // 7 days expiry
         setUser(userData);
         setIsAuthenticated(true);
+        // Fetch permissions after login
+        fetchRoutePermissions();
     };
 
     // Logout function
@@ -69,6 +108,7 @@ export const AuthProvider = ({ children }) => {
         deleteCookie('isAuthenticated');
         setUser(null);
         setIsAuthenticated(false);
+        setRoutePermissions({});
     };
 
     const value = {
@@ -78,7 +118,9 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         setUser,
-        setIsAuthenticated
+        setIsAuthenticated,
+        routePermissions,
+        hasRouteAccess
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

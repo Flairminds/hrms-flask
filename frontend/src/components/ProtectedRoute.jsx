@@ -1,9 +1,10 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading, hasRouteAccess } = useAuth();
+    const location = useLocation();
 
     if (loading) {
         return (
@@ -21,6 +22,11 @@ const ProtectedRoute = ({ children }) => {
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
+    }
+
+    // Role-based access check
+    if (!hasRouteAccess(location.pathname)) {
+        return <Navigate to="/unauthorized" replace />;
     }
 
     return children;

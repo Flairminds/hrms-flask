@@ -4,7 +4,7 @@ from sqlalchemy import text, func, case, and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from ... import db
-from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, LeaveType, 
+from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, MasterLeaveTypes, 
                            LeaveOpeningTransaction, LeaveAudit, CompensatoryOff, WorkingLate,
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt

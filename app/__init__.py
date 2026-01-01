@@ -67,6 +67,7 @@ def create_app(config_name):
     from .routes.project import project_bp
     from .routes.allocation import allocation_bp
     from .routes.health import health_bp
+    from .routes.auth_routes import bp as auth_bp
 
     # Register health check blueprint at root level (no prefix)
     app.register_blueprint(health_bp)
@@ -87,6 +88,7 @@ def create_app(config_name):
     app.register_blueprint(policy_bp, url_prefix='/api/policy')
     app.register_blueprint(project_bp, url_prefix='/api/project')
     app.register_blueprint(allocation_bp, url_prefix='/api/allocation')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     # Serve React App (if production build exists)
     if has_build:

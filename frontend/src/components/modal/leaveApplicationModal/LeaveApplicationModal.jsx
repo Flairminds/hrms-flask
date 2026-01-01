@@ -504,12 +504,12 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
     const fetchLeaveOptions = async () => {
       try {
         const response = await getTypeApprover(employeeId);
-        if (response.data.leaveTypes) {
+        if (response.data) {
           setLeaveOptions({
-            leaveTypes: response.data.leaveTypes.map((type, index) => ({
-              key: `${type}-${index}`,
-              value: type,
-              label: type
+            leaveTypes: response.data?.leave_types?.map((type, index) => ({
+              key: `${type.name}-${index}`,
+              value: type.name,
+              label: type.name
             })),
             approver: response.data.approver
           });

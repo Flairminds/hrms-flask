@@ -4,7 +4,7 @@ from sqlalchemy import text, func, case, and_, or_, Integer
 from sqlalchemy.exc import SQLAlchemyError
 
 from ... import db
-from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, LeaveType, 
+from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, MasterLeaveTypes, 
                            LeaveOpeningTransaction, LeaveAudit, CompensatoryOff, WorkingLate,
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
@@ -25,8 +25,8 @@ class LeaveQueryService:
                 return {"leave_types": [], "approver": None}
             
             leave_types = db.session.query(
-                LeaveType.leave_type_id.label('id'),
-                LeaveType.leave_type_name.label('name')
+                MasterLeaveTypes.leave_type_id.label('id'),
+                MasterLeaveTypes.leave_name.label('name')
             ).all()
 
             # Convert to list of dicts
@@ -119,9 +119,9 @@ class LeaveQueryService:
                 Employee.employee_id.label('employee'),
                 func.coalesce(func.abs(used_subq.c.number_of_days), 0).label('total_used_leaves'),
                 opening_subq.c.no_of_days.label('total_alloted_leaves'),
-                LeaveType.leave_name.label('leave_name'),
-                LeaveType.leave_type_id.label('leave_type_id'),
-                LeaveType.leave_cards_flag.label('leave_cards_flag'),
+                MasterLeaveTypes.leave_name.label('leave_name'),
+                MasterLeaveTypes.leave_type_id.label('leave_type_id'),
+                MasterLeaveTypes.leave_cards_flag.label('leave_cards_flag'),
                 Employee.date_of_joining
             ).join(
                 opening_subq,
@@ -133,11 +133,11 @@ class LeaveQueryService:
                     opening_subq.c.leave_type_id == used_subq.c.leave_type_id
                 )
             ).join(
-                LeaveType,
-                LeaveType.leave_type_id == opening_subq.c.leave_type_id
+                MasterLeaveTypes,
+                MasterLeaveTypes.leave_type_id == opening_subq.c.leave_type_id
             ).filter(
                 Employee.employee_id == employee_id,
-                LeaveType.leave_cards_flag == 1
+                MasterLeaveTypes.leave_cards_flag == 1
             ).all()
             
             result = []
@@ -199,7 +199,7 @@ class LeaveQueryService:
                  func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
                 LeaveTransaction.comments.label('description'),
-                LeaveType.leave_type_name,
+                MasterLeaveTypes.leave_name,
                 LeaveTransaction.duration,
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
@@ -227,8 +227,8 @@ class LeaveQueryService:
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
             ).join(
-                LeaveType,
-                LeaveTransaction.leave_type == LeaveType.leave_type_id
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
             ).filter(
                 Employee.employee_id == employee_id,
                 LeaveTransaction.from_date >= start_date,
@@ -342,7 +342,7 @@ class LeaveQueryService:
                 Employee.employee_id,
                 func.sum(
                     case(
-                        (LeaveType.leave_type_id == LeaveTypeID.SICK,
+                        (MasterLeaveTypes.leave_type_id == LeaveTypeID.SICK,
                          func.coalesce(opening_balance_subq.c.opening_days, 0) + 
                          func.coalesce(leave_audit_subq.c.audit_days, 0)),
                         else_=0
@@ -350,7 +350,7 @@ class LeaveQueryService:
                 ).label('sick_leave_balance'),
                 func.sum(
                     case(
-                        (LeaveType.leave_type_id == LeaveTypeID.PRIVILEGE,
+                        (MasterLeaveTypes.leave_type_id == LeaveTypeID.PRIVILEGE,
                          func.coalesce(opening_balance_subq.c.opening_days, 0) + 
                          func.coalesce(leave_audit_subq.c.audit_days, 0)),
                         else_=0
@@ -358,7 +358,7 @@ class LeaveQueryService:
                 ).label('privilege_leave_balance'),
                 func.sum(
                     case(
-                        (LeaveType.leave_type_id == LeaveTypeID.WFH,
+                        (MasterLeaveTypes.leave_type_id == LeaveTypeID.WFH,
                          func.coalesce(opening_balance_subq.c.opening_days, 0) + 
                          func.coalesce(leave_audit_subq.c.audit_days, 0)),
                         else_=0
@@ -374,10 +374,10 @@ class LeaveQueryService:
                     leave_audit_subq.c.leave_type_id == opening_balance_subq.c.leave_type_id
                 )
             ).join(
-                LeaveType,
-                LeaveType.leave_type_id == opening_balance_subq.c.leave_type_id
+                MasterLeaveTypes,
+                MasterLeaveTypes.leave_type_id == opening_balance_subq.c.leave_type_id
             ).filter(
-                LeaveType.leave_cards_flag == True
+                MasterLeaveTypes.leave_cards_flag == True
             ).group_by(
                 Employee.employee_id
             ).subquery()
@@ -387,7 +387,7 @@ class LeaveQueryService:
                 (Employee.first_name + ' ' + 
                  func.coalesce(Employee.middle_name + ' ', '') + 
                  Employee.last_name).label('employee_name'),
-                LeaveType.leave_name.label('leave_type'),
+                MasterLeaveTypes.leave_name.label('leave_type'),
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
                 LeaveTransaction.approved_by,
@@ -402,8 +402,8 @@ class LeaveQueryService:
                 LeaveTransaction,
                 LeaveTransaction.employee_id == Employee.employee_id
             ).join(
-                LeaveType,
-                LeaveTransaction.leave_type == LeaveType.leave_type_id
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
             ).outerjoin(
                 carry_forward_subq,
                 carry_forward_subq.c.employee_id == Employee.employee_id
@@ -478,8 +478,8 @@ class LeaveQueryService:
                  func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('employee_name'),
                 Employee.email,
-                func.cast(LeaveType.leave_type_id, db.String).label('leave_type'),
-                LeaveType.leave_name.label('leave_type_name'),
+                func.cast(MasterLeaveTypes.leave_type_id, db.String).label('leave_type'),
+                MasterLeaveTypes.leave_name.label('leave_type_name'),
                 LeaveTransaction.leave_status,
                 LeaveTransaction.from_date.label('start_date'),
                 LeaveTransaction.to_date.label('end_date'),
@@ -517,19 +517,19 @@ class LeaveQueryService:
                     else_='Yes'
                 ).label('is_handover_responsibilities'),
                 case(
-                    (LeaveType.leave_type_id == LeaveTypeID.COMP_OFF, 'Yes'),
+                    (MasterLeaveTypes.leave_type_id == LeaveTypeID.COMP_OFF, 'Yes'),
                     else_='Not Required'
                 ).label('is_com_off_approved'),
                 case(
-                    (LeaveType.leave_type_id == LeaveTypeID.WFH, 'Yes'),
+                    (MasterLeaveTypes.leave_type_id == LeaveTypeID.WFH, 'Yes'),
                     else_='Not Required'
                 ).label('is_work_from_approved')
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
             ).join(
-                LeaveType,
-                LeaveTransaction.leave_type == LeaveType.leave_type_id
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
             ).outerjoin(
                 ApprovedByEmployee,
                 ApprovedByEmployee.employee_id == approved_by

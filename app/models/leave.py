@@ -3,12 +3,15 @@ from datetime import datetime
 from .base import BaseModel
 from sqlalchemy import text
 
-
-class LeaveType(BaseModel):
-    __tablename__ = 'leave_type'
+class MasterLeaveTypes(BaseModel):
+    __tablename__ = 'master_leave_types'
     leave_type_id = db.Column(db.Integer, primary_key=True)
-    leave_type_name = db.Column(db.String(50))
-
+    leave_name = db.Column(db.String(100))
+    yearly_allocation = db.Column(db.Integer)
+    monthly_allocation = db.Column(db.Integer)
+    requires_customer_approval = db.Column(db.Boolean)
+    leave_cards_flag = db.Column(db.Boolean)
+    quarterly_allocation = db.Column(db.Numeric(18, 0))
 
 class LeaveTransaction(BaseModel):
     __tablename__ = 'leave_transaction'
@@ -119,17 +122,6 @@ class LeaveTransaction2(BaseModel):
     second_approval_comment = db.Column(db.String(255))
     second_approver_date = db.Column(db.Date)
     is_for_second_approval = db.Column(db.Boolean)
-
-
-class LeaveTypeMaster(BaseModel):
-    __tablename__ = 'leave_type_master'
-    leave_type_id = db.Column(db.Integer, primary_key=True)
-    leave_name = db.Column(db.String(100))
-    yearly_allocation = db.Column(db.Integer)
-    monthly_allocation = db.Column(db.Integer)
-    requires_customer_approval = db.Column(db.Boolean)
-    leave_cards_flag = db.Column(db.Boolean)
-    quarterly_allocation = db.Column(db.Numeric(18, 0))
 
 
 class LeaveAudit(BaseModel):
