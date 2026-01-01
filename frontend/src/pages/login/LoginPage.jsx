@@ -22,7 +22,7 @@ export const LoginPage = () => {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate('/personal-info');
+      navigate('/');
     }
   }, [isAuthenticated, loading, navigate]);
 
@@ -69,7 +69,7 @@ export const LoginPage = () => {
       login(accessToken, userData);
 
       toast.success('Login successful!');
-      navigate('/personal-info');
+      navigate('/');
     } catch (error) {
       console.error('There was a problem with the login operation:', error);
       toast.error('Login failed. Please check your credentials and try again.');

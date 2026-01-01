@@ -152,6 +152,10 @@ export const Sidebar = ({ isRole }) => {
     <div className={stylesSidebar.main}>
       {(isRole === "Employee" || isRole === "Lead" || isRole === "Intern" || isRole === 'Manager' || isRole === "HR") && (
         <>
+          <div className={`${stylesSidebar.divs} ${isActive('/') ? stylesSidebar.active : ''}`} onClick={() => navigate('/')}>
+            <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Dashboard" />
+            <span className={stylesSidebar.info}>Dashboard</span>
+          </div>
           <div className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`} onClick={() => navigate('/personal-info')}>
             <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
             <span className={stylesSidebar.info}>Personal Info</span>

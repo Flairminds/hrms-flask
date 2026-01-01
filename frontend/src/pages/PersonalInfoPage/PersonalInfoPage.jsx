@@ -5,9 +5,12 @@ import editIcon from "../../assets/HR/edit.svg";
 import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditPersonalDetails } from '../../components/modal/editPersonalDetails/EditPersonalDetails';
-import { Modal, Button, Steps, message, Select } from 'antd';
-import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space } from 'antd';
+import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined, HomeOutlined, FileTextOutlined, ToolOutlined, MailOutlined, PhoneOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import WidgetCard from '../../components/common/WidgetCard';
+
+const { Title, Text } = Typography;
 
 const { Step } = Steps;
 const { Option } = Select;
@@ -329,182 +332,177 @@ function PersonalInfoPage() {
   };
 
 
+  const InfoRow = ({ label, value }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+      <Text type="secondary">{label}:</Text>
+      <Text strong>{value || 'N/A'}</Text>
+    </div>
+  );
+
   return (
     <div className={styles.employeeDetailsContainer}>
-      {!isLoading && countPersonalInfo <= 3 && countPersonalInfo >= 0 && !warningMessage && (
-        <div style={{ marginBottom: '16px', color: 'red' }}>
-          Kindly note: You have {3 - countPersonalInfo} attempts remaining to fill the required information .
-
-          Your account remains active while you still have remaining attempts. However, access to certain HRMS features will be temporarily restricted if you exhaust your attempts.
-
-          Please ensure all required steps are completed promptly. Once done, full access will be automatically restored.
-        </div>
-      )}
-
-      {countPersonalInfo > 3 && (
-        <div style={{ marginBottom: '16px', color: 'red', fontWeight: 'bold' }}>
-          ⚠️ You have exceeded the maximum number of allowed attempts. Due to non-compliance, access to certain HRMS other options has been blocked.
-          To regain access, please fill in the missing information you will able to access all the HRMS features.
-        </div>
-      )}
-      <div className={styles.profileResumeContainer}>
-        <div className={styles.profileDetailsDiv}>
-          <img
-            className={styles.profileImage}
-            src={defaultProfile}
-            alt="Profile"
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-            <div>
-              <span style={{ fontSize: '18px' }}>{employeeData?.last_name ? employeeData?.first_name + " " + employeeData?.last_name : employeeData?.first_name}</span>
-              <span>, {user?.roleName}</span>
+      <div className={styles.contentWrapper}>
+        {/* Missing Info Alerts */}
+        {!isLoading && countPersonalInfo <= 3 && countPersonalInfo >= 0 && !warningMessage && (
+          <Card style={{ marginBottom: '24px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f' }}>
+            <Text type="danger" strong>
+              <ExclamationCircleOutlined style={{ marginRight: '8px' }} />
+              Kindly note: You have {3 - countPersonalInfo} attempts remaining to fill the required information.
+            </Text>
+            <div style={{ marginTop: '8px', fontSize: '13px' }}>
+              Your account remains active while you still have remaining attempts. However, access to certain HRMS features will be temporarily restricted if you exhaust your attempts.
+              Please ensure all required steps are completed promptly.
             </div>
-            <div>{employeeData?.email}</div>
-            <div>{employeeData?.contact_number}</div>
+          </Card>
+        )}
+
+        {countPersonalInfo > 3 && (
+          <Card style={{ marginBottom: '24px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7' }}>
+            <Text type="danger" strong>
+              <ExclamationCircleOutlined style={{ marginRight: '8px' }} />
+              ⚠️ You have exceeded the maximum number of allowed attempts. Access to certain features has been blocked.
+            </Text>
+          </Card>
+        )}
+
+        {/* Profile Header */}
+        <WidgetCard style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <Avatar size={100} src={defaultProfile} style={{ border: '4px solid #f0f2f5' }} />
+              <div>
+                <Title level={3} style={{ margin: 0 }}>
+                  {employeeData?.last_name ? `${employeeData?.first_name} ${employeeData?.last_name}` : employeeData?.first_name}
+                </Title>
+                <Tag color="blue" style={{ marginTop: '4px' }}>{user?.roleName}</Tag>
+                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <Text type="secondary"><MailOutlined style={{ marginRight: '8px' }} />{employeeData?.email}</Text>
+                  <Text type="secondary"><PhoneOutlined style={{ marginRight: '8px' }} />{employeeData?.contact_number}</Text>
+                </div>
+              </div>
+            </div>
+            <Space>
+              <Button type="primary" icon={<EditOutlined />} onClick={handleEditModal} style={{ borderRadius: '4px' }}>
+                Edit Profile
+              </Button>
+              <Button icon={<CreditCardOutlined />} onClick={() => setIsSalarySlipModal(true)} style={{ borderRadius: '4px' }}>
+                Salary Slips
+              </Button>
+            </Space>
           </div>
-        </div>
-        {/* <div className={styles.resumeButton}>
-          <button onClick={handleResumeClick}>View Resume</button>
-          <button onClick={() => setIsSalarySlipModal(true)}>Download Salary Slip</button>
-        </div> */}
+        </WidgetCard>
 
-        <div onClick={handleEditModal} style={{ cursor: 'pointer', float: 'right' }}>
-          <img width={15} height={15} src={editIcon} alt="Edit Icon" />
-          <span style={{ marginLeft: '5px' }} >Edit Profile</span>
-        </div>
+        {employeeData ? (
+          <Row gutter={[24, 24]}>
+            {/* Personal Details */}
+            <Col xs={24} lg={12}>
+              <WidgetCard title="Personal Details" icon={<UserOutlined />} iconColor="#1890ff">
+                <InfoRow label="Employee ID" value={employeeData.employee_id} />
+                <InfoRow label="First Name" value={employeeData.first_name} />
+                <InfoRow label="Middle Name" value={employeeData.middle_name} />
+                <InfoRow label="Last Name" value={employeeData.last_name} />
+                <InfoRow label="Date of Birth" value={employeeData.date_of_birth && new Date(employeeData.date_of_birth).toLocaleDateString('en-GB')} />
+                <InfoRow label="Gender" value={employeeData.gender} />
+                <InfoRow label="Blood Group" value={employeeData.blood_group} />
+                <InfoRow label="Personal Email" value={employeeData.personal_email} />
+                <InfoRow label="Date of Joining" value={employeeData.date_of_joining && new Date(employeeData.date_of_joining).toLocaleDateString('en-GB')} />
+                <InfoRow label="Band" value={employeeData.designation_name} />
+                <InfoRow label="Highest Qualification" value={employeeData.highest_qualification} />
+                <InfoRow label="Qualification Date" value={highestQualificationYearMonth} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                  <Text type="secondary">Full Stack Ready:</Text>
+                  <Tag color={fullStackReady ? 'success' : 'default'}>{fullStackReady ? "Yes" : "No"}</Tag>
+                </div>
+              </WidgetCard>
+            </Col>
 
-        <div className={styles.personalInfoContainer}>
-          {employeeData ? (
-            <div className={styles.infoFields}>
-              <div className={styles.infoItem}><strong>Employee ID:</strong> {employeeData.employee_id}</div>
-              <div className={styles.infoItem}><strong>First Name:</strong> {employeeData.first_name}</div>
-              <div className={styles.infoItem}><strong>Middle Name:</strong> {employeeData.middle_name || 'N/A'}</div>
-              <div className={styles.infoItem}><strong>Last Name:</strong> {employeeData.last_name}</div>
-              <div className={styles.infoItem}>
-                <strong>Date of Birth:</strong>
-                {new Date(employeeData.date_of_birth).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric'
-                })}
-              </div>
-              <div className={styles.infoItem}><strong>Contact Number:</strong> {employeeData.contact_number}</div>
-              <div className={styles.infoItem}><strong>Emergency Contact Person:</strong> {employeeData.emergency_contact_person}</div>
-              <div className={styles.infoItem}><strong>Emergency Contact Relation:</strong> {employeeData.emergency_contact_relation}</div>
-              <div className={styles.infoItem}><strong>Emergency Contact Number:</strong> {employeeData.emergency_contact_number}</div>
-              <div className={styles.infoItem}><strong>Email:</strong> {employeeData.email}</div>
-              <div className={styles.infoItem}><strong>Personal Email:</strong> {employeeData.personal_email || 'N/A'}</div>
-              <div className={styles.infoItem}><strong>Gender:</strong> {employeeData.gender}</div>
-              <div className={styles.infoItem}><strong>Blood Group:</strong> {employeeData.blood_group || 'N/A'}</div>
-              <div className={styles.infoItem}><strong>Band:</strong> {employeeData.designation_name}</div>
-              <div className={styles.infoItem}><strong>Employee Role:</strong>{employeeData.employee_sub_role}</div>
-              <div className={styles.infoItem}>
-                <strong>Date of Joining:</strong>
-                {new Date(employeeData.date_of_joining).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric'
-                })}
-              </div>
-              <div className={styles.infoItem}><strong>Highest Qualification:</strong> {employeeData.highest_qualification}</div>
-              <div className={styles.infoItem}><strong>Highest Qualification Year-Month:</strong> {highestQualificationYearMonth}</div>
-              <div className={styles.infoItem}>
-                <strong>Full Stack Ready:</strong> {fullStackReady ? "Yes" : "No"}
-              </div>
+            {/* Address Information */}
+            <Col xs={24} lg={12}>
+              <Space direction="vertical" size={24} style={{ width: '100%' }}>
+                <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a">
+                  {employeeData.addresses ? (
+                    <>
+                      <InfoRow label="Type" value={employeeData.addresses.residential_address_type} />
+                      <InfoRow label="Line 1" value={employeeData.addresses.residential_address1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.residential_address2} />
+                      <InfoRow label="City" value={employeeData.addresses.residential_city} />
+                      <InfoRow label="State" value={employeeData.addresses.residential_state} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.residential_zipcode} />
+                    </>
+                  ) : <Text type="secondary">No address info available</Text>}
+                </WidgetCard>
 
-              <div className={styles.addressSection}>
-                <h6 className={styles.headingContainer}>Documents</h6>
-                {documentTypes.map(({ key, label }) => {
-                  const docStatus = documentStatusDetails?.documents?.[key];
-                  return (
-                    <div key={key} className={styles.infoItem}>
-                      <div className={styles.documentRow}>
-                        <div><strong>{label}:</strong></div>
-                        <div className={styles.documentActions}>
-                          <div className={styles.documentStatus}>
-                            Status: {
-                              docStatus ? (
-                                <span style={{
-                                  color: docStatus.status === 'Accepted' ? 'green' :
-                                    docStatus.status === 'Rejected' ? 'red' :
-                                      docStatus.status === 'Pending' ? 'orange' : 'gray'
-                                }}>
-                                  {docStatus.status}
-                                </span>
-                              ) : (
-                                <span style={{ color: 'gray' }}>Not Uploaded</span>
-                              )
-                            }
-                          </div>
-                          <div className={styles.documentButtons}>
-                            <Button
-                              className={styles.resumeButton}
-                              onClick={() => fetchDocuments(key)}
-                              disabled={!docStatus?.uploaded}
-                            >
-                              Download
-                            </Button>
-                            <Button
-                              className={styles.resumeButton}
-                              onClick={() => fetchDocumentsView(key)}
-                              disabled={!docStatus?.uploaded}
-                            >
-                              View
-                            </Button>
-                          </div>
+                <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14">
+                  {employeeData.addresses ? (
+                    <>
+                      <InfoRow label="Type" value={employeeData.addresses.permanent_address_type} />
+                      <InfoRow label="Line 1" value={employeeData.addresses.permanent_address1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.permanent_address2} />
+                      <InfoRow label="City" value={employeeData.addresses.permanent_city} />
+                      <InfoRow label="State" value={employeeData.addresses.permanent_state} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.permanent_zipcode} />
+                    </>
+                  ) : <Text type="secondary">No address info available</Text>}
+                </WidgetCard>
+              </Space>
+            </Col>
+
+            {/* Documents Section */}
+            <Col xs={24} lg={12}>
+              <WidgetCard title="Documents" icon={<FileTextOutlined />} iconColor="#eb2f96">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {documentTypes.map(({ key, label }) => {
+                    const docStatus = documentStatusDetails?.documents?.[key];
+                    return (
+                      <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <div>
+                          <Text strong>{label}</Text>
+                          <br />
+                          {docStatus ? (
+                            <Tag color={docStatus.status === 'Accepted' ? 'success' : docStatus.status === 'Rejected' ? 'error' : 'warning'}>
+                              {docStatus.status}
+                            </Tag>
+                          ) : <Text type="secondary" style={{ fontSize: '12px' }}>Not Uploaded</Text>}
                         </div>
+                        <Space>
+                          <Button size="small" icon={<DownloadOutlined />} onClick={() => fetchDocuments(key)} disabled={!docStatus?.uploaded} />
+                          <Button size="small" icon={<EyeOutlined />} onClick={() => fetchDocumentsView(key)} disabled={!docStatus?.uploaded} />
+                        </Space>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-
-              {/* Residential Address Section */}
-              {employeeData.addresses && (
-                <div className={styles.addressSection}>
-                  <h6 className={styles.headingContainer}>Residential Address</h6>
-                  <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.residential_address_type || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.residential_address1 || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.residential_address2 || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.residential_city || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.residential_state || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.residential_zipcode || 'N/A'}</div>
+                    );
+                  })}
                 </div>
-              )}
+              </WidgetCard>
+            </Col>
 
-              {/* Permanent Address Section */}
-              {employeeData.addresses && (
-                <div className={styles.addressSection}>
-                  <h6 className={styles.headingContainer}>Permanent Address</h6>
-                  <div className={styles.infoItem}><strong>Type:</strong> {employeeData.addresses.permanent_address_type || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Address Line 1:</strong> {employeeData.addresses.permanent_address1 || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Address Line 2:</strong> {employeeData.addresses.permanent_address2 || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>City:</strong> {employeeData.addresses.permanent_city || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>State:</strong> {employeeData.addresses.permanent_state || 'N/A'}</div>
-                  <div className={styles.infoItem}><strong>Zipcode:</strong> {employeeData.addresses.permanent_zipcode || 'N/A'}</div>
-                </div>
-              )}
-
-              {/* Skills Section */}
-              <div className={styles.skillsSection}>
-                <h6 className={styles.headingContainer}>Skills</h6>
+            {/* Skills Section */}
+            <Col xs={24} lg={12}>
+              <WidgetCard title="Skills" icon={<ToolOutlined />} iconColor="#722ed1">
                 {employeeData.skills && employeeData.skills.length > 0 ? (
-                  employeeData.skills.map((skill, index) => (
-                    <div className={styles.infoItem} key={index}>
-                      <strong>{skill.skill_level}:</strong> {skill.skill_name}
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.infoItem}> <strong>No Skills</strong> </div>
-                )}
-              </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {employeeData.skills.map((skill, index) => (
+                      <Tag key={index} color="blue" style={{ borderRadius: '4px', padding: '4px 8px', whiteSpace: 'pre-wrap' }}>
+                        <Text strong>{skill.skill_name}</Text>
+                        <Text type="secondary" style={{ marginLeft: '4px', fontSize: '12px' }}>({skill.skill_level})</Text>
+                      </Tag>
+                    ))}
+                  </div>
+                ) : <Text type="secondary">No skills listed</Text>}
+              </WidgetCard>
+            </Col>
 
-            </div>
-          ) : (
-            <div>Loading...</div>
-          )}
-        </div>
+            {/* Emergency Contact */}
+            <Col xs={24} lg={12}>
+              <WidgetCard title="Emergency Contact" icon={<ExclamationCircleOutlined />} iconColor="#ff4d4f">
+                <InfoRow label="Person" value={employeeData.emergency_contact_person} />
+                <InfoRow label="Relation" value={employeeData.emergency_contact_relation} />
+                <InfoRow label="Number" value={employeeData.emergency_contact_number} />
+              </WidgetCard>
+            </Col>
+          </Row>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '50px' }}>Loading employee details...</div>
+        )}
       </div>
 
       <EditPersonalDetails

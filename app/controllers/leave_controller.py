@@ -45,13 +45,10 @@ class LeaveController:
         Logger.info("Get leave details request received", employee_id=emp_id)
         
         try:
-            year = request.args.get('year')
-            
-            details = LeaveService.get_leave_details(emp_id, year)
+            details = LeaveService.get_leave_details(emp_id)
             
             Logger.info("Leave details retrieved successfully",
                        employee_id=emp_id,
-                       year=year,
                        record_count=len(details))
             
             return jsonify([dict(row) for row in details]), 200

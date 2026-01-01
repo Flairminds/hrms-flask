@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { CSVLink } from 'react-csv';
+import { Input, Button, Table, Typography, Space } from 'antd';
+import { PushpinOutlined, DownloadOutlined } from '@ant-design/icons';
 import styles from './HolidayPage.module.css';
 import { holidayListData } from '../../services/api';
 import { convertDate, getWeekDay } from '../../util/helperFunctions';
+import WidgetCard from '../../components/common/WidgetCard';
+
+const { Text } = Typography;
 
 function HolidayPage() {
   const [holidayData, setHolidayData] = useState([]);
@@ -42,40 +47,41 @@ function HolidayPage() {
   return (
     <div className={styles.mainContainer}>
       <div className={styles.mainBlock}>
-        <div className={styles.message}>
-          <span className={styles.headingText}>
-            *The following holiday list is applicable only for associates who are not allocated to any particular project.
-            Those who are allocated to projects need to follow customer holidays. Please refer to leave policy.*
-          </span>
-        </div>
+        <WidgetCard
+          title="Company Holiday List"
+          icon={<PushpinOutlined />}
+          iconColor="#1890ff"
+        >
+          <div style={{ marginBottom: '16px' }}>
+            <Text type="secondary" italic>
+              *The following holiday list is applicable only for associates who are not allocated to any particular project.
+              Those who are allocated to projects need to follow customer holidays. Please refer to leave policy.*
+            </Text>
+          </div>
 
-        <div className={styles.searchContainer}>
-          <div>
-            <input
-              type="text"
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <Input
               placeholder="Search holidays..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.searchInput}
+              style={{ width: '300px' }}
+              allowClear
             />
+            <Button type="primary" icon={<DownloadOutlined />} style={{ borderRadius: '4px' }}>
+              <CSVLink
+                data={filteredHolidays}
+                headers={[
+                  { label: 'Holiday Date', key: 'holiday_date' },
+                  { label: 'Holiday Name', key: 'holiday_name' },
+                ]}
+                filename="holiday_list.csv"
+                style={{ color: 'inherit', textDecoration: 'none' }}
+              >
+                Download CSV
+              </CSVLink>
+            </Button>
           </div>
-          <button className={styles.csvBtn}>
-            <CSVLink
-              data={filteredHolidays}
-              headers={[
-                { label: 'Holiday Date', key: 'holiday_date' },
-                { label: 'Holiday Name', key: 'holiday_name' },
-              ]}
-              filename="holiday_list.csv"
-              className={styles.downloadButton}
-            >
-              Download
-            </CSVLink>
-          </button>
-        </div>
 
-
-        <div className={styles.tableDiv}>
           <div className={styles.tableContainer}>
             <table className={styles.table}>
               <thead className={styles.stickyHeader}>
@@ -94,8 +100,13 @@ function HolidayPage() {
                 ))}
               </tbody>
             </table>
+            {filteredHolidays.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#8c8c8c' }}>
+                No holidays found matching your search.
+              </div>
+            )}
           </div>
-        </div>
+        </WidgetCard>
       </div>
     </div>
   );

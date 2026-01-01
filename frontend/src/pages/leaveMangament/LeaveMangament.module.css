@@ -4,7 +4,7 @@
     justify-content: start;
     /* height: 100vh; */
     width: 90%;
-    background-color: white;
+    /* background-color: white; */
     /* padding: 0 1rem 1rem 1rem; */
     padding: 1.5rem;
     border: none;
@@ -37,7 +37,7 @@
     background-color: white;
     border-radius: 5px;
     box-shadow: 0px 2px 2px 2px #b3c7ff;
-    padding :0.5%;
+    padding: 0.5%;
 }
 
 .typeOfLeave {
@@ -98,7 +98,7 @@
     font-style: bold;
 }
 
-.leaveNumber{
+.leaveNumber {
     font-size: 15px;
     /* color: black !important; */
 }
@@ -217,16 +217,6 @@
     border-radius: 10px;
 }
 
-
-.table {
-    background-color: red;
-}
-
-.leaveTable {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-}
-
 .addButton {
     padding: 8px;
     background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
@@ -242,11 +232,11 @@
 }
 
 .addButton:hover {
-    
-  color: #5c6ac8 !important;
-  background-color:#b3c7ff !important;
-  border: 1.4px solid #b3c7ff !important;
-  font-weight: 400;
+
+    color: #5c6ac8 !important;
+    background-color: #b3c7ff !important;
+    border: 1.4px solid #b3c7ff !important;
+    font-weight: 400;
 }
 
 .headingHolidays {
@@ -275,9 +265,9 @@
     /* box-shadow: 10px 10px 10px -1px rgba(10,99,169,0.16),-10px -10px -10px -1px rgba(255,255,255,0.70) */
 }
 
-.noHolidaysMessage{
+.noHolidaysMessage {
     padding-left: 18px;
     font-weight: 500;
     font-size: 1rem;
     color: #0F6CBD;
- }
+}

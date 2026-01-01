@@ -1,9 +1,13 @@
-import { Calendar, Empty, Select, theme, Modal, Button } from 'antd';
+import { Calendar, Empty, Select, theme, Modal, Button, Row, Col, Space, Typography } from 'antd';
 import React, { useState, useEffect } from 'react';
 import styles from "./LeaveTable.module.css";
 import { getLeaveDetails, cancelLeave, getLeaveCardDetails } from '../../services/api';
 import { tableHeaders } from '../../util/leavetableData';
 import { getCookie } from '../../util/CookieSet';
+import WidgetCard from '../common/WidgetCard';
+import { FilterOutlined } from '@ant-design/icons';
+
+const { Text } = Typography;
 
 const leaveOptions = [
   { value: 'Sick/Emergency Leave', label: 'Sick/Emergency Leave' },
@@ -17,7 +21,7 @@ const leaveOptions = [
   { value: 'Swap Leave', label: 'Swap Leave' },
   { value: 'Exempt Work From Home', label: 'Exempt Work From Home' },
   { value: 'Customer Holiday', label: 'Customer Holiday' },
-  {value:"Missed Door Entry", label:'Missed Door Entry'},
+  { value: "Missed Door Entry", label: 'Missed Door Entry' },
 ];
 
 const leaveStatusOptions = [
@@ -30,12 +34,12 @@ const leaveStatusOptions = [
 const { Option } = Select;
 export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
-  employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable,setLeaveDates
+  employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable, setLeaveDates
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [leaveToCancel, setLeaveToCancel] = useState(null);
   const [selectedLeaveDetails, setSelectedLeaveDetails] = useState(null);
-  const[loader,setLoader]=useState(false)
+  const [loader, setLoader] = useState(false)
   const yearRanges = ["2022-2023", "2023-2024", "2024-2025", "2025-2026"];
   const [selectedRange, setSelectedRange] = useState("2025");
 
@@ -55,8 +59,8 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
     try {
       const employeeId = getCookie('employeeId');
       const res = await getLeaveCardDetails(employeeId);
-   
-      
+
+
       setLeaveCardData(res.data);
     } catch (err) {
       console.error('Error fetching leave card data:', err);
@@ -81,10 +85,10 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
         setLoadingLeaveTable(false);
       }
     };
-  
+
     fetchEmployeeData();
   }, [selectedRange]);
-  
+
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -100,25 +104,25 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
   };
 
   const generateDateRange = (fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const dates = [];
-  const holidayDates = apiHolidays.map(holiday => formatHolidayDate(holiday.holidayDate));
-  let currentDate = startDate;
-  while (currentDate <= endDate) {
-    const formattedDate = formatDate(currentDate);
-    const dayOfWeek = currentDate.getDay();
+    const startDate = new Date(fromDate);
+    const endDate = new Date(toDate);
+    const dates = [];
+    const holidayDates = apiHolidays.map(holiday => formatHolidayDate(holiday.holidayDate));
+    let currentDate = startDate;
+    while (currentDate <= endDate) {
+      const formattedDate = formatDate(currentDate);
+      const dayOfWeek = currentDate.getDay();
 
-    // Exclude Saturday (6) and Sunday (0)
-    if (dayOfWeek !== 6 && dayOfWeek !== 0 && !holidayDates.includes(formattedDate)) {
-      dates.push(formattedDate);
+      // Exclude Saturday (6) and Sunday (0)
+      if (dayOfWeek !== 6 && dayOfWeek !== 0 && !holidayDates.includes(formattedDate)) {
+        dates.push(formattedDate);
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
     }
 
-    currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
-  }
-
-  return dates;
-};
+    return dates;
+  };
   // Create leaveDates object
   const generateLeaveDates = () => {
     return employeeData?.reduce((acc, leave) => {
@@ -131,8 +135,8 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
 
       // Generate date range and assign leaveName to all dates in the range
       const dateRange = generateDateRange(fromDate, toDate);
-      
-      
+
+
       dateRange.forEach((date) => {
         acc[date] = leave.leaveName;
       });
@@ -141,7 +145,7 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
     }, {});
   };
   // console.log(generateLeaveDates,"genrate");
-  
+
   // useEffect to set leaveDates on component mount
   useEffect(() => {
     const leaveDatesObj = generateLeaveDates();
@@ -153,8 +157,8 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
     (selectedLeave.length === 0 || selectedLeave.includes(emp.leaveName)) &&
     (selectedStatus.length === 0 || selectedStatus.includes(emp.leaveStatus))
   );
-  
-  
+
+
   const handleLeaveChange = (value) => {
     setSelectedLeave(value);
   };
@@ -165,7 +169,7 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
 
   const { token } = theme.useToken();
 
-  
+
   const handleCancelLeave = async () => {
     if (!leaveToCancel) return;
 
@@ -173,11 +177,11 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
       leaveTranId: leaveToCancel,
       leaveStatus: "Cancel"
     };
-    
+
     setLoader(true)
     try {
       const response = await cancelLeave(leaveToCancel);
-   
+
       if (response.status === 200) {
         leaveCardDetails()
         setEmployeeData(prevData => prevData.map(employee =>
@@ -237,115 +241,124 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
 
   return (
     <div className={styles.main}>
-      <div className={styles.leaveDiv} style={{paddingBottom:"0.7rem"}}>
-        <div className={styles.headingSelectDiv}>
-            <h5  style={{paddingRight:"0.5rem", paddingTop:"0.3rem", paddingLeft:"2rem"}} className={styles.heading}>Leave Type :</h5>
-            <Select
-              mode="multiple"
-              placeholder="Search"
-              onChange={handleLeaveChange}
-              style={{ width: '60%' }}
-              options={leaveOptions}
-            />
-        </div>
+      <WidgetCard title="Leave Applications" icon={<FilterOutlined />} iconColor="#1890ff">
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          {/* Filter Section */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8}>
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Leave Type</Text>
+                <Select
+                  mode="multiple"
+                  placeholder="Select leave types"
+                  onChange={handleLeaveChange}
+                  style={{ width: '100%' }}
+                  options={leaveOptions}
+                  allowClear
+                />
+              </Space>
+            </Col>
+            <Col xs={24} md={8}>
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Leave Status</Text>
+                <Select
+                  mode="multiple"
+                  placeholder="Select status"
+                  onChange={handleStatusChange}
+                  style={{ width: '100%' }}
+                  options={leaveStatusOptions}
+                  allowClear
+                />
+              </Space>
+            </Col>
+            <Col xs={24} md={8}>
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Year</Text>
+                <Select
+                  value={selectedRange}
+                  onChange={handleChangeYear}
+                  placeholder="Select Year Range"
+                  style={{ width: '100%' }}
+                >
+                  {yearRanges.map((range) => (
+                    <Option key={range} value={range}>
+                      {range}
+                    </Option>
+                  ))}
+                </Select>
+              </Space>
+            </Col>
+          </Row>
 
-        <div className={styles.headingSelectDiv}>
-            <h5 style={{paddingRight:"0.5rem", paddingTop:"0.3rem"}} className={styles.heading}>Leave Status :</h5>
-            <Select
-              mode="multiple"
-              placeholder="Search"
-              onChange={handleStatusChange}
-              style={{ width: '60%' }}
-              options={leaveStatusOptions}
-            />
-        </div>
+          {/* Table Section */}
+          <div className={styles.tableContainer}>
+            {loadingLeaveTable ? (
+              <div>Loading...</div>
+            ) : (
+              <table className={styles.employeeTable}>
+                <thead>
+                  <tr className={styles.tableHead}>
+                    {tableHeaders.map((header, index) => (
+                      <th key={index}>{header.displayName}</th>
+                    ))}
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployeeData && filteredEmployeeData.length > 0 ? (
+                    filteredEmployeeData.map((employee, index) => (
+                      <tr key={index} onClick={() => handleRowClick(employee)}>
+                        {tableHeaders?.map((header, subIndex) => (
+                          <td key={subIndex}>
+                            <div
+                              className={`${header.key === "leaveStatus"
+                                  ? employee[header.key] === "Pending"
+                                    ? styles.pendingLeave
+                                    : employee[header.key] === "Approved"
+                                      ? styles.approvedLeave
+                                      : employee[header.key] === "Cancel"
+                                        ? styles.canceledLeave
+                                        : employee[header.key] === "Reject"
+                                          ? styles.rejectedLeave
+                                          : employee[header.key] === "Partial Approved"
+                                            ? styles.partialApprovedLeave
+                                            : ""
+                                  : ""
+                                }`}
+                            >
+                              {employee[header.key]}
+                            </div>
+                          </td>
+                        ))}
+                        <td>
+                          <Button
+                            danger
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showModal(employee.leaveTranId);
+                            }}
+                            disabled={employee.leaveStatus !== "Pending"}
+                          >
+                            Cancel
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={tableHeaders.length + 1}>
+                        <Empty description="No data available" />
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
 
-        <div className={styles.headingSelectDiv}>
-            <h5 style={{paddingRight:"0.5rem", paddingTop:"0.3rem"}} className={styles.heading}>Year:</h5>
-            <Select
-              value={selectedRange}
-              onChange={handleChangeYear}
-              placeholder="Select Year Range"
-              style={{ width: 200 }}
-            >
-              {yearRanges.map((range) => (
-                <Option key={range} value={range}>
-                  {range}
-                </Option>
-              ))}
-            </Select>
-        </div>
-        
-        
-      </div>
-      <div className={styles.tableContainer}>
-        {loadingLeaveTable ? (
-          <div>Loading...</div>
-        ) : (
-          <table className={styles.employeeTable}>
-            <thead>
-              <tr className={styles.tableHead}>
-                {tableHeaders.map((header, index) => (
-                  <th key={index}>{header.displayName}</th>
-                ))}
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-  {filteredEmployeeData && filteredEmployeeData.length > 0 ? (
-    filteredEmployeeData.map((employee, index) => (
-      <tr key={index} onClick={() => handleRowClick(employee)}>
-        {tableHeaders?.map((header, subIndex) => (
-          <td key={subIndex}>
-            <div
-              className={`${
-                header.key === "leaveStatus"
-                  ? employee[header.key] === "Pending"
-                    ? styles.pendingLeave
-                    : employee[header.key] === "Approved"
-                    ? styles.approvedLeave
-                    : employee[header.key] === "Cancel"
-                    ? styles.canceledLeave
-                    : employee[header.key] === "Reject"
-                    ? styles.rejectedLeave
-                    : employee[header.key] === "Partial Approved"
-                    ? styles.partialApprovedLeave
-                    : ""
-                  : ""
-              }`}
-            >
-              {employee[header.key]}
-            </div>
-          </td>
-        ))}
-        <td>
-          <button
-            className={`${styles.cancelButton} ${
-              employee.leaveStatus !== "Pending" ? styles.disabledButton : ""
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              showModal(employee.leaveTranId);
-            }}
-            disabled={employee.leaveStatus !== "Pending"}
-          >
-            Cancel
-          </button>
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan={tableHeaders.length + 1}>
-        <Empty description="No data available" />
-      </td>
-    </tr>
-  )}
-</tbody>
-
-          </table>
-        )}
-      </div>
+              </table>
+            )}
+          </div>
+        </Space>
+      </WidgetCard>
       <Modal
         //  title={
         //   <div className={styles.titleDiv}>

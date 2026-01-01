@@ -199,7 +199,7 @@ class LeaveQueryService:
                  func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
                 LeaveTransaction.comments.label('description'),
-                LeaveType.leave_name,
+                LeaveType.leave_type_name,
                 LeaveTransaction.duration,
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
@@ -209,15 +209,15 @@ class LeaveQueryService:
                 LeaveTransaction.leave_status,
                 case(
                     (and_(
-                        LeaveTransaction.is_for_second_approval == 1,
-                        LeaveTransaction.second_approver_date.isnot(None)
-                    ), 'Parag Khandekar'), # This might also be a constant if it's always him
+                        LeaveTransaction.is_for_second_approval == True,
+                        LeaveTransaction.second_approval_date.isnot(None)
+                    ), LeaveTransaction.second_approval_by),
                     else_=LeaveTransaction.approved_by
                 ).label('approved_by'),
                 case(
                     (and_(
-                        LeaveTransaction.is_for_second_approval == 1,
-                        LeaveTransaction.second_approver_date.isnot(None)
+                        LeaveTransaction.is_for_second_approval == True,
+                        LeaveTransaction.second_approval_date.isnot(None)
                     ), LeaveTransaction.second_approval_comment),
                     else_=LeaveTransaction.approval_comment
                 ).label('approval_comment'),

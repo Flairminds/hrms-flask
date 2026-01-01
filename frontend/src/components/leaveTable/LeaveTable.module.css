@@ -1,237 +1,104 @@
 .main {
-  padding: 12px;
-  /* padding-bottom: 20px; */
-  /* overflow-y: scroll; */
+  width: 100%;
 }
 
 .tableContainer {
-  margin-top: 0.5rem;
+  margin-top: 16px;
   overflow-x: auto;
-  max-height: 48vh;
-  /* border: 1px solid #b3c7ff; */
+  max-height: 500px;
+  border-radius: 4px;
 }
 
-.employeeTable { 
+.employeeTable {
   width: 100%;
   border-collapse: collapse;
 }
 
 .tableHead {
-  background: linear-gradient(135deg, #b3c7ff, #697df7);
+  background: linear-gradient(135deg, #1890ff, #096dd9);
 }
 
 .employeeTable th {
-  padding: 8px;
-  text-align: center;
+  padding: 12px 8px;
   position: sticky;
   top: 0;
-  background-color: #8ec5fc;
-    font-weight: 600;
-    font-size: 15px;
-  z-index: 1;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  color: white;
+  z-index: 10;
+  min-width: 100px;
 }
 
 .employeeTable td {
-  border-bottom: 1px solid #dddddd;
-  padding: 8px;
-  text-align: center;
-  min-width: 18vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 8px;
+  min-width: 100px;
 }
 
-
-.employeeTable .headRow .th:first-child {
-  border-top-left-radius: 9px;
-}
-
-.employeeTable .headRow .th:last-child {
-  border-top-right-radius: 9px;
-}
-
-.employeeTable .lastRow .totalRow:first-child {
-  border-bottom-left-radius: 8px;
-}
-
-.employeeTable .lastRow .totalRow:last-child {
-  border-bottom-right-radius: 8px;
-}
-
-.btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  background-color: #007bff;
-  color: white;
-  border: none;
+.employeeTable tbody tr {
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.btn:hover {
-  background-color: #0056b3;
-}
-
-.dropDownDiv,
-.applyLeaveDiv {
-  /* Styles can be added as needed */
-}
-
-.heading {
-  font-weight: 500;
-  font-size: 1rem;
-  color: #34495e;
-  padding: 0 0 0 1.5rem;
-  /* padding-top: 0.3rem; */
-  /* padding-bottom: 0.3rem; */
-  /* padding-right: 0.5rem; */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-}
-
-.btnDiv {
-  padding-left: 4rem;
-}
-
-.addButton {
-  background-color: #007bff;
-  border: none;
-  padding: 0.5rem;
-  border-radius: 7px;
-}
-
-.addButton:hover {
-  background-color: #8ec5fc;
-}
-
-.filterImg {
-  height: 50%;
-  width: 50%;
-  padding: 2px;
-  margin-left: 10px;
-  /* padding-left: ; */
-}
-
-.employeeTable thead tr:first-child th:first-child {
-  border-top-left-radius: 9px;
-}
-
-.employeeTable thead tr:first-child th:last-child {
-  border-top-right-radius: 9px;
-}
-
-.employeeTable tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 8px;
-}
-
-.employeeTable tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 8px;
-}
-
-.leaveDiv {
-  display: flex;
-  flex-direction: row;
-  justify-content:space-between;
-  width: 100%;
-  /* background-color: red; */
-}
-
-
-.headingSelectDiv{
-  display: flex;
-  /* background-color: #008D8D; */
-  width: 100%;
-
-}
-
-.headingSelectDivNew{
-  display: flex;
-  width: 100%;
-  align-items: center;
-}
-.leaveStatus {
-  /* color: green; */
-  font-weight: bold;
-  color: green;
-  cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid green;
-  padding: 5px;
+.employeeTable tbody tr:hover {
+  background-color: #f5f5f5;
 }
 
 .pendingLeave {
-  /* font-weight: bold; */
   cursor: pointer;
-  font-weight: bold;
-  color: #EFA300;
-  cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid #EFA300;
-  padding: 5px;
+  font-weight: 600;
+  color: #fa8c16;
+  border-radius: 4px;
+  border: 1.5px solid #fa8c16;
+  padding: 4px 8px;
+  display: inline-block;
 }
 
 .approvedLeave {
-  /* font-weight: bold; */
   cursor: pointer;
-  font-weight: bold;
-  color: green;
+  font-weight: 600;
+  color: #52c41a;
+  border-radius: 4px;
+  border: 1.5px solid #52c41a;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.canceledLeave {
   cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid green;
-  padding: 5px;
+  font-weight: 600;
+  color: #13c2c2;
+  border-radius: 4px;
+  border: 1.5px solid #13c2c2;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.rejectedLeave {
+  cursor: pointer;
+  font-weight: 600;
+  color: #ff4d4f;
+  border-radius: 4px;
+  border: 1.5px solid #ff4d4f;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.partialApprovedLeave {
+  cursor: pointer;
+  font-weight: 600;
+  color: #95de64;
+  border-radius: 4px;
+  border: 1.5px solid #95de64;
+  padding: 4px 8px;
+  display: inline-block;
 }
 
 .pendingLeave:hover,
 .approvedLeave:hover,
 .rejectedLeave:hover,
 .canceledLeave:hover,
-.partialApprovedLeave {
-  transform: translateY(-3px);
-  transition: transform 0.1s ease;
-}
-
-.canceledLeave {
-  cursor: pointer;
-  font-weight: bold;
-  color: #008D8D;
-  cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid #008D8D;
-  padding: 5px;
-}
-
-.rejectedLeave {
-  cursor: pointer;
-  font-weight: bold;
-  /* color: #9D166B; */
-  color: red;
-  cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid red;
-  padding: 5px;
-}
-
-.cancelButton {
-  width: max-content !important;
-  background-color: red;
-  border-radius: 8px;
-  color: white;
-  border: none;
-  height: 2rem;
-  padding: 6px;
-  cursor: pointer;
-}
-
-.titleDiv {
-  display: flex;
-  align-items: center;
-
-
-}
-
-.titleHeading {
-  font-weight: 600;
-  font-size: 1.3rem;
-  color: #0F6CBD;
-  /* padding-bottom: 0.5rem; */
+.partialApprovedLeave:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
 }
 
 .btnDiv {
@@ -242,136 +109,113 @@
 }
 
 .btnStyle {
-  background-color: rgb(65, 181, 65);
+  background-color: #52c41a;
   color: white;
 }
 
 .btnStyle:hover {
-  background-color: rgb(115, 223, 115) !important;
+  background-color: #73d13d !important;
   color: white !important;
   border: none !important;
 }
 
 .Nobtn {
-  background-color: red;
+  background-color: #ff4d4f;
   color: white;
 }
 
 .Nobtn:hover {
-  background-color: rgb(247, 61, 61) !important;
+  background-color: #ff7875 !important;
   color: white !important;
   border: none !important;
-}
-
-.partialApprovedLeave {
-  cursor: pointer;
-  font-weight: bold;
-  color: rgb(144, 231, 166);
-  cursor: pointer;
-  border-radius: 5px;
-  border: 2px solid  rgb(144, 231, 166);
-  padding: 5px;
 }
 
 .leaveDetails {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  /* overflow: auto; */
 }
 
 .leaveDetails h4 {
   margin-bottom: 16px;
-  font-size: 24px;
-  border-bottom: 2px solid #b3c7ff; /* Add underline below title */
-  padding-bottom: 8px; /* Space between title text and underline */
+  font-size: 20px;
+  border-bottom: 2px solid #1890ff;
+  padding-bottom: 8px;
+  color: #1890ff;
 }
 
 .leaveDetailsRow {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  padding: 10px 70px 10px 0;
-  border-bottom: 1px solid #ddd; 
-  overflow: auto;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.leaveDetailsRow:last-child {
+  border-bottom: none;
+}
+
+.leaveDetailsRow strong {
+  color: #595959;
+  font-weight: 600;
 }
 
 .leaveDetailsRow span {
-  width: 150px; 
-  white-space: nowrap; 
-}
-
-/* .leaveDetailsRow span {
-  flex: 1;
+  color: #262626;
+  font-weight: 500;
   text-align: right;
-} */
-.disabledButton {
-  cursor: not-allowed;
-  opacity: 0.9;
-  background-color: #d3d3d3;
-  border: 1 px solid red;
 }
 
 .pendingLeaveBox {
-  font-weight: bold;
-  color: #EFA300;
-  border-radius: 5px;
-  border: 2px solid #EFA300;
-  padding: 5px;
-  width: 50px;
-  padding-left: 10%;
+  font-weight: 600;
+  color: #fa8c16;
+  border-radius: 4px;
+  border: 1.5px solid #fa8c16;
+  padding: 4px 8px;
+  display: inline-block;
 }
-.canceledLeaveBox {
-  font-weight: bold;
-  color:  #008D8D;
-  border-radius: 5px;
-  border: 2px solid  #008D8D;
-  padding: 5px;
-  width: 50px;
-  padding-left: 11%;
-}
-.rejectedLeaveBox {
-  font-weight: bold;
-  color: #f10c0c;
-  border-radius: 5px;
-  border: 2px solid  #f10c0c;
-  padding: 5px;
-  width: 50px;
-  padding-left: 11%;
-}
-.approvedLeaveBox {
-  font-weight: bold;
-  color:green;
-  border-radius: 5px;
-  border: 2px solid green;
-  padding: 5px;
-  width: 50px;
-  padding-left: 9%;
-}
-.partialApprovedLeaveBox{
-  font-weight: bold;
-  color: rgb(144, 231, 166);
-  border-radius: 5px;
-  border: 2px solid  rgb(144, 231, 166);
-  padding: 5px;
-  width: 50px;
-  padding-left: 4%;
-}
-/* .leaveDetailsRow {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  padding: 10px 70px 10px 0;
-} */
 
-/* .leaveDetailsRow span {
-  width: 150px; 
-  white-space: nowrap; 
-} */
+.canceledLeaveBox {
+  font-weight: 600;
+  color: #13c2c2;
+  border-radius: 4px;
+  border: 1.5px solid #13c2c2;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.rejectedLeaveBox {
+  font-weight: 600;
+  color: #ff4d4f;
+  border-radius: 4px;
+  border: 1.5px solid #ff4d4f;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.approvedLeaveBox {
+  font-weight: 600;
+  color: #52c41a;
+  border-radius: 4px;
+  border: 1.5px solid #52c41a;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.partialApprovedLeaveBox {
+  font-weight: 600;
+  color: #95de64;
+  border-radius: 4px;
+  border: 1.5px solid #95de64;
+  padding: 4px 8px;
+  display: inline-block;
+}
 
 .leaveDetailsTitle {
   text-align: center;
   margin-bottom: 20px;
   font-size: 18px;
   font-weight: bold;
+  color: #1890ff;
 }

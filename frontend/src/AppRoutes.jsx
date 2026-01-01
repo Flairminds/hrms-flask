@@ -41,7 +41,6 @@ function AppRoutes() {
             }} />
 
             {/* Public Routes */}
-            <Route path="/" element={isAuthenticated ? <Navigate to="/personal-info" replace /> : <LoginPage />} />
             <Route path="/login" element={isAuthenticated ? <Navigate to="/personal-info" replace /> : <LoginPage />} />
             <Route path="/resetPassword" element={<ResetPassword />} />
 
@@ -51,10 +50,11 @@ function AppRoutes() {
                     <PageLayout isRole={user?.roleName} />
                 </ProtectedRoute>
             }>
+                <Route path="/" element={<Dashboard />} />
                 <Route path="leave" element={<LeaveManagementPage />} />
                 <Route path="holiday" element={<HolidayPage />} />
                 <Route path="personal-info" element={<PersonalInfo />} />
-                <Route path="dashboard1" element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="company-policy" element={<PolicyPage />} />
                 <Route path="goalSeetingForm" element={<GoalSettingForm />} />
                 <Route path="teamLeaveManagement" element={<TeamLeaves isRole={user?.roleName} />} />

@@ -61,7 +61,7 @@ export const getEmployeeDetails = (employeeId) => {
 
 // 3.Get Cards Details - Retrieves leave card details for a specific employee (leave balances, history, etc).
 export const getLeaveCardDetails = (employeeId) => {
-  const res = axiosInstance.get(`${API_BASE_URL}/Leave/LeavesCard/${employeeId}`)
+  const res = axiosInstance.get(`${API_BASE_URL}/leave/get-leave-details/${employeeId}`)
   return res;
 }
 
@@ -102,8 +102,8 @@ export const insertLeaveTransaction = async (payload) => {
 
 // Gets available leave types and the approver for a given employee.
 export const getTypeApprover = (employeeId) => {
-  const res = axiosInstance.get(`${API_BASE_URL}/Leave/LeaveTypesAndApprover/`, {
-    params: { "EmpId": `${employeeId}` }
+  const res = axiosInstance.get(`${API_BASE_URL}/leave/leave-types-and-approver`, {
+    params: { "employeeId": `${employeeId}` }
   });
   return res;
 };

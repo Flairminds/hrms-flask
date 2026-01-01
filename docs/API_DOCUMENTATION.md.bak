@@ -1,28 +1,28 @@
 # HRMS Flask API Documentation
 
-**Last Updated**: 2025-12-31 18:45:00  
+**Last Updated**: 2025-12-30 19:51:00  
 **Base URL**: `/api`
 
 ---
 
 ## Table of Contents
 
-1. [Account & Authentication](#account--authentication) (5 endpoints)
-2. [HR Management](#hr-management) (7 endpoints)
-3. [Leave Management](#leave-management) (6 endpoints)
-4. [Document Management](#document-management) (16 endpoints)
-5. [Asset Management](#asset-management) (6 endpoints)
-6. [Feedback & Reviews](#feedback--reviews) (2 endpoints)
-7. [Skills Management](#skills-management) (4 endpoints)
-8. [Skill Reviews](#skill-reviews) (6 endpoints)
-9. [Capability Management](#capability-management) (7 endpoints)
-10. [Profile Management](#profile-management) (6 endpoints)
-11. [Policy Management](#policy-management) (5 endpoints)
-12. [Project Management](#project-management) (3 endpoints)
-13. [Employee Allocation](#employee-allocation) (2 endpoints)
-14. [Goals Management](#goals-management) (4 endpoints)
-15. [Evaluators Management](#evaluators-management) (5 endpoints)
-16. [Health Check](#health-check) (2 endpoints)
+1. [Account & Authentication](#account--authentication)
+2. [HR Management](#hr-management)
+3. [Leave Management](#leave-management)
+4. [Document Management](#document-management)
+5. [Asset Management](#asset-management)
+6. [Feedback & Reviews](#feedback--reviews)
+7. [Skills Management](#skills-management)
+8. [Skill Reviews](#skill-reviews)
+9. [Capability Management](#capability-management)
+10. [Profile Management](#profile-management)
+11. [Policy Management](#policy-management)
+12. [Project Management](#project-management)
+13. [Employee Allocation](#employee-allocation)
+14. [Goals Management](#goals-management)
+15. [Evaluators Management](#evaluators-management)
+16. [Health Check](#health-check)
 
 ---
 
@@ -35,8 +35,8 @@
 - **Request Body**:
   ```json
   {
-    "username": "string (Employee ID or Email)",
-    "password": "string"
+    "Username": "string (Employee ID or Email)",
+    "Password": "string"
   }
   ```
 - **Response** (200):
@@ -122,29 +122,6 @@
   - `400`: Missing fields or password too weak
   - `500`: Failed to reset password
 
-### Get Current User
-- **Method**: `GET`
-- **Path**: `/api/account/me`
-- **Authentication**: JWT Required
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": {
-      "employeeId": "string",
-      "roleName": "string",
-      "email": "string",
-      "fullName": "string",
-      "employmentStatus": "string"
-    }
-  }
-  ```
-- **Status Codes**:
-  - `200`: Success
-  - `401`: Missing or invalid token
-  - `404`: User not found
-  - `500`: Server error
-
 ---
 
 ## HR Management
@@ -153,6 +130,7 @@
 - **Method**: `GET`
 - **Path**: `/api/hr-functionality/get-all-employees`
 - **Authentication**: Admin, HR
+- **Query Parameters**: None
 - **Response** (200): Array of employee objects
   ```json
   [
@@ -199,35 +177,6 @@
   - `200`: Success
   - `400`: Missing EmployeeId or validation error
   - `404`: Employee not found (update only)
-  - `500`: Server error
-
-### Insert Employee (with Credentials)
-- **Method**: `POST`
-- **Path**: `/api/hr-functionality/insert-employee`
-- **Authentication**: Admin, HR
-- **Request Body**:
-  ```json
-  {
-    "EmployeeId": "string (required)",
-    "FirstName": "string",
-    "LastName": "string",
-    "Email": "string",
-    "Password": "string (min 8 chars)",
-    "DateOfJoining": "YYYY-MM-DD",
-    "Addresses": [...],
-    "Skills": [...]
-  }
-  ```
-- **Response** (201):
-  ```json
-  {
-    "message": "Employee created successfully",
-    "employee_id": "string"
-  }
-  ```
-- **Status Codes**:
-  - `201`: Created
-  - `400`: Validation error or duplicate EmployeeId/Email
   - `500`: Server error
 
 ### Get Monthly Report
@@ -279,29 +228,6 @@
   ```
 - **Status Codes**:
   - `200`: Success
-  - `500`: Server error
-
-### Get Employee with Address and Skills
-- **Method**: `GET`
-- **Path**: `/api/hr-functionality/employee-details/<employee_id>`
-- **Authentication**: Admin, HR
-- **Path Parameters**:
-  - `employee_id`: Employee ID
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": {
-      "employee": {...},
-      "addresses": [...],
-      "skills": [...]
-    }
-  }
-  ```
-- **Status Codes**:
-  - `200`: Success
-  - `400`: Invalid ID
-  - `404`: Employee not found
   - `500`: Server error
 
 ---
@@ -407,8 +333,8 @@
   ```json
   [
     {
-      "holiday_date": "YYYY-MM-DD",
-      "holiday_name": "string"
+      "HolidayDate": "YYYY-MM-DD",
+      "HolidayName": "string"
     }
   ]
   ```
@@ -438,26 +364,28 @@
 - **Method**: `GET`
 - **Path**: `/api/documents/employeeDetailsForRelievingLetter`
 - **Authentication**: Admin, HR
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": [...],
-    "message": "Employee details fetched successfully"
-  }
-  ```
+- **Response** (200): Employee list for relieving letter generation
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get HR Relieving Letters
 - **Method**: `GET`
 - **Path**: `/api/documents/hrRelievingLetters`
 - **Authentication**: Admin, HR
 - **Response** (200): Complete list of relieving letters
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get Relieving Letters
 - **Method**: `GET`
 - **Path**: `/api/documents/relieving-letters`
 - **Authentication**: Admin, HR
 - **Response** (200): Simplified list of relieving letters
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Create Relieving Letter
 - **Method**: `POST`
@@ -469,23 +397,23 @@
     "employeeId": "string",
     "employeeName": "string",
     "designation": "string",
-    "joiningDate": "YYYY-MM-DD",
     "lastWorkingDate": "YYYY-MM-DD",
     "relievingDate": "YYYY-MM-DD",
     "resignationDate": "YYYY-MM-DD",
     "ctcSalary": "number",
-    "bonus": "number",
-    "variables": "number",
-    "employeeEmail": "string"
+    "bonus": "number"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "message": "Relieving letter generated and emailed successfully"
+    "message": "Relieving letter created and emailed successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing/invalid fields
+  - `500`: Server error
 
 ### Send Relieving Letter Email
 - **Method**: `POST`
@@ -496,10 +424,13 @@
 - **Response** (200):
   ```json
   {
-    "status": "success",
     "message": "Email sent successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Letter or PDF not found
+  - `500`: Server error
 
 ### Update Relieving Letter
 - **Method**: `PUT`
@@ -514,17 +445,20 @@
     "relievingDate": "YYYY-MM-DD",
     "resignationDate": "YYYY-MM-DD",
     "ctcSalary": "number",
-    "bonus": "number",
-    "variables": "number"
+    "bonus": "number"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
     "message": "Relieving letter updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing/invalid fields
+  - `404`: Letter not found
+  - `500`: Server error
 
 ### Download Relieving Letter
 - **Method**: `GET`
@@ -533,6 +467,10 @@
 - **Path Parameters**:
   - `letter_id`: Integer
 - **Response** (200): PDF file download
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Letter or PDF not found
+  - `500`: Server error
 
 ### Upload Document
 - **Method**: `POST`
@@ -542,12 +480,16 @@
   - `emp_id`: Employee ID
   - `doc_type`: tenth, twelve, pan, adhar, grad, resume
   - `file`: PDF file
-- **Response** (201):
+- **Response** (200):
   ```json
   {
-    "message": "pan document uploaded successfully"
+    "message": "Document uploaded successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing fields or invalid file type
+  - `500`: Server error
 
 ### Get Document
 - **Method**: `GET`
@@ -557,6 +499,11 @@
   - `emp_id`: Employee ID
   - `doc_type`: Document type
 - **Response** (200): PDF file download
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Invalid document type
+  - `404`: Document not found
+  - `500`: Server error
 
 ### Delete Document
 - **Method**: `DELETE`
@@ -568,9 +515,13 @@
 - **Response** (200):
   ```json
   {
-    "message": "pan document deleted successfully"
+    "message": "Document deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing/invalid parameters
+  - `500`: Server error
 
 ### Get Document Status
 - **Method**: `GET`
@@ -579,6 +530,10 @@
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200): Document upload status
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Employee not found
+  - `500`: Server error
 
 ### Verify Document
 - **Method**: `POST`
@@ -587,17 +542,21 @@
 - **Request Body**:
   ```json
   {
-    "emp_id": "string",
-    "doc_type": "string",
-    "is_verified": "boolean"
+    "employee_id": "string",
+    "document_type": "string",
+    "status": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Document verification status updated successfully"
+    "message": "Document verified successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing fields
+  - `500`: Server error
 
 ### Get Document Verification Status
 - **Method**: `GET`
@@ -606,6 +565,9 @@
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200): Verification status for documents
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get Document Status Details
 - **Method**: `GET`
@@ -614,24 +576,27 @@
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200): Detailed document status
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get Incomplete Employees
 - **Method**: `GET`
 - **Path**: `/api/documents/incomplete-employees`
 - **Authentication**: Admin, HR
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": [...]
-  }
-  ```
+- **Response** (200): List of employees with incomplete documents
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get All Employees Document Status
 - **Method**: `GET`
 - **Path**: `/api/documents/all-employees-docs`
 - **Authentication**: Admin, HR
 - **Response** (200): Document status for all employees
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
@@ -642,17 +607,9 @@
 - **Path**: `/api/assets/pcs`
 - **Authentication**: Admin, HR
 - **Response** (200): List of all PCs
-  ```json
-  [
-    {
-      "pcid": 123,
-      "pc_name": "LAPTOP-001",
-      "type": "Laptop",
-      "purchase_date": "2024-01-15",
-      "warranty_till": "2026-01-15"
-    }
-  ]
-  ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Upsert PC
 - **Method**: `POST`, `PUT`
@@ -661,19 +618,21 @@
 - **Request Body**:
   ```json
   {
-    "PCID": "integer (optional for update)",
-    "PCName": "string",
-    "Type": "string",
-    "PurchaseDate": "YYYY-MM-DD",
-    "WarrantyTill": "YYYY-MM-DD"
+    "pc_id": "string",
+    "pc_name": "string",
+    "specifications": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "PC information saved successfully"
+    "message": "PC upserted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Assign PC
 - **Method**: `POST`
@@ -682,83 +641,67 @@
 - **Request Body**:
   ```json
   {
-    "EmployeeID": "string",
-    "PCID": "integer"
+    "employee_id": "string",
+    "pc_id": "string",
+    "assignment_date": "YYYY-MM-DD"
   }
   ```
-- **Response** (201):
+- **Response** (200):
   ```json
   {
-    "message": "PC assigned successfully",
-    "assignment_id": 456
+    "message": "PC assigned successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
-### Get Maintenance Records
+### Get Maintenance
 - **Method**: `GET`
 - **Path**: `/api/assets/maintenance`
 - **Authentication**: Admin, HR
-- **Response** (200): Array of maintenance records
-
-### Add Maintenance Record
-- **Method**: `POST`
-- **Path**: `/api/assets/maintenance`
-- **Authentication**: Admin, HR
-- **Request Body**:
-  ```json
-  {
-    "pcid": "integer",
-    "issue_description": "string",
-    "status": "string (Pending/Completed)",
-    "maintenance_date": "YYYY-MM-DD",
-    "notes": "string"
-  }
-  ```
-- **Response** (201):
-  ```json
-  {
-    "message": "Maintenance record created successfully"
-  }
-  ```
-
-### Get Peripherals
-- **Method**: `GET`
-- **Path**: `/api/assets/peripherals`
-- **Authentication**: Admin, HR
-- **Response** (200): List of peripheral devices
+- **Response** (200): Maintenance records
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
 ## Feedback & Reviews
 
-### Get Employee Feedback Report
+### Get Employee Report
 - **Method**: `GET`
 - **Path**: `/api/feedback/get-emp-report`
-- **Authentication**: Admin, HR, Lead
-- **Query Parameters**:
-  - `empId` (required): Employee ID
+- **Authentication**: Admin, HR, Lead, Employee
 - **Response** (200): Employee feedback reports
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
-### Add Employee Feedback Report
+### Add Employee Report
 - **Method**: `POST`
 - **Path**: `/api/feedback/add-emp-report`
 - **Authentication**: Admin, HR, Lead
 - **Request Body**:
   ```json
   {
-    "EmployeeId": "string (required)",
-    "Feedback": "string",
-    "Rating": "integer",
-    "ReviewPeriod": "string"
+    "employee_id": "string",
+    "feedback": "string",
+    "rating": "integer",
+    "period": "string"
   }
   ```
-- **Response** (201):
+- **Response** (200):
   ```json
   {
-    "Message": "Feedback added successfully",
-    "FeedBackId": "integer"
+    "message": "Report added successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ---
 
@@ -769,6 +712,9 @@
 - **Path**: `/api/skills/employee-skills`
 - **Authentication**: Admin, HR
 - **Response** (200): Overview of all employee skills
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Add or Update Skills
 - **Method**: `POST`
@@ -786,12 +732,16 @@
     ]
   }
   ```
-- **Response** (201):
+- **Response** (200):
   ```json
   {
-    "message": "Skills added/updated successfully"
+    "message": "Skills updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Get Employee Skills
 - **Method**: `GET`
@@ -800,12 +750,19 @@
 - **Path Parameters**:
   - `employee_id`: Employee ID
 - **Response** (200): Skills for specific employee
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Employee not found
+  - `500`: Server error
 
 ### Get Employees with Skills
 - **Method**: `GET`
 - **Path**: `/api/skills/employees`
 - **Authentication**: Admin, HR
 - **Response** (200): List of employees with their skills
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
@@ -815,13 +772,10 @@
 - **Method**: `GET`
 - **Path**: `/api/review/employees/skills`
 - **Authentication**: Admin, HR
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": [...]
-  }
-  ```
+- **Response** (200): Skills of assigned employees for review
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Get Skill Statuses
 - **Method**: `GET`
@@ -830,6 +784,9 @@
 - **Path Parameters**:
   - `employee_id`: Employee ID
 - **Response** (200): Skill review statuses for employee
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Save Review
 - **Method**: `POST`
@@ -839,19 +796,21 @@
   ```json
   {
     "employee_id": "string",
-    "skill_id": "integer",
+    "skill_id": "string",
     "review_score": "number",
-    "reviewer_id": "string",
     "comments": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "data": {...}
+    "message": "Review saved successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Add Employee Skill
 - **Method**: `POST`
@@ -860,19 +819,20 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string",
-    "skillId": "integer",
-    "skillLevel": "string"
+    "employee_id": "string",
+    "skill_id": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "message": "Skill added successfully",
-    "data": {...}
+    "message": "Skill added successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Update Skill Score
 - **Method**: `PUT`
@@ -881,24 +841,30 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string",
-    "skillId": "integer",
-    "reviewScore": "number"
+    "employee_id": "string",
+    "skill_id": "string",
+    "new_score": "number"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
     "message": "Skill score updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Get Master Skills
 - **Method**: `GET`
 - **Path**: `/api/review/skills/employee`
 - **Authentication**: Admin, HR
-- **Response** (200): List of all skills in master table
+- **Response** (200): List of all master skills
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
@@ -908,54 +874,58 @@
 - **Method**: `GET`
 - **Path**: `/api/capability/capability-leads`
 - **Authentication**: Admin, HR
-- **Response** (200):
-  ```json
-  {
-    "status": "success",
-    "data": [...],
-    "message": "Capability Development Leads retrieved successfully"
-  }
-  ```
+- **Response** (200): List of capability leads
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
-### Create Capability Leads
+### Create Capability Lead
 - **Method**: `POST`
 - **Path**: `/api/capability/capability-leads`
 - **Authentication**: Admin, HR
 - **Request Body**:
   ```json
   {
-    "employeeIds": ["EMP001", "EMP002"]
+    "capability_name": "string",
+    "lead_employee_id": "string"
   }
   ```
 - **Response** (201):
   ```json
   {
-    "status": "success",
-    "data": [...],
-    "message": "Capability Development Leads added successfully"
+    "message": "Capability lead created successfully"
   }
   ```
+- **Status Codes**:
+  - `201`: Created successfully
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Delete Capability Lead
 - **Method**: `DELETE`
-- **Path**: `/api/capability/capability-leads/<int:lead_id>`
+- **Path**: `/api/capability/capability-leads/<lead_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `lead_id`: Integer
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "data": {...},
-    "message": "Capability Development Lead and related assignments deleted successfully"
+    "message": "Capability lead deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Lead not found
+  - `500`: Server error
 
 ### Get Assigned Capability Leads
 - **Method**: `GET`
 - **Path**: `/api/capability/assigned-capability-leads`
 - **Authentication**: Admin, HR
-- **Response** (200): List of employee-lead assignments
+- **Response** (200): List of capability lead assignments
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Create Capability Assignment
 - **Method**: `POST`
@@ -964,89 +934,102 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string",
-    "leadId": "integer"
+    "employee_id": "string",
+    "capability_id": "string"
   }
   ```
 - **Response** (201):
   ```json
   {
-    "status": "success",
-    "data": { "CapabilityDevelopmentLeadAssignmentId": 456 },
     "message": "Assignment created successfully"
   }
   ```
+- **Status Codes**:
+  - `201`: Created successfully
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Update Capability Assignment
 - **Method**: `PUT`
-- **Path**: `/api/capability/assigned-capability-leads/<int:assignment_id>`
+- **Path**: `/api/capability/assigned-capability-leads/<assignment_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `assignment_id`: Integer
 - **Request Body**:
   ```json
   {
-    "employeeId": "string",
-    "leadId": "integer"
+    "employee_id": "string",
+    "capability_id": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "data": { "CapabilityDevelopmentLeadAssignmentId": 123 },
     "message": "Assignment updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `404`: Assignment not found
+  - `500`: Server error
 
 ### Delete Capability Assignment
 - **Method**: `DELETE`
-- **Path**: `/api/capability/assigned-capability-leads/<int:assignment_id>`
+- **Path**: `/api/capability/assigned-capability-leads/<assignment_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `assignment_id`: Integer
 - **Response** (200):
   ```json
   {
-    "status": "success",
     "message": "Assignment deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Assignment not found
+  - `500`: Server error
 
 ---
 
 ## Profile Management
 
-### Get Employee Profile
+### Get Profile
 - **Method**: `GET`
 - **Path**: `/api/profile/<emp_id>`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200):
   ```json
   {
-    "employee_id": "string",
-    "first_name": "string",
-    "last_name": "string",
-    "email": "string",
-    "contact_number": "string",
-    "skills": [...],
-    "addresses": [...]
+    "EmployeeId": "string",
+    "FirstName": "string",
+    "LastName": "string",
+    "Email": "string",
+    "ContactNumber": "string",
+    "Skills": [...],
+    "Addresses": [...]
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Employee not found
+  - `500`: Server error
 
 ### Update Profile (Self)
 - **Method**: `PUT`
 - **Path**: `/api/profile/update-employee-details-by-self/<emp_id>`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Request Body**:
   ```json
   {
-    "contact_number": "string",
-    "email": "string",
+    "ContactNumber": "string",
+    "Email": "string",
+    "Address": "string",
     "..."
   }
   ```
@@ -1056,11 +1039,15 @@
     "Message": "Profile updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing request body
+  - `500`: Server error or employee not found
 
 ### Cancel Leave
 - **Method**: `PATCH`
 - **Path**: `/api/profile/cancel-leave`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Request Body**:
   ```json
   {
@@ -1073,19 +1060,28 @@
     "Message": "Leave cancelled successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Missing LeaveTranId
+  - `404`: Leave transaction not found or cannot be cancelled
+  - `500`: Server error
 
-### Get Complete Employee Details
+### Get Complete Details
 - **Method**: `GET`
 - **Path**: `/api/profile/complete-details/<emp_id>`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Path Parameters**:
   - `emp_id`: Employee ID
-- **Response** (200): Full employee record including all associations
+- **Response** (200): Complete employee details
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Employee not found
+  - `500`: Server error
 
-### Increment Address Verification Counter
+### Increment Address Counter
 - **Method**: `POST`
 - **Path**: `/api/profile/increment-address-counter/<emp_id>`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200):
@@ -1094,11 +1090,14 @@
     "message": "Counter incremented successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Failed to increment counter
 
-### Get Address Verification Counter
+### Get Address Counter
 - **Method**: `GET`
 - **Path**: `/api/profile/get-address-counter/<emp_id>`
-- **Authentication**: Admin, HR, Employee
+- **Authentication**: Admin, HR, Lead, Employee
 - **Path Parameters**:
   - `emp_id`: Employee ID
 - **Response** (200):
@@ -1107,6 +1106,9 @@
     "counter": "integer"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
@@ -1118,7 +1120,10 @@
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `employee_id`: Employee ID
-- **Response** (200): Array of policy acknowledgments
+- **Response** (200): Policy acknowledgment status
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Update Policy Acknowledgment
 - **Method**: `POST`
@@ -1127,20 +1132,21 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string",
-    "policyName": "string",
+    "employee_id": "string",
+    "policy_id": "string",
     "acknowledged": "boolean"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Policy acknowledgment updated successfully",
-    "employeeId": "string",
-    "policyName": "string",
-    "acknowledged": "boolean"
+    "message": "Acknowledgment updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Send Policy Email
 - **Method**: `POST`
@@ -1149,17 +1155,20 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string"
+    "employee_id": "string",
+    "policy_id": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Email sent successfully",
-    "employeeId": "string",
-    "employeeName": "string"
+    "message": "Policy email sent successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Update Warning Count
 - **Method**: `POST`
@@ -1168,17 +1177,20 @@
 - **Request Body**:
   ```json
   {
-    "employeeId": "string"
+    "employee_id": "string",
+    "warning_count": "integer"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Warning count updated successfully",
-    "employeeId": "string",
-    "warningCount": "integer"
+    "message": "Warning count updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Get Warning Count
 - **Method**: `GET`
@@ -1189,9 +1201,12 @@
 - **Response** (200):
   ```json
   {
-    "warningCount": "integer"
+    "warning_count": "integer"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
@@ -1200,22 +1215,25 @@
 ### Get Projects
 - **Method**: `GET`
 - **Path**: `/api/project/projects`
-- **Authentication**: None Required
+- **Authentication**: None (Public)
 - **Response** (200):
   ```json
   {
     "projects": [...]
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Add Project
 - **Method**: `POST`
 - **Path**: `/api/project/add-project`
-- **Authentication**: None Required
+- **Authentication**: None (Public)
 - **Request Body**:
   ```json
   {
-    "project_name": "string",
+    "project_name": "string (required)",
     "end_date": "YYYY-MM-DD",
     "required": "integer"
   }
@@ -1226,11 +1244,15 @@
     "message": "Project added successfully"
   }
   ```
+- **Status Codes**:
+  - `201`: Created successfully
+  - `400`: Project name is required
+  - `500`: Server error
 
 ### Delete Project
 - **Method**: `DELETE`
-- **Path**: `/api/project/delete-project/<int:project_id>`
-- **Authentication**: None Required
+- **Path**: `/api/project/delete-project/<project_id>`
+- **Authentication**: None (Public)
 - **Path Parameters**:
   - `project_id`: Integer
 - **Response** (200):
@@ -1239,34 +1261,39 @@
     "message": "Project deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ---
 
 ## Employee Allocation
 
-### Assign Employee to Project
+### Assign Employee
 - **Method**: `POST`
 - **Path**: `/api/allocation/assign-employee`
-- **Authentication**: None Required
+- **Authentication**: None (Public)
 - **Request Body**:
   ```json
   {
-    "employee_id": "string",
-    "project_id": "string",
-    "work_category_id": "string",
-    "allocation": "number (e.g., 1.0)"
+    "employee_id": "string (required)",
+    "project_id": "integer (required)",
+    "work_category": "string",
+    "allocation": "float (default: 1.0)"
   }
   ```
 - **Response** (201):
   ```json
   {
-    "message": "Employee EMP001 assigned to project PROJ123 successfully",
-    "allocation": {...}
+    "message": "Employee assigned successfully",
+    "allocation_id": "integer"
   }
   ```
-
-### Get Employee Allocations
-- **Note**: Currently accessed via `AllocationController.get_employee_allocations` in code but route not explicitly defined in `allocation.py`. Service exists but route might be missing or combined.
+- **Status Codes**:
+  - `201`: Created successfully
+  - `400`: Validation error or missing fields
+  - `409`: Duplicate assignment
+  - `500`: Server error
 
 ---
 
@@ -1279,20 +1306,23 @@
 - **Request Body**:
   ```json
   {
-    "EmployeeId": "string",
-    "GoalName": "string",
-    "Description": "string",
-    "TargetDate": "YYYY-MM-DD"
+    "employee_id": "string",
+    "goal_title": "string",
+    "goal_description": "string",
+    "target_date": "YYYY-MM-DD"
   }
   ```
 - **Response** (201):
   ```json
   {
-    "status": "success",
-    "data": {...},
-    "message": "Goal created successfully"
+    "message": "Goal created successfully",
+    "goal_id": "integer"
   }
   ```
+- **Status Codes**:
+  - `201`: Created successfully
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Get Employee Goals
 - **Method**: `GET`
@@ -1301,35 +1331,53 @@
 - **Path Parameters**:
   - `employee_id`: Employee ID
 - **Response** (200): List of goals for employee
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Update Goal
 - **Method**: `PUT`
-- **Path**: `/api/goals/goals/<int:goal_id>`
+- **Path**: `/api/goals/goals/<goal_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `goal_id`: Integer
+- **Request Body**:
+  ```json
+  {
+    "goal_title": "string",
+    "goal_description": "string",
+    "target_date": "YYYY-MM-DD",
+    "status": "string"
+  }
+  ```
 - **Response** (200):
   ```json
   {
-    "status": "success",
-    "data": { "goalId": 123 },
     "message": "Goal updated successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `404`: Goal not found
+  - `500`: Server error
 
 ### Delete Goal
 - **Method**: `DELETE`
-- **Path**: `/api/goals/goals/<int:goal_id>`
+- **Path**: `/api/goals/goals/<goal_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
   - `goal_id`: Integer
 - **Response** (200):
   ```json
   {
-    "status": "success",
     "message": "Goal deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `404`: Goal not found
+  - `500`: Server error
 
 ---
 
@@ -1342,17 +1390,20 @@
 - **Request Body**:
   ```json
   {
-    "empId": "string",
-    "evaluatorIds": ["string", "string"]
+    "employee_id": "string",
+    "evaluators": ["string"]
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Evaluators assigned successfully",
-    "emailFailures": []
+    "message": "Evaluators assigned successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Send Evaluator Reminder
 - **Method**: `POST`
@@ -1361,31 +1412,40 @@
 - **Request Body**:
   ```json
   {
-    "empId": "string",
-    "evaluatorIds": ["string", "string"]
+    "evaluator_id": "string",
+    "employee_id": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Reminder emails sent successfully",
-    "emailFailures": []
+    "message": "Reminder sent successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ### Get All Employee Evaluators
 - **Method**: `GET`
 - **Path**: `/api/evaluators/HRFunctionality/GetAllEmployeeEvaluators`
 - **Authentication**: Admin, HR
 - **Response** (200): List of all employee-evaluator mappings
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
-### Get All Employees for Evaluator
+### Get All Employees for Evaluators
 - **Method**: `GET`
 - **Path**: `/api/evaluators/HRFunctionality/GetAllEmployeesForEvaluators/<evaluator_id>`
 - **Authentication**: Admin, HR
 - **Path Parameters**:
-  - `evaluator_id`: Employee ID (Evaluator)
-- **Response** (200): List of employees assigned to this evaluator
+  - `evaluator_id`: Evaluator employee ID
+- **Response** (200): List of employees assigned to the evaluator
+- **Status Codes**:
+  - `200`: Success
+  - `500`: Server error
 
 ### Delete Evaluators
 - **Method**: `DELETE`
@@ -1394,22 +1454,26 @@
 - **Request Body**:
   ```json
   {
-    "empId": "string",
-    "evaluatorIds": ["string"]
+    "employee_id": "string",
+    "evaluator_id": "string"
   }
   ```
 - **Response** (200):
   ```json
   {
-    "message": "Evaluator(s) deleted successfully"
+    "message": "Evaluator assignment deleted successfully"
   }
   ```
+- **Status Codes**:
+  - `200`: Success
+  - `400`: Validation error
+  - `500`: Server error
 
 ---
 
 ## Health Check
 
-### Server Health Check
+### Health Check
 - **Method**: `GET`
 - **Path**: `/api/health/health`
 - **Authentication**: None (Public)
@@ -1421,6 +1485,8 @@
     "service": "HRMS-Flask Backend"
   }
   ```
+- **Status Codes**:
+  - `200`: Server is running
 
 ### Database Health Check
 - **Method**: `GET`
@@ -1434,3 +1500,97 @@
     "database": "connected"
   }
   ```
+- **Status Codes**:
+  - `200`: Database connection is healthy
+  - `503`: Database connection failed
+    ```json
+    {
+      "status": "unhealthy",
+      "message": "Database connection failed",
+      "database": "disconnected",
+      "error": "string"
+    }
+    ```
+
+---
+
+## Common Response Codes
+
+| Code | Description |
+|------|-------------|
+| 200  | Success |
+| 201  | Created |
+| 400  | Bad Request - Invalid input |
+| 401  | Unauthorized - Authentication required |
+| 403  | Forbidden - Insufficient permissions |
+| 404  | Not Found - Resource does not exist |
+| 409  | Conflict - Duplicate resource |
+| 500  | Internal Server Error |
+| 503  | Service Unavailable |
+
+---
+
+## Authentication
+
+All endpoints (except login, OTP operations, health checks, project endpoints, and allocation endpoints) require a JWT token in the Authorization header:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+Token is obtained from the `/api/account/login` endpoint and includes:
+- Employee ID (identity claim)
+- Role name (role claim)
+
+---
+
+## Role-Based Access Control
+
+| Role | Permissions |
+|------|-------------|
+| Admin | Full access to all endpoints |
+| HR | Access to HR, Leave, Document, Asset, Feedback, Skills, Capability, Profile, Policy, Goals, Evaluators management |
+| Lead | Access to Leave approvals, Team management, Feedback, Profile |
+| Employee | Access to own profile, leave application, document view, profile management |
+
+### Role Permissions by Module
+
+- **Account**: Public (no authentication required)
+- **HR Management**: Admin, HR
+- **Leave Management**: 
+  - View/Apply: Admin, HR, Lead, Employee
+ - Approve: Admin, HR, Lead
+- **Documents**: Admin, HR
+- **Assets**: Admin, HR
+- **Feedback**: 
+  - View: Admin, HR, Lead, Employee
+  - Add: Admin, HR, Lead
+- **Skills, Review, Capability**: Admin, HR
+- **Profile**: Admin, HR, Lead, Employee (self-service)
+- **Policy**: Admin, HR
+- **Project**: Public (no authentication required)
+- **Allocation**: Public (no authentication required)
+- **Goals, Evaluators**: Admin, HR
+- **Health Check**: Public (no authentication required)
+
+---
+
+## Notes
+
+- All dates should be in `YYYY-MM-DD` format
+- All timestamps are in IST (UTC+5:30)
+- File uploads use multipart/form-data
+- Maximum file upload size: 10MB
+- Supported document formats: PDF, PNG, JPG, JPEG
+- Document types supported: tenth, twelve, pan, adhar, grad, resume
+- OTPs are valid for 10 minutes
+- Password minimum length: 8 characters
+- Leave status values: Pending, Approved, Rejected, Cancelled
+
+---
+
+**Generated**: 2025-12-30 19:51:00  
+**Total Endpoints Documented**: 100+  
+**Modules Covered**: 16
+
+*This documentation is auto-generated by analyzing route and controller files. To update, run `/update-api-documentation` workflow.*

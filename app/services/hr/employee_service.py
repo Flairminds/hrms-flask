@@ -11,7 +11,7 @@ from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, Mas
                           EmployeeDesignation, EmployeeDocuments)
 from ...models.leave import LeaveTransaction, LeaveOpeningTransaction
 from ...utils.logger import Logger
-from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear
+from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailConfig
 
 class EmployeeService:
     @staticmethod
@@ -650,6 +650,11 @@ class EmployeeService:
             employee_id = f"EMP{new_id_num}"
             Logger.info("Generated new employee ID", employee_id=employee_id, id_number=new_id_num)
             
+            
+            # Find default team lead (HR)
+            hr_employee = Employee.query.filter_by(email=EmailConfig.DEFAULT_TEAM_LEAD_EMAIL).first()
+            default_team_lead_id = hr_employee.employee_id
+            
             # Create employee record
             new_employee = Employee(
                 employee_id=employee_id, first_name=employee_data['first_name'], middle_name=employee_data.get('middle_name'),
@@ -658,7 +663,7 @@ class EmployeeService:
                 emergency_contact_relation=employee_data.get('emergency_contact_relation'), email=employee_data['email'],
                 personal_email=employee_data.get('personal_email'), gender=employee_data.get('gender'), blood_group=employee_data.get('blood_group'),
                 date_of_joining=employee_data['date_of_joining'], sub_role=employee_data['sub_role'], highest_qualification=employee_data.get('highest_qualification'),
-                employment_status='Active', team_lead_id='EMP77', date_of_resignation=employee_data.get('date_of_resignation'),
+                employment_status='Active', team_lead_id=default_team_lead_id, date_of_resignation=employee_data.get('date_of_resignation'),
                 lwd=employee_data.get('lwd'), lwp=employee_data.get('lwp'), internship_end_date=employee_data.get('internship_end_date'),
                 probation_end_date=employee_data.get('probation_end_date')
             )

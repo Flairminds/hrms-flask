@@ -50,6 +50,9 @@ class FinancialYear:
 class EmailConfig:
     """Email service configuration constants."""
     
+    # Default team lead for new employees
+    DEFAULT_TEAM_LEAD_EMAIL = 'hr@flairminds.com'
+    
     # Special case email redirects for specific employees
     # Maps original email -> redirect email
     SPECIAL_CASE_REDIRECTS = {

@@ -1,30 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Modal, Select, DatePicker, Input, message, TimePicker,Tooltip  } from 'antd';
+import { Button, Modal, Select, DatePicker, Input, message, TimePicker, Tooltip } from 'antd';
 import stylesLeaveApplication from "./LeaveApplicationModal.module.css";
 import { getLeaveCardDetails, getLeaveDetails, getTypeApprover, holidayListData, insertLeaveTransaction } from '../../../services/api';
 import { CompOff } from '../../compOff/CompOff';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { ToastContainer, toast } from 'react-toastify';
-import { holidays } from '../../../util/holidaysList';
-import { getCookie } from '../../../util/CookieSet';
+import { useAuth } from '../../../context/AuthContext';
 import GreenEllipse from '../../../assets/profile/GreenEllipse.svg';
-import moment from 'moment';
 import RedDot from "../../../assets/profile/redDotImg.png"
 
 
 dayjs.extend(customParseFormat);
- 
+
 export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDates, apiHolidays, setApiHolidays,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
   employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable,
-  setLeaveApplicationModal, isSetLeaveApplicationModal, leave, leaveObj,formattedLeaveData}) => {
+  setLeaveApplicationModal, isSetLeaveApplicationModal, preSelectedLeaveType, leaveObj, formattedLeaveData }) => {
 
-  const employeeId = getCookie('employeeId');
+  const { user } = useAuth();
+  const employeeId = user?.employeeId;
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  console.log(endDate?.format('dddd') === "Monday","ss")
-  
+
   const [leaveDuration, setLeaveDuration] = useState(null);
   const [leaveType, setLeaveType] = useState(null);
   const [workedDate, setWorkedDate] = useState(null);
@@ -36,20 +34,20 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const [fromTime, setFromTime] = useState(null);
   const [toTime, setToTime] = useState(null);
   const [error, setError] = useState(null);
-  const[errorMissedDoorEntry,setErrorMissedDoorEntry]=useState(false)
+  const [errorMissedDoorEntry, setErrorMissedDoorEntry] = useState(false)
   const [showAlert, setShowAlert] = useState(false);
   const [totalHours, setTotalHours] = useState(0);
   const [compOffTransactions, setCompOffTransactions] = useState([]);
   const [alertLeaveType, setAlertLeaveType] = useState(null);
-  const[loader,setLoader]=useState(false)
-  const[alertMissedDoorCount,setAlertMissedDoorCount]=useState(false)
+  const [loader, setLoader] = useState(false)
+  const [alertMissedDoorCount, setAlertMissedDoorCount] = useState(false)
   const [isValidDescription, setIsValidDescription] = useState(false);
   // const[apiHolidays,setApiHolidays] = useState([])
- 
+
 
   const leaveCardDetails = async () => {
     try {
-      const employeeId = getCookie('employeeId');
+      if (!employeeId) return;
       const res = await getLeaveCardDetails(employeeId);
       setLeaveCardData(res.data);
     } catch (err) {
@@ -57,12 +55,11 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       toast.error('Failed to fetch leave card data');
     }
   };
-  const year =2025;
+  const year = 2025;
   const fetchEmployeeData = async () => {
-    const employeeId = getCookie('employeeId');
     if (employeeId) {
       try {
-        const response = await getLeaveDetails(employeeId,year);
+        const response = await getLeaveDetails(employeeId, year);
         setEmployeeData(response.data.data);
       } catch (error) {
         console.error('Failed to fetch employee data:', error);
@@ -73,12 +70,20 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       setLoadingLeaveTable(false);
     }
   };
- 
+
   useEffect(() => {
-    fetchEmployeeData();
-  }, []);
- 
- 
+    if (isSetLeaveApplicationModal && preSelectedLeaveType) {
+      handleLeaveTypeChange(preSelectedLeaveType);
+    }
+  }, [isSetLeaveApplicationModal, preSelectedLeaveType]);
+
+  useEffect(() => {
+    if (employeeId) {
+      fetchEmployeeData();
+    }
+  }, [employeeId]);
+
+
   const handleCancel = () => {
     setLeaveApplicationModal(false);
     setStartDate(null)
@@ -96,9 +101,9 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
     setAlertMissedDoorCount(false)
     setCompOffTransactions([])
   };
- 
+
   const parseDate = dateStr => new Date(dateStr);
- 
+
   let leaveTypeId;
   if (leaveType === 'Sick/Emergency Leave') leaveTypeId = 1;
   else if (leaveType === 'Privilege Leave') leaveTypeId = 2;
@@ -108,8 +113,8 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   else if (leaveType === 'Customer Holiday') leaveTypeId = 6;
   else if (leaveType === 'Working Late Today') leaveTypeId = 7;
   else if (leaveType === 'Visiting Client Location') leaveTypeId = 8;
-  else if (leaveType === "Missed Door Entry") leaveTypeId =14;
-  
+  else if (leaveType === "Missed Door Entry") leaveTypeId = 14;
+
   const isHolidayWorkingHoursValid = (totalHours, leaveDuration) => {
     if (leaveDuration === 'Full Day') {
       return totalHours == 8;
@@ -122,13 +127,13 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       compOffDate: new Date(item.date),
       numberOfHours: item.hours
     }));
- 
+
     const total = data.reduce((acc, item) => acc + item.hours, 0);
     setTotalHours(total);
     setCompOffTransactions(transactions)
   }
- 
- 
+
+
   const wfhBalance = leaveObj[2]?.totalAllotedLeaves - leaveObj[2]?.totalUsedLeaves
 
   const handleOk = async () => {
@@ -162,13 +167,13 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       return;
     }
 
-    
+
 
     if (
       leaveTypeId === 3 &&
-      startDate && startDate.format('dddd') === "Monday" 
+      startDate && startDate.format('dddd') === "Monday"
       // endDate && endDate.format('dddd') === "Monday"
-    ) {      
+    ) {
       toast.error("You cannot apply for Work From Home on Monday.");
       setStartDate(null)
       setEndDate(null)
@@ -185,31 +190,31 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       setLeaveApplicationModal(false);
       return
     }
-    
-      
-    
+
+
+
     try {
       setLoader(true)
-    const adjustDateByOneDay = (date) => {
-  if (date) {
-    return date.format('YYYY-MM-DD');
-  }
-  return '';
-};
+      const adjustDateByOneDay = (date) => {
+        if (date) {
+          return date.format('YYYY-MM-DD');
+        }
+        return '';
+      };
 
- 
+
       const payload = {
         employeeId: employeeId,
         comments: comments,
         leaveType: leaveTypeId,
         duration: leaveDuration,
         fromDate: leaveTypeId === 4
-  ? startDate.format('YYYY-MM-DD')
-  : adjustDateByOneDay(startDate),
+          ? startDate.format('YYYY-MM-DD')
+          : adjustDateByOneDay(startDate),
 
-toDate: leaveTypeId === 4
-  ? endDate.format('YYYY-MM-DD')
-  : adjustDateByOneDay(endDate),
+        toDate: leaveTypeId === 4
+          ? endDate.format('YYYY-MM-DD')
+          : adjustDateByOneDay(endDate),
         handOverComments,
         noOfDays: leaveDays,
         approvedBy: leaveOptions.approver,
@@ -224,7 +229,7 @@ toDate: leaveTypeId === 4
           reasonforworkinglate: null,
         },
       };
- 
+
       if (leaveTypeId === 4) {
         payload.compOffTransactions = compOffTransactions.map(transaction => ({
           compOffDate: dayjs(transaction.compOffDate).format('YYYY-MM-DD'),
@@ -241,7 +246,7 @@ toDate: leaveTypeId === 4
           reasonforworkinglate: workingLateReason
         };
       }
- 
+
       const res = await insertLeaveTransaction(payload);
       if (res.status === 200) {
         leaveCardDetails()
@@ -251,8 +256,8 @@ toDate: leaveTypeId === 4
         leaveCardDetails()
         setLeaveApplicationModal(false);
       }
- 
-     
+
+
       fetchEmployeeData();
       setStartDate(null);
       setEndDate(null);
@@ -270,20 +275,20 @@ toDate: leaveTypeId === 4
       setToTime(null);
       setComments('');
       setLeaveApplicationModal(false);
-        toast.success(res.data);
+      toast.success(res.data);
     } catch (error) {
       setLeaveApplicationModal(false);
       leaveCardDetails()
       fetchEmployeeData();
- 
-      
-        toast.error(error.response.data);
-      
+
+
+      toast.error(error.response.data);
+
       const errorMessage = error.response?.data?.message || 'An unexpected error occurred';
       // setError(errorMessage);
-    }finally {
-      setLoader(false); 
-       setStartDate(null)
+    } finally {
+      setLoader(false);
+      setStartDate(null)
       setEndDate(null)
       setLeaveDuration(null)
       setLeaveType(null)
@@ -296,17 +301,17 @@ toDate: leaveTypeId === 4
       setToTime(null)
       setLeaveApplicationModal(false);
       setAlertMissedDoorCount(false)
-  }
+    }
   };
- 
- 
-  const handleLeaveTypeChange = (value) => { 
+
+
+  const handleLeaveTypeChange = (value) => {
     // setAlertMissedDoorCount(false)
-    if(value === "Missed Door Entry"){
+    if (value === "Missed Door Entry") {
       setLeaveDuration("Full Day")
       setAlertMissedDoorCount(true)
     }
-    if(value != "Missed Door Entry"){
+    if (value != "Missed Door Entry") {
       setAlertMissedDoorCount(false)
     }
     const selectedLeave = leaveObj.find(leave => leave.leaveName === value);
@@ -333,7 +338,7 @@ toDate: leaveTypeId === 4
       // setAlertMissedDoorCount(false)
       setAlertLeaveType(null);
     }
- 
+
     setLeaveType(value);
     if (value === 'Working Late Today') {
       const today = dayjs().startOf('day');
@@ -345,7 +350,7 @@ toDate: leaveTypeId === 4
     }
     setLeaveDays(0);
   };
- 
+
   const handleDurationChange = (value) => {
     setLeaveDuration(value);
     setLeaveDays(0);
@@ -358,7 +363,7 @@ toDate: leaveTypeId === 4
       setLeaveDays(0.5);
     }
   };
- 
+
   const handleStartDateChange = (date) => {
     if (leaveType !== 'Working Late Today' && leaveType !== 'Customer Holiday') {
       setStartDate(date);
@@ -381,7 +386,7 @@ toDate: leaveTypeId === 4
         setLeaveDays(1);
       }
     }
-    
+
     // else if (leaveType !== 'Customer Approved Comp-off') {
     //   setStartDate(date);
     //   calculateLeaveDays(date, endDate);
@@ -390,38 +395,38 @@ toDate: leaveTypeId === 4
     //     setLeaveDays(0.5);
     //   }
     // }
-    if(leaveType === "Missed Door Entry"){
+    if (leaveType === "Missed Door Entry") {
       setLeaveDays(1);
       setStartDate(date);
       setEndDate(date);
     }
   };
- 
+
   const cellRender = (current, info) => {
     const style = {};
     const formattedDate = current.format('YYYY-MM-DD');
     const leaveType = leaveDates ? leaveDates[formattedDate] : undefined;
-  
+
     const isHoliday = apiHolidays.some(
-      holiday => moment(holiday.holidayDate, 'DD-MM-YYYY').format('YYYY-MM-DD') === formattedDate
+      holiday => dayjs(holiday.holidayDate, 'DD-MM-YYYY').format('YYYY-MM-DD') === formattedDate
     );
     const holidayName = isHoliday ? apiHolidays.find(
-      holiday => moment(holiday.holidayDate, 'DD-MM-YYYY').format('YYYY-MM-DD') === formattedDate
+      holiday => dayjs(holiday.holidayDate, 'DD-MM-YYYY').format('YYYY-MM-DD') === formattedDate
     ).holidayName : null;
-  
+
     if (info && info.type === 'date') {
       return (
         <>
-           {isHoliday ? (
-          <Tooltip title={holidayName}>
-            <div className="ant-picker-cell-inner" style={style}>
-              {current.date()}
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <img src={RedDot} alt="Holiday" style={{ height: '10%', width: '10%' }} />
+          {isHoliday ? (
+            <Tooltip title={holidayName}>
+              <div className="ant-picker-cell-inner" style={style}>
+                {current.date()}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <img src={RedDot} alt="Holiday" style={{ height: '10%', width: '10%' }} />
+                </div>
               </div>
-            </div>
-          </Tooltip>
-        ) :leaveType ? (
+            </Tooltip>
+          ) : leaveType ? (
             <Tooltip title={leaveType}>
               <div className="ant-picker-cell-inner" style={style}>
                 {current.date()}
@@ -454,20 +459,20 @@ toDate: leaveTypeId === 4
     }
   };
 
-  const getHolidayListApi = async() =>{
+  const getHolidayListApi = async () => {
     const res = await holidayListData();
     setApiHolidays(res.data)
   }
-  useEffect(()=>{
+  useEffect(() => {
     getHolidayListApi()
-  },[])
- 
+  }, [])
+
   const calculateLeaveDays = (start, end) => {
     if (!start || !end) {
       setLeaveDays(0);
       return;
     }
-    
+
     // const holidayList = holidays.map((date) => {
     //   return parseDate(date).toDateString();
     // });
@@ -478,23 +483,23 @@ toDate: leaveTypeId === 4
       const formattedDate = new Date(`${year}-${month}-${day}`);
       return formattedDate.toDateString();
     });
-    
-        let count = 0;
-        let currentDate = new Date(start);
-    
-        while (currentDate <= end) {
-          const dayOfWeek = currentDate.getDay();
-          const currentDateString = currentDate.toDateString();
-    
-          if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayList.includes(currentDateString)) {
-            count++;
-          }
-    
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-        setLeaveDays(count);
-      };
- 
+
+    let count = 0;
+    let currentDate = new Date(start);
+
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+      const currentDateString = currentDate.toDateString();
+
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayList.includes(currentDateString)) {
+        count++;
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    setLeaveDays(count);
+  };
+
   useEffect(() => {
     const fetchLeaveOptions = async () => {
       try {
@@ -513,62 +518,62 @@ toDate: leaveTypeId === 4
         console.log('Error fetching leave types:', error);
       }
     };
- 
+
     fetchLeaveOptions();
   }, [employeeId]);
- 
+
   const durationOptions = [
     { value: "Full Day", label: "Full Day" },
     { value: "Half Day", label: "Half Day" }
   ];
- 
+
   const disableDateStart = (current, startDate) => {
     if (startDate > current) return false
     return true;
   }
- 
+
   const disableDatesForPrivilegeLeave = (current) => {
     if (!current) return false;
     const today = new Date();
-    const todayWFH = moment();
-     const currentTime = moment();
-    const cutoffTime = moment().set({ hour: 9, minute: 30, second: 0 });
-    const cutoffTimeHalfDay = moment().set({ hour: 11, minute: 59, second: 59 });
-    
-    
+    const todayWFH = dayjs();
+    const currentTime = dayjs();
+    const cutoffTime = dayjs().set('hour', 9).set('minute', 30).set('second', 0);
+    const cutoffTimeHalfDay = dayjs().set('hour', 11).set('minute', 59).set('second', 59);
+
+
     if (
       //  (
-        leaveType === "Work From Home" 
+      leaveType === "Work From Home"
       // || leaveType === "Sick/Emergency Leave") 
-      && leaveDuration ==="Full Day") {
+      && leaveDuration === "Full Day") {
 
-      
+
       // Disable today's date if it's past 9:30 AM
       if (current.isSame(todayWFH, "day") && currentTime.isAfter(cutoffTime)) {
         return true;
       }
       // Disable past dates
-      return current.isBefore(todayWFH, "day"); 
+      return current.isBefore(todayWFH, "day");
     }
 
     if (
       // (
-      leaveType === "Work From Home" 
+      leaveType === "Work From Home"
       // || leaveType === "Sick/Emergency Leave") 
-      && leaveDuration ==="Half Day") {
-      
+      && leaveDuration === "Half Day") {
+
       // Disable today's date if it's past 9:30 AM
       if (current.isSame(todayWFH, "day") && currentTime.isAfter(cutoffTimeHalfDay)) {
         return true;
       }
       // Disable past dates
-      return current.isBefore(todayWFH, "day"); 
+      return current.isBefore(todayWFH, "day");
     }
     if (leaveType === 'Privilege Leave') {
       const diffDays = Math.ceil((current.toDate() - today) / (1000 * 60 * 60 * 24));
       if (diffDays < 7) return true;
     }
-   
+
     if (leaveTypeId === 4) {
       const compOffDates = compOffTransactions.map(transaction => new Date(transaction.compOffDate));
       const threeMonthsFromCompOffDates = compOffDates.map(date => {
@@ -576,53 +581,53 @@ toDate: leaveTypeId === 4
         threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
         return threeMonthsLater;
       });
- 
+
       const isAfterThreeMonths = threeMonthsFromCompOffDates.some(date => current.isAfter(date, 'day'));
       const isBeforeCompOffDates = compOffDates.some(date => current.isBefore(date, 'day'));
-     
+
       return isAfterThreeMonths || isBeforeCompOffDates;
     }
- 
+
     return false;
   };
- 
- 
+
+
   const disableDatesForPrivilegeLeaveEnd = (current, type, startDate) => {
     if (type === 'Customer Approved Comp-off') {
       let maxDate = null;
       const compOffDates = compOffTransactions.map(transaction => new Date(transaction.compOffDate));
-     
+
       compOffDates.forEach(compOffDate => {
         const threeMonthsLater = new Date(compOffDate);
         threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
- 
+
         if (!maxDate || threeMonthsLater > maxDate) {
           maxDate = threeMonthsLater;
         }
       });
- 
+
       const isAfterMaxDate = maxDate ? current.isAfter(maxDate, 'day') : false;
       const isBeforeStartDate = startDate && current.isBefore(startDate, 'day');
       const isBeforeCompOffDates = compOffDates.some(date => current.isBefore(date, 'day'));
- 
+
       return isAfterMaxDate || isBeforeStartDate || isBeforeCompOffDates;
     }
- 
+
     if (startDate && current && current.isBefore(startDate, 'day')) {
       return true;
     }
-   
+
     const today = new Date();
     const diffDays = Math.ceil((current.toDate() - today) / (1000 * 60 * 60 * 24));
     return type === 'Privilege Leave' && diffDays < 7;
   };
- 
- 
- 
+
+
+
   const onChangeTimeFrom = (time, timeString) => {
     setFromTime(time);
   };
- 
+
   const onChangeTimeTo = (time, timeString) => {
     setToTime(time);
   };
@@ -645,20 +650,20 @@ toDate: leaveTypeId === 4
       else if (leaveType === 'Missed Door Entry') {
         return isValidDescription;
       }
-       else {
+      else {
         return leaveType && leaveDuration && startDate && endDate && leaveDays > 0 && comments && handOverComments;
       }
     } catch (error) {
       console.log("The errror is ---> ", error)
     }
- 
+
   };
   const isLeaveExhausted = () => {
     if ((leaveTypeId === 1 || leaveTypeId === 2 || leaveTypeId === 3) && leave.totalAllotedLeaves - leave.totalUsedLeaves >= 0) {
       return true;
     }
   }
- 
+
   return (
     <div>
       <Modal
@@ -677,9 +682,9 @@ toDate: leaveTypeId === 4
           <div key="footer-buttons" className={stylesLeaveApplication.btnDiv}>
             <Button key="cancel-button" onClick={handleCancel}>
               Cancel
-            </Button> 
+            </Button>
             <Button key="apply-button" className={stylesLeaveApplication.btnStyle} onClick={handleOk} loading={loader}
-              disabled={!isFormValid()}> 
+              disabled={!isFormValid()}>
               Apply
             </Button>
           </div>
@@ -692,18 +697,19 @@ toDate: leaveTypeId === 4
             </h3>
           )}
           {alertMissedDoorCount && (
-             <h3 className={stylesLeaveApplication.unpaidLeaveHeading}>
-             Remaining missed door entries for this quarter is {3 - (formattedLeaveData?.[3]?.totalUsedLeaves || 0)}
-           </h3>
+            <h3 className={stylesLeaveApplication.unpaidLeaveHeading}>
+              Remaining missed door entries for this quarter is {3 - (formattedLeaveData?.[3]?.totalUsedLeaves || 0)}
+            </h3>
           )}
           <div className={stylesLeaveApplication.typeofLeaveDiv}>
             <span className={stylesLeaveApplication.heading}>Select type of leave*</span>
             <Select
               style={{ width: '100%' }}
               onChange={handleLeaveTypeChange}
-              options={leaveOptions.leaveTypes}
+              options={preSelectedLeaveType ? [{ value: preSelectedLeaveType, label: preSelectedLeaveType }] : leaveOptions.leaveTypes}
               placeholder="Select type of leave"
               value={leaveType}
+              disabled={!!preSelectedLeaveType}
             />
             <span className={stylesLeaveApplication.heading}>Select Leave Duration*</span>
             <Select
@@ -738,9 +744,9 @@ toDate: leaveTypeId === 4
                 onChange={handleEndDateChange}
                 value={endDate}
                 disabledDate={(current) => disableDatesForPrivilegeLeaveEnd(current, leaveType, startDate)}
-                disabled={leaveType === 'Working Late Today' || leaveDuration === 'Half Day' || leaveType === 'Customer Holiday' || (leaveType === 'Customer Approved Comp-off' && compOffTransactions.length === 0) || leaveType ==="Missed Door Entry"}
+                disabled={leaveType === 'Working Late Today' || leaveDuration === 'Half Day' || leaveType === 'Customer Holiday' || (leaveType === 'Customer Approved Comp-off' && compOffTransactions.length === 0) || leaveType === "Missed Door Entry"}
                 cellRender={cellRender}
-             />
+              />
             </div>
             <div className={stylesLeaveApplication.leaveDaysDiv}>
               <span className={stylesLeaveApplication.heading}>Number of Leave Days:</span>
@@ -759,7 +765,7 @@ toDate: leaveTypeId === 4
               </div>
             )}
           </div>
- 
+
           {leaveType === 'Working Late Today' && (
             <div className={stylesLeaveApplication.notesSection}>
               <p className={stylesLeaveApplication.heading} >Reason for Working Late*</p>
@@ -783,7 +789,7 @@ toDate: leaveTypeId === 4
                 </ul>
               </div>
             </div>
- 
+
           )}
           {leaveType === 'Customer Holiday' && (
             <div className={stylesLeaveApplication.dateDiv}>
@@ -805,22 +811,22 @@ toDate: leaveTypeId === 4
               onChange={(e) => {
                 const value = e.target.value;
                 setComments(value);
-            
+
                 // Check if the leave type is "Missed Door Entry" and if the description is valid
                 if (leaveType === "Missed Door Entry") {
                   if (value.length >= 5) {
-                    setIsValidDescription(true); 
-                    setErrorMissedDoorEntry(""); 
+                    setIsValidDescription(true);
+                    setErrorMissedDoorEntry("");
                   } else {
-                    setIsValidDescription(false); 
+                    setIsValidDescription(false);
                     setErrorMissedDoorEntry("");
                   }
                 } else {
-                  setIsValidDescription(true); 
-                  setErrorMissedDoorEntry(""); 
+                  setIsValidDescription(true);
+                  setErrorMissedDoorEntry("");
                 }
               }}
-              
+
             />
             {/* {leaveType === "Missed Door Entry" && !isValidDescription && (
                   <span className={stylesLeaveApplication.unpaidLeaveHeading}>
