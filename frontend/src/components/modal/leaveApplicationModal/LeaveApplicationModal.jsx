@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, DatePicker, Input, message, TimePicker, Tooltip } from 'antd';
 import stylesLeaveApplication from "./LeaveApplicationModal.module.css";
-import { getLeaveCardDetails, getLeaveDetails, getTypeApprover, holidayListData, insertLeaveTransaction } from '../../../services/api';
+import { getLeaveCards, getLeaveDetails, getTypeApprover, holidayListData, insertLeaveTransaction } from '../../../services/api';
 import { CompOff } from '../../compOff/CompOff';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -47,8 +47,18 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const leaveCardDetails = async () => {
     try {
       if (!employeeId) return;
-      const res = await getLeaveCardDetails(employeeId);
-      setLeaveCardData(res.data);
+      const res = await getLeaveCards(employeeId);
+      if (res.data) {
+        // Map backend snake_case to frontend camelCase
+        const mappedData = res.data.map(item => ({
+          ...item,
+          totalAllotedLeaves: item.total_alloted_leaves,
+          totalUsedLeaves: item.total_used_leaves,
+          leaveCardsFlag: item.leave_cards_flag,
+          leaveName: item.leave_name
+        }));
+        setLeaveCardData(mappedData);
+      }
     } catch (err) {
       console.error('Error fetching leave card data:', err);
       toast.error('Failed to fetch leave card data');

@@ -941,5 +941,17 @@ export const getNewJoinees = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/get-new-joinees`);
 };
 
+// Retrieves employees who have birthdays within the next 2 months
+export const getUpcomingBirthdays = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/upcoming-birthdays`);
+};
+
+// Retrieves leave balance cards for an employee
+export const getLeaveCards = (employeeId) => {
+  return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-cards`, {
+    params: { employeeId }
+  });
+};
+
 
 export default axiosInstance;

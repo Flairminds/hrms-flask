@@ -157,7 +157,7 @@ class LeaveQueryService:
                 MasterLeaveTypes.leave_type_id == opening_subq.c.leave_type_id
             ).filter(
                 Employee.employee_id == employee_id,
-                MasterLeaveTypes.leave_cards_flag == 1
+                MasterLeaveTypes.leave_cards_flag == True
             ).all()
             
             result = []

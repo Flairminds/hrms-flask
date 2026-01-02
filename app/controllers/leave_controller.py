@@ -224,3 +224,37 @@ class LeaveController:
             return jsonify({
                 "error": "An error occurred while sending email. Please try again."
             }), 500
+
+    @staticmethod
+    def get_leave_cards():
+        """Retrieves leave balance cards for an employee."""
+        Logger.info("Get leave cards request received")
+        
+        try:
+            emp_id = request.args.get('employeeId')
+            if not emp_id:
+                Logger.warning("Missing employeeId parameter for leave cards")
+                return jsonify({"Message": "EmployeeId is required"}), 400
+            
+            result = LeaveService.get_employee_leave_cards(emp_id)
+            
+            Logger.info("Leave cards retrieved successfully",
+                       employee_id=emp_id,
+                       card_count=len(result))
+            
+            return jsonify(result), 200
+            
+        except LookupError as le:
+            Logger.warning("Employee not found for leave cards",
+                          employee_id=emp_id,
+                          error=str(le))
+            return jsonify({"Message": "Employee not found"}), 404
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching leave cards",
+                        employee_id=emp_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "Message": "An error occurred while fetching leave cards. Please try again."
+            }), 500

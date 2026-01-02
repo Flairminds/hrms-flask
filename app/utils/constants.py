@@ -46,6 +46,30 @@ class FinancialYear:
     START_MONTH = 4  # April
     START_DAY = 1
 
+class LeaveConfiguration:
+    PRIVILEGE_LEAVE = {
+        'name': 'Privilege Leave',
+        'allocation_type': 'yearly',
+        'deduction_type': None,
+        'carry_forward': True,
+        'default_allocation': 12
+    }
+    SICK_LEAVE = {
+        'name': 'Sick Leave',
+        'allocation_type': 'quarterly',
+        'deduction_type': None,
+        'carry_forward': False,
+        'default_allocation': 2
+    }
+    WFH = {
+        'name': 'Work From Home',
+        'allocation_type': 'yearly',
+        'deduction_type': 'monthly',
+        'carry_forward': False,
+        'default_allocation': 36,
+        'monthly_deduction': 3,
+    }
+
 
 class EmailConfig:
     """Email service configuration constants."""

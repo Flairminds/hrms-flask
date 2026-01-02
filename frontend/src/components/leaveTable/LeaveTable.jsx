@@ -1,7 +1,7 @@
 import { Calendar, Empty, Select, theme, Modal, Button, Row, Col, Space, Typography } from 'antd';
 import React, { useState, useEffect } from 'react';
 import styles from "./LeaveTable.module.css";
-import { getLeaveDetails, cancelLeave, getLeaveCardDetails } from '../../services/api';
+import { getLeaveDetails, cancelLeave, getLeaveCards } from '../../services/api';
 import { tableHeaders } from '../../util/leavetableData';
 import { getCookie } from '../../util/CookieSet';
 import WidgetCard from '../common/WidgetCard';
@@ -58,10 +58,19 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
   const leaveCardDetails = async () => {
     try {
       const employeeId = getCookie('employeeId');
-      const res = await getLeaveCardDetails(employeeId);
+      const res = await getLeaveCards(employeeId);
 
-
-      setLeaveCardData(res.data);
+      if (res.data) {
+        // Map backend snake_case to frontend camelCase
+        const mappedData = res.data.map(item => ({
+          ...item,
+          totalAllotedLeaves: item.total_alloted_leaves,
+          totalUsedLeaves: item.total_used_leaves,
+          leaveCardsFlag: item.leave_cards_flag,
+          leaveName: item.leave_name
+        }));
+        setLeaveCardData(mappedData);
+      }
     } catch (err) {
       console.error('Error fetching leave card data:', err);
       toast.error('Failed to fetch leave card data');

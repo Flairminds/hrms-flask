@@ -35,3 +35,8 @@ def get_holidays():
 def send_leave_email_report():
     return LeaveController.send_leave_email_report()
 
+@leave_bp.route('/get-leave-cards', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['get_leave_cards'])
+def get_leave_cards():
+    return LeaveController.get_leave_cards()
+

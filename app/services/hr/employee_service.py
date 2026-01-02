@@ -11,7 +11,7 @@ from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, Mas
                           EmployeeDesignation, EmployeeDocuments)
 from ...models.leave import LeaveTransaction, LeaveOpeningTransaction
 from ...utils.logger import Logger
-from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailConfig
+from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailConfig, LeaveConfiguration
 
 class EmployeeService:
     @staticmethod
@@ -704,6 +704,43 @@ class EmployeeService:
             for skill in employee_data.get('skills', []):
                 db.session.add(EmployeeSkill(employee_id=employee_id, skill_id=skill.get('skill_id'), skill_level=skill.get('skill_level')))
             
+            # Default Leave Allocations
+            today = datetime.now().date()
+
+            # Calculate default privilege leaves based on joining month
+            employee_date_of_joining = datetime.fromisoformat(employee_data['date_of_joining'])
+            month_of_joining = employee_date_of_joining.month
+
+            default_privilege_leaves = LeaveConfiguration.PRIVILEGE_LEAVE['default_allocation']
+            if (month_of_joining < 4):
+                default_privilege_leaves = 4 - month_of_joining
+            else:
+                default_privilege_leaves = default_privilege_leaves - (month_of_joining - 4)
+            
+            default_work_from_home_leaves = LeaveConfiguration.WFH['default_allocation']
+            if (month_of_joining < 4):
+                default_work_from_home_leaves = (4 - month_of_joining) * LeaveConfiguration.WFH['monthly_deduction']
+            else:
+                default_work_from_home_leaves = default_work_from_home_leaves - ((month_of_joining - 4) * LeaveConfiguration.WFH['monthly_deduction'])
+
+            default_allocations = [
+                (LeaveTypeID.PRIVILEGE, default_privilege_leaves),
+                (LeaveTypeID.SICK, LeaveConfiguration.SICK_LEAVE['default_allocation']),
+                (LeaveTypeID.WFH, default_work_from_home_leaves)
+            ]
+            
+            for lt_id, days in default_allocations:
+                db.session.add(LeaveOpeningTransaction(
+                    employee_id=employee_id,
+                    leave_type_id=lt_id,
+                    no_of_days=days,
+                    added_by='System',
+                    transaction_date=today,
+                    approved_by='System',
+                    approved_date=today,
+                    is_carry_forwarded=False
+                ))
+            
             db.session.commit()
             Logger.info("Employee inserted successfully", employee_id=employee_id)
             return employee_id
@@ -774,4 +811,78 @@ class EmployeeService:
             ]
         except Exception as e:
             Logger.error("Error fetching new joinees", error=str(e))
+            return []
+    @staticmethod
+    def get_upcoming_birthdays() -> List[Dict[str, Any]]:
+        """Retrieves active employees who have birthdays within the next 2 months, including today."""
+        try:
+            from dateutil.relativedelta import relativedelta
+            from sqlalchemy import extract
+            
+            Logger.info("Fetching upcoming birthdays (next 2 months)")
+            
+            today = datetime.now().date()
+            two_months_from_now = today + relativedelta(months=2)
+            
+            # Extract month and day for comparison
+            m1, d1 = today.month, today.day
+            m2, d2 = two_months_from_now.month, two_months_from_now.day
+            
+            query = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.middle_name,
+                Employee.last_name,
+                Employee.date_of_birth
+            ).filter(
+                Employee.employment_status == 'Active',
+                Employee.date_of_birth != None
+            )
+            
+            # Handle wrap around if end month is smaller than start month
+            if m1 <= m2:
+                # Same year
+                query = query.filter(
+                    (extract('month', Employee.date_of_birth) > m1) |
+                    ((extract('month', Employee.date_of_birth) == m1) & (extract('day', Employee.date_of_birth) >= d1))
+                ).filter(
+                    (extract('month', Employee.date_of_birth) < m2) |
+                    ((extract('month', Employee.date_of_birth) == m2) & (extract('day', Employee.date_of_birth) <= d2))
+                )
+            else:
+                # Wrap around to next year
+                query = query.filter(
+                    ((extract('month', Employee.date_of_birth) > m1) |
+                     ((extract('month', Employee.date_of_birth) == m1) & (extract('day', Employee.date_of_birth) >= d1))) |
+                    ((extract('month', Employee.date_of_birth) < m2) |
+                     ((extract('month', Employee.date_of_birth) == m2) & (extract('day', Employee.date_of_birth) <= d2)))
+                )
+            
+            new_joinees = query.all()
+            
+            results = []
+            for e in new_joinees:
+                dob = e.date_of_birth
+                # Get birthday in current and next year for sorting
+                bday_this_year = dob.replace(year=today.year)
+                if bday_this_year < today:
+                    bday_this_year = bday_this_year.replace(year=today.year + 1)
+                
+                results.append({
+                    "employee_id": e.employee_id,
+                    "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
+                    "date": dob.strftime("%d %b"), # Format: 05 Oct
+                    "sort_date": bday_this_year
+                })
+            
+            # Sort by upcoming date
+            results.sort(key=lambda x: x['sort_date'])
+            
+            # Remove sort_date before returning
+            for r in results:
+                r.pop('sort_date')
+                
+            return results
+        except Exception as e:
+            Logger.error("Error fetching upcoming birthdays", error=str(e))
             return []

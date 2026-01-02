@@ -44,3 +44,8 @@ def get_employee_with_address_and_skills(employee_id):
 @roles_required(*ROLE_PERMISSIONS['hr']['get_new_joinees'])
 def get_new_joinees():
     return HRController.get_new_joinees()
+
+@hr_bp.route('/upcoming-birthdays', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_upcoming_birthdays'])
+def get_upcoming_birthdays():
+    return HRController.get_upcoming_birthdays()

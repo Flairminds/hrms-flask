@@ -25,7 +25,8 @@ ROLE_PERMISSIONS = {
         "add_project": ["Admin", "HR"],
         "employee_details_for_relieving_letter": ["Admin", "HR"],
         "employee_details": ["Admin", "HR"],  # GET /employee-details/<employee_id>
-        "get_new_joinees": ["Admin", "HR", "Employee", "Lead"]  # New joinees widget
+        "get_new_joinees": ["Admin", "HR", "Employee", "Lead"],  # New joinees widget
+        "get_upcoming_birthdays": ["Admin", "HR", "Employee", "Lead"] # Upcoming birthdays widget
     },
     
     # ===========================
@@ -37,6 +38,7 @@ ROLE_PERMISSIONS = {
         "insert_leave": ["Admin", "HR", "Lead", "Employee"],
         "update_status": ["Admin", "HR", "Lead"],  # Only approvers
         "get_holidays": ["Admin", "HR", "Lead", "Employee"],
+        "get_leave_cards": ["Admin", "HR", "Lead", "Employee"],
         "leave_records_mail": ["Admin", "HR", "Lead"]  # Email reports
     },
     

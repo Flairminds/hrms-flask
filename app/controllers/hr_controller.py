@@ -299,12 +299,30 @@ class HRController:
                 'status': 'success',
                 'data': new_joinees
             }), 200
-            
         except Exception as e:
-            Logger.error("Unexpected error fetching new joinees",
-                        error=str(e),
-                        error_type=type(e).__name__)
+            Logger.error("Unexpected error in get_new_joinees", error=str(e))
             return jsonify({
                 'status': 'error',
-                'message': 'An error occurred while fetching new joinees. Please try again.'
+                'message': 'An unexpected error occurred while fetching new joinees.'
+            }), 500
+
+    @staticmethod
+    def get_upcoming_birthdays():
+        """Retrieves active employees who have birthdays within the next 2 months."""
+        Logger.info("Get upcoming birthdays request received")
+        
+        try:
+            birthdays = HRService.get_upcoming_birthdays()
+            
+            Logger.info("Upcoming birthdays retrieved successfully", count=len(birthdays))
+            
+            return jsonify({
+                'status': 'success',
+                'data': birthdays
+            }), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_upcoming_birthdays", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching upcoming birthdays.'
             }), 500

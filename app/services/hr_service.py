@@ -133,3 +133,7 @@ class HRService:
     @staticmethod
     def get_new_joinees():
         return EmployeeService.get_new_joinees()
+
+    @staticmethod
+    def get_upcoming_birthdays():
+        return EmployeeService.get_upcoming_birthdays()

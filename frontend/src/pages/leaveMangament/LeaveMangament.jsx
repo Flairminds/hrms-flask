@@ -3,7 +3,7 @@ import styles from "./LeaveMangament.module.css"
 import FM from "../../assets/leave/FM.png"
 import { Button, Progress, Row, Col, List, Typography, Badge } from "antd";
 import { LeaveApplicationModal } from '../../components/modal/leaveApplicationModal/LeaveApplicationModal';
-import { getLeaveCardDetails, holidayListData } from '../../services/api.jsx';
+import { getLeaveCards, holidayListData } from '../../services/api.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { LeaveTable } from '../../components/leaveTable/LeaveTable';
 import WidgetCard from '../../components/common/WidgetCard';
@@ -67,9 +67,18 @@ export function LeaveManagementPage() {
   const leaveCardDetails = async (employeeId) => {
     try {
       setLoading(true);
-      const res = await getLeaveCardDetails(employeeId);
+      const res = await getLeaveCards(employeeId);
       if (res.data) {
-        setLeaveCardData(res.data);
+        // Map backend snake_case to frontend camelCase
+        const mappedData = res.data.map(item => ({
+          ...item,
+          totalAllotedLeaves: item.total_alloted_leaves,
+          totalUsedLeaves: item.total_used_leaves,
+          leaveCardsFlag: item.leave_cards_flag,
+          leaveName: item.leave_name
+        }));
+        console.log(mappedData);
+        setLeaveCardData(mappedData);
       }
     } catch (err) {
       console.error('Error fetching leave card data:', err);
