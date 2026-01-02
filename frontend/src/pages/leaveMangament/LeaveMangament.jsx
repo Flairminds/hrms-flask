@@ -64,6 +64,12 @@ export function LeaveManagementPage() {
     return () => window.removeEventListener("resize", updateSize);
   }, [windowSize]);
 
+  useEffect(() => {
+    if (!isSetLeaveApplicationModal) {
+      leaveCardDetails(user.employeeId);
+    }
+  }, [isSetLeaveApplicationModal])
+
   const leaveCardDetails = async (employeeId) => {
     try {
       setLoading(true);

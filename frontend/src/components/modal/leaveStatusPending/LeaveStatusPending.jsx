@@ -5,6 +5,7 @@ import { ConfirmationChecklistModal } from '../ConfirmationChecklist/Confirmatio
 import { getTeamLead, updateLeaveStatus } from '../../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
+import { convertDate, getWeekDay } from '../../../util/helperFunctions';
 
 export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange, selectedRange }) => {
   const [isConfirmationChecklistModalOpen, setIsConfirmationChecklistModalOpen] = useState(false);
@@ -44,70 +45,56 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     // return () => clearInterval(intervalId);
   }, []);
 
-
-  const updatedEmployee = { ...employee, ApproverComment: approverComments, approvedById: employeeId };
-
-
   const shouldShowCheckboxes = ![
     "Visiting Client Location",
     "Customer Holiday",
     "Working Late Today"
-  ].includes(employee.LeaveType);
+  ].includes(employee.leaveTypeName);
 
   // Update allChecked logic to include any new checkboxes
   const allChecked = informedCustomer && communicatedWithinTeam && handedOverResponsibilities;
-  const customerApprovedChecked = employee.LeaveType === 'Customer Approved Comp-off' && informedCustomer;
-  const workFromHomeChecked = employee.LeaveType === 'Work From Home' && informedCustomer;
-  const customerApprovedWFHChecked = employee.LeaveType === 'Customer Approved Work From Home' && informedCustomer;
+  const customerApprovedChecked = employee.leaveTypeName === 'Customer Approved Comp-off' && informedCustomer;
+  const workFromHomeChecked = employee.leaveTypeName === 'Work From Home' && informedCustomer;
+  const customerApprovedWFHChecked = employee.leaveTypeName === 'Customer Approved Work From Home' && informedCustomer;
 
   const enableApproveButton = shouldShowCheckboxes
-    ? (employee.LeaveType === 'Customer Approved Comp-off'
+    ? (employee.leaveTypeName === 'Customer Approved Comp-off'
       ? customerApprovedChecked
-      : employee.LeaveType === 'Work From Home'
+      : employee.leaveTypeName === 'Work From Home'
         ? true
-        : employee.LeaveType === 'Customer Approved Work From Home'
+        : employee.leaveTypeName === 'Customer Approved Work From Home'
           ? customerApprovedWFHChecked
           : allChecked)
     : true;
 
+  const showWorkingLateDetails = employee.leaveTypeName === "Working Late Today";
+  const showCustomerHolidayDetails = employee.leaveTypeName === "Customer Holiday";
+  const showCompOffDetails = employee.leaveTypeName === "Customer Approved Comp-off";
 
-  const showWorkingLateDetails = employee.LeaveType === "Working Late Today";
-  const showCustomerHolidayDetails = employee.LeaveType === "Customer Holiday";
-  const showCompOffDetails = employee.LeaveType === "Customer Approved Comp-off";
   const handleApprove = async () => {
     setIsButtonDisabled(true);
-    const {
-      leaveTranId,
-      isBillable,
-      isCommunicatedToTeam,
-      isCustomerApprovalRequired,
-      approvedById
-    } = updatedEmployee;
-
-    const isBillableNum = isBillable ? 1 : 0;
-    const isCommunicatedToTeamNum = isCommunicatedToTeam ? 1 : 0;
-    const isCustomerApprovalRequiredNum = isCustomerApprovalRequired ? 1 : 0;
+    console.log(employee);
 
     const updatedData = {
       leaveTranId: leaveTranId,
       leaveStatus: "Approved",
-      approverComment: approverComments, // Corrected: Use approverComments here
-      isBillable: isBillableNum,
-      isCommunicatedToTeam: isCommunicatedToTeamNum,
-      isCustomerApprovalRequired: isCustomerApprovalRequiredNum,
+      approverComment: approverComments,
+      isBillable: isBillable,
+      isCommunicatedToTeam: isCommunicatedToTeam,
+      isCustomerApprovalRequired: isCustomerApprovalRequired,
       approvedById: approvedById
     };
 
     try {
-      await updateLeaveStatus(
-        updatedData.leaveTranId,
-        updatedData.leaveStatus,
-        updatedData.approverComment,
-        updatedData.isBillable,
-        updatedData.isCommunicatedToTeam,
-        updatedData.isCustomerApprovalRequired,
-        updatedData.approvedById
-      );
+      await updateLeaveStatus({
+        leaveTranId: updatedData.leaveTranId,
+        leaveStatus: updatedData.leaveStatus,
+        approverComment: updatedData.approverComment,
+        isBillable: updatedData.isBillable,
+        isCommunicatedToTeam: updatedData.isCommunicatedToTeam,
+        isCustomerApprovalRequired: updatedData.isCustomerApprovalRequired,
+        approvedById: updatedData.approvedById
+      });
       fetchEmployeeData();
       toast.success('Leave approved successfully..');
     } catch (error) {
@@ -125,25 +112,14 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
 
   const handleReject = async () => {
     setIsButtonDisabled(true);
-    const {
-      leaveTranId,
-      isBillable,
-      isCommunicatedToTeam,
-      isCustomerApprovalRequired,
-      approvedById
-    } = updatedEmployee;
-
-    const isBillableNum = isBillable ? 1 : 0;
-    const isCommunicatedToTeamNum = isCommunicatedToTeam ? 1 : 0;
-    const isCustomerApprovalRequiredNum = isCustomerApprovalRequired ? 1 : 0;
 
     const updatedData = {
       leaveTranId: leaveTranId,
       leaveStatus: "Reject",
       approverComment: approverComments,
-      isBillable: isBillableNum,
-      isCommunicatedToTeam: isCommunicatedToTeamNum,
-      isCustomerApprovalRequired: isCustomerApprovalRequiredNum,
+      isBillable: isBillable,
+      isCommunicatedToTeam: isCommunicatedToTeam,
+      isCustomerApprovalRequired: isCustomerApprovalRequired,
       approvedById: approvedById
     };
 
@@ -188,20 +164,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const handleCommentsChange = (e) => {
     const value = e.target.value;
     setApproverComments(value);
-    if (employee.LeaveType === "Missed Door Entry") {
-      if (value.length >= 250) {
-        setIsCommentValid(true);
-        setErrorMessage("");
-      } else {
-        setIsCommentValid(false);
-        setErrorMessage(
-          "Comments must be at least 250 characters for 'Missed Door Entry'."
-        );
-      }
-    } else {
-      setIsCommentValid(true);
-      setErrorMessage("");
-    }
+    setIsCommentValid(false);
+    setErrorMessage("Comments must be at least 5 characters");
   };
 
   const handleCancel = () => {
@@ -229,25 +193,57 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         width={1000}
         centered
       >
-        <Descriptions bordered column={3}>
-          <Descriptions.Item label="Employee Name" labelStyle={{ fontWeight: 'bold' }}>{employee.empName}</Descriptions.Item>
-          <Descriptions.Item label="Leave Type" labelStyle={{ fontWeight: 'bold' }}>{employee.LeaveType}</Descriptions.Item>
-          <Descriptions.Item label="Duration" labelStyle={{ fontWeight: 'bold' }}>{employee.duration}</Descriptions.Item>
-          <Descriptions.Item label="From Date" labelStyle={{ fontWeight: 'bold' }}>{employee.fromDate}</Descriptions.Item>
-          <Descriptions.Item label="To Date" labelStyle={{ fontWeight: 'bold' }}>{employee.toDate}</Descriptions.Item>
-          <Descriptions.Item label="Hand Over Comment" labelStyle={{ fontWeight: 'bold' }}>{employee.handOverComments}</Descriptions.Item>
+        <div className={styles.detailsContainer}>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Employee Name</span>
+            <span className={styles.detailValue}>{employee.empName}</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Leave Type</span>
+            <span className={styles.detailValue}>{employee.leaveTypeName}</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Duration</span>
+            <span className={styles.detailValue}>{employee.duration}</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>From Date</span>
+            <span className={styles.detailValue}>{convertDate(employee.fromDate)} ({getWeekDay(employee.fromDate)})</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>To Date</span>
+            <span className={styles.detailValue}>{convertDate(employee.toDate)} ({getWeekDay(employee.toDate)})</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Number of Days</span>
+            <span className={styles.detailValue}>{employee.appliedLeaveCount}</span>
+          </div>
 
           {showWorkingLateDetails && (
             <>
-              <Descriptions.Item label="From Time" labelStyle={{ fontWeight: 'bold' }}>{employee.fromTime}</Descriptions.Item>
-              <Descriptions.Item label="To Time" labelStyle={{ fontWeight: 'bold' }}>{employee.toTime}</Descriptions.Item>
-              <Descriptions.Item label="Reasons for Working Late" labelStyle={{ fontWeight: 'bold' }}>{employee.reasonForWorkingLate}</Descriptions.Item>
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>From Time</span>
+                <span className={styles.detailValue}>{employee.fromTime}</span>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>To Time</span>
+                <span className={styles.detailValue}>{employee.toTime}</span>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>Reasons for Working Late</span>
+                <span className={styles.detailValue}>{employee.reasonForWorkingLate}</span>
+              </div>
             </>
-          )}{showCustomerHolidayDetails && (
-            <>
-              <Descriptions.Item label="Worked Date" labelStyle={{ fontWeight: 'bold' }}>{employee.workedDate}</Descriptions.Item>
-            </>
-          )}{showCompOffDetails && (
+          )}
+
+          {showCustomerHolidayDetails && (
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>Worked Date</span>
+              <span className={styles.detailValue}>{employee.workedDate}</span>
+            </div>
+          )}
+
+          {showCompOffDetails && (
             <>
               {employee.compOffDetails && employee.compOffDetails.length > 0 && (
                 employee.compOffDetails.map((transaction, index) => {
@@ -256,47 +252,64 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
 
                   return (
                     <React.Fragment key={index}>
-                      <Descriptions.Item label="Comp Off Date" labelStyle={{ fontWeight: 'bold' }}>{formattedDate}</Descriptions.Item>
-                      <Descriptions.Item label="Number of Hours" labelStyle={{ fontWeight: 'bold' }}>{transaction.numberOfHours}</Descriptions.Item>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Comp Off Date</span>
+                        <span className={styles.detailValue}>{formattedDate}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Number of Hours</span>
+                        <span className={styles.detailValue}>{transaction.numberOfHours}</span>
+                      </div>
                     </React.Fragment>
                   );
                 })
               )}
             </>
           )}
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Hand Over Comment</span>
+            <span className={styles.detailValue}>{employee.handOverComments}</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Comments</span>
+            <span className={styles.detailValue}>{employee.comments}</span>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Application Date</span>
+            <span className={styles.detailValue}>{convertDate(employee.applicationDate)} ({getWeekDay(employee.applicationDate)})</span>
+          </div>
 
-          <Descriptions.Item label="Number of Days" labelStyle={{ fontWeight: 'bold' }}>{employee.appliedLeaveCount}</Descriptions.Item>
-          <Descriptions.Item label="Application Date" labelStyle={{ fontWeight: 'bold' }}>{employee.applicationDate}</Descriptions.Item>
-          <Descriptions.Item label="Comments" labelStyle={{ fontWeight: 'bold' }}>{employee.comments}</Descriptions.Item>
-          <Descriptions.Item label="Leave Status" labelStyle={{ fontWeight: 'bold' }}>
-            <Button
-              key="status"
-              className={styles.pendingLeave}
-            >
-              {employee.leaveStatus}
-            </Button>
-          </Descriptions.Item>
-          <Descriptions.Item label="Approver" labelStyle={{ fontWeight: 'bold' }}>{employee.approvedBy}</Descriptions.Item>
-          <Descriptions.Item label="Approver's Comments" labelStyle={{ fontWeight: 'bold' }}>
-            <div style={{ gridColumn: 'span 2' }}>
-              <Input.TextArea rows={4} placeholder="Enter your comments here" style={{ width: '100%' }}
-                value={approverComments}
-                onChange={handleCommentsChange}
-              />
-              {employee.LeaveType === "Missed Door Entry" && !isCommentValid && (
-                <span style={{ color: "red", fontSize: "12px" }}>{errorMessage}</span>
-              )}
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Leave Status</span>
+            <div className={styles.detailValue}>
+              <span className={styles.pendingLeave}>{employee.leaveStatus}</span>
             </div>
-          </Descriptions.Item>
-        </Descriptions>
+          </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Approver</span>
+            <span className={styles.detailValue}>{employee.approverName}</span>
+          </div>
+        </div>
+
+        <div className={styles.textareaContainer}>
+          <div className={styles.heading}>Approver's Comments</div>
+          <Input.TextArea
+            rows={2}
+            placeholder="Enter your comments here"
+            style={{ width: '100%', borderRadius: '8px' }}
+            value={approverComments}
+            onChange={handleCommentsChange}
+          />
+          {employee.leaveTypeName === "Missed Door Entry" && !isCommentValid && (
+            <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errorMessage}</div>
+          )}
+        </div>
 
         {shouldShowCheckboxes && (
           <>
-            {employee.LeaveType === 'Customer Approved Comp-off' ? (
+            {employee.leaveTypeName === 'Customer Approved Comp-off' ? (
               <div className={styles.checkboxDiv}>
-                <div style={{ padding: "0.2rem" }}>
-                  <h3 className={styles.heading}>Customer Approved Comp-Off Checklist</h3>
-                </div>
+                <div className={styles.heading}>Customer Approved Comp-Off Checklist</div>
 
                 <input
                   type="checkbox"
@@ -304,8 +317,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                   onChange={handleCheckboxChange(setInformedCustomer)}
                 />
                 <label className={styles.space}> Received and Reviewed Customer Approval?</label>
-                <div style={{ padding: "0.2rem" }}>
-                  <h4 className={styles.heading}>Note for approving for Comp-Off</h4>
+                <div style={{ marginTop: '12px' }}>
+                  <div className={styles.heading}>Note for approving for Comp-Off</div>
                   <ol className={styles.orderList}>
                     <li className={styles.orderListLI}>When approving full day comp off, the logged time in Zymmr for the day of comp-off must be a minimum of 8 hrs.</li>
                     <li className={styles.orderListLI}>When approving half day comp off, the logged time in Zymmr for the day of comp-off must be a minimum of 4 hrs.</li>
@@ -313,32 +326,28 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                   </ol>
                 </div>
               </div>
-            ) : employee.LeaveType === 'Work From Home' ? (
+            ) : employee.leaveTypeName === 'Work From Home' ? (
               <div className={styles.checkboxDiv}>
-
-                <div style={{ padding: "0.2rem" }}>
-                  <h4 className={styles.heading}>Note for approver: The approver is required to check and validate compliance for the below requirements before approving.</h4>
-                  <ol className={styles.orderList}>
-                    <li className={styles.orderListLI}>Associates working from home must dedicate their time to work-related tasks and refrain from engaging in personal activities during designated working hours.</li>
-                    <li className={styles.orderListLI}>There cannot be background noise to ensure professionalism during calls or meetings.</li>
-                    <li className={styles.orderListLI}>Associates are responsible for maintaining a stable internet connection and power supply, as well as ensuring the functionality of required devices.</li>
-                    <li className={styles.orderListLI}>In the event of work being affected by issues related to the above points or any other reasons, WFH approval may be revoked, or the day may be considered as paid leave</li>
-                  </ol>
-                </div>
+                <div className={styles.heading}>Note for approver</div>
+                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '8px' }}>The approver is required to check and validate compliance for the below requirements before approving.</div>
+                <ol className={styles.orderList}>
+                  <li className={styles.orderListLI}>Associates working from home must dedicate their time to work-related tasks and refrain from engaging in personal activities during designated working hours.</li>
+                  <li className={styles.orderListLI}>There cannot be background noise to ensure professionalism during calls or meetings.</li>
+                  <li className={styles.orderListLI}>Associates are responsible for maintaining a stable internet connection and power supply, as well as ensuring the functionality of required devices.</li>
+                  <li className={styles.orderListLI}>In the event of work being affected by issues related to the above points or any other reasons, WFH approval may be revoked, or the day may be considered as paid leave</li>
+                </ol>
               </div>
-            ) : employee.LeaveType === "Customer Approved Work From Home" ? (
+            ) : employee.leaveTypeName === "Customer Approved Work From Home" ? (
               <div className={styles.checkboxDiv}>
-                <div style={{ padding: "0.2rem" }}>
-                  <h3 className={styles.heading}>Customer Approved work from home Checklist</h3>
-                </div>
+                <div className={styles.heading}>Customer Approved work from home Checklist</div>
                 <input
                   type="checkbox"
                   checked={informedCustomer}
                   onChange={handleCheckboxChange(setInformedCustomer)}
                 />
                 <label className={styles.space}> Received and Reviewed Customer Approval?</label>
-                <div style={{ padding: "0.2rem" }}>
-                  <h4 className={styles.heading}>Note for approving for Customer Approved work from home</h4>
+                <div style={{ marginTop: '12px' }}>
+                  <div className={styles.heading}>Note for approving for Customer Approved work from home</div>
                   <ol className={styles.orderList}>
                     <li className={styles.orderListLI}>Associates working from home must dedicate their time to work-related tasks and refrain from engaging in personal activities during designated working hours.</li>
                     <li className={styles.orderListLI}>There cannot be background noise to ensure professionalism during calls or meetings.</li>
@@ -350,7 +359,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
             ) :
               (
                 <>
-                  <h2 className={styles.heading}>Approver's Confirmation Checklist</h2>
+                  <div className={styles.heading}>Approver's Confirmation Checklist</div>
                   <div className={styles.checkboxDiv}>
                     <input
                       type="checkbox"
@@ -386,7 +395,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         setIsConfirmationChecklistModalOpen={handleConfirmationModalCancel}
         shouldReopenLeaveStatusPending={shouldReopenLeaveStatusPending}
         setShouldReopenLeaveStatusPending={setShouldReopenLeaveStatusPending}
-        employee={updatedEmployee}
+      // employee={updatedEmployee}
       />
     </>
   );

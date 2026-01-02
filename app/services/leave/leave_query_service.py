@@ -194,14 +194,17 @@ class LeaveQueryService:
         if not employee_id or not employee_id.strip():
             raise ValueError("Employee ID is required")
         
+        month = None
+        
         if not year:
             year = datetime.now().year
+            month = datetime.now().month
         
         Logger.info("Getting leave details", employee_id=employee_id, year=year)
         
         try:
             # Calculate financial year dates using LeaveUtils
-            start_date, end_date = LeaveUtils.get_financial_year_dates(year)
+            start_date, end_date = LeaveUtils.get_financial_year_dates(year, month)
             
             # Helper for date formatting
             def format_date(date_obj):
@@ -215,13 +218,11 @@ class LeaveQueryService:
                 (Employee.first_name + ' ' + 
                  func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
-                LeaveTransaction.comments.label('description'),
+                LeaveTransaction.comments.label('comments'),
                 MasterLeaveTypes.leave_name,
-                LeaveTransaction.duration,
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
-                LeaveTransaction.applied_leave_count,
-                LeaveTransaction.applied_leave_count.label('number_of_days'),
+                LeaveTransaction.no_of_days,
                 LeaveTransaction.application_date,
                 LeaveTransaction.leave_status,
                 case(
@@ -245,7 +246,7 @@ class LeaveQueryService:
                 LeaveTransaction.employee_id == Employee.employee_id
             ).join(
                 MasterLeaveTypes,
-                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
             ).filter(
                 Employee.employee_id == employee_id,
                 LeaveTransaction.from_date >= start_date,
@@ -262,13 +263,11 @@ class LeaveQueryService:
                 result.append({
                     'leave_tran_id': row.leave_tran_id,
                     'emp_name': emp_name,
-                    'description': row.description or '',
+                    'comments': row.comments or '',
                     'leave_name': row.leave_name or '',
-                    'duration': row.duration or '',
                     'from_date': format_date(row.from_date),
                     'to_date': format_date(row.to_date),
-                    'applied_leave_count': float(row.applied_leave_count) if row.applied_leave_count else 0.0,
-                    'number_of_days': float(row.number_of_days) if row.number_of_days else 0.0,
+                    'no_of_days': float(row.no_of_days) if row.no_of_days else 0.0,
                     'application_date': format_date(row.application_date),
                     'leave_status': row.leave_status or '',
                     'approved_by': row.approved_by or '',
@@ -642,16 +641,19 @@ class LeaveQueryService:
         if not approver_id or not approver_id.strip():
             raise ValueError("approver_id is required")
         
+        month = None
+        
         if not year:
-            raise ValueError("Invalid year")
+            year = datetime.now().year
+            month = datetime.now().month
         
         Logger.info("Getting leave transactions by approver",
                    approver_id=approver_id, year=year)
         
         try:
             # Get financial year dates
-            start_date, end_date = LeaveUtils.get_financial_year_dates(year)
-            
+            start_date, end_date = LeaveUtils.get_financial_year_dates(year, month)
+
             # Get team lead full name for filter
             approver = db.session.query(
                 (Employee.first_name + ' ' + Employee.last_name).label('name')
@@ -737,35 +739,35 @@ class LeaveQueryService:
             )
             
             results = query.all()
-            
+
             transactions = []
             for row in results:
                 emp_name = ' '.join(row.emp_name.split())
                 applied_by_name = ' '.join(row.applied_by_name.split()) if row.applied_by_name else ''
                 
                 transactions.append({
-                    'LeaveTranId': row.leave_tran_id,
+                    'leaveTranId': row.leave_tran_id,
                     'employeeId': row.employee_id or '',
                     'empName': emp_name,
                     'comments': row.comments or '',
                     'leaveType': row.leave_type_id,
                     'leaveTypeName': row.leave_name,
-                    'fromDate': format_date(row.from_date),
-                    'toDate': format_date(row.to_date),
+                    'fromDate': row.from_date,
+                    'toDate': row.to_date,
                     'duration': row.duration or '',
                     'handOverComments': row.hand_over_comments or '',
                     'appliedBy': applied_by_name,
-                    'applicationDate': format_date(row.application_date),
+                    'applicationDate': row.application_date,
                     'approvedBy': row.approved_by or '',
-                    'approvedDate': format_date(row.approved_date),
+                    'approvedDate': row.approved_date,
                     'approvalComment': row.approval_comment or '',
                     'leaveStatus': row.leave_status or '',
                     'appliedLeaveCount': float(row.no_of_days) if row.no_of_days else 0.0,
                     'fromTime': str(row.from_time) if row.from_time else '',
                     'toTime': str(row.to_time) if row.to_time else '',
                     'reasonForWorkingLate': row.reason_for_working_late or '',
-                    'compOffDate': format_date(row.comp_off_date),
-                    'workedDate': format_date(row.worked_date)
+                    'compOffDate': row.comp_off_date,
+                    'workedDate': row.worked_date
                 })
             
             return transactions

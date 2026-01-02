@@ -20,10 +20,10 @@ def get_leave_details(emp_id):
 def insert_leave():
     return LeaveController.insert_leave()
 
-@leave_bp.route('/update-status', methods=['PUT'])
-@roles_required(*ROLE_PERMISSIONS['leave']['update_status'])
+@leave_bp.route('/update-leave-status', methods=['PUT'])
+@roles_required(*ROLE_PERMISSIONS['leave']['update_leave_status'])
 def update_status():
-    return LeaveController.update_status()
+    return LeaveController.update_leave_status()
 
 @leave_bp.route('/get-holidays', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['leave']['get_holidays'])

@@ -53,6 +53,31 @@ class LeaveTransactionService:
             
         leave_type_id = int(target_card['leave_type_id'])
 
+        # validation - any leave should not overlap with existing leave
+        existing_leaves = LeaveQueryService.get_leave_details(emp_id)
+        existing_leaves = [c for c in existing_leaves if c['leave_status'] != LeaveStatus.REJECTED and c['leave_status'] != LeaveStatus.CANCELLED]
+        
+        # Helper to ensure we are comparing date objects
+        def to_date_obj(d):
+            if isinstance(d, str):
+                # Try common formats if needed, but get_leave_details uses '%d %b %Y'
+                try:
+                    return datetime.strptime(d, '%d %b %Y').date()
+                except ValueError:
+                    return datetime.strptime(d, '%Y-%m-%d').date()
+            if isinstance(d, datetime):
+                return d.date()
+            return d
+
+        new_from = to_date_obj(from_date)
+        new_to = to_date_obj(to_date)
+
+        for leave in existing_leaves:
+            exist_from = to_date_obj(leave['from_date'])
+            exist_to = to_date_obj(leave['to_date'])
+            if exist_from <= new_to and exist_to >= new_from:
+                raise ValueError("Leaves already applied for some of the selected dates.")
+
         try:
             # 1. Privilege Leave Validation
             # at least 7 days in advance, cannot exceed balance
@@ -139,7 +164,6 @@ class LeaveTransactionService:
                 leave_type_id=leave_type_id,
                 from_date=from_date,
                 to_date=to_date,
-                duration=data.get('duration'),
                 no_of_days=no_of_days,
                 hand_over_comments=data.get('handOverComments'),
                 applied_by=applied_by.upper(),

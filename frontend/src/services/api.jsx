@@ -150,16 +150,8 @@ export const leaveTransaction = (employeeId, comments, leaveType, fromDate, toDa
 }
 
 // 9.update Leave status - Updates the status of a leave transaction (approve, reject, etc) by the approver.
-export const updateLeaveStatus = (leaveTranId, leaveStatus, approverComment, isBillable, isCommunicatedToTeam, isCustomerApprovalRequired, approvedById) => {
-  const res = axiosInstance.put(`${API_BASE_URL}/Leave/UpdateStatus/`, {
-    "leaveTranId": leaveTranId,
-    "leaveStatus": `${leaveStatus}`,
-    "approverComment": `${approverComment}`,
-    "isBillable": isBillable,
-    "isCommunicatedToTeam": isCommunicatedToTeam,
-    "isCustomerApprovalRequired": isCustomerApprovalRequired,
-    "approvedById": approvedById
-  })
+export const updateLeaveStatus = (payload) => {
+  const res = axiosInstance.put(`${API_BASE_URL}/leave/update-leave-status`, payload)
   return res;
 }
 

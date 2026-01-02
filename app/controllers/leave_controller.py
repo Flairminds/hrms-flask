@@ -111,7 +111,7 @@ class LeaveController:
             }), 500
 
     @staticmethod
-    def update_status():
+    def update_leave_status():
         """Updates the approval status of a leave request."""
         Logger.info("Update leave status request received")
         

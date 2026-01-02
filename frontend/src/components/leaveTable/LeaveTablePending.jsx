@@ -8,6 +8,7 @@ import { getLeaveTransactionsByApprover } from "../../services/api";
 import { tableHeadersTM } from "../../util/leavetableData"
 import { getCookie } from "../../util/CookieSet";
 import { useAuth } from "../../context/AuthContext";
+import { convertDate } from "../../util/helperFunctions";
 
 const leaveStatusOptions = [
   // ... (rest of imports and leaveStatusOptions)
@@ -113,29 +114,24 @@ export const LeaveTablePending = ({ isRole }) => {
   }, [myEmployeeData, selectedLeaveStatus, selectedEmployeeName]);
 
   const handlePendingStatus = (employee) => {
-
-    const transformedEmployee = {
-      ...employee,
-      LeaveType: getLeaveTypeName(employee.leaveType)
-    };
-    setSelectedEmployee(transformedEmployee);
+    setSelectedEmployee(employee);
     setLeaveModalOpen(true);
   };
 
   const handleStatusChange = (newStatus) => {
     setMyEmployeeData((prevData) =>
       prevData.map((emp) =>
-        emp.LeaveTranId === selectedEmployee.LeaveTranId
+        emp.LeaveTranId === selectedEmployee.leaveTranId
           ? { ...emp, LeaveStatus: newStatus }
           : emp
       )
     );
-    setSelectedEmployee((prev) => ({ ...prev, LeaveStatus: newStatus }));
+    setSelectedEmployee((prev) => ({ ...prev, leaveStatus: newStatus }));
   };
   const handleApprovedStatus = (employee) => {
     const transformedEmployee = {
       ...employee,
-      LeaveType: getLeaveTypeName(employee.leaveType),
+      leaveTypeName: getLeaveTypeName(employee.leaveType),
     };
     setSelectedEmployee(transformedEmployee);
     setLeaveModalOpen(true);
@@ -209,21 +205,17 @@ export const LeaveTablePending = ({ isRole }) => {
           </thead>
           <tbody>
             {myEmployeeFilteredData.map((employee, index) => (
-              <tr key={index}>
+              <tr key={index} onClick={() => {
+                if ((employee['leaveStatus'] === "Pending") || (employee['leaveStatus'] === "Partial Approved")) {
+                  handlePendingStatus(employee);
+                } else if (employee['leaveStatus'] === "Approved" || employee['leaveStatus'] === "Reject") {
+                  handleApprovedStatus(employee);
+                }
+              }}>
                 {tableHeadersTM.map((header, subIndex) => (
                   <td key={subIndex}>
-                    <div
-                      className={`${header.key === "leaveStatus" ? styles.rejectedLeave : ""}`}
-                      onClick={() => {
-                        if (header.key === "leaveStatus" && ((employee[header.key] === "Pending") || (employee[header.key] === "Partial Approved"))) {
-                          handlePendingStatus(employee);
-                        } else if (header.key === "leaveStatus" && (employee[header.key] === "Approved" || employee[header.key] === "Reject")) {
-                          handleApprovedStatus(employee);
-                        }
-                      }}
-                    >
-
-                      {header.key === "leaveType" ? getLeaveTypeName(employee[header.key]) : employee[header.key]}
+                    <div className={`${header.key === "leaveStatus" ? styles.rejectedLeave : ""}`}>
+                      {header.key === "leaveType" ? getLeaveTypeName(employee[header.key]) : header.dataFormat === "date" ? convertDate(employee[header.key]) : employee[header.key]}
                     </div>
                   </td>
                 ))}

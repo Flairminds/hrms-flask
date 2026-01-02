@@ -195,7 +195,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
         // Handle non-200 but not caught by Axios catch (if any)
         toast.info(res.data.Message);
       }
-
+      setLeaveApplicationModal(false);
     } catch (error) {
       const errorMsg = error.response?.data?.Message || error.message || 'An unexpected error occurred';
       toast.error(errorMsg);

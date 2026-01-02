@@ -34,8 +34,6 @@
 
 .heading {
   font-weight: 600;
-  font-size: 0.9rem;
-  /* Further reduced font size */
   color: #34495e;
   padding-bottom: 0.3rem;
 }
@@ -90,13 +88,8 @@
 
 .inputDes {
   border: 1px solid #ced6e0;
-  border-radius: 8px;
-  height: 3.5vh;
-  /* Further reduced height */
-  padding: 17px;
-  /* Further reduced padding */
-  font-size: 0.8rem;
-  /* Further reduced font size */
+  border-radius: 6px;
+  padding: 8px;
   transition: border-color 0.3s ease;
 }
 
@@ -139,8 +132,6 @@
   border-radius: 5px;
   cursor: pointer;
   position: relative;
-  font-size: 15px;
-  font-weight: 500;
   border: 1.4px solid transparent;
 }
 
@@ -163,10 +154,6 @@
   color: black !important;
   border-radius: 5px;
   padding: 0.8rem;
-  /* Reduced padding */
-  font-weight: 700;
-  font-size: 1rem;
-  /* Further reduced font size */
   width: 100%;
 }
 
@@ -175,7 +162,6 @@
 }
 
 .ant-picker-panel-layout {
-  font-size: 10px;
   /* Further reduced font size */
   padding: 3px;
   /* Further reduced padding */

@@ -36,7 +36,7 @@ ROLE_PERMISSIONS = {
         "types_and_approver": ["Admin", "HR", "Lead", "Employee"],
         "get_leave_details": ["Admin", "HR", "Lead", "Employee"],
         "insert_leave": ["Admin", "HR", "Lead", "Employee"],
-        "update_status": ["Admin", "HR", "Lead"],  # Only approvers
+        "update_leave_status": ["Admin", "HR", "Lead"],  # Only approvers
         "get_holidays": ["Admin", "HR", "Lead", "Employee"],
         "get_leave_cards": ["Admin", "HR", "Lead", "Employee"],
         "get_leave_transactions_by_approver": ["Admin", "HR", "Lead"],
