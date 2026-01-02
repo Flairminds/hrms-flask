@@ -1,110 +1,174 @@
 .main {
-    width: 220px;
+    width: 240px;
     height: 100%;
-    background: linear-gradient(135deg, #b3c7ff, #697df7);
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-    padding: 0.5rem 0.3rem 0.3rem 0;
-    border: none;
+    background: #c6e0e7;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+    padding: 16px 8px;
+    border-right: 1px solid #f0f0f0;
     overflow-y: auto;
-    transition: width 0.3s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Logo container */
+.logoContainer {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.logo {
+    width: 140px;
+    height: auto;
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
 }
 
 /* Responsive sidebar - adjust width for smaller screens */
 @media (max-width: 768px) {
     .main {
-        width: 180px;
+        width: 200px;
     }
 }
 
 @media (max-width: 576px) {
     .main {
-        width: 60px;
-        /* Collapsed sidebar */
-        padding: 0.5rem;
+        width: 72px;
+        padding: 12px 4px;
+    }
+
+    .logoContainer {
+        display: none;
     }
 
     .divs span,
     .info {
         display: none;
-        /* Hide text for smaller screens */
+    }
+
+    .divs {
+        justify-content: center;
+        padding: 12px !important;
     }
 }
 
 /* Sidebar items */
 .iconsSidebar {
-    height: 24px;
-    width: 24px;
-    transition: transform 0.3s ease;
+    font-size: 18px;
+    color: #8c8c8c;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .divs {
     display: flex;
     align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin-bottom: 4px;
     border-radius: 8px;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    padding: 10px 10px 15px 10px;
     cursor: pointer;
+    transition: all 0.2s ease;
+    color: #595959;
 }
 
 .divs:hover {
-    background-color: white;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: translateX(4px);
 }
 
 .divs:hover .iconsSidebar {
+    color: #1890ff;
     transform: scale(1.1);
 }
 
 .info,
 .divs span {
-    margin-left: 10px;
+    font-size: 14px;
     font-weight: 500;
-    font-size: 12px;
-    color: #343a40;
-    transition: color 0.3s ease;
+    color: inherit;
+    transition: color 0.2s ease;
 }
 
 .divs:hover .info,
 .divs:hover span {
-    color: rgb(12, 12, 12);
+    color: #1890ff;
 }
 
+/* Active state */
 .active {
-    background-color: white;
-    color: black;
-    font-weight: bold;
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
 }
 
+.active .iconsSidebar {
+    color: #ffffff !important;
+}
+
+.active .info,
+.active span {
+    color: #ffffff !important;
+}
+
+.active:hover {
+    background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+    transform: translateX(4px);
+}
+
+.active:hover .iconsSidebar {
+    color: #ffffff !important;
+}
+
+/* Submenu styling */
+.sidebarContainer {
+    margin-bottom: 4px;
+}
 
 .subMenu {
-    margin-left: 25px;
+    margin-left: 36px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    padding-top: 4px;
+}
+
+.subIcon {
+    font-size: 14px;
+    color: inherit;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .subItem {
-    cursor: pointer;
     display: flex;
     align-items: center;
-    padding: 6px 10px;
-    border-radius: 8px;
-    transition: background 0.3s;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #8c8c8c;
+    font-size: 13px;
 }
 
 .subItem:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: #fafafa;
+    color: #1890ff;
+}
+
+.subItem:hover .subIcon {
+    color: #1890ff;
 }
 
 .activeParent {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: #f0f5ff;
+    color: #1890ff;
 }
 
-/* Responsive: Adjust item spacing for smaller screens */
-@media (max-width: 576px) {
-    .divs {
-        justify-content: center;
-        /* Center icons when text is hidden */
-        padding: 10px;
-    }
+.activeParent .iconsSidebar {
+    color: #1890ff;
 }

@@ -1,22 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import stylesSidebar from "./Sidebar.module.css";
-import personalInfoIcon from "../../assets/sidebarIcons/personalInfo.svg";
-import leaveManagmentIcon from '../../assets/sidebarIcons/leave-7.svg';
-import holidayListIcon from "../../assets/sidebarIcons/holiday.svg";
-import policyIconIcon from "../../assets/sidebarIcons/policy.svg";
-import learningSpaceIcon from "../../assets/sidebarIcons/learningSpaceIcon01.png";
-import logOutIcon from "../../assets/sidebarIcons/logoutIcon.svg";
-import teamLeadIcon from "../../assets/sidebarIcons/teamLead.svg";
+import {
+  DashboardOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  GiftOutlined,
+  FileProtectOutlined,
+  TeamOutlined,
+  AuditOutlined,
+  TrophyOutlined,
+  StarOutlined,
+  ContactsOutlined,
+  FolderOpenOutlined,
+  UserSwitchOutlined,
+  ClockCircleOutlined,
+  BarChartOutlined,
+  UnlockOutlined,
+  SettingOutlined,
+  LineChartOutlined,
+  FileSyncOutlined,
+  ToolOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+  LaptopOutlined,
+  ContainerOutlined
+} from '@ant-design/icons';
+import FMLogo from '../../assets/login/FMLogonew.png';
 import axiosInstance, { getWarningCount } from '../../services/api';
 import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext';
 import { getAllEmployeeEvaluators } from '../../services/api';
-// import skillEvaluationIcon from "../../assets/sidebarIcons/skillEvaluation.svg"; // New icon for Skill 
-import goalIcon from "../../assets/sidebarIcons/goal-icon.svg";
-import skillEvaluationIcon from "../../assets/sidebarIcons/skills.svg";
-import relievingLetterIcon from "../../assets/sidebarIcons/relievingLetterIcon.svg";
-import systemIcon from "../../assets/sidebarIcons/skills.svg"; // any icon for System Management
 
 
 export const Sidebar = ({ isRole }) => {
@@ -136,11 +150,11 @@ export const Sidebar = ({ isRole }) => {
           className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`}
           onClick={() => navigate('/personal-info')}
         >
-          <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
+          <UserOutlined className={stylesSidebar.iconsSidebar} />
           <span className={stylesSidebar.info}>Personal Info</span>
         </div>
         <div className={stylesSidebar.divs} onClick={handleLogout}>
-          <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
+          <LogoutOutlined className={stylesSidebar.iconsSidebar} />
           <span>Log Out</span>
         </div>
       </div>
@@ -150,43 +164,44 @@ export const Sidebar = ({ isRole }) => {
   // Default: Full Sidebar
   return (
     <div className={stylesSidebar.main}>
+      {/* Flairminds Logo */}
+      <div className={stylesSidebar.logoContainer}>
+        <img src={FMLogo} alt="Flairminds" className={stylesSidebar.logo} />
+      </div>
+
       {(isRole === "Employee" || isRole === "Lead" || isRole === "Intern" || isRole === 'Manager' || isRole === "HR") && (
         <>
           <div className={`${stylesSidebar.divs} ${isActive('/') ? stylesSidebar.active : ''}`} onClick={() => navigate('/')}>
-            <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Dashboard" />
+            <DashboardOutlined className={stylesSidebar.iconsSidebar} />
             <span className={stylesSidebar.info}>Dashboard</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`} onClick={() => navigate('/personal-info')}>
-            <img src={personalInfoIcon} className={stylesSidebar.iconsSidebar} alt="Personal Info" />
+            <UserOutlined className={stylesSidebar.iconsSidebar} />
             <span className={stylesSidebar.info}>Personal Info</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/leave') ? stylesSidebar.active : ''}`} onClick={() => navigate('/leave')}>
-            <img src={leaveManagmentIcon} className={stylesSidebar.iconsSidebar} alt="Leave Management" />
+            <CalendarOutlined className={stylesSidebar.iconsSidebar} />
             <span>Leave Management</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/holiday') ? stylesSidebar.active : ''}`} onClick={() => navigate('/holiday')}>
-            <img src={holidayListIcon} className={stylesSidebar.iconsSidebar} alt="Holiday List" />
+            <GiftOutlined className={stylesSidebar.iconsSidebar} />
             <span>Holiday List</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/company-policy') ? stylesSidebar.active : ''}`} onClick={() => navigate('/company-policy')}>
-            <img src={policyIconIcon} className={stylesSidebar.iconsSidebar} alt="Company Policy" />
+            <FileProtectOutlined className={stylesSidebar.iconsSidebar} />
             <span>Company Policy</span>
           </div>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/https://dev-learning-space-v1.vercel.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://dev-learning-space-v1.vercel.app/', '_blank')}>
-            <img src={learningSpaceIcon} className={stylesSidebar.iconsSidebar} alt="Learning Space" />
-            <span>Learning Space</span>
-          </div> */}
         </>
       )}
       {isEvaluator && (
         <div className={`${stylesSidebar.divs} ${isActive('/EmployeesSkillEvaluationList') ? stylesSidebar.active : ''}`} onClick={() => navigate('/EmployeesSkillEvaluationList')}>
-          <img src={skillEvaluationIcon} className={stylesSidebar.iconsSidebar} alt="Skill Evaluation" />
+          <StarOutlined className={stylesSidebar.iconsSidebar} />
           <span>Skill Evaluation</span>
         </div>
       )}
 
       <div className={`${stylesSidebar.divs} ${isActive('/goalSetting') ? stylesSidebar.active : ''}`} onClick={() => navigate('/goalSetting')}>
-        <img src={goalIcon} className={stylesSidebar.iconsSidebar} alt="Goal Setting" />
+        <TrophyOutlined className={stylesSidebar.iconsSidebar} />
         <span className={stylesSidebar.info}>Goal Setting</span>
       </div>
 
@@ -196,7 +211,7 @@ export const Sidebar = ({ isRole }) => {
 
       {(isRole === "Lead" || isRole === "Manager" || isRole === "HR") && (
         <div className={`${stylesSidebar.divs} ${isActive('/teamLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/teamLeaveManagement')}>
-          <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Team Leave Management" />
+          <TeamOutlined className={stylesSidebar.iconsSidebar} />
           <span>Team Leave Management</span>
         </div>
       )}
@@ -206,73 +221,66 @@ export const Sidebar = ({ isRole }) => {
       {(isRole === "HR" || isRole === "Manager") && (
         <>
           <div className={`${stylesSidebar.divs} ${isActive('/HRLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/HRLeaveManagement')}>
-            <img src={leaveManagmentIcon} className={stylesSidebar.iconsSidebar} alt="HR Leave Management" />
+            <AuditOutlined className={stylesSidebar.iconsSidebar} />
             <span>HR Leave Management</span>
           </div>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/goalSeetingForm') ? stylesSidebar.active : ''}`} onClick={() => navigate('/goalSeetingForm')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Goal Setting Form" />
-            <span>Goal Setting Form</span>
-          </div> */}
           <div className={`${stylesSidebar.divs} ${isActive('/EmployeeData') ? stylesSidebar.active : ''}`} onClick={() => navigate('/EmployeeData')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Employee Data" />
+            <ContactsOutlined className={stylesSidebar.iconsSidebar} />
             <span>Employee Data</span>
           </div>
-
-          {/*<div className={`${stylesSidebar.divs} ${isActive('/RelievingLetter') ? stylesSidebar.active : ''}`} onClick={() => navigate('/RelievingLetter')}>
-            <img src={relievingLetterIcon} className={stylesSidebar.iconsSidebar} alt="Relieving Letter" />
-            <span className={stylesSidebar.info}>Relieving Letter</span>
-          </div>*/}
-
           <div className={`${stylesSidebar.divs} ${isActive('/allLeaveRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/allLeaveRecords')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="All Leaves data" />
+            <FolderOpenOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Leave Records</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/updateLeaveApprover') ? stylesSidebar.active : ''}`} onClick={() => navigate('/updateLeaveApprover')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Update Leave Approver" />
+            <UserSwitchOutlined className={stylesSidebar.iconsSidebar} />
             <span>Update Leave Approver</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('https://hrms-monthly-report.streamlit.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://hrms-monthly-report.streamlit.app/', '_blank')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Monthly Attendance" />
+            <ClockCircleOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Attendance Data</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/MonthlyReport') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MonthlyReport')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="MonthlyReport" />
+            <BarChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Report</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/Accessibility') ? stylesSidebar.active : ''}`} onClick={() => navigate('/Accessibility')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="Accessibility" />
+            <UnlockOutlined className={stylesSidebar.iconsSidebar} />
             <span>Accessibility</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/MasterHR') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MasterHR')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="MasterHR" />
+            <SettingOutlined className={stylesSidebar.iconsSidebar} />
             <span>MasterHR</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/SkillTracking') ? stylesSidebar.active : ''}`} onClick={() => navigate('/SkillTracking')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="SkillTracking" />
+            <LineChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Skill Tracking</span>
           </div>
           <div className={`${stylesSidebar.divs} ${isActive('/AllDocumentRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/AllDocumentRecords')}>
-            <img src={teamLeadIcon} className={stylesSidebar.iconsSidebar} alt="AllDocumentRecords" />
+            <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Document Records</span>
           </div>
           <div className={stylesSidebar.sidebarContainer}>
             <div className={`${stylesSidebar.divs} ${openSystem ? stylesSidebar.activeParent : ""}`} onClick={() => setOpenSystem(!openSystem)}>
-              <img src={systemIcon} className={stylesSidebar.iconsSidebar} alt="System Management" />
+              <ToolOutlined className={stylesSidebar.iconsSidebar} />
               <span className={stylesSidebar.info}>System Management</span>
             </div>
 
             {openSystem && (
               <div className={stylesSidebar.subMenu}>
                 <div className={`${stylesSidebar.subItem} ${isActive("/PCsPage") ? stylesSidebar.active : ""}`} onClick={() => navigate("/PCsPage")}>
-                  <span className={stylesSidebar.info}> 💻 PCs Page</span>
+                  <LaptopOutlined className={stylesSidebar.subIcon} />
+                  <span className={stylesSidebar.info}>PCs Page</span>
                 </div>
 
                 <div className={`${stylesSidebar.subItem} ${isActive("/Assignments") ? stylesSidebar.active : ""}`} onClick={() => navigate("/Assignments")} >
-                  <span className={stylesSidebar.info}> 🧾 Assignments</span>
+                  <ContainerOutlined className={stylesSidebar.subIcon} />
+                  <span className={stylesSidebar.info}>Assignments</span>
                 </div>
 
                 <div className={`${stylesSidebar.subItem} ${isActive("/Maintenance") ? stylesSidebar.active : ""}`} onClick={() => navigate("/Maintenance")} >
-                  <span className={stylesSidebar.info}>🛠️ Maintenance</span>
+                  <ToolOutlined className={stylesSidebar.subIcon} />
+                  <span className={stylesSidebar.info}>Maintenance</span>
                 </div>
               </div>
             )}
@@ -281,7 +289,7 @@ export const Sidebar = ({ isRole }) => {
       )}
 
       <div className={stylesSidebar.divs} onClick={handleLogout}>
-        <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
+        <LogoutOutlined className={stylesSidebar.iconsSidebar} />
         <span>Log Out</span>
       </div>
     </div>

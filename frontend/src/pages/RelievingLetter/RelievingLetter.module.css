@@ -139,7 +139,7 @@ body {
   overflow: hidden;
 }
 
-.customTable .ant-table-thead > tr > th {
+.customTable .ant-table-thead>tr>th {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
   padding: 20px !important;
   text-align: left !important;
@@ -149,14 +149,14 @@ body {
   font-size: 14px !important;
 }
 
-.customTable .ant-table-tbody > tr > td {
+.customTable .ant-table-tbody>tr>td {
   padding: 18px 20px !important;
   border-bottom: 1px solid #f3f4f6 !important;
   color: #4b5563 !important;
   vertical-align: middle !important;
 }
 
-.customTable .ant-table-tbody > tr:hover > td {
+.customTable .ant-table-tbody>tr:hover>td {
   background: #f9fafb !important;
   transition: background-color 0.2s ease !important;
 }
@@ -168,7 +168,10 @@ body {
 }
 
 /* Table Cell Styling */
-.employeeCell, .empIdCell, .designationCell, .dateCell {
+.employeeCell,
+.empIdCell,
+.designationCell,
+.dateCell {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -216,7 +219,8 @@ body {
   gap: 8px;
 }
 
-.editBtn, .emailBtn {
+.editBtn,
+.emailBtn {
   border-radius: 8px !important;
   font-size: 12px !important;
   font-weight: 500 !important;
@@ -334,14 +338,15 @@ body {
   font-weight: 600;
 }
 
-.formInput, .formSelect {
+.formInput,
+.formSelect {
   border-radius: 10px !important;
   border: 2px solid #e5e7eb !important;
   transition: all 0.3s ease !important;
   background: white !important;
 }
 
-.formInput:focus, 
+.formInput:focus,
 .formSelect:focus,
 .formInput.ant-input-focused,
 .formSelect.ant-select-focused .ant-select-selector {
@@ -408,7 +413,8 @@ body {
   margin: 0 -32px -32px -32px;
 }
 
-.btnCancel, .btnSubmit {
+.btnCancel,
+.btnSubmit {
   border-radius: 10px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
@@ -530,6 +536,7 @@ body {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -595,7 +602,7 @@ body {
     margin: 16px;
     padding: 20px;
   }
-  
+
   .searchInput {
     width: 300px !important;
   }
@@ -657,13 +664,14 @@ body {
     gap: 12px;
   }
 
-  .btnCancel, .btnSubmit {
+  .btnCancel,
+  .btnSubmit {
     width: 100%;
     justify-content: center;
   }
 
-  .customTable .ant-table-thead > tr > th,
-  .customTable .ant-table-tbody > tr > td {
+  .customTable .ant-table-thead>tr>th,
+  .customTable .ant-table-tbody>tr>td {
     padding: 12px 8px !important;
     font-size: 13px !important;
   }
@@ -734,26 +742,6 @@ body {
     font-size: 10px;
     padding: 3px 6px;
   }
-}
-
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
 }
 
 /* Ant Design Override for better integration */

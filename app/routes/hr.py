@@ -39,3 +39,8 @@ def get_employee_details_for_relieving_letter():
 @roles_required(*ROLE_PERMISSIONS['hr'])
 def get_employee_with_address_and_skills(employee_id):
     return HRController.get_employee_with_address_and_skills(employee_id)
+
+@hr_bp.route('/get-new-joinees', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_new_joinees'])
+def get_new_joinees():
+    return HRController.get_new_joinees()

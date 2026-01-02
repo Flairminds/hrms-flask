@@ -45,7 +45,6 @@ export function LeaveManagementPage() {
   const [windowSize, setWindowSize] = useState(0);
 
   const [leaveDates, setLeaveDates] = useState({})
-  const [apiHolidays, setApiHolidays] = useState([])
 
 
   useEffect(() => {
@@ -216,9 +215,9 @@ export function LeaveManagementPage() {
               </WidgetCard>
             </Col>
 
-            <Col xs={24} lg={8}>
+            <Col xs={24} lg={8} style={{ maxHeight: '250px' }}>
               <WidgetCard
-                title="Upcoming Public Holidays"
+                title="Upcoming Holidays"
                 icon={<PushpinOutlined />}
                 iconColor="#fa8c16"
               >
@@ -232,21 +231,21 @@ export function LeaveManagementPage() {
                       />
                     </List.Item>
                   )}
-                  style={{ maxHeight: '250px', overflowY: 'auto' }}
+                  style={{ maxHeight: '150px', overflowY: 'auto' }}
                 />
               </WidgetCard>
             </Col>
           </Row>
 
           {isSetLeaveApplicationModal && (
-            <LeaveApplicationModal leaveDates={leaveDates} apiHolidays={apiHolidays} setApiHolidays={setApiHolidays}
+            <LeaveApplicationModal leaveDates={leaveDates}
               setLeaveCardData={setLeaveCardData} leaveCardData={leaveCardData}
               selectedLeave={selectedLeave} setSelectedLeave={setSelectedLeave} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} employeeData={employeeData} setEmployeeData={setEmployeeData} loadingLeaveTable={loadingLeaveTable} setLoadingLeaveTable={setLoadingLeaveTable}
               setLeaveApplicationModal={setLeaveApplicationModal} isSetLeaveApplicationModal={isSetLeaveApplicationModal} preSelectedLeaveType={selectedLeaveType} leaveObj={leaveCardData}
-              formattedLeaveData={formattedLeaveData} />
+              formattedLeaveData={formattedLeaveData} holidayData={holidayData} />
           )}
           <div className={styles.leaveTable}>
-            <LeaveTable leaveDates={leaveDates} apiHolidays={apiHolidays}
+            <LeaveTable leaveDates={leaveDates} holidayData={holidayData}
               setLeaveCardData={setLeaveCardData} setLeaveDates={setLeaveDates}
               selectedLeave={selectedLeave} setSelectedLeave={setSelectedLeave} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} employeeData={employeeData} setEmployeeData={setEmployeeData} loadingLeaveTable={loadingLeaveTable} setLoadingLeaveTable={setLoadingLeaveTable}
             />

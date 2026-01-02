@@ -67,8 +67,7 @@ export const getLeaveCardDetails = (employeeId) => {
 
 // Submits a new leave application/transaction for an employee.
 export const insertLeaveTransaction = async (payload) => {
-  const defaultApprover = "Parag Khandekar";
-  const res = await axiosInstance.post(`${API_BASE_URL}/Leave/InsertLeaveTransaction`, {
+  const res = await axiosInstance.post(`${API_BASE_URL}/leave/insert-leave-transaction`, {
     "employeeId": payload.employeeId,
     "comments": payload.comments,
     "leaveType": payload.leaveType,
@@ -77,7 +76,7 @@ export const insertLeaveTransaction = async (payload) => {
     "toDate": payload.toDate,
     "handOverComments": payload.handOverComments,
     "noOfDays": payload.noOfDays,
-    "approvedBy": payload.appliedBy !== payload.employeeId ? defaultApprover : payload.approvedBy,
+    "approvedBy": payload.approvedBy,
     "appliedBy": payload.appliedBy,
     "compOffTransactions": payload?.compOffTransactions?.length > 0
       ? payload.compOffTransactions.map(transaction => ({
@@ -935,6 +934,11 @@ export const deleteAssignment = async (assignmentID) => {
     console.error("Error deleting assignment:", err);
     throw err;
   }
+};
+
+// Retrieves employees who joined within the last 2 months
+export const getNewJoinees = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/get-new-joinees`);
 };
 
 

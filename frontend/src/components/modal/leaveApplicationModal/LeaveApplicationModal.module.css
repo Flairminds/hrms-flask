@@ -1,119 +1,137 @@
 .titleDiv {
-    display: flex;
-    align-items: center;
-  }
-  
-  .unpaidLeaveHeading {
-    color: red;
-    margin: 0;
-    font-size: 0.8rem; /* Further reduced font size */
-  }
-  
-  .typeofLeaveDiv {
-    display: flex;
-    flex-direction: column;
-    gap: 6px; /* Further reduced gap */
-    padding-bottom: 0.4rem;
-    border-radius: 8px;
-  }
-  
-  .workingLateTimeDiv {
-    display: flex;
-    flex-direction: row;
-    gap: 15px; /* Further reduced gap */
-    padding: 0.4rem 0.4rem;
-  }
-  
-  .fromTime {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .heading {
-    font-weight: 600;
-    font-size: 0.9rem; /* Further reduced font size */
-    color: #34495e;
-    padding-bottom: 0.3rem;
-  }
-  
-  .notesSection {
-    padding: 0.4rem 0; /* Further reduced padding */
-  }
-  
-  .titleHeading {
-    font-weight: 600;
-    font-size: 1rem; /* Further reduced font size */
-    color: #0F6CBD;
-    padding-bottom: 0.4rem;
-  }
-  
-  .datesContainer {
-    display: flex;
-    flex-direction: row;
-    gap: 6px; /* Further reduced gap */
-    padding-bottom: 0.8rem;
-    padding-top: 0.4rem;
-  }
-  
-  .dateDiv {
-    display: flex;
-    flex-direction: column;
-    gap: 4px; /* Reduced gap */
-    padding: 0.4rem;
-  }
-  
-  .leaveDaysDiv {
-    display: flex;
-    flex-direction: column;
-    gap: 4px; /* Reduced gap */
-    padding: 0.4rem;
-  }
-  
-  .desDiv {
-    display: flex;
-    flex-direction: column;
-    gap: 6px; /* Further reduced gap */
-    padding-left: 0.4rem;
-    padding-bottom: 10px; /* Further reduced padding */
-  }
-  
-  .inputDes {
-    border: 1px solid #ced6e0;
-    border-radius: 8px;
-    height: 3.5vh; /* Further reduced height */
-    padding: 17px; /* Further reduced padding */
-    font-size: 0.8rem; /* Further reduced font size */
-    transition: border-color 0.3s ease;
-  }
-  
-  .inputDes:focus {
-    border-color: #2d98da;
-    outline: none;
-    box-shadow: 0 0 4px rgba(45, 152, 218, 0.5);
-  }
-  
-  .ant-select-selector {
-    border-radius: 8px !important;
-  }
-  
-  .ant-picker {
-    border-radius: 8px !important;
-  }
-  
-  .leaveIconImg {
-    height: 18px; /* Further reduced height */
-    width: 18px; /* Further reduced width */
-    transition: transform 0.3s ease;
-  }
-  
-  .btnDiv {
-    display: flex;
-    justify-content: end;
-    gap: 10px; /* Further reduced gap */
-    padding-right: 8px; /* Further reduced padding */
-  }
-  
-  .btnStyle {
+  display: flex;
+  align-items: center;
+}
+
+.unpaidLeaveHeading {
+  color: red;
+  margin: 0;
+  font-size: 0.8rem;
+  /* Further reduced font size */
+}
+
+.typeofLeaveDiv {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Further reduced gap */
+  padding-bottom: 0.4rem;
+  border-radius: 8px;
+}
+
+.workingLateTimeDiv {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  /* Further reduced gap */
+  padding: 0.4rem 0.4rem;
+}
+
+.fromTime {
+  display: flex;
+  flex-direction: column;
+}
+
+.heading {
+  font-weight: 600;
+  font-size: 0.9rem;
+  /* Further reduced font size */
+  color: #34495e;
+  padding-bottom: 0.3rem;
+}
+
+.notesSection {
+  padding: 0.4rem 0;
+  /* Further reduced padding */
+}
+
+.titleHeading {
+  font-weight: 600;
+  font-size: 1rem;
+  /* Further reduced font size */
+  color: #0F6CBD;
+  padding-bottom: 0.4rem;
+}
+
+.datesContainer {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  /* Further reduced gap */
+  padding-bottom: 0.8rem;
+  padding-top: 0.4rem;
+}
+
+.dateDiv {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Reduced gap */
+  padding: 0.4rem;
+}
+
+.leaveDaysDiv {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Reduced gap */
+  padding: 0.4rem;
+}
+
+.desDiv {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Further reduced gap */
+  padding-left: 0.4rem;
+  padding-bottom: 10px;
+  /* Further reduced padding */
+}
+
+.inputDes {
+  border: 1px solid #ced6e0;
+  border-radius: 8px;
+  height: 3.5vh;
+  /* Further reduced height */
+  padding: 17px;
+  /* Further reduced padding */
+  font-size: 0.8rem;
+  /* Further reduced font size */
+  transition: border-color 0.3s ease;
+}
+
+.inputDes:focus {
+  border-color: #2d98da;
+  outline: none;
+  box-shadow: 0 0 4px rgba(45, 152, 218, 0.5);
+}
+
+.ant-select-selector {
+  border-radius: 8px !important;
+}
+
+.ant-picker {
+  border-radius: 8px !important;
+}
+
+.leaveIconImg {
+  height: 18px;
+  /* Further reduced height */
+  width: 18px;
+  /* Further reduced width */
+  transition: transform 0.3s ease;
+}
+
+.btnDiv {
+  display: flex;
+  justify-content: end;
+  gap: 10px;
+  /* Further reduced gap */
+  padding-right: 8px;
+  /* Further reduced padding */
+}
+
+.btnStyle {
   padding: 12px;
   background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
   color: #fff !important;
@@ -124,36 +142,47 @@
   font-size: 15px;
   font-weight: 500;
   border: 1.4px solid transparent;
-  }
-  
-  .btnStyle:hover {
+}
+
+.btnStyle:hover {
   color: #5c6ac8 !important;
-  background-color:#b3c7ff !important;
+  background-color: #b3c7ff !important;
   border: 1.4px solid #b3c7ff !important;
   font-weight: 400;
-  }
-  
-  .headingApprover {
-    display: flex;
-    justify-content: start;
-    margin-top: 0.8rem; /* Reduced margin */
-    box-shadow: 1px 1px 1px 0px #b3c7ff !important; /* Further reduced shadow */
-    background-color: white !important;
-    border-color: #b3c7ff !important;
-    color: black !important;
-    border-radius: 5px;
-    padding: 0.8rem; /* Reduced padding */
-    font-weight: 700;
-    font-size: 1rem; /* Further reduced font size */
-    width: 100%;
-  }
-  
-  .uL {
-    padding-top: 0.4rem;
-  }
-  
-  .ant-picker-panel-layout {
-    font-size: 10px; /* Further reduced font size */
-    padding: 3px; /* Further reduced padding */
-  }
-  
+}
+
+.headingApprover {
+  display: flex;
+  justify-content: start;
+  margin-top: 0.8rem;
+  /* Reduced margin */
+  box-shadow: 1px 1px 1px 0px #b3c7ff !important;
+  /* Further reduced shadow */
+  background-color: white !important;
+  border-color: #b3c7ff !important;
+  color: black !important;
+  border-radius: 5px;
+  padding: 0.8rem;
+  /* Reduced padding */
+  font-weight: 700;
+  font-size: 1rem;
+  /* Further reduced font size */
+  width: 100%;
+}
+
+.uL {
+  padding-top: 0.4rem;
+}
+
+.ant-picker-panel-layout {
+  font-size: 10px;
+  /* Further reduced font size */
+  padding: 3px;
+  /* Further reduced padding */
+}
+
+.leaveConditions {
+  padding: 0 0 0 1.5rem;
+  color: red;
+  font-style: italic;
+}

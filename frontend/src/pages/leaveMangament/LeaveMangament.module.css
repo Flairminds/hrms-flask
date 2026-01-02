@@ -205,18 +205,6 @@
     /* margin: 1px; */
 }
 
-::-webkit-scrollbar {
-    width: 5px;
-    /* background-color: red; */
-    height: 5px;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: #EEEEEE;
-    border: 3px solid #8EC5FC;
-    border-radius: 10px;
-}
-
 .addButton {
     padding: 8px;
     background: linear-gradient(135deg, #b3c7ff, #697df7) !important;

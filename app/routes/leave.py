@@ -6,7 +6,7 @@ from ..auth_config import ROLE_PERMISSIONS
 leave_bp = Blueprint('leave', __name__)
 
 @leave_bp.route('/leave-types-and-approver', methods=['GET'])
-@roles_required(*ROLE_PERMISSIONS['leave']['get_types_and_approver'])
+@roles_required(*ROLE_PERMISSIONS['leave']['types_and_approver'])
 def get_types_and_approver():
     return LeaveController.get_types_and_approver()
 
@@ -31,7 +31,7 @@ def get_holidays():
     return LeaveController.get_holidays()
 
 @leave_bp.route('/leave-records-mail', methods=['GET'])
-@roles_required(*ROLE_PERMISSIONS['leave']['update_status']) # Using update_status as a proxy for admin
+@roles_required(*ROLE_PERMISSIONS['leave']['leave_records_mail'])
 def send_leave_email_report():
     return LeaveController.send_leave_email_report()
 

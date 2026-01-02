@@ -68,8 +68,20 @@ button:focus-visible {
 } */
 
 
-body{
+body {
   margin: 0;
   padding: 0;
-  
+
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  /* background-color: red; */
+  height: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #EEEEEE;
+  border: 3px solid #8EC5FC;
+  border-radius: 10px;
 }

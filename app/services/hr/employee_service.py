@@ -729,3 +729,49 @@ class EmployeeService:
         except Exception as e:
             db.session.rollback()
             raise e
+
+    @staticmethod
+    def get_new_joinees() -> List[Dict[str, Any]]:
+        """Retrieves employees who joined within the last 2 months with their designation and sub role."""
+        try:
+            from dateutil.relativedelta import relativedelta
+            
+            Logger.info("Fetching new joinees (joined within last 2 months)")
+            
+            # Calculate date 2 months ago from today
+            two_months_ago = datetime.now().date() - relativedelta(months=2)
+            
+            # Query employees with joining date within last 2 months
+            new_joinees = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.middle_name,
+                Employee.last_name,
+                Employee.date_of_joining,
+                MasterDesignation.designation_name.label('band'),
+                MasterSubRole.sub_role_name.label('sub_role')
+            ).outerjoin(
+                EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+            ).outerjoin(
+                MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+            ).filter(
+                Employee.date_of_joining >= two_months_ago,
+                Employee.employment_status == 'Active'
+            ).order_by(
+                Employee.date_of_joining.desc()
+            ).all()
+            
+            return [
+                {
+                    "employee_id": e.employee_id,
+                    "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
+                    "date_of_joining": e.date_of_joining.isoformat() if e.date_of_joining else None,
+                    "band": e.band or "Not Assigned",
+                    "sub_role": e.sub_role or "Not Assigned"
+                } for e in new_joinees
+            ]
+        except Exception as e:
+            Logger.error("Error fetching new joinees", error=str(e))
+            return []

@@ -32,7 +32,7 @@ const leaveStatusOptions = [
   { value: 'Partial Approved', label: 'Partial Approved' },
 ];
 const { Option } = Select;
-export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
+export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
   employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable, setLeaveDates
 }) => {
@@ -107,7 +107,7 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
     const startDate = new Date(fromDate);
     const endDate = new Date(toDate);
     const dates = [];
-    const holidayDates = apiHolidays.map(holiday => formatHolidayDate(holiday.holidayDate));
+    const holidayDates = holidayData.map(holiday => formatHolidayDate(holiday.holiday_date));
     let currentDate = startDate;
     while (currentDate <= endDate) {
       const formattedDate = formatDate(currentDate);
@@ -135,7 +135,6 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
 
       // Generate date range and assign leaveName to all dates in the range
       const dateRange = generateDateRange(fromDate, toDate);
-
 
       dateRange.forEach((date) => {
         acc[date] = leave.leaveName;
@@ -312,18 +311,18 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, apiHolidays,
                           <td key={subIndex}>
                             <div
                               className={`${header.key === "leaveStatus"
-                                  ? employee[header.key] === "Pending"
-                                    ? styles.pendingLeave
-                                    : employee[header.key] === "Approved"
-                                      ? styles.approvedLeave
-                                      : employee[header.key] === "Cancel"
-                                        ? styles.canceledLeave
-                                        : employee[header.key] === "Reject"
-                                          ? styles.rejectedLeave
-                                          : employee[header.key] === "Partial Approved"
-                                            ? styles.partialApprovedLeave
-                                            : ""
-                                  : ""
+                                ? employee[header.key] === "Pending"
+                                  ? styles.pendingLeave
+                                  : employee[header.key] === "Approved"
+                                    ? styles.approvedLeave
+                                    : employee[header.key] === "Cancel"
+                                      ? styles.canceledLeave
+                                      : employee[header.key] === "Reject"
+                                        ? styles.rejectedLeave
+                                        : employee[header.key] === "Partial Approved"
+                                          ? styles.partialApprovedLeave
+                                          : ""
+                                : ""
                                 }`}
                             >
                               {employee[header.key]}

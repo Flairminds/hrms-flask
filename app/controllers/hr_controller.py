@@ -284,3 +284,27 @@ class HRController:
                 'status': 'error',
                 'message': 'An error occurred while fetching employee details. Please try again.'
             }), 500
+
+    @staticmethod
+    def get_new_joinees():
+        """Retrieves employees who joined within the last 2 months."""
+        Logger.info("Get new joinees request received")
+        
+        try:
+            new_joinees = HRService.get_new_joinees()
+            
+            Logger.info("New joinees retrieved successfully", count=len(new_joinees))
+            
+            return jsonify({
+                'status': 'success',
+                'data': new_joinees
+            }), 200
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching new joinees",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                'status': 'error',
+                'message': 'An error occurred while fetching new joinees. Please try again.'
+            }), 500

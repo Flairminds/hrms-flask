@@ -19,10 +19,28 @@ class LeaveQueryService:
         Retrieves the list of available leave types and the assigned approver for an employee using ORM.
         """
         try:
-            employee = Employee.query.filter_by(employee_id=employee_id).first()
-            if not employee:
+            from sqlalchemy.orm import aliased
+            
+            # Alias for the team lead employee
+            TeamLead = aliased(Employee)
+            
+            # Left join with employee table to get team lead name
+            employee_query = db.session.query(
+                Employee,
+                (TeamLead.first_name + ' ' + TeamLead.last_name).label('approver_name')
+            ).outerjoin(
+                TeamLead,
+                Employee.team_lead_id == TeamLead.employee_id
+            ).filter(
+                Employee.employee_id == employee_id
+            ).first()
+            
+            if not employee_query:
                 Logger.warning("Employee not found for leave types", employee_id=employee_id)
-                return {"leave_types": [], "approver": None}
+                return {"leave_types": [], "approver": None, "approver_name": None}
+            
+            employee = employee_query[0]
+            approver_name = employee_query[1] if len(employee_query) > 1 else None
             
             leave_types = db.session.query(
                 MasterLeaveTypes.leave_type_id.label('id'),
@@ -34,11 +52,13 @@ class LeaveQueryService:
             
             Logger.info("Retrieved leave types and approver", 
                        employee_id=employee_id, 
-                       approver=employee.team_lead_id)
+                       approver=employee.team_lead_id,
+                       approver_name=approver_name)
             
             return {
                 "leave_types": types_list,
-                "approver": employee.team_lead_id
+                "approver": employee.team_lead_id,
+                "approver_name": approver_name
             }
         except SQLAlchemyError as e:
             Logger.error("Database error getting leave types", employee_id=employee_id, error=str(e))

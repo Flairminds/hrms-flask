@@ -129,3 +129,7 @@ class HRService:
     @staticmethod
     def get_monthly_report(month, year):
         return ReportService.get_monthly_report(month, year)
+
+    @staticmethod
+    def get_new_joinees():
+        return EmployeeService.get_new_joinees()

@@ -1,11 +1,38 @@
-import React from 'react';
-import { Row, Col, List, Typography, Progress, Badge, Avatar } from 'antd';
-import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, List, Typography, Progress, Badge, Avatar, message } from 'antd';
+import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
+import { getNewJoinees } from '../../services/api';
 
 const { Title, Text } = Typography;
 
 export const Dashboard = () => {
+  // State for new joinees
+  const [newJoinees, setNewJoinees] = useState([]);
+  const [loadingJoinees, setLoadingJoinees] = useState(true);
+
+  // Fetch new joinees on component mount
+  useEffect(() => {
+    const fetchNewJoinees = async () => {
+      try {
+        setLoadingJoinees(true);
+        const response = await getNewJoinees();
+        if (response.data.status === 'success') {
+          setNewJoinees(response.data.data);
+        } else {
+          message.error('Failed to fetch new joinees');
+        }
+      } catch (error) {
+        console.error('Error fetching new joinees:', error);
+        message.error('Failed to fetch new joinees');
+      } finally {
+        setLoadingJoinees(false);
+      }
+    };
+
+    fetchNewJoinees();
+  }, []);
+
   // Sample Data
   const recentNotifications = [
     { title: 'Policy Update', desc: 'New remote work guidelines are now available.', time: '2h ago' },
@@ -130,6 +157,37 @@ export const Dashboard = () => {
                     avatar={<Avatar src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name}`} />}
                     title={<Text strong>{item.name}</Text>}
                     description={`Celebrating on ${item.date}`}
+                  />
+                </List.Item>
+              )}
+            />
+          </WidgetCard>
+        </Col>
+
+        {/* New Joinees */}
+        <Col xs={24} sm={12} lg={8}>
+          <WidgetCard
+            title="New Joinees"
+            icon={<UserAddOutlined />}
+            iconColor="#13c2c2"
+          >
+            <List
+              loading={loadingJoinees}
+              dataSource={newJoinees}
+              locale={{ emptyText: 'No new joinees in the last 2 months' }}
+              renderItem={item => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={<Avatar style={{ backgroundColor: '#13c2c2' }}>{item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    title={<Text strong>{item.employee_name}</Text>}
+                    description={
+                      <div style={{ fontSize: '12px' }}>
+                        <div><CalendarOutlined /> {new Date(item.date_of_joining).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        <div style={{ marginTop: '2px' }}>
+                          <Badge status="default" text={`${item.band} • ${item.sub_role}`} />
+                        </div>
+                      </div>
+                    }
                   />
                 </List.Item>
               )}
