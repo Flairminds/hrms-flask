@@ -91,5 +91,5 @@ class LeaveService:
         return LeaveQueryService.get_leave_transaction_details(leave_tran_id, approved_by)
 
     @staticmethod
-    def get_leave_transactions_by_team_lead(team_lead_id: str, year: int):
-        return LeaveQueryService.get_leave_transactions_by_team_lead(team_lead_id, year)
+    def get_leave_transactions_by_approver(approver_id: str, year: int):
+        return LeaveQueryService.get_leave_transactions_by_approver(approver_id, year)

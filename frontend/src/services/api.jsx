@@ -128,6 +128,11 @@ export const getTeamLead = (employeeId, year) => {
   return axiosInstance.get(`${API_BASE_URL}/Leave/teamlead/${employeeId}?year=${year}`);
 };
 
+// Gets leave transactions for a specific approver and year.
+export const getLeaveTransactionsByApprover = (approverId, year) => {
+  return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-transactions-by-approver?approverId=${approverId}&year=${year}`);
+};
+
 
 // 8.Leave transaction
 export const leaveTransaction = (employeeId, comments, leaveType, fromDate, toDate, handOverComments, leaveStatus) => {

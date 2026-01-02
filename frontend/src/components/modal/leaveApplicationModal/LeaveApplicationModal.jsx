@@ -28,7 +28,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const [leaveType, setLeaveType] = useState(null);
   const [workedDate, setWorkedDate] = useState(null);
   const [workingLateReason, setWorkingLateReason] = useState("");
-  const [leaveOptions, setLeaveOptions] = useState({ leaveTypes: [], approver: '' });
+  const [leaveOptions, setLeaveOptions] = useState({ leaveTypes: [], approver: '', approverId: '' });
   const [leaveDays, setLeaveDays] = useState(0);
   const [comments, setComments] = useState('');
   const [handOverComments, setHandOverComments] = useState('');
@@ -43,6 +43,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const [loader, setLoader] = useState(false)
   const [alertMissedDoorCount, setAlertMissedDoorCount] = useState(false)
   const [isValidDescription, setIsValidDescription] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const leaveCardDetails = async () => {
     try {
@@ -68,7 +69,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const fetchEmployeeData = async () => {
     if (employeeId) {
       try {
-        const response = await getLeaveDetails(employeeId, year);
+        const response = await getLeaveDetails(employeeId);
         setEmployeeData(response.data.data);
       } catch (error) {
         console.error('Failed to fetch employee data:', error);
@@ -130,11 +131,12 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
         employeeId: employeeId,
         comments: comments,
         duration: leaveDuration,
-        fromDate: leaveType === startDate.format('YYYY-MM-DD'),
-        toDate: leaveType === endDate.format('YYYY-MM-DD'),
+        leaveType: leaveType,
+        fromDate: startDate.format('YYYY-MM-DD'),
+        toDate: endDate.format('YYYY-MM-DD'),
         handOverComments,
         noOfDays: leaveDays,
-        approvedBy: leaveOptions.approver,
+        approvedBy: leaveOptions.approverId,
         appliedBy: employeeId,
         compOffTransactions: compOffTransactions,
         cutsomerHolidays: {
@@ -165,57 +167,40 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       }
 
       const res = await insertLeaveTransaction(payload);
+
       if (res.status === 200) {
-        leaveCardDetails()
+        toast.success(res.data || "Leave applied successfully");
+
+        // Only close and reset on success
         setLeaveApplicationModal(false);
-      }
-      if (res.status === 500) {
-        leaveCardDetails()
-        setLeaveApplicationModal(false);
+
+        // Reset fields
+        setStartDate(null);
+        setEndDate(null);
+        setLeaveDuration(null);
+        setLeaveType(null);
+        setWorkedDate(null);
+        setWorkingLateReason("");
+        setLeaveDays(0);
+        setHandOverComments('');
+        setFromTime(null);
+        setToTime(null);
+        setComments('');
+        setAlertMissedDoorCount(false);
+
+        // Refresh data
+        leaveCardDetails();
+        fetchEmployeeData();
+      } else {
+        // Handle non-200 but not caught by Axios catch (if any)
+        toast.info(res.data.Message);
       }
 
-      fetchEmployeeData();
-      setStartDate(null);
-      setEndDate(null);
-      setLeaveDuration(null);
-      setLeaveType(null);
-      setWorkedDate(null);
-      setWorkingLateReason("");
-      setLeaveOptions((prevOptions) => ({
-        ...prevOptions,
-        leaveTypes: prevOptions.leaveTypes.map(type => ({ value: type.value, label: type.label }))
-      }));
-      setLeaveDays(0);
-      setHandOverComments('');
-      setFromTime(null);
-      setToTime(null);
-      setComments('');
-      setLeaveApplicationModal(false);
-      toast.success(res.data);
     } catch (error) {
-      setLeaveApplicationModal(false);
-      leaveCardDetails()
-      fetchEmployeeData();
-
-      toast.error(error.response.data);
-
-      const errorMessage = error.response?.data?.message || 'An unexpected error occurred';
-      // setError(errorMessage);
+      const errorMsg = error.response?.data?.Message || error.message || 'An unexpected error occurred';
+      toast.error(errorMsg);
     } finally {
       setLoader(false);
-      setStartDate(null)
-      setEndDate(null)
-      setLeaveDuration(null)
-      setLeaveType(null)
-      setWorkedDate(null)
-      setWorkingLateReason("")
-      setLeaveDays(0)
-      setComments("")
-      setHandOverComments('')
-      setFromTime(null)
-      setToTime(null)
-      setLeaveApplicationModal(false);
-      setAlertMissedDoorCount(false)
     }
   };
 
@@ -232,7 +217,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
     const selectedLeave = leaveObj.find(leave => leave.leaveName === value);
     if (selectedLeave) {
       if ((selectedLeave.totalAllotedLeaves - selectedLeave.totalUsedLeaves) <= 0) {
-        if (['Sick/Emergency Leave', 'Privilege Leave'].includes(value)) {
+        if (['Sick/Emergency Leave'].includes(value)) {
           setShowAlert(true);
           setAlertLeaveType(value);
         }
@@ -416,7 +401,8 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
               value: type.name,
               label: type.name
             })),
-            approver: response.data.approver_name
+            approver: response.data.approver_name,
+            approverId: response.data.approver_id
           });
         }
       } catch (error) {
@@ -523,15 +509,25 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
             </h3>
           )}
           <div className={stylesLeaveApplication.typeofLeaveDiv}>
-            <span className={stylesLeaveApplication.heading}>Select type of leave*</span>
-            <Select
-              style={{ width: '100%' }}
-              onChange={handleLeaveTypeChange}
-              options={preSelectedLeaveType ? [{ value: preSelectedLeaveType, label: preSelectedLeaveType }] : leaveOptions.leaveTypes}
-              placeholder="Select type of leave"
-              value={leaveType}
-              disabled={!!preSelectedLeaveType}
-            />
+            {/* <span className={stylesLeaveApplication.heading}>Select type of leave*</span> */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Select
+                style={{ width: '45%' }}
+                onChange={handleLeaveTypeChange}
+                options={preSelectedLeaveType ? [{ value: preSelectedLeaveType, label: preSelectedLeaveType }] : leaveOptions.leaveTypes}
+                placeholder="Type of Leave"
+                value={leaveType}
+                disabled={!!preSelectedLeaveType}
+              />
+              <Select
+                style={{ width: '45%' }}
+                onChange={handleDurationChange}
+                options={durationOptions}
+                placeholder="Leave Duration"
+                disabled={leaveType === 'Working Late Today' || (leaveType === 'Missed Door Entry')}
+                value={leaveDuration}
+              />
+            </div>
             {LEAVE_CONDITIONS[leaveType] && (
               <div className={stylesLeaveApplication.leaveConditions}>
                 <ul>
@@ -541,15 +537,6 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
                 </ul>
               </div>
             )}
-            <span className={stylesLeaveApplication.heading}>Select Leave Duration*</span>
-            <Select
-              style={{ width: '100%' }}
-              onChange={handleDurationChange}
-              options={durationOptions}
-              placeholder="Leave Duration"
-              disabled={leaveType === 'Working Late Today' || (leaveType === 'Missed Door Entry')}
-              value={leaveDuration}
-            />
           </div>
           <div className={stylesLeaveApplication.datesContainer}>
             <div className={stylesLeaveApplication.dateDiv}>
@@ -674,8 +661,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
             />
           </div>
           <div className={stylesLeaveApplication.approverDiv}>
-            <span className={stylesLeaveApplication.heading}>Approver</span>
-            <Button className={stylesLeaveApplication.headingApprover} disabled>{leaveOptions.approver}</Button>
+            <span className={stylesLeaveApplication.heading}>Approver: {leaveOptions.approver}</span>
           </div>
         </div>
       </Modal>

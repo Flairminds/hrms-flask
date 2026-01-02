@@ -258,3 +258,41 @@ class LeaveController:
             return jsonify({
                 "Message": "An error occurred while fetching leave cards. Please try again."
             }), 500
+
+    @staticmethod
+    def get_leave_transactions_by_approver():
+        """Retrieves leave transactions for a specific approver."""
+        Logger.info("Get leave transactions by approver request received")
+        
+        try:
+            approver_id = request.args.get('approverId')
+            year = request.args.get('year')
+            if not year:
+                from datetime import datetime
+                year = datetime.now().year
+            else:
+                year = int(year)
+                
+            transactions = LeaveService.get_leave_transactions_by_approver(approver_id, year)
+            
+            Logger.info("Team leave transactions retrieved successfully",
+                       approver_id=approver_id,
+                       year=year,
+                       record_count=len(transactions))
+            
+            return jsonify(transactions), 200
+            
+        except ValueError as ve:
+            Logger.warning("Validation error fetching team transactions",
+                          approver_id=approver_id,
+                          error=str(ve))
+            return jsonify({"Message": str(ve)}), 400
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching team transactions",
+                        approver_id=approver_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "Message": "An error occurred while fetching team transactions. Please try again."
+            }), 500

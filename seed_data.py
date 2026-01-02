@@ -302,21 +302,21 @@ def seed_leave_types():
     """Seeds leave types"""
     print("Seeding leave types")
     leave_type_sql = text("""
-        INSERT INTO master_leave_types (leave_name, yearly_allocation, monthly_allocation, requires_customer_approval, leave_cards_flag, quarterly_allocation) VALUES
-        (N'Sick/Emergency Leave', 8, 0, false, true, 2),
-        (N'Privilege Leave', 12, 1, false, true, NULL),
-        (N'Work From Home', 36, 0, false, true, NULL),
-        (N'Customer Approved Comp-off', 0, 0, true, false, NULL),
-        (N'Customer Approved Work From Home', 0, 0, true, false, NULL),
-        (N'Customer Holiday', 0, 0, true, false, NULL),
-        (N'Working Late Today', 0, 0, false, false, NULL),
-        (N'Visiting Client Location', 0, 0, false, false, NULL),
-        (N'Casual Leave', 0, 0, false, false, NULL),
-        (N'Swap Leave', 0, 0, false, false, NULL),
-        (N'Exempt Work From Home', 0, 0, false, false, NULL),
-        (N'Unpaid Sick/Emergency Leave', 0, 0, false, true, NULL),
-        (N'Unpaid Privilege Leave', 0, 0, false, true, NULL),
-        (N'Missed Door Entry', 12, 0, false, true, 3);
+        INSERT INTO master_leave_types (leave_type_id, leave_name, yearly_allocation, monthly_allocation, requires_customer_approval, leave_cards_flag, quarterly_allocation, is_deleted) VALUES
+        (1, N'Sick/Emergency Leave', 8, 0, false, true, 2, false),
+        (2, N'Privilege Leave', 12, 1, false, true, NULL, false),
+        (3, N'Work From Home', 36, 0, false, true, NULL, false),
+        (4, N'Customer Approved Comp-off', 0, 0, true, false, NULL, false),
+        (5, N'Customer Approved Work From Home', 0, 0, true, false, NULL, false),
+        (6, N'Customer Holiday', 0, 0, true, false, NULL, false),
+        (7, N'Working Late Today', 0, 0, false, false, NULL, false),
+        (8, N'Visiting Client Location', 0, 0, false, false, NULL, false),
+        (9, N'Casual Leave', 0, 0, false, false, NULL, true),
+        (10, N'Swap Leave', 0, 0, false, false, NULL, true),
+        (11, N'Exempt Work From Home', 0, 0, false, false, NULL, true),
+        (12, N'Unpaid Sick/Emergency Leave', 0, 0, false, true, NULL, true),
+        (13, N'Unpaid Privilege Leave', 0, 0, false, true, NULL, true),
+        (14, N'Missed Door Entry', 12, 0, false, true, 3, false);
     """)
     db.session.execute(leave_type_sql)
     print("✓ Leave types seeded")

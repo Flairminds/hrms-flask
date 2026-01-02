@@ -8,14 +8,22 @@ class LeaveStatus:
     REJECTED = 'Rejected'
     CANCELLED = 'Cancelled'
     PARTIAL_APPROVED = 'Partial Approved'
-    CANCEL = 'Cancel'
 
 class LeaveTypeName:
-    SICK = 'Sick Leave'
-    PRIVILEGE = 'Privilege Leave'
-    WFH = 'WFH'
-    COMP_OFF = 'Comp-Off'
-    CASUAL = 'Casual Leave'
+    SICK_LEAVE = 'Sick/Emergency Leave'
+    PRIVILEGE_LEAVE = 'Privilege Leave'
+    WFH = 'Work From Home'
+    CUSTOMER_APPROVED_COMP_OFF = 'Customer Approved Comp-off'
+    CUSTOMER_APPROVED_WFH = 'Customer Approved Work From Home'
+    CUSTOMER_HOLIDAY = 'Customer Holiday'
+    WORKING_LATE_TODAY = 'Working Late Today'
+    VISITING_CLIENT_LOCATION = 'Visiting Client Location'
+    CASUAL_LEAVE = 'Casual Leave'
+    SWAP_LEAVE = 'Swap Leave'
+    EXEMPT_WFH = 'Exempt Work From Home'
+    UNPAID_SICK_LEAVE = 'Unpaid Sick/Emergency Leave'
+    UNPAID_PRIVILEGE_LEAVE = 'Unpaid Privilege Leave'
+    MISSED_DOOR_ENTRY = 'Missed Door Entry'
 
 class LeaveTypeID:
     SICK = 1

@@ -45,7 +45,7 @@ class LeaveQueryService:
             leave_types = db.session.query(
                 MasterLeaveTypes.leave_type_id.label('id'),
                 MasterLeaveTypes.leave_name.label('name')
-            ).all()
+            ).filter(MasterLeaveTypes.is_deleted == False).all()
 
             # Convert to list of dicts
             types_list = [dict(row._mapping) for row in leave_types]
@@ -107,17 +107,14 @@ class LeaveQueryService:
             
             # Subquery for LeaveAudit aggregation (used leaves)
             used_subq = db.session.query(
-                func.sum(LeaveAudit.number_of_days).label('number_of_days'),
-                LeaveAudit.leave_type_id,
-                LeaveAudit.employee_id
-            ).join(
-                LeaveTransaction,
-                LeaveAudit.leave_transaction_id == LeaveTransaction.leave_tran_id
+                func.sum(LeaveTransaction.no_of_days).label('number_of_days'),
+                LeaveTransaction.leave_type_id,
+                LeaveTransaction.employee_id
             ).filter(
-                LeaveAudit.employee_id == employee_id,
+                LeaveTransaction.employee_id == employee_id,
                 # Date logic based on leave type
                 case(
-                    (LeaveAudit.leave_type_id.in_([LeaveTypeID.SICK, LeaveTypeID.WFH]),
+                    (LeaveTransaction.leave_type_id.in_([LeaveTypeID.SICK, LeaveTypeID.WFH]),
                      and_(
                          LeaveTransaction.from_date >= datetime(2025, 4, 1),
                          LeaveTransaction.to_date <= datetime(2026, 3, 31)
@@ -127,11 +124,11 @@ class LeaveQueryService:
                         LeaveTransaction.to_date <= datetime(2026, 3, 31)
                     )
                 ),
-                ~LeaveTransaction.leave_status.in_([LeaveStatus.CANCEL, LeaveStatus.REJECTED]),
+                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED]),
                 ~LeaveTransaction.leave_tran_id.in_([10598, 10599, 10601, 10618, 10634])
             ).group_by(
-                LeaveAudit.leave_type_id,
-                LeaveAudit.employee_id
+                LeaveTransaction.leave_type_id,
+                LeaveTransaction.employee_id
             ).subquery()
             
             # Main query joining all tables
@@ -638,36 +635,36 @@ class LeaveQueryService:
             raise
 
     @staticmethod
-    def get_leave_transactions_by_team_lead(team_lead_id: str, year: int) -> List[Dict[str, Any]]:
+    def get_leave_transactions_by_approver(approver_id: str, year: int) -> List[Dict[str, Any]]:
         """
         Retrieves all leave transactions approved by or requiring approval from a team lead.
         """
-        if not team_lead_id or not team_lead_id.strip():
-            raise ValueError("team_lead_id is required")
+        if not approver_id or not approver_id.strip():
+            raise ValueError("approver_id is required")
         
-        if not year or year < 2000 or year > 2100:
+        if not year:
             raise ValueError("Invalid year")
         
-        Logger.info("Getting leave transactions by team lead",
-                   team_lead_id=team_lead_id, year=year)
+        Logger.info("Getting leave transactions by approver",
+                   approver_id=approver_id, year=year)
         
         try:
             # Get financial year dates
             start_date, end_date = LeaveUtils.get_financial_year_dates(year)
             
             # Get team lead full name for filter
-            team_lead = db.session.query(
+            approver = db.session.query(
                 (Employee.first_name + ' ' + Employee.last_name).label('name')
             ).filter(
-                Employee.employee_id == team_lead_id
+                Employee.employee_id == approver_id
             ).first()
             
-            team_lead_name = team_lead.name if team_lead else ''
+            approver_name = approver.name if approver else ''
             
             # Helper for date formatting
             def format_date(date_obj):
                 if date_obj:
-                    return date_obj.strftime('%d %b %Y')
+                    return date_obj.strftime('%d-%m-%Y') # Standardized format
                 return ''
             
             AppliedByEmployee = db.aliased(Employee)
@@ -680,7 +677,7 @@ class LeaveQueryService:
                  func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
                 LeaveTransaction.comments,
-                LeaveTransaction.leave_type,
+                LeaveTransaction.leave_type_id,
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
                 LeaveTransaction.duration,
@@ -693,7 +690,7 @@ class LeaveQueryService:
                     (and_(
                         LeaveTransaction.is_for_second_approval == True,
                         LeaveTransaction.leave_status == LeaveStatus.PARTIAL_APPROVED
-                    ), 'Parag Khandekar'),
+                    ), approver_name),
                     else_=LeaveTransaction.approved_by
                 ).label('approved_by'),
                 LeaveTransaction.approved_date,
@@ -709,17 +706,20 @@ class LeaveQueryService:
                 LeaveTransaction.is_billable,
                 LeaveTransaction.is_communicated_to_team,
                 LeaveTransaction.is_customer_approval_required,
-                LeaveTransaction.applied_leave_count,
-                LeaveTransaction.temp,
+                LeaveTransaction.no_of_days,
                 WorkingLate.from_time,
                 WorkingLate.to_time,
                 WorkingLate.reason_for_working_late,
                 CompensatoryOff.comp_off_date,
                 CompensatoryOff.comp_off_time,
-                CustomerHoliday.worked_date
+                CustomerHoliday.worked_date,
+                MasterLeaveTypes.leave_name # Join to get name
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
+            ).join(
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
             ).outerjoin(
                 AppliedByEmployee,
                 LeaveTransaction.applied_by == AppliedByEmployee.employee_id
@@ -732,69 +732,49 @@ class LeaveQueryService:
             ).outerjoin(
                 CustomerHoliday,
                 LeaveTransaction.leave_tran_id == CustomerHoliday.leave_tran_id
-            ).filter(
-                or_(
-                    LeaveTransaction.approved_by == team_lead_name,
-                    # Parag Khandekar special case
-                    and_(
-                        team_lead_id == 'Emp4',
-                        LeaveTransaction.leave_status == LeaveStatus.PARTIAL_APPROVED,
-                        LeaveTransaction.leave_type.in_([LeaveTypeID.COMP_OFF, LeaveTypeID.WFH])
-                    ),
-                    and_(
-                        team_lead_id == 'Emp4',
-                        LeaveTransaction.is_for_second_approval == True,
-                        LeaveTransaction.leave_status == LeaveStatus.PARTIAL_APPROVED
-                    )
-                ),
-                LeaveTransaction.from_date >= start_date,
-                LeaveTransaction.to_date <= end_date
             ).order_by(
                 LeaveTransaction.leave_tran_id.desc()
-            ).all()
+            )
             
-            result = []
-            for row in query:
+            results = query.all()
+            
+            transactions = []
+            for row in results:
                 emp_name = ' '.join(row.emp_name.split())
                 applied_by_name = ' '.join(row.applied_by_name.split()) if row.applied_by_name else ''
                 
-                result.append({
-                    'leave_tran_id': row.leave_tran_id,
-                    'employee_id': row.employee_id or '',
-                    'emp_name': emp_name,
+                transactions.append({
+                    'LeaveTranId': row.leave_tran_id,
+                    'employeeId': row.employee_id or '',
+                    'empName': emp_name,
                     'comments': row.comments or '',
-                    'leave_type': row.leave_type or 0,
-                    'from_date': format_date(row.from_date),
-                    'to_date': format_date(row.to_date),
+                    'leaveType': row.leave_type_id,
+                    'leaveTypeName': row.leave_name,
+                    'fromDate': format_date(row.from_date),
+                    'toDate': format_date(row.to_date),
                     'duration': row.duration or '',
-                    'hand_over_comments': row.hand_over_comments or '',
-                    'applied_by': applied_by_name,
-                    'application_date': format_date(row.application_date),
-                    'approved_by': row.approved_by or '',
-                    'approved_date': row.approved_date,
-                    'approval_comment': row.approval_comment or '',
-                    'leave_status': row.leave_status or '',
-                    'attachments': row.attachments or '',
-                    'is_billable': row.is_billable or 0,
-                    'is_communicated_to_team': row.is_communicated_to_team or 0,
-                    'is_customer_approval_required': row.is_customer_approval_required or 0,
-                    'applied_leave_count': float(row.applied_leave_count) if row.applied_leave_count else 0.0,
-                    'temp': row.temp or '',
-                    'from_time': str(row.from_time) if row.from_time else '',
-                    'to_time': str(row.to_time) if row.to_time else '',
-                    'reason_for_working_late': row.reason_for_working_late or '',
-                    'comp_off_date': row.comp_off_date,
-                    'comp_off_time': float(row.comp_off_time) if row.comp_off_time else 0.0,
-                    'worked_date': row.worked_date
+                    'handOverComments': row.hand_over_comments or '',
+                    'appliedBy': applied_by_name,
+                    'applicationDate': format_date(row.application_date),
+                    'approvedBy': row.approved_by or '',
+                    'approvedDate': format_date(row.approved_date),
+                    'approvalComment': row.approval_comment or '',
+                    'leaveStatus': row.leave_status or '',
+                    'appliedLeaveCount': float(row.no_of_days) if row.no_of_days else 0.0,
+                    'fromTime': str(row.from_time) if row.from_time else '',
+                    'toTime': str(row.to_time) if row.to_time else '',
+                    'reasonForWorkingLate': row.reason_for_working_late or '',
+                    'compOffDate': format_date(row.comp_off_date),
+                    'workedDate': format_date(row.worked_date)
                 })
             
-            return result
+            return transactions
             
-        except SQLAlchemyError as e:
-            Logger.error("Database error getting team lead leave transactions",
-                        team_lead_id=team_lead_id, error=str(e))
+        except Exception as e:
+            Logger.error("Error getting leave transactions by approver",
+                        approver_id=approver_id, error=str(e))
             raise
         except Exception as e:
             Logger.critical("Unexpected error getting team lead leave transactions",
-                           team_lead_id=team_lead_id, error=str(e))
+                           approver_id=approver_id, error=str(e))
             raise

@@ -26,6 +26,7 @@ class LeaveTransaction(BaseModel):
     hand_over_comments = db.Column(db.Text)
     applied_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
     application_date = db.Column(db.DateTime)
+    approver_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
     approved_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
     approved_date = db.Column(db.DateTime)
     approval_comment = db.Column(db.String(255))

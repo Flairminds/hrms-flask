@@ -210,7 +210,7 @@ export const Sidebar = ({ isRole }) => {
 
 
       {(isRole === "Lead" || isRole === "Manager" || isRole === "HR") && (
-        <div className={`${stylesSidebar.divs} ${isActive('/teamLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/teamLeaveManagement')}>
+        <div className={`${stylesSidebar.divs} ${isActive('/team-leave-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/team-leave-management')}>
           <TeamOutlined className={stylesSidebar.iconsSidebar} />
           <span>Team Leave Management</span>
         </div>

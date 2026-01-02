@@ -6,15 +6,15 @@ import { getTeamLead, updateLeaveStatus } from '../../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
 
-export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange,selectedRange }) => {
+export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange, selectedRange }) => {
   const [isConfirmationChecklistModalOpen, setIsConfirmationChecklistModalOpen] = useState(false);
   const [shouldReopenLeaveStatusPending, setShouldReopenLeaveStatusPending] = useState(false);
   const [approverComments, setApproverComments] = useState('');
   const [informedCustomer, setInformedCustomer] = useState(false);
   const [communicatedWithinTeam, setCommunicatedWithinTeam] = useState(false);
   const [handedOverResponsibilities, setHandedOverResponsibilities] = useState(false);
-  const [isButtonDisabled, setIsButtonDisabled] = useState(false); 
-  const [isCommentValid, setIsCommentValid] = useState(false); 
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [isCommentValid, setIsCommentValid] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   let employeeId;
@@ -22,7 +22,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const fetchEmployeeData = async () => {
     if (employeeId) {
       try {
-        const response = await getTeamLead(employeeId,selectedRange);
+        const response = await getTeamLead(employeeId, selectedRange);
         if (response.data.leaveTransactions) {
           setMyEmployeeData(response.data.leaveTransactions);
         } else {
@@ -43,8 +43,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     // const intervalId = fetchEmployeeData, 3000);
     // return () => clearInterval(intervalId);
   }, []);
- 
-  
+
+
   const updatedEmployee = { ...employee, ApproverComment: approverComments, approvedById: employeeId };
 
 
@@ -61,14 +61,14 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const customerApprovedWFHChecked = employee.LeaveType === 'Customer Approved Work From Home' && informedCustomer;
 
   const enableApproveButton = shouldShowCheckboxes
-  ? (employee.LeaveType === 'Customer Approved Comp-off'
-    ? customerApprovedChecked
-    : employee.LeaveType === 'Work From Home'
-      ? true
-      : employee.LeaveType === 'Customer Approved Work From Home'
-        ? customerApprovedWFHChecked
-        : allChecked)
-  : true;
+    ? (employee.LeaveType === 'Customer Approved Comp-off'
+      ? customerApprovedChecked
+      : employee.LeaveType === 'Work From Home'
+        ? true
+        : employee.LeaveType === 'Customer Approved Work From Home'
+          ? customerApprovedWFHChecked
+          : allChecked)
+    : true;
 
 
   const showWorkingLateDetails = employee.LeaveType === "Working Late Today";
@@ -83,11 +83,11 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
       isCustomerApprovalRequired,
       approvedById
     } = updatedEmployee;
-    
+
     const isBillableNum = isBillable ? 1 : 0;
     const isCommunicatedToTeamNum = isCommunicatedToTeam ? 1 : 0;
     const isCustomerApprovalRequiredNum = isCustomerApprovalRequired ? 1 : 0;
-  
+
     const updatedData = {
       leaveTranId: leaveTranId,
       leaveStatus: "Approved",
@@ -97,7 +97,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
       isCustomerApprovalRequired: isCustomerApprovalRequiredNum,
       approvedById: approvedById
     };
- 
+
     try {
       await updateLeaveStatus(
         updatedData.leaveTranId,
@@ -113,7 +113,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     } catch (error) {
       console.error('Failed to update leave status:', error);
     }
-  
+
     setApproverComments('');
     setInformedCustomer(false);
     setCommunicatedWithinTeam(false);
@@ -122,7 +122,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     onStatusChange(updatedData.leaveStatus);
     setIsButtonDisabled(false);
   };
-  
+
   const handleReject = async () => {
     setIsButtonDisabled(true);
     const {
@@ -132,14 +132,14 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
       isCustomerApprovalRequired,
       approvedById
     } = updatedEmployee;
-  
+
     const isBillableNum = isBillable ? 1 : 0;
     const isCommunicatedToTeamNum = isCommunicatedToTeam ? 1 : 0;
     const isCustomerApprovalRequiredNum = isCustomerApprovalRequired ? 1 : 0;
-  
+
     const updatedData = {
       leaveTranId: leaveTranId,
-      leaveStatus: "Reject", 
+      leaveStatus: "Reject",
       approverComment: approverComments,
       isBillable: isBillableNum,
       isCommunicatedToTeam: isCommunicatedToTeamNum,
@@ -162,7 +162,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     } catch (error) {
       console.error('Failed to update leave status:', error);
     }
-  
+
     setApproverComments('');
     setInformedCustomer(false);
     setCommunicatedWithinTeam(false);
@@ -171,7 +171,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     onStatusChange(updatedData.leaveStatus);
     setIsButtonDisabled(false);
   };
-  
+
 
   const handleCheckboxChange = (setter) => (event) => {
     setter(event.target.checked);
@@ -186,12 +186,12 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   };
 
   const handleCommentsChange = (e) => {
-    const value = e.target.value; 
+    const value = e.target.value;
     setApproverComments(value);
     if (employee.LeaveType === "Missed Door Entry") {
       if (value.length >= 250) {
-        setIsCommentValid(true); 
-        setErrorMessage(""); 
+        setIsCommentValid(true);
+        setErrorMessage("");
       } else {
         setIsCommentValid(false);
         setErrorMessage(
@@ -199,8 +199,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         );
       }
     } else {
-      setIsCommentValid(true); 
-      setErrorMessage(""); 
+      setIsCommentValid(true);
+      setErrorMessage("");
     }
   };
 
@@ -229,7 +229,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         width={1000}
         centered
       >
-        <Descriptions bordered column={2}>
+        <Descriptions bordered column={3}>
           <Descriptions.Item label="Employee Name" labelStyle={{ fontWeight: 'bold' }}>{employee.empName}</Descriptions.Item>
           <Descriptions.Item label="Leave Type" labelStyle={{ fontWeight: 'bold' }}>{employee.LeaveType}</Descriptions.Item>
           <Descriptions.Item label="Duration" labelStyle={{ fontWeight: 'bold' }}>{employee.duration}</Descriptions.Item>
@@ -251,8 +251,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
             <>
               {employee.compOffDetails && employee.compOffDetails.length > 0 && (
                 employee.compOffDetails.map((transaction, index) => {
-                const compOffDate = new Date(transaction.compOffDate);
-                const formattedDate = `${compOffDate.getFullYear()}-${String(compOffDate.getMonth() + 1).padStart(2, '0')}-${String(compOffDate.getDate()).padStart(2, '0')}`;                 
+                  const compOffDate = new Date(transaction.compOffDate);
+                  const formattedDate = `${compOffDate.getFullYear()}-${String(compOffDate.getMonth() + 1).padStart(2, '0')}-${String(compOffDate.getDate()).padStart(2, '0')}`;
 
                   return (
                     <React.Fragment key={index}>
@@ -271,7 +271,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
           <Descriptions.Item label="Leave Status" labelStyle={{ fontWeight: 'bold' }}>
             <Button
               key="status"
-             className={styles.pendingLeave}
+              className={styles.pendingLeave}
             >
               {employee.leaveStatus}
             </Button>
@@ -284,8 +284,8 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                 onChange={handleCommentsChange}
               />
               {employee.LeaveType === "Missed Door Entry" && !isCommentValid && (
-        <span style={{ color: "red", fontSize: "12px" }}>{errorMessage}</span>
-      )}
+                <span style={{ color: "red", fontSize: "12px" }}>{errorMessage}</span>
+              )}
             </div>
           </Descriptions.Item>
         </Descriptions>

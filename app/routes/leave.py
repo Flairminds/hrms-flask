@@ -40,3 +40,8 @@ def send_leave_email_report():
 def get_leave_cards():
     return LeaveController.get_leave_cards()
 
+@leave_bp.route('/get-leave-transactions-by-approver', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['get_leave_transactions_by_approver'])
+def get_leave_transactions_by_approver():
+    return LeaveController.get_leave_transactions_by_approver()
+

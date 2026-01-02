@@ -59,7 +59,7 @@ function AppRoutes() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="company-policy" element={<PolicyPage />} />
                 <Route path="goalSeetingForm" element={<GoalSettingForm />} />
-                <Route path="teamLeaveManagement" element={<TeamLeaves isRole={user?.roleName} />} />
+                <Route path="team-leave-management" element={<TeamLeaves />} />
                 <Route path="HRLeaveManagement" element={<HRLeaveManagement />} />
                 <Route path="EmployeeData" element={<EmployeeData />} />
                 <Route path="allLeaveRecords" element={<AllLeavesRecords />} />

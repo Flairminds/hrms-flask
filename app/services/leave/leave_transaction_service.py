@@ -9,7 +9,7 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, LeaveTypeName
 
 class LeaveTransactionService:
     @staticmethod
@@ -23,12 +23,12 @@ class LeaveTransactionService:
         
         Logger.info("Executing InsertLeaveTransaction logic")
         
-        emp_id = data.get('EmployeeId')
-        leave_type = int(data.get('LeaveType'))
-        from_date = data.get('FromDate')
-        to_date = data.get('ToDate')
-        no_of_days = float(data.get('NoOfDays'))
-        applied_by = data.get('AppliedBy')
+        emp_id = data.get('employeeId')
+        leave_type_name = data.get('leaveType')
+        from_date = data.get('fromDate')
+        to_date = data.get('toDate')
+        no_of_days = data.get('noOfDays')
+        applied_by = data.get('appliedBy')
         
         if not emp_id or not from_date or not to_date or not applied_by:
             raise ValueError("Missing required fields for leave transaction")
@@ -44,18 +44,36 @@ class LeaveTransactionService:
         
         flag_for_second_approval = 0
 
+        # Fetch leave balances and resolve leave type
+        balance_leaves = LeaveQueryService.get_employee_leave_cards(emp_id)
+        target_card = next((c for c in balance_leaves if c['leave_name'] == leave_type_name), None)
+        
+        if not target_card:
+            raise ValueError(f"Invalid or unauthorized leave type: {leave_type_name}")
+            
+        leave_type_id = int(target_card['leave_type_id'])
+
         try:
+            # 1. Privilege Leave Validation
+            # at least 7 days in advance, cannot exceed balance
+            if leave_type_name == LeaveTypeName.PRIVILEGE_LEAVE:
+                if (from_date_only - app_date_only).days < 7:
+                    raise ValueError("You must apply for Privilege Leave at least 7 days in advance.")
+
+                remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
+                if remaining < no_of_days:
+                    raise ValueError(f"Insufficient Privilege Leave balance. Available: {remaining}")
+
             # 2. WFH Validations
-            if leave_type == LeaveTypeID.WFH:
+            if leave_type_id == LeaveTypeID.WFH:
                 if no_of_days >= 5:
                     six_months_ago = from_date - timedelta(days=180)
                     last_wfh = db.session.query(func.max(LeaveTransaction.to_date)).filter(
                         LeaveTransaction.employee_id == emp_id,
-                        LeaveTransaction.leave_type == LeaveTypeID.WFH,
-                        LeaveTransaction.applied_leave_count >= 5,
+                        LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
+                        LeaveTransaction.no_of_days >= 5,
                         LeaveTransaction.from_date >= six_months_ago,
-                        LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
-                        LeaveTransaction.applied_by.isnot(None)
+                        LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
                     ).scalar()
                     
                     if last_wfh and (from_date - last_wfh).days < 180:
@@ -74,30 +92,29 @@ class LeaveTransactionService:
                     raise ValueError("You cannot apply for Work From Home as the application date is after the from date.")
 
                 from_week = from_date.isocalendar()[1]
+                # In production, use a more compatible approach if WEEK part is not supported directly in all dialects
+                # Assuming SQL Server style based on previous context or just using SQLAlchemy native functions
                 conflicting_wfh = db.session.query(LeaveTransaction.to_date).filter(
                     LeaveTransaction.employee_id == emp_id,
-                    LeaveTransaction.leave_type == LeaveTypeID.WFH,
-                    LeaveTransaction.applied_leave_count == 5,
+                    LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
+                    LeaveTransaction.no_of_days == 5,
                     func.datepart(text('WEEK'), LeaveTransaction.to_date) == from_week,
-                    LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
-                    LeaveTransaction.applied_by.isnot(None)
+                    LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
                 ).first()
                 
                 if conflicting_wfh:
                     raise ValueError("You cannot take any WFH leave this week as you have already taken a 5-day WFH leave.")
 
-                current_gy = datetime.now()
-                fy_year = current_gy.year if current_gy.month >= 4 else current_gy.year - 1
+                fy_year = application_date.year if application_date.month >= 4 else application_date.year - 1
                 fy_start, fy_end = LeaveUtils.get_financial_year_dates(fy_year)
                 
-                wfh_in_week = db.session.query(func.sum(LeaveTransaction.applied_leave_count)).filter(
+                wfh_in_week = db.session.query(func.sum(LeaveTransaction.no_of_days)).filter(
                     LeaveTransaction.employee_id == emp_id,
-                    LeaveTransaction.leave_type == LeaveTypeID.WFH,
+                    LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
                     func.datepart(text('WEEK'), LeaveTransaction.from_date) == from_week,
                     LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
                     LeaveTransaction.from_date >= fy_start,
-                    LeaveTransaction.to_date <= fy_end,
-                    LeaveTransaction.applied_by.isnot(None)
+                    LeaveTransaction.to_date <= fy_end
                 ).scalar() or 0
                 
                 if wfh_in_week >= 1 or no_of_days > 1:
@@ -106,52 +123,47 @@ class LeaveTransactionService:
                     else:
                         flag_for_second_approval = 1
 
-            # 3. Privilege Leave Validation
-            if leave_type == LeaveTypeID.PRIVILEGE:
-                if (from_date_only - app_date_only).days < 6:
-                    raise ValueError("You must apply for this leave at least 7 days in advance.")
-
-            # 4. Balance Check
-            cards = LeaveQueryService.get_employee_leave_cards(emp_id)
-            target_card = next((c for c in cards if int(c['leave_type_id']) == leave_type), None)
-            
-            if target_card:
+            # 4. General Balance Check (for any leave cards flagged types)
+            if target_card and target_card['leave_cards_flag']:
                 remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
                 if (remaining - no_of_days) < 0:
-                    raise ValueError("Insufficient leave balance. Cannot Apply.")
+                    raise ValueError(f"Insufficient {leave_type_name} balance. Available: {remaining}")
 
-            leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
-            is_second_approval = 1 if (flag_for_second_approval == 1 or leave_type == LeaveTypeID.CASUAL) else 0
+            # Generate sequence if needed or use autoincrement
+            # For now, following leave_tran_id = autoincrement in model definition
+            is_second_approval = True if (flag_for_second_approval == 1 or leave_type_id == LeaveTypeID.CASUAL) else False
             
             new_leave = LeaveTransaction(
-                leave_tran_id=leave_tran_seq,
                 employee_id=emp_id.upper(),
-                comments=data.get('Comments'),
-                leave_type=leave_type,
+                comments=data.get('comments'),
+                leave_type_id=leave_type_id,
                 from_date=from_date,
                 to_date=to_date,
-                duration=data.get('Duration'),
-                applied_leave_count=no_of_days,
-                hand_over_comments=data.get('HandOverComments'),
+                duration=data.get('duration'),
+                no_of_days=no_of_days,
+                hand_over_comments=data.get('handOverComments'),
                 applied_by=applied_by.upper(),
                 application_date=application_date,
-                approved_by=data.get('ApprovedBy'),
+                approved_by=data.get('approvedBy'),
                 is_for_second_approval=is_second_approval,
                 leave_status=LeaveStatus.PENDING
             )
             db.session.add(new_leave)
+            db.session.flush() # To get the leave_tran_id
             
-            comp_offs = data.get('CompOffTransactions', [])
+            leave_tran_id = new_leave.leave_tran_id
+
+            comp_offs = data.get('compOffTransactions', [])
             for co in comp_offs:
                 new_co = CompOffTransaction(
-                    leave_tran_id=leave_tran_seq,
-                    comp_off_date=co.get('CompOffDate'),
-                    duration=co.get('Duration')
+                    leave_tran_id=leave_tran_id,
+                    comp_off_date=co.get('compOffDate'),
+                    duration=co.get('duration')
                 )
                 db.session.add(new_co)
                 
             db.session.commit()
-            return leave_tran_seq
+            return leave_tran_id
         except Exception as e:
             db.session.rollback()
             Logger.error("Error inserting leave transaction", error=str(e))
@@ -173,11 +185,11 @@ class LeaveTransactionService:
             if not leave:
                 return "Transaction not found", 0
                 
-            leave_type = leave.leave_type
+            leave_type_id = leave.leave_type_id
             is_for_second_approval = leave.is_for_second_approval
             current_status = leave.leave_status
             
-            if leave_type in (LeaveTypeID.COMP_OFF, LeaveTypeID.WORKING_LATE) or is_for_second_approval:
+            if leave_type_id in (LeaveTypeID.COMP_OFF, LeaveTypeID.WORKING_LATE) or is_for_second_approval:
                 if current_status == LeaveStatus.PENDING:
                     leave.leave_status = LeaveStatus.PARTIAL_APPROVED if status == LeaveStatus.APPROVED else status
                     leave.approval_comment = approver_comment
@@ -185,13 +197,13 @@ class LeaveTransactionService:
                     leave.is_billable = is_billable
                     leave.is_communicated_to_team = is_communicated_to_team
                     leave.is_customer_approval_required = is_customer_approval_required
-                    leave.have_customer_approval = have_customer_approval
+                    # leave.have_customer_approval = have_customer_approval
                     leave.approved_by = approved_by_id
                     send_mail_flag = 2
                 elif current_status == LeaveStatus.PARTIAL_APPROVED:
                     leave.leave_status = status
                     leave.second_approval_comment = approver_comment
-                    leave.second_approver_date = datetime.now()
+                    leave.second_approval_date = datetime.now()
                     send_mail_flag = 1
                 else:
                     return "Leave Already Approved", 0
@@ -234,26 +246,26 @@ class LeaveTransactionService:
             leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
             
             new_leave = LeaveTransaction(
-                leave_tran_id=leave_tran_seq,
                 employee_id=employee_id.upper(),
                 comments=comments,
-                leave_type=leave_type,
+                leave_type_id=leave_type,
                 from_date=from_date,
                 to_date=to_date,
-                applied_leave_count=no_of_days,
+                no_of_days=no_of_days,
                 duration=duration,
                 hand_over_comments=hand_over_comments,
                 applied_by=applied_by.upper(),
                 approved_by=approved_by,
                 application_date=ist_application_date,
-                is_for_second_approval=1,
+                is_for_second_approval=True,
                 leave_status=LeaveStatus.PENDING
             )
             db.session.add(new_leave)
+            db.session.flush()
             
             for comp_off_data in comp_off_transactions:
                 comp_off = CompensatoryOff(
-                    leave_tran_id=leave_tran_seq,
+                    leave_tran_id=new_leave.leave_tran_id,
                     employee_id=employee_id.upper(),
                     comp_off_date=comp_off_data.get('CompOffDate'),
                     comp_off_time=comp_off_data.get('CompOffTime'),
@@ -262,7 +274,7 @@ class LeaveTransactionService:
                 db.session.add(comp_off)
             
             db.session.commit()
-            return leave_tran_seq
+            return new_leave.leave_tran_id
         except Exception as e:
             db.session.rollback()
             Logger.error("Error inserting CompOff transaction", employee_id=employee_id, error=str(e))
@@ -287,13 +299,12 @@ class LeaveTransactionService:
             leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
             
             new_leave = LeaveTransaction(
-                leave_tran_id=leave_tran_seq,
                 employee_id=employee_id.upper(),
                 comments=comments,
-                leave_type=leave_type,
+                leave_type_id=leave_type,
                 from_date=from_date,
                 to_date=to_date,
-                applied_leave_count=no_of_days,
+                no_of_days=no_of_days,
                 duration=duration,
                 hand_over_comments=hand_over_comments,
                 applied_by=applied_by.upper(),
@@ -302,14 +313,15 @@ class LeaveTransactionService:
                 leave_status=LeaveStatus.PENDING
             )
             db.session.add(new_leave)
+            db.session.flush()
             
             customer_holiday = CustomerHoliday(
-                leave_tran_id=leave_tran_seq,
+                leave_tran_id=new_leave.leave_tran_id,
                 worked_date=worked_date
             )
             db.session.add(customer_holiday)
             db.session.commit()
-            return leave_tran_seq
+            return new_leave.leave_tran_id
         except Exception as e:
             db.session.rollback()
             Logger.error("Error inserting customer holiday", employee_id=employee_id, error=str(e))
@@ -330,13 +342,12 @@ class LeaveTransactionService:
             application_date = datetime.utcnow() + timedelta(minutes=330)
             
             new_leave = LeaveTransaction(
-                leave_tran_id=leave_tran_id,
                 employee_id=employee_id.upper() if employee_id else None,
                 comments=comments,
-                leave_type=leave_type,
+                leave_type_id=leave_type,
                 from_date=from_date,
                 to_date=to_date,
-                applied_leave_count=no_of_days,
+                no_of_days=no_of_days,
                 duration=duration,
                 hand_over_comments=hand_over_comments,
                 applied_by=applied_by.upper() if applied_by else None,

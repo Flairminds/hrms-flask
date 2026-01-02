@@ -39,6 +39,7 @@ ROLE_PERMISSIONS = {
         "update_status": ["Admin", "HR", "Lead"],  # Only approvers
         "get_holidays": ["Admin", "HR", "Lead", "Employee"],
         "get_leave_cards": ["Admin", "HR", "Lead", "Employee"],
+        "get_leave_transactions_by_approver": ["Admin", "HR", "Lead"],
         "leave_records_mail": ["Admin", "HR", "Lead"]  # Email reports
     },
     
@@ -190,7 +191,7 @@ FRONTEND_ROUTE_PERMISSIONS = {
     "/company-policy": ["Admin", "HR", "Lead", "Employee"],
     
     # Team/Lead management routes
-    "/teamLeaveManagement": ["Admin", "HR", "Lead"],
+    "/team-leave-management": ["Admin", "HR", "Lead"],
     "/goalSeetingForm": ["Admin", "HR", "Lead"],
     
     # HR-only routes
