@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import jsonify, request
+from flask import jsonify, request, g
 from flask_jwt_extended import get_jwt, verify_jwt_in_request
 
 def roles_required(*roles):
@@ -16,6 +16,12 @@ def roles_required(*roles):
             
             # Check if user role is in the allowed roles list
             user_role = claims.get("role")
+            employee_id = claims.get('sub')
+            
+            # Store in flask.g for access in controllers/services
+            g.user_role = user_role
+            g.employee_id = employee_id
+            
             if user_role not in roles:
                 return jsonify({"Message": "Access denied. Insufficient permissions."}), 403
             

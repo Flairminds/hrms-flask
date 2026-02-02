@@ -100,10 +100,8 @@ export const insertLeaveTransaction = async (payload) => {
 };
 
 // Gets available leave types and the approver for a given employee.
-export const getTypeApprover = (employeeId) => {
-  const res = axiosInstance.get(`${API_BASE_URL}/leave/leave-types-and-approver`, {
-    params: { "employeeId": `${employeeId}` }
-  });
+export const getTypeApprover = () => {
+  const res = axiosInstance.get(`${API_BASE_URL}/leave/leave-types-and-approver`);
   return res;
 };
 
@@ -944,11 +942,8 @@ export const getUpcomingBirthdays = () => {
 };
 
 // Retrieves leave balance cards for an employee
-export const getLeaveCards = (employeeId) => {
-  return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-cards`, {
-    params: { employeeId }
-  });
+export const getLeaveCards = () => {
+  return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-cards`);
 };
-
 
 export default axiosInstance;

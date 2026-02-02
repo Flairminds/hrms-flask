@@ -393,7 +393,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   useEffect(() => {
     const fetchLeaveOptions = async () => {
       try {
-        const response = await getTypeApprover(employeeId);
+        const response = await getTypeApprover();
         if (response.data) {
           setLeaveOptions({
             leaveTypes: response.data?.leave_types?.map((type, index) => ({

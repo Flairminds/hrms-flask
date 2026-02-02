@@ -70,10 +70,10 @@ export function LeaveManagementPage() {
     }
   }, [isSetLeaveApplicationModal])
 
-  const leaveCardDetails = async (employeeId) => {
+  const leaveCardDetails = async () => {
     try {
       setLoading(true);
-      const res = await getLeaveCards(employeeId);
+      const res = await getLeaveCards();
       if (res.data) {
         // Map backend snake_case to frontend camelCase
         const mappedData = res.data.map(item => ({

@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, g
 from ..services.leave_service import LeaveService
 from ..utils.logger import Logger
 
@@ -12,7 +12,7 @@ class LeaveController:
         Logger.info("Get leave types and approver request received")
         
         try:
-            emp_id = request.args.get('employeeId')
+            emp_id = g.employee_id
             if not emp_id:
                 Logger.warning("Missing employeeId parameter")
                 return jsonify({"Message": "EmployeeId is required"}), 400
@@ -231,7 +231,7 @@ class LeaveController:
         Logger.info("Get leave cards request received")
         
         try:
-            emp_id = request.args.get('employeeId')
+            emp_id = g.employee_id
             if not emp_id:
                 Logger.warning("Missing employeeId parameter for leave cards")
                 return jsonify({"Message": "EmployeeId is required"}), 400
