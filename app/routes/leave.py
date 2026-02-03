@@ -45,3 +45,8 @@ def get_leave_cards():
 def get_leave_transactions_by_approver():
     return LeaveController.get_leave_transactions_by_approver()
 
+@leave_bp.route('/people-on-leave', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['people_on_leave'])
+def get_people_on_leave():
+    return LeaveController.get_people_on_leave()
+

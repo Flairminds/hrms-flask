@@ -950,3 +950,56 @@ class LeaveQueryService:
             Logger.critical("Unexpected error getting team lead leave transactions",
                            approver_id=approver_id, error=str(e))
             raise
+
+    @staticmethod
+    def get_employees_on_leave(start_date: date, end_date: date) -> List[Dict[str, Any]]:
+        """
+        Retrieves a list of employees who are on leave between the start and end date (inclusive).
+        includes Name, Leave Status, and Date Range.
+        """
+        try:
+            # Join LeaveTransaction with Employee to get names
+            # Filter for leaves that overlap with the requested range
+            
+            # Overlap logic: (StartA <= EndB) and (EndA >= StartB)
+            # Transaction Range: [from_date, to_date]
+            # Requested Range: [start_date, end_date]
+            
+            query = db.session.query(
+                LeaveTransaction,
+                Employee.first_name,
+                Employee.last_name
+            ).join(
+                Employee,
+                LeaveTransaction.employee_id == Employee.employee_id
+            ).filter(
+                LeaveTransaction.leave_status == LeaveStatus.APPROVED,
+                func.date(LeaveTransaction.from_date) <= end_date,
+                func.date(LeaveTransaction.to_date) >= start_date
+            ).order_by(LeaveTransaction.from_date)
+            
+            results = query.all()
+            
+            leave_list = []
+            for txn, first_name, last_name in results:
+                leave_list.append({
+                    "employee_name": f"{first_name} {last_name}",
+                    "leave_status": txn.leave_status,
+                    "from_date": txn.from_date.isoformat(),
+                    "to_date": txn.to_date.isoformat(),
+                    "leave_type_id": txn.leave_type_id
+                })
+                
+            Logger.info("Retrieved employees on leave", 
+                       start_date=start_date, 
+                       end_date=end_date, 
+                       count=len(leave_list))
+            
+            return leave_list
+            
+        except SQLAlchemyError as e:
+            Logger.error("Database error getting employees on leave", error=str(e))
+            raise
+        except Exception as e:
+            Logger.critical("Unexpected error in get_employees_on_leave", error=str(e))
+            raise

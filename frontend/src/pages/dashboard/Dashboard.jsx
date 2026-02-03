@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, List, Typography, Progress, Badge, Avatar, message } from 'antd';
 import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
-import { getNewJoinees, holidayListData, getUpcomingBirthdays } from '../../services/api';
+import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
 import { filterUpcomingHolidays } from '../../util/helperFunctions';
 
 const { Title, Text } = Typography;
@@ -23,6 +23,10 @@ export const Dashboard = () => {
   // State for birthdays
   const [birthdayData, setBirthdayData] = useState([]);
   const [loadingBirthdays, setLoadingBirthdays] = useState(true);
+
+  // State for people on leave
+  const [peopleOnLeave, setPeopleOnLeave] = useState([]);
+  const [loadingPeopleOnLeave, setLoadingPeopleOnLeave] = useState(true);
 
   // Fetch new joinees on component mount
   useEffect(() => {
@@ -74,29 +78,32 @@ export const Dashboard = () => {
       }
     };
 
+    const fetchPeopleOnLeave = async () => {
+      try {
+        setLoadingPeopleOnLeave(true);
+        const response = await getPeopleOnLeave();
+        if (response.data.status === 'success') {
+          setPeopleOnLeave(response.data.data);
+        } else {
+          message.error('Failed to fetch people on leave');
+        }
+      } catch (error) {
+        console.error('Error fetching people on leave:', error);
+        message.error('Failed to fetch people on leave');
+      } finally {
+        setLoadingPeopleOnLeave(false);
+      }
+    };
+
     fetchNewJoinees();
     fetchHolidayData();
     fetchBirthdayData();
+    fetchPeopleOnLeave();
   }, []);
 
-  // Sample Data
-  const recentNotifications = [
-    { title: 'Policy Update', desc: 'New remote work guidelines are now available.', time: '2h ago' },
-    { title: 'Leave Approved', desc: 'Your leave request for Oct 20th has been approved.', time: '5h ago' },
-    { title: 'System Update', desc: 'HRMS will undergo maintenance tonight at 12 AM.', time: '1d ago' },
-  ];
-
-  const upcomingEvents = [
-    { title: 'Town Hall Meeting', date: 'Oct 15, 2026', type: 'Work' },
-    { title: 'Project Kickoff', date: 'Oct 20, 2026', type: 'Work' },
-    { title: 'Annual Dinner', date: 'Dec 15, 2026', type: 'Social' },
-  ];
-
-  const peopleOnLeave = [
-    { name: 'Alice Johnson', date: 'Oct 10 - Oct 12', avatar: 'AJ' },
-    { name: 'Bob Smith', date: 'Oct 12 - Oct 15', avatar: 'BS' },
-    { name: 'Charlie Brown', date: 'Oct 14 - Oct 14', avatar: 'CB' },
-  ];
+  // Sample Data - initialized to empty as per requirement
+  const recentNotifications = [];
+  const upcomingEvents = [];
 
   // Helper function to format date from DD-MM-YYYY to readable format
   const formatDate = (dateStr) => {
@@ -111,11 +118,7 @@ export const Dashboard = () => {
     return date.toLocaleDateString("en-US", options).replace(/ /g, " ");
   };
 
-  const myGoals = [
-    { title: 'Complete React Training', percent: 75, color: '#1890ff' },
-    { title: 'Submit Q4 Project', percent: 40, color: '#f5222d' },
-    { title: 'Improve Code Coverage', percent: 90, color: '#52c41a' },
-  ];
+  const myGoals = [];
 
   return (
     <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
@@ -131,6 +134,7 @@ export const Dashboard = () => {
           >
             <List
               dataSource={recentNotifications}
+              locale={{ emptyText: 'No recent notifications' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
               renderItem={item => (
                 <List.Item>
@@ -156,6 +160,7 @@ export const Dashboard = () => {
           >
             <List
               dataSource={upcomingEvents}
+              locale={{ emptyText: 'No upcoming events' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
               renderItem={item => (
                 <List.Item>
@@ -177,14 +182,23 @@ export const Dashboard = () => {
             iconColor="#52c41a"
           >
             <List
+              loading={loadingPeopleOnLeave}
               dataSource={peopleOnLeave}
+              locale={{ emptyText: 'No one on leave this week or next week' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar style={{ backgroundColor: '#87d068' }}>{item.avatar}</Avatar>}
-                    title={<Text strong>{item.name}</Text>}
-                    description={item.date}
+                    avatar={<Avatar style={{ backgroundColor: '#87d068' }}>{item.employee_name?.charAt(0)}</Avatar>}
+                    title={<Text strong>{item.employee_name}</Text>}
+                    description={
+                      <div style={{ fontSize: '12px' }}>
+                        <div>
+                          {new Date(item.from_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {new Date(item.to_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </div>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>{item.leave_status}</Text>
+                      </div>
+                    }
                   />
                 </List.Item>
               )}
@@ -281,16 +295,25 @@ export const Dashboard = () => {
             iconColor="#722ed1"
           >
             <Row gutter={[16, 16]}>
-              {myGoals.map((goal, index) => (
-                <Col xs={24} sm={8} key={index}>
-                  <div style={{ textAlign: 'center', padding: '10px' }}>
-                    <Progress type="circle" percent={goal.percent} strokeColor={goal.color} width={80} />
-                    <div style={{ marginTop: '12px' }}>
-                      <Text strong>{goal.title}</Text>
+              {myGoals.length > 0 ? (
+                myGoals.map((goal, index) => (
+                  <Col xs={24} sm={8} key={index}>
+                    <div style={{ textAlign: 'center', padding: '10px' }}>
+                      <Progress type="circle" percent={goal.percent} strokeColor={goal.color} width={80} />
+                      <div style={{ marginTop: '12px' }}>
+                        <Text strong>{goal.title}</Text>
+                      </div>
                     </div>
+                  </Col>
+                ))
+              ) : (
+                <Col span={24}>
+                  <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+                    <RocketOutlined style={{ fontSize: '24px', marginBottom: '8px', opacity: 0.5 }} />
+                    <div>No active goals found</div>
                   </div>
                 </Col>
-              ))}
+              )}
             </Row>
           </WidgetCard>
         </Col>

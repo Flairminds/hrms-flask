@@ -298,6 +298,68 @@ class LeaveController:
                 # Regular approvers only see their assigned leaves
                 transactions = LeaveService.get_leave_transactions_by_approver(approver_id, year)
             
+            Logger.info("Leave transactions retrieved successfully",
+                       approver_id=approver_id,
+                       year=year,
+                       count=len(transactions))
+            
+            return jsonify([dict(row) for row in transactions]), 200
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching leave transactions by approver",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "Message": "An error occurred while fetching leave transactions. Please try again."
+            }), 500
+
+    @staticmethod
+    def get_people_on_leave():
+        """
+        Retrieves employees on leave for the current week and next week.
+        Returns a list of employee names, leave status, and dates.
+        """
+        Logger.info("Get people on leave request received")
+        
+        try:
+            from datetime import datetime, timedelta
+            from ..services.leave.leave_query_service import LeaveQueryService
+            
+            today = datetime.now().date()
+            
+            # Calculate start of this week (Monday)
+            start_of_this_week = today - timedelta(days=today.weekday())
+            
+            # Calculate end of next week (Sunday of next week)
+            # Days until next Sunday = (6 - weekday) + 7
+            end_of_next_week = today + timedelta(days=(6 - today.weekday()) + 7)
+            
+            Logger.info("Fetching people on leave for range",
+                       start_date=start_of_this_week,
+                       end_date=end_of_next_week)
+            
+            people_on_leave = LeaveQueryService.get_employees_on_leave(
+                start_of_this_week, 
+                end_of_next_week
+            )
+            
+            return jsonify({
+                "status": "success",
+                "data": people_on_leave,
+                "range": {
+                    "start": start_of_this_week.isoformat(),
+                    "end": end_of_next_week.isoformat()
+                }
+            }), 200
+            
+        except Exception as e:
+            Logger.error("Unexpected error fetching people on leave",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "status": "error",
+                "message": "An error occurred while fetching people on leave."
+            }), 500
             Logger.info("Team leave transactions retrieved successfully",
                        approver_id=approver_id,
                        user_role=user_role,

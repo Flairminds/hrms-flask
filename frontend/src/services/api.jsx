@@ -898,6 +898,11 @@ export const fetchAssignments = async () => {
   }
 };
 
+// Get people on leave for dashboard
+export const getPeopleOnLeave = () => {
+  return axiosInstance.get(`${API_BASE_URL}/leave/people-on-leave`);
+};
+
 //  Add a new assignment
 export const addAssignment = async (assignmentData) => {
   try {
