@@ -260,30 +260,6 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
               <span className={styles.detailValue}>{employee.workedDate}</span>
             </div>
           )}
-
-          {showCompOffDetails && (
-            <>
-              {employee.compOffDetails && employee.compOffDetails.length > 0 && (
-                employee.compOffDetails.map((transaction, index) => {
-                  const compOffDate = new Date(transaction.compOffDate);
-                  const formattedDate = `${compOffDate.getFullYear()}-${String(compOffDate.getMonth() + 1).padStart(2, '0')}-${String(compOffDate.getDate()).padStart(2, '0')}`;
-
-                  return (
-                    <React.Fragment key={index}>
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Comp Off Date</span>
-                        <span className={styles.detailValue}>{formattedDate}</span>
-                      </div>
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Number of Hours</span>
-                        <span className={styles.detailValue}>{transaction.numberOfHours}</span>
-                      </div>
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </>
-          )}
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Hand Over Comment</span>
             <span className={styles.detailValue}>{employee.handOverComments}</span>
@@ -308,6 +284,30 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
             <span className={styles.detailValue}>{employee.approverName}</span>
           </div>
         </div>
+
+        {showCompOffDetails && employee.compOffTransactions?.length > 0 && (
+          <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+            <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Comp Off Details</span>
+            <table style={{ borderCollapse: 'collapse', border: '1px solid #e8e8e8' }}>
+              <thead>
+                <tr style={{ background: '#fafafa' }}>
+                  <th style={{ padding: '8px 16px', border: '1px solid #e8e8e8', textAlign: 'left', fontWeight: '600' }}>Comp Off Date</th>
+                  <th style={{ padding: '8px 16px', border: '1px solid #e8e8e8', textAlign: 'left', fontWeight: '600' }}>Hours</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employee.compOffTransactions.map((transaction, index) => {
+                  return (
+                    <tr key={index}>
+                      <td style={{ padding: '8px 16px', border: '1px solid #e8e8e8' }}>{convertDate(transaction.compOffDate)} ({getWeekDay(transaction.compOffDate)})</td>
+                      <td style={{ padding: '8px 16px', border: '1px solid #e8e8e8' }}>{transaction.numberOfHours}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className={styles.textareaContainer}>
           <div className={styles.heading}>Approver's Comments</div>

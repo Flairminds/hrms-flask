@@ -743,6 +743,26 @@ class LeaveQueryService:
             
             results = query.all()
 
+            # Separate fetch for CompOffTransaction to handle 1-to-many relationship
+            # Extract leave_tran_ids for Customer Approved Comp-off
+            # We filter by name or just fetch for all found IDs to be safe
+            leave_tran_ids = [row.leave_tran_id for row in results]
+            
+            comp_off_map = {}
+            if leave_tran_ids:
+                co_details = db.session.query(CompOffTransaction).filter(
+                    CompOffTransaction.leave_tran_id.in_(leave_tran_ids)
+                ).all()
+                
+                for co in co_details:
+                    if co.leave_tran_id not in comp_off_map:
+                        comp_off_map[co.leave_tran_id] = []
+                    
+                    comp_off_map[co.leave_tran_id].append({
+                        'compOffDate': co.comp_off_date.strftime('%Y-%m-%d') if co.comp_off_date else '',
+                        'numberOfHours': co.duration or ''
+                    })
+
             transactions = []
             for row in results:
                 emp_name = ' '.join(row.emp_name.split())
@@ -770,7 +790,8 @@ class LeaveQueryService:
                     'toTime': str(row.to_time) if row.to_time else '',
                     'reasonForWorkingLate': row.reason_for_working_late or '',
                     'compOffDate': row.comp_off_date,
-                    'workedDate': row.worked_date
+                    'workedDate': row.worked_date,
+                    'compOffTransactions': comp_off_map.get(row.leave_tran_id, [])
                 })
             
             return transactions

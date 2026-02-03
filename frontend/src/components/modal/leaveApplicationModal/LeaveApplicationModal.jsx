@@ -574,18 +574,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
             </div>
           )}
           {leaveType === 'Customer Approved Comp-off' && (
-            <div>
-              <div><CompOff onSubmit={handleFormSubmit} /></div>
-              <div className={stylesLeaveApplication.notesSection}>
-                <span className={stylesLeaveApplication.heading}>Note for Applying for Comp-off:*</span>
-                <ul className={stylesLeaveApplication.uL}>
-                  <li>When applying full day comp off the logged time in zymmr for the day of compoff must be minimum of 8hrs</li>
-                  <li>When applying half day comp off the logged time in zymmr for the day of compoff must be minimum of 4hrs</li>
-                  <li>There must be approval from customer before applying compoff</li>
-                </ul>
-              </div>
-            </div>
-
+            <CompOff onSubmit={handleFormSubmit} />
           )}
           {leaveType === 'Customer Holiday' && (
             <div className={stylesLeaveApplication.dateDiv}>

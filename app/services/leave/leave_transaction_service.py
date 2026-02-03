@@ -183,6 +183,33 @@ class LeaveTransactionService:
                     else:
                         flag_for_second_approval = 1
 
+            # 3. Customer Approved Comp-off Validation
+            if leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF:
+                comp_offs = data.get('compOffTransactions', [])
+                if not comp_offs and no_of_days > 0:
+                    raise ValueError("Please provide comp-off work details.")
+                
+                total_hours = sum(float(co.get('numberOfHours', 0)) for co in comp_offs)
+                required_hours = float(no_of_days) * 8
+                
+                # Check 1: Total hours >= 8 * no_of_days
+                if total_hours < required_hours:
+                    raise ValueError(f"Total comp-off hours ({total_hours}) must be at least {required_hours} for {no_of_days} days leave.")
+                    
+                limit_date = date.today() - timedelta(days=90)
+                for co in comp_offs:
+                    worked_date_str = co.get('compOffDate')
+                    if worked_date_str:
+                        try:
+                            # Try parsing YYYY-MM-DD
+                            worked_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
+                            # Check 2: Worked date expiry (3 months)
+                            if worked_date < limit_date:
+                                raise ValueError(f"Comp-off worked date {worked_date_str} cannot be older than 3 months.")
+                        except (ValueError, TypeError):
+                             # Continue if format issues, or log warning
+                             pass
+
             # 4. General Balance Check (for any leave cards flagged types)
             # Exclude "Missed Door Entry" from balance checks as it's for attendance correction
             if target_card and target_card['leave_cards_flag'] and leave_type_name != "Missed Door Entry":
@@ -219,7 +246,7 @@ class LeaveTransactionService:
                 new_co = CompOffTransaction(
                     leave_tran_id=leave_tran_id,
                     comp_off_date=co.get('compOffDate'),
-                    duration=co.get('duration')
+                    duration=co.get('numberOfHours')
                 )
                 db.session.add(new_co)
                 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { MinusCircleOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import { Button, DatePicker, Form, InputNumber, Space } from 'antd';
 import stylesCompOff from './CompOff.module.css';
 import moment from 'moment';
@@ -10,10 +10,22 @@ export const CompOff = ({ onSubmit }) => {
   const handleAdd = (add) => {
     if (itemCount < 5) {
       add();
-      setItemCount(itemCount + 1);
+      // setItemCount(itemCount + 1); // logic is inside add() usually? No, AntD doesn't track count.
+      // But we track itemCount state.
+      // We should update it AFTER fields update?
+      // fields.length logic?
+      // AntD add() is async? No.
+      setItemCount(prev => prev + 1);
     }
   };
+
+  const handleRemove = (remove, name) => {
+    remove(name);
+    setItemCount(prev => prev - 1);
+  }
+
   const areAllFieldsFilled = (users) => {
+    if (!users) return false;
     return users.every(user => user.date && user.hours);
   };
 
@@ -41,7 +53,7 @@ export const CompOff = ({ onSubmit }) => {
         <Form.List name="users">
           {(fields, { add, remove }) => (
             <>
-              {fields.map(({ key, name, ...restField }) => (
+              {fields.map(({ key, name, ...restField }, index) => (
                 <Space
                   key={key}
                   style={{
@@ -50,9 +62,8 @@ export const CompOff = ({ onSubmit }) => {
                   }}
                   align="baseline"
                 >
-                  <div style={{ display: 'flex', gap: '20px', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', justifyItems: 'center' }}>
                     <div>
-                      <p className={stylesCompOff.heading}>Date</p>
                       <Form.Item
                         {...restField}
                         name={[name, 'date']}
@@ -63,7 +74,6 @@ export const CompOff = ({ onSubmit }) => {
                     </div>
 
                     <div>
-                      <p className={stylesCompOff.heading}>Number of hours</p>
                       <Form.Item
                         {...restField}
                         name={[name, 'hours']}
@@ -74,26 +84,19 @@ export const CompOff = ({ onSubmit }) => {
                     </div>
 
                     <MinusCircleOutlined
-                      onClick={() => {
-                        remove(name);
-                        setItemCount(itemCount - 1);
-                      }}
+                      onClick={() => handleRemove(remove, name)}
+                      style={{ fontSize: '18px', color: '#ff4d4f', cursor: 'pointer', marginTop: '-20px' }}
                     />
+
+                    {index === fields.length - 1 && itemCount < 5 && (
+                      <PlusCircleOutlined
+                        onClick={() => handleAdd(add)}
+                        style={{ fontSize: '18px', color: '#1890ff', cursor: 'pointer', marginTop: '-20px' }}
+                      />
+                    )}
                   </div>
                 </Space>
               ))}
-
-              <Form.Item>
-                <Button
-                  type="dashed"
-                  onClick={() => handleAdd(add)}
-                  block
-                  icon={<PlusOutlined />}
-                  disabled={itemCount >= 5}
-                >
-                  Add
-                </Button>
-              </Form.Item>
             </>
           )}
         </Form.List>
