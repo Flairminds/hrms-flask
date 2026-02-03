@@ -6,14 +6,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from 'antd';
-import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { EyeOutlined, EyeInvisibleOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
 import { loginUser } from '../../services/api';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [validationMessage, setValidationMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loader, setLoader] = useState(false);
 
@@ -38,13 +36,9 @@ export const LoginPage = () => {
     setPassword(event.target.value);
   };
 
-  const handleRememberMeChange = (event) => {
-    setRememberMe(event.target.checked);
-  };
-
   const handleSubmit = async (event) => {
+    if (event) event.preventDefault();
     setLoader(true);
-    event.preventDefault();
 
     if (!email || !password) {
       toast.error('Please enter both email and password');
@@ -52,13 +46,10 @@ export const LoginPage = () => {
       return;
     }
 
-    setValidationMessage('');
-
     try {
       const response = await loginUser(email, password);
       const { accessToken, employeeId, roleName, email: userEmail, fullName } = response.data;
 
-      // Store accessToken in cookie and user data in context
       const userData = {
         employeeId,
         roleName,
@@ -67,7 +58,6 @@ export const LoginPage = () => {
       };
 
       login(accessToken, userData);
-
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
@@ -90,69 +80,85 @@ export const LoginPage = () => {
         pauseOnFocusLoss={false}
         newestOnTop
       />
-      <div className={styles.midContainer}>
-        <div className={styles.imageContainer}>
-          <div className={styles.headingContainer}>
-            <div className={styles.heading}>
-              {/* <b>Flairminds</b> */}
-              <img src="https://media.giphy.com/media/26xBKuuVuNxp8seTS/giphy.gif" style={{ height: "200px", width: "200px" }} alt="GIF" />
+
+      <div className={styles.loginCard}>
+        <div className={styles.brandingSection}>
+          <div className={styles.meshBackground}></div>
+          <div className={styles.brandingContent}>
+            <div className={styles.logoWrapper}>
+              <img src={FMLogonew} alt="Flairminds Logo" className={styles.brandedLogo} />
             </div>
-            <div className={styles.companySlogan}>
-              <p>
-                Flair For Technology <br />
-                Focus For Success
-              </p>
+            <div className={styles.brandingText}>
+              <p className={styles.subSlogan}>Flair For Technology • Focus For Success</p>
             </div>
           </div>
         </div>
-        <div className={styles.formContainer}>
-          <div className="logoContainer">
-            <img src={FMLogonew} alt="LogoImage" className={styles.logoImage} />
-          </div>
-          <div className={styles.innerForm}>
-            <form onSubmit={handleSubmit}>
-              <div className={styles.inputContainer}>
-                <div className={styles.login}>Login</div>
-                <label htmlFor="email"></label>
-                <input
-                  type="text"
-                  id="email"
-                  value={email}
-                  placeholder="Username"
-                  onChange={handleEmailChange}
-                  className={styles.input}
-                />
+
+        <div className={styles.verticalSeparator}></div>
+
+        <div className={styles.formSection}>
+          <div className={styles.formContent}>
+            <div className={styles.welcomeText}>
+              {/* <h2>Welcome Back</h2> */}
+              <p>Sign in using email and password</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className={styles.loginForm}>
+              <div className={styles.inputGroup}>
+                <label htmlFor="email">Email</label>
+                <div className={styles.inputWrapper}>
+                  <UserOutlined className={styles.inputIcon} />
+                  <input
+                    type="text"
+                    id="email"
+                    value={email}
+                    placeholder="name@company.com"
+                    onChange={handleEmailChange}
+                    className={styles.inputField}
+                    required
+                  />
+                </div>
               </div>
 
-              <div className={styles.inputContainer1}>
-                <label htmlFor="password"></label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  placeholder="Password"
-                  onChange={handlePasswordChange}
-                  className={styles.input}
-                />
-                <span onClick={handleShowPasswordChange} className={styles.eyeIcon}>
-                  {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                </span>
+              <div className={styles.inputGroup}>
+                <div className={styles.labelRow}>
+                  <label htmlFor="password">Password</label>
+                  <Link to='/resetPassword' className={styles.forgotLink}>Forgot password?</Link>
+                </div>
+                <div className={styles.inputWrapper}>
+                  <LockOutlined className={styles.inputIcon} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    value={password}
+                    placeholder="••••••••"
+                    onChange={handlePasswordChange}
+                    className={styles.inputField}
+                    required
+                  />
+                  <span onClick={handleShowPasswordChange} className={styles.passwordToggle}>
+                    {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                  </span>
+                </div>
               </div>
 
-              <div className={styles.resetPassword}>
-                <Link to='/resetPassword'>Reset Password </Link>
-              </div>
-
-              <Button type="submit" onClick={handleSubmit} className={styles.submitButton} loading={loader}>
-                LOGIN
+              <Button
+                type="primary"
+                htmlType="submit"
+                className={styles.loginButton}
+                loading={loader}
+                block
+              >
+                Sign In
               </Button>
-
             </form>
+
+            <div className={styles.footer}>
+              <p>© 2026 Flairminds. All rights reserved.</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-// export default LoginPage;
