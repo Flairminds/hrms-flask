@@ -239,7 +239,7 @@ class LeaveTransactionService:
 
             # Generate sequence if needed or use autoincrement
             # For now, following leave_tran_id = autoincrement in model definition
-            is_second_approval = True if (flag_for_second_approval == 1 or leave_type_id == LeaveTypeID.CASUAL) else False
+            is_second_approval = True if (flag_for_second_approval == 1 or leave_type_id == LeaveTypeID.CASUAL or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_WFH) else False
             
             new_leave = LeaveTransaction(
                 employee_id=emp_id.upper(),

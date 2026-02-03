@@ -9,7 +9,7 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig
 from .leave_utils import LeaveUtils
 
 class LeaveQueryService:
@@ -658,7 +658,8 @@ class LeaveQueryService:
 
             # Get team lead full name for filter
             approver = db.session.query(
-                (Employee.first_name + ' ' + Employee.last_name).label('name')
+                (Employee.first_name + ' ' + Employee.last_name).label('name'),
+                Employee.email
             ).filter(
                 Employee.employee_id == approver_id
             ).first()
@@ -736,7 +737,25 @@ class LeaveQueryService:
             ).outerjoin(
                 CustomerHoliday,
                 LeaveTransaction.leave_tran_id == CustomerHoliday.leave_tran_id
-            ).order_by(
+            )
+            
+            # Filter logic
+            approver_email = approver.email if approver else None
+            
+            if approver_email == EmailConfig.SECONDARY_LEAVE_APPROVER_EMAIL:
+                query = query.filter(or_(
+                    Employee.team_lead_id == approver_id,
+                    and_(
+                        LeaveTransaction.is_for_second_approval == True,
+                        LeaveTransaction.leave_status == LeaveStatus.PARTIAL_APPROVED
+                    )
+                ))
+            else:
+                # Standard team lead filter - only see own team's leaves
+                # (Unless existing code relied on implicit filtering? But explicit is safer)
+                query = query.filter(Employee.team_lead_id == approver_id)
+
+            query = query.order_by(
                 LeaveTransaction.from_date.desc(),
                 LeaveTransaction.leave_tran_id.desc()
             )

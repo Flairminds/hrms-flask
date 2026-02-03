@@ -99,3 +99,6 @@ class EmailConfig:
     FY_2024_START = '2024-04-01'
     FY_2024_END = '2025-03-31'
     FY_2025_START = '2025-04-01'
+
+    # Secondary Approver for multi-level approval (e.g., Customer Approved WFH)
+    SECONDARY_LEAVE_APPROVER_EMAIL = 'john.doe@flairminds.com'
