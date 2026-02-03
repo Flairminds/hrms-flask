@@ -330,15 +330,21 @@ class EmailService:
     # ==================================================================
 
     @staticmethod
-    def send_leave_notification_email(employee_name: str, recipients: str) -> bool:
+    def send_leave_notification_email(employee_name: str, recipients: str, leave_details: Dict[str, Any] = None) -> bool:
         """
         Sends leave approval request notification to team lead.
         
-        Sends simple notification that employee has requested leave approval.
+        Sends detailed notification that employee has requested leave approval.
         
         Args:
             employee_name: Name of employee requesting leave
             recipients: Comma-separated email addresses of approvers
+            leave_details: Dictionary containing leave request details:
+                - from_date: Start date of leave
+                - to_date: End date of leave
+                - leave_type: Type of leave
+                - description: Reason for leave
+                - handover_comments: Handover comments
         
         Returns:
             True if email sent successfully
@@ -346,16 +352,6 @@ class EmailService:
         Raises:
             ValueError: If employee_name or recipients is empty
             SMTPException: If email send fails
-        
-        Example:
-            >>> EmailService.send_leave_notification_email(
-            ...     'John Doe',
-            ...     'teamlead@example.com,manager@example.com'
-            ... )
-            True
-        
-        Note:
-            Email contains link to HRMS login for leave approval.
         """
         if not employee_name or not employee_name.strip():
             raise ValueError("Employee name is required")
@@ -365,12 +361,92 @@ class EmailService:
         Logger.info("Sending leave notification email", employee_name=employee_name)
         
         try:
-            subject = "Leave Approval Request"
+            subject = f"Leave Request by {employee_name}"
+            
+            # Default empty details if not provided
+            if leave_details is None:
+                leave_details = {}
+                
+            from_date = leave_details.get('from_date', 'N/A')
+            to_date = leave_details.get('to_date', 'N/A')
+            leave_type = leave_details.get('leave_type', 'N/A')
+            description = leave_details.get('description', 'N/A')
+            handover_comments = leave_details.get('handover_comments', 'N/A')
+            approver_name = leave_details.get('approver_name', 'N/A')
+            
+            # Format dates if they are datetime/date objects
+            if hasattr(from_date, 'strftime'):
+                from_date = from_date.strftime('%d-%b-%Y')
+            if hasattr(to_date, 'strftime'):
+                to_date = to_date.strftime('%d-%b-%Y')
+            
             body = f"""
-                <p>Dear Team Lead,</p>
-                <p>{employee_name} has requested your approval for leave.</p>
-                <p><a href='https://hrms.flairminds.com/login'>Click here for details</a>.</p>
-                <p>Leave Management System</p>
+                <html>
+                <head>
+                    <style>
+                        table {{
+                            border-collapse: collapse;
+                            width: 100%;
+                            max-width: 600px;
+                        }}
+                        th, td {{
+                            text-align: left;
+                            padding: 8px;
+                            border: 1px solid #ddd;
+                        }}
+                        th {{
+                            background-color: #f2f2f2;
+                            width: 30%;
+                        }}
+                        .button {{
+                            border: none;
+                            background-color: #f2f2f2;
+                            color: white;
+                            padding: 10px 20px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            border-radius: 4px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <p>Dear {approver_name},</p>
+                    <p><b>{employee_name}</b> has requested your approval for leave.</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <th>Leave Type</th>
+                            <td>{leave_type}</td>
+                        </tr>
+                        <tr>
+                            <th>From Date</th>
+                            <td>{from_date}</td>
+                        </tr>
+                        <tr>
+                            <th>To Date</th>
+                            <td>{to_date}</td>
+                        </tr>
+                        <tr>
+                            <th>Reason</th>
+                            <td>{description}</td>
+                        </tr>
+                        <tr>
+                            <th>Handover Comments</th>
+                            <td>{handover_comments}</td>
+                        </tr>
+                    </table>
+                    <br>
+                    <p>Please log in to the HRMS portal to review and take action.</p>
+                    <p><a href='https://hrms.flairminds.com/login' class='button'>View in HRMS</a></p>
+                    <br>
+                    <p>Regards,</p>
+                    <p>HRMS Team</p>
+                </body>
+                </html>
             """
             
             # Parse recipients
@@ -387,7 +463,7 @@ class EmailService:
             if not from_address or not from_password:
                 Logger.error("SMTP credentials not configured for leave notification")
                 raise ValueError("Email configuration missing: MAIL_USERNAME and MAIL_PASSWORD required")
-            from_name = "Leave Management System"
+            from_name = "HRMS"
             
             # Create message
             msg = MIMEMultipart()

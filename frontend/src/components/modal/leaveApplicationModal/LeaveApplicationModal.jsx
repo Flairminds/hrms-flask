@@ -143,7 +143,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
 
       const res = await insertLeaveTransaction(payload);
 
-      if (res.status === 200) {
+      if (res.status === 200 || res.status === 201) {
         toast.success(res.data || "Leave applied successfully");
 
         // Only close and reset on success

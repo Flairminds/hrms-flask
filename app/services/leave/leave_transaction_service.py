@@ -35,6 +35,13 @@ class LeaveTransactionService:
         if not emp_id or not from_date or not to_date or not applied_by:
             raise ValueError("Missing required fields for leave transaction")
 
+        # Fetch employee early to get leave approver
+        employee = Employee.query.filter_by(employee_id=emp_id).first()
+        if not employee:
+            raise ValueError(f"Employee not found with ID: {emp_id}")
+
+        approver_id = employee.team_lead_id
+
         if isinstance(from_date, str):
             from_date = datetime.strptime(from_date, '%Y-%m-%d')
         if isinstance(to_date, str):
@@ -139,7 +146,9 @@ class LeaveTransactionService:
                     if last_wfh and (from_date - last_wfh).days < 180:
                         raise ValueError("You have already taken a continuous 5-day WFH leave within the last 6 months.")
 
-                employee = Employee.query.filter_by(employee_id=emp_id).first()
+                if not employee: # Double check, though we checked above
+                     employee = Employee.query.filter_by(employee_id=emp_id).first()
+
                 lateral_info = LateralAndExempt.query.filter_by(employee_id=emp_id).first()
                 is_lateral = lateral_info.lateral_hire if lateral_info else False
                 
@@ -223,7 +232,7 @@ class LeaveTransactionService:
                             worked_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
                             # Check 2: Worked date expiry (3 months)
                             if worked_date < limit_date:
-                                raise ValueError(f"Comp-off worked date {worked_date_str} cannot be older than 3 months.")
+                                 raise ValueError(f"Comp-off worked date {worked_date_str} cannot be older than 3 months.")
                         except (ValueError, TypeError):
                              # Continue if format issues, or log warning
                              pass
@@ -272,21 +281,25 @@ class LeaveTransactionService:
                 approved_by=data.get('approvedBy'),
                 is_for_second_approval=is_second_approval,
                 leave_status=LeaveStatus.PENDING,
-                duration=duration
+                duration=duration,
+                approver_id=approver_id  # Store leave approver
             )
             db.session.add(new_leave)
             db.session.flush() # To get the leave_tran_id
             
             leave_tran_id = new_leave.leave_tran_id
 
-            comp_offs = data.get('compOffTransactions', [])
-            for co in comp_offs:
-                new_co = CompOffTransaction(
-                    leave_tran_id=leave_tran_id,
-                    comp_off_date=co.get('compOffDate'),
-                    duration=co.get('numberOfHours')
-                )
-                db.session.add(new_co)
+            leave_tran_id = new_leave.leave_tran_id
+
+            if leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF:
+                comp_offs = data.get('compOffTransactions', [])
+                for co in comp_offs:
+                    new_co = CompOffTransaction(
+                        leave_tran_id=leave_tran_id,
+                        comp_off_date=co.get('compOffDate'),
+                        duration=co.get('numberOfHours')
+                    )
+                    db.session.add(new_co)
             
             if leave_type_name == LeaveTypeName.CUSTOMER_HOLIDAY and customer_holiday_date:
                 new_ch = CustomerHoliday(
@@ -294,8 +307,54 @@ class LeaveTransactionService:
                     worked_date=customer_holiday_date
                 )
                 db.session.add(new_ch)
+
+            if leave_type_name == LeaveTypeName.WORKING_LATE_TODAY:
+                wl_data = data.get('workingLates', {})
+                if wl_data:
+                    new_wl = WorkingLate(
+                        leave_tran_id=leave_tran_id,
+                        from_time=wl_data.get('fromtime'),
+                        to_time=wl_data.get('totime'),
+                        reason_for_working_late=wl_data.get('reasonforworkinglate')
+                    )
+                    db.session.add(new_wl)
                 
             db.session.commit()
+            
+            # Send email notification to leave approver using stored approver_id
+            try:
+                from ..email_service import EmailService
+                
+                if approver_id:
+                    approver = Employee.query.filter_by(employee_id=approver_id).first()
+                    if approver and approver.email:
+                        employee_name = f"{employee.first_name} {employee.last_name}"
+                        
+                        # Prepare leave details for email
+                        leave_details = {
+                            'from_date': from_date,
+                            'to_date': to_date,
+                            'leave_type': leave_type_name,
+                            'description': comments,
+                            'handover_comments': data.get('handOverComments', 'N/A'),
+                            'approver_name': approver.first_name + ' ' + approver.last_name
+                        }
+                        
+                        Logger.info("Sending leave notification email", 
+                                   employee_name=employee_name, 
+                                   approver_email=approver.email)
+                        EmailService.send_leave_notification_email(employee_name, approver.email, leave_details)
+                    else:
+                        Logger.warning("Approver not found or no email", approver_id=approver_id)
+                else:
+                    Logger.warning("No approver_id for leave", leave_tran_id=leave_tran_id)
+                    
+            except Exception as email_error:
+                # Log the error but don't fail the transaction
+                Logger.error("Failed to send leave notification email", 
+                            employee_id=emp_id, 
+                            error=str(email_error))
+            
             return leave_tran_id
         except Exception as e:
             db.session.rollback()
