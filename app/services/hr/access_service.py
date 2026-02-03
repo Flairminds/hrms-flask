@@ -14,15 +14,6 @@ class AccessService:
         Logger.info("Executing UpsertEmployeeData logic", employee_id=employee_id)
         rows_affected = 0
         try:
-            # 1. Upsert EmployeeCredentials
-            creds = EmployeeCredentials.query.filter_by(employee_id=employee_id).first()
-            if creds:
-                creds.password = password
-            else:
-                new_creds = EmployeeCredentials(employee_id=employee_id, password=password)
-                db.session.add(new_creds)
-            rows_affected += 1
-            
             # 2. Upsert EmployeeRole
             emp_role = EmployeeRole.query.filter_by(employee_id=employee_id).first()
             if emp_role:
@@ -57,7 +48,6 @@ class AccessService:
                 (Employee.first_name + ' ' + Employee.last_name).label('employee_name'),
                 MasterRole.role_name,
                 Employee.email,
-                EmployeeCredentials.password,
                 Employee.employee_id
             ).join(EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
             ).join(MasterRole, EmployeeRole.role_id == MasterRole.role_id

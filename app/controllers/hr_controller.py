@@ -385,3 +385,75 @@ class HRController:
                 'status': 'error',
                 'message': 'An unexpected error occurred while fetching upcoming birthdays.'
             }), 500
+
+    @staticmethod
+    def get_designations():
+        """Retrieves all available designations/bands for dropdown population."""
+        Logger.info("Get designations request received")
+        
+        try:
+            designations = HRService.get_designations()
+            
+            Logger.info("Designations retrieved successfully", count=len(designations))
+            
+            return jsonify(designations), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_designations", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching designations.'
+            }), 500
+
+    @staticmethod
+    def get_sub_roles():
+        """Retrieves all available sub-roles for dropdown population."""
+        Logger.info("Get sub-roles request received")
+        
+        try:
+            sub_roles = HRService.get_sub_roles()
+            
+            Logger.info("Sub-roles retrieved successfully", count=len(sub_roles))
+            
+            return jsonify(sub_roles), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_sub_roles", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching sub-roles.'
+            }), 500
+
+    @staticmethod
+    def get_roles():
+        """Retrieves all available roles for dropdown population."""
+        Logger.info("Get roles request received")
+        
+        try:
+            roles = HRService.get_roles()
+            
+            Logger.info("Roles retrieved successfully", count=len(roles))
+            
+            return jsonify(roles), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_roles", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching roles.'
+            }), 500
+
+    @staticmethod
+    def get_all_skills():
+        """Retrieves all available skills for dropdown population."""
+        Logger.info("Get all skills request received")
+        
+        try:
+            skills = HRService.get_all_skills()
+            
+            Logger.info("Skills retrieved successfully", count=len(skills))
+            
+            return jsonify(skills), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_all_skills", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching skills.'
+            }), 500

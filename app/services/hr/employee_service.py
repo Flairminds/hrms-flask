@@ -263,12 +263,10 @@ class EmployeeService:
                 )
                 
                 if credentials:
-                    credentials.password = password
                     credentials.password_hash = password_hash
                 else:
                     new_credentials = EmployeeCredentials(
                         employee_id=emp_id,
-                        password=password,
                         password_hash=password_hash
                     )
                     db.session.add(new_credentials)
@@ -800,7 +798,6 @@ class EmployeeService:
             )
             new_credentials = EmployeeCredentials(
                 employee_id=employee_id,
-                password=password,  # Store plain text as per existing schema (backward compatibility)
                 password_hash=password_hash  # Store secure hash
             )
             db.session.add(new_credentials)
@@ -908,7 +905,7 @@ class EmployeeService:
                 MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
             ).filter(
                 Employee.date_of_joining >= two_months_ago,
-                Employee.employment_status == 'Active'
+                Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding'])
             ).order_by(
                 Employee.date_of_joining.desc()
             ).all()
@@ -948,7 +945,7 @@ class EmployeeService:
                 Employee.last_name,
                 Employee.date_of_birth
             ).filter(
-                Employee.employment_status == 'Active',
+                Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding']),
                 Employee.date_of_birth != None
             )
             

@@ -30,6 +30,17 @@ class RoleService:
             raise e
 
     @staticmethod
+    def get_employee_roles() -> List[Dict[str, Any]]:
+        """Retrieves all employee roles from master_role table."""
+        try:
+            roles = MasterRole.query.with_entities(
+                MasterRole.role_id, MasterRole.role_name).all()
+            return [{'role_id': r.role_id, 'role_name': r.role_name} for r in roles]
+        except Exception as e:
+            Logger.error("Error fetching roles", error=str(e))
+            raise e
+
+    @staticmethod
     def get_designations() -> List[Dict[str, Any]]:
         """Retrieves all available designations."""
         try:

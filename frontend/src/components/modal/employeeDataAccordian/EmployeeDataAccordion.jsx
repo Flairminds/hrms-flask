@@ -14,7 +14,7 @@ import styles from './EmployeeDataAccordion.module.css';
 import { indianStates } from '../../../util/helper';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import { getAllEmployeeSkills, getBands1, getRoles1, insertEmployee, getPotentialApprovers } from '../../../services/api';
+import { getAllEmployeeSkills, getBands1, getRoles1, getMasterRoles, insertEmployee, getPotentialApprovers } from '../../../services/api';
 import { toast } from 'react-toastify';
 import WidgetCard from '../../common/WidgetCard';
 
@@ -27,6 +27,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
     const [copyAddress, setCopyAddress] = useState(false);
     const [companyBand, setCompanyBand] = useState([]);
     const [companyRole, setCompanyRole] = useState([]);
+    const [companyMasterRole, setCompanyMasterRole] = useState([]);
     const [skillEmp, setSkillEmp] = useState([]);
     const [potentialApprovers, setPotentialApprovers] = useState([]);
     const optionsSkill = useRef([]);
@@ -45,8 +46,13 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
     const getEmployeeSkill = async () => {
         try {
             const res = await getAllEmployeeSkills();
-            setSkillEmp(res.data);
-            optionsSkill.current = res.data;
+            // Map snake_case to camelCase for consistency with form
+            const mappedSkills = res.data.map(skill => ({
+                skillId: skill.skill_id,
+                skillName: skill.skill_name
+            }));
+            setSkillEmp(mappedSkills);
+            optionsSkill.current = mappedSkills;
         } catch (err) {
             console.error('Error fetching skills:', err);
         }
@@ -61,39 +67,57 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
         }
     };
 
-    const getCompanyBandsFtn = async () => {
+    // Fetch bands (designations)
+    const fetchBand = async () => {
         try {
-            const res = await getBands1();
-            setCompanyBand(res.data || []);
+            const response = await getBands1();
+            setCompanyBand(response.data || []);
         } catch (error) {
             console.error('Error fetching company bands', error);
         }
     };
 
-    const getCompanyRolesFtn = async () => {
+    // Fetch sub-roles
+    const fetchRoles = async () => {
         try {
-            const res = await getRoles1();
-            setCompanyRole(res.data || []);
+            const response = await getRoles1();
+            setCompanyRole(response.data || []);
         } catch (error) {
-            console.error('Error fetching company roles', error);
+            console.error('Error fetching company sub-roles', error);
+        }
+    };
+
+    // Fetch master roles
+    const fetchMasterRoles = async () => {
+        try {
+            const response = await getMasterRoles();
+            setCompanyMasterRole(response.data || []);
+        } catch (error) {
+            console.error('Error fetching company master roles', error);
         }
     };
 
     useEffect(() => {
-        getCompanyBandsFtn();
-        getCompanyRolesFtn();
+        fetchBand();
+        fetchRoles();
+        fetchMasterRoles();
         getEmployeeSkill();
         fetchPotentialApprovers();
     }, []);
 
     const getDesignationId = (designationName) => {
-        const designation = companyBand?.find(item => item.designationName === designationName);
-        return designation ? designation.designationId : null;
+        const designation = companyBand?.find(item => item.designation_name === designationName);
+        return designation ? designation.designation_id : null;
     };
 
     const getRoleId = (role) => {
-        const getRole = companyRole.find(item => item.subRoleName === role);
-        return getRole ? getRole.subRoleId : null;
+        const getRole = companyRole.find(item => item.sub_role_name === role);
+        return getRole ? getRole.sub_role_id : null;
+    };
+
+    const getMasterRoleId = (roleName) => {
+        const role = companyMasterRole?.find(item => item.role_name === roleName);
+        return role ? role.role_id : null;
     };
 
     const fethNameById = (id) => {
@@ -116,7 +140,8 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             gender: data.gender === 'Male' ? 'M' : 'F',
             bloodGroup: data.bloodGroup,
             band: getDesignationId(data.band),
-            MasterSubRole: getRoleId(data.role),
+            sub_role: getRoleId(data.MasterSubRole), // Sub-role ID
+            role_id: getMasterRoleId(data.role), // Master role ID for EmployeeRole table
             dateOfBirth: data.dateOfBirth,
             dateOfJoining: data.dateOfJoining,
             highestQualification: data.highestQualification,
@@ -139,14 +164,14 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             },
             skills: [
                 ...(data.primarySkills || []).map((skill) => ({
-                    skillId: skill,
-                    skillName: fethNameById(skill),
-                    skillLevel: 'Primary'
+                    skill_id: skill,
+                    skill_name: fethNameById(skill),
+                    skill_level: 'Primary'
                 })),
                 ...(data.secondarySkills || []).map((skill) => ({
-                    skillId: skill,
-                    skillName: fethNameById(skill),
-                    skillLevel: 'Secondary'
+                    skill_id: skill,
+                    skill_name: fethNameById(skill),
+                    skill_level: 'Secondary'
                 }))
             ],
             resumeLink: data.resumeLink || '',
@@ -157,15 +182,21 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
         setLoader(true);
         try {
             const transformedData = transformData(values);
+            console.log('Transformed data being sent:', transformedData);
+            console.log('Skills data:', transformedData.skills);
             const res = await insertEmployee(transformedData);
-            if (res.status === 200) {
-                getEmployees();
+            if (res.status === 200 || res.status === 201) {
+                form.resetFields();
+                setIsAccordionVisible(false);
+                message.success("Employee added successfully");
+                // Refresh employee list after modal closes
+                if (getEmployees) {
+                    getEmployees();
+                }
             }
-            form.resetFields();
-            setIsAccordionVisible(false);
-            message.success("Employee added successfully");
         } catch (error) {
-            toast.error(error.message);
+            console.error('Error adding employee:', error);
+            toast.error(error?.response?.data?.message || error.message || "Failed to add employee");
         } finally {
             setLoader(false);
         }
@@ -208,7 +239,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                     <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>Add New Employee</span>
                 </div>
             }
-            styles={{ body: { overflowY: 'auto', maxHeight: '80vh', padding: '20px' } }}
+            styles={{ body: { overflowY: 'auto', maxHeight: '80vh', padding: '16px' } }}
         >
             <Form
                 form={form}
@@ -218,7 +249,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                     employmentStatus: 'Probation'
                 }}
             >
-                <Row gutter={[24, 24]}>
+                <Row gutter={[16, 12]}>
                     {/* Personal Information */}
                     <Col xs={24} lg={12}>
                         <WidgetCard
@@ -227,7 +258,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             iconColor="#1890ff"
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8', height: '100%' }}
                         >
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[12, 4]}>
                                 <Col span={12}>
                                     <Form.Item
                                         label="First Name"
@@ -292,7 +323,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                     <Form.Item
                                         label="Blood Group"
                                         name="bloodGroup"
-                                        rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <Input placeholder="Blood Group" />
                                     </Form.Item>
@@ -331,7 +361,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             iconColor="#fa8c16"
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8', height: '100%' }}
                         >
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[16, 8]}>
                                 <Col span={24}>
                                     <Form.Item
                                         label={<><MailOutlined style={{ marginRight: '8px' }} />Official Email</>}
@@ -371,8 +401,8 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                     >
                                         <Select placeholder="Select band" showSearch>
                                             {companyBand.map(band => (
-                                                <Option key={band.designationId} value={band.designationName}>
-                                                    {band.designationName}
+                                                <Option key={band.designation_id} value={band.designation_name}>
+                                                    {band.designation_name}
                                                 </Option>
                                             ))}
                                         </Select>
@@ -385,9 +415,24 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <Select placeholder="Select role" showSearch>
+                                            {companyMasterRole.map(role => (
+                                                <Option key={role.role_id} value={role.role_name}>
+                                                    {role.role_name}
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        label="Sub-Role"
+                                        name="MasterSubRole"
+                                        rules={[{ required: false, message: 'Required' }]}
+                                    >
+                                        <Select placeholder="Select sub-role" showSearch>
                                             {companyRole.map(role => (
-                                                <Option key={role.subRoleId} value={role.subRoleName}>
-                                                    {role.subRoleName}
+                                                <Option key={role.sub_role_id} value={role.sub_role_name}>
+                                                    {role.sub_role_name}
                                                 </Option>
                                             ))}
                                         </Select>
@@ -442,12 +487,11 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             iconColor="#ff4d4f"
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}
                         >
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[16, 8]}>
                                 <Col span={12}>
                                     <Form.Item
                                         label="Contact Person"
                                         name="emergencyContactPerson"
-                                        rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <Input placeholder="Name" />
                                     </Form.Item>
@@ -456,7 +500,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                     <Form.Item
                                         label="Relation"
                                         name="emergencyContactRelation"
-                                        rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <Input placeholder="Relation" />
                                     </Form.Item>
@@ -465,7 +508,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                     <Form.Item
                                         label="Contact Number"
                                         name="emergencyContactNumber"
-                                        rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <PhoneInput
                                             international
@@ -486,9 +528,13 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             iconColor="#722ed1"
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}
                         >
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[16, 8]}>
                                 <Col span={24}>
-                                    <Form.Item label="Primary Skills" name="primarySkills">
+                                    <Form.Item
+                                        label="Primary Skills"
+                                        name="primarySkills"
+                                        rules={[{ required: true, message: 'Required' }]}
+                                    >
                                         <Select
                                             mode="multiple"
                                             placeholder="Select primary skills"
@@ -535,7 +581,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             iconColor="#52c41a"
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}
                         >
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[16, 8]}>
                                 <Col span={24}>
                                     <Form.Item
                                         label="Address Line 1"
@@ -599,7 +645,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             >
                                 Same as Current Address
                             </Checkbox>
-                            <Row gutter={[16, 16]}>
+                            <Row gutter={[16, 8]}>
                                 <Col span={24}>
                                     <Form.Item
                                         label="Address Line 1"

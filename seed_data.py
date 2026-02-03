@@ -328,12 +328,12 @@ def seed_all():
     print("="*50 + "\n")
     
     try:
-        seed_master_roles()
-        seed_master_sub_roles()
-        seed_master_skills()
-        seed_master_designation()
-        seed_holidays()
-        seed_leave_types()
+        # seed_master_roles()
+        # seed_master_sub_roles()
+        # seed_master_skills()
+        # seed_master_designation()
+        # seed_holidays()
+        # seed_leave_types()
         seed_hr_employee()
         
         db.session.commit()

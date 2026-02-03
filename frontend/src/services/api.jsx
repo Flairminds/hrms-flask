@@ -258,19 +258,25 @@ export const getCompanyRoles = () => {
 
 // Inserts a new employee record.
 export const insertEmployee = async (payload) => {
-  const res = await axiosInstance.post(`${API_BASE_URL}/EmployeesDetails/InsertEmployee`, payload)
+  const res = await axiosInstance.post(`${API_BASE_URL}/hr/insert-employee`, payload)
   return res;
 }
 
 // Retrieves all company bands.
 export const getBands1 = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/EmployeesDetails/Bands`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-designations`)
   return res;
 }
 
 // Retrieves all company roles.
 export const getRoles1 = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/EmployeesDetails/SubRoles`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-sub-roles`)
+  return res;
+}
+
+// Retrieves all master roles.
+export const getMasterRoles = () => {
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-roles`)
   return res;
 }
 
@@ -385,7 +391,7 @@ export const getMonthlyReport = (month, year) => {
 
 // Gets the list of all employee skills.
 export const getAllEmployeeSkills = () => {
-  return axiosInstance.get('/EmployeesDetails/Skills/All');
+  return axiosInstance.get('/hr/get-all-skills');
 };
 
 // Gets the list of all projects.

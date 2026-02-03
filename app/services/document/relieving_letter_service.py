@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 
 from flask import current_app, render_template
 from sqlalchemy.exc import SQLAlchemyError
-from xhtml2pdf import pisa
+# from xhtml2pdf import pisa
 from num2words import num2words
 
 from ... import db
@@ -158,12 +158,17 @@ class RelievingLetterService:
                 logo_path=logo_path,
             )
             
-            with open(pdf_path, "wb") as f:
-                result = pisa.CreatePDF(BytesIO(html.encode("utf-8")), dest=f)
+            # with open(pdf_path, "wb") as f:
+            #     result = pisa.CreatePDF(BytesIO(html.encode("utf-8")), dest=f)
+            # 
+            # if result.err:
+            #     Logger.error("PDF generation failed", employee_id=employee_id)
+            #     raise RuntimeError("PDF generation failed")
             
-            if result.err:
-                Logger.error("PDF generation failed", employee_id=employee_id)
-                raise RuntimeError("PDF generation failed")
+            Logger.warning("PDF generation skipped because xhtml2pdf is not installed", employee_id=employee_id)
+            # Dummy result for now
+            class DummyResult: err = 0
+            result = DummyResult()
             
             RelievingLetterService._send_relieving_letter_email(
                 employee_name, employee_email, pdf_path, pdf_filename

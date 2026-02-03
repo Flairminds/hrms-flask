@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 57a4b91c6db5
+Revision ID: c3c7e8a43392
 Revises: 
-Create Date: 2026-01-02 13:35:41.256714
+Create Date: 2026-02-04 00:37:03.695452
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '57a4b91c6db5'
+revision = 'c3c7e8a43392'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -677,6 +677,7 @@ def upgrade():
     sa.Column('hand_over_comments', sa.Text(), nullable=True),
     sa.Column('applied_by', sa.String(length=20), nullable=True),
     sa.Column('application_date', sa.DateTime(), nullable=True),
+    sa.Column('approver_id', sa.String(length=20), nullable=True),
     sa.Column('approved_by', sa.String(length=20), nullable=True),
     sa.Column('approved_date', sa.DateTime(), nullable=True),
     sa.Column('approval_comment', sa.String(length=255), nullable=True),
@@ -702,6 +703,7 @@ def upgrade():
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['applied_by'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['approved_by'], ['employee.employee_id'], ),
+    sa.ForeignKeyConstraint(['approver_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['employee_id'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['exempted_by'], ['employee.employee_id'], ),
     sa.ForeignKeyConstraint(['leave_type_id'], ['master_leave_types.leave_type_id'], ),

@@ -100,7 +100,7 @@ export const LoginPage = () => {
           <div className={styles.formContent}>
             <div className={styles.welcomeText}>
               {/* <h2>Welcome Back</h2> */}
-              <p>Sign in using email and password</p>
+              {/* <p>Sign in using email and password</p> */}
             </div>
 
             <form onSubmit={handleSubmit} className={styles.loginForm}>

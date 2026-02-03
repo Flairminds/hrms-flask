@@ -89,6 +89,11 @@ class HRService:
         return RoleService.get_sub_roles()
 
     @staticmethod
+    def get_roles():
+        """Retrieves all roles from master_role table."""
+        return RoleService.get_employee_roles()
+
+    @staticmethod
     def insert_sub_role(sub_role_name):
         return RoleService.insert_sub_role(sub_role_name)
 

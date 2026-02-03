@@ -59,3 +59,23 @@ def get_new_joinees():
 @roles_required(*ROLE_PERMISSIONS['hr']['get_upcoming_birthdays'])
 def get_upcoming_birthdays():
     return HRController.get_upcoming_birthdays()
+
+@hr_bp.route('/get-designations', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_designations():
+    return HRController.get_designations()
+
+@hr_bp.route('/get-sub-roles', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_sub_roles():
+    return HRController.get_sub_roles()
+
+@hr_bp.route('/get-roles', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_roles():
+    return HRController.get_roles()
+
+@hr_bp.route('/get-all-skills', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_all_skills():
+    return HRController.get_all_skills()
