@@ -7,7 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
 import { convertDate, getWeekDay } from '../../../util/helperFunctions';
 
-export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange, selectedRange }) => {
+export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange, selectedRange, readOnly = false }) => {
   const [isConfirmationChecklistModalOpen, setIsConfirmationChecklistModalOpen] = useState(false);
   const [shouldReopenLeaveStatusPending, setShouldReopenLeaveStatusPending] = useState(false);
   const [approverComments, setApproverComments] = useState('');
@@ -45,6 +45,16 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     // return () => clearInterval(intervalId);
   }, []);
 
+  // Populate data when in read-only mode
+  useEffect(() => {
+    if (readOnly && employee) {
+      setApproverComments(employee.approvalComment || employee.approverComment || '');
+      setInformedCustomer(employee.isCustomerApprovalRequired || employee.haveCustomerApproval || false);
+      setCommunicatedWithinTeam(employee.isCommunicatedToTeam || false);
+      setHandedOverResponsibilities(employee.isBillable || false);
+    }
+  }, [readOnly, employee]);
+
   const shouldShowCheckboxes = ![
     "Visiting Client Location",
     "Customer Holiday",
@@ -73,79 +83,74 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
 
   const handleApprove = async () => {
     setIsButtonDisabled(true);
-    console.log(employee);
+    const approverId = getCookie('employeeId');
 
-    const updatedData = {
-      leaveTranId: leaveTranId,
+    const tranId = employee.leaveTranId || employee.LeaveTranId || employee.leave_tran_id;
+    const payload = {
+      leaveTranId: tranId,
       leaveStatus: "Approved",
       approverComment: approverComments,
-      isBillable: isBillable,
-      isCommunicatedToTeam: isCommunicatedToTeam,
-      isCustomerApprovalRequired: isCustomerApprovalRequired,
-      approvedById: approvedById
+      isBillable: false,
+      isCommunicatedToTeam: communicatedWithinTeam,
+      isCustomerApprovalRequired: false,
+      approvedById: approverId
     };
 
     try {
-      await updateLeaveStatus({
-        leaveTranId: updatedData.leaveTranId,
-        leaveStatus: updatedData.leaveStatus,
-        approverComment: updatedData.approverComment,
-        isBillable: updatedData.isBillable,
-        isCommunicatedToTeam: updatedData.isCommunicatedToTeam,
-        isCustomerApprovalRequired: updatedData.isCustomerApprovalRequired,
-        approvedById: updatedData.approvedById
-      });
-      fetchEmployeeData();
-      toast.success('Leave approved successfully..');
+      const response = await updateLeaveStatus(payload);
+      await fetchEmployeeData();
+
+      setApproverComments('');
+      setInformedCustomer(false);
+      setCommunicatedWithinTeam(false);
+      setHandedOverResponsibilities(false);
+      setIsLeaveApprovalModalOpen(false);
+      onStatusChange(payload.leaveStatus);
+
+      toast.success(response?.data?.Message || 'Leave approved successfully');
     } catch (error) {
       console.error('Failed to update leave status:', error);
+      const errorMsg = error?.response?.data?.Message || error?.response?.data?.message || 'Failed to approve leave';
+      toast.error(errorMsg);
+    } finally {
+      setIsButtonDisabled(false);
     }
-
-    setApproverComments('');
-    setInformedCustomer(false);
-    setCommunicatedWithinTeam(false);
-    setHandedOverResponsibilities(false);
-    setIsLeaveApprovalModalOpen(false);
-    onStatusChange(updatedData.leaveStatus);
-    setIsButtonDisabled(false);
   };
 
   const handleReject = async () => {
     setIsButtonDisabled(true);
+    const approverId = getCookie('employeeId');
 
-    const updatedData = {
-      leaveTranId: leaveTranId,
+    const tranId = employee.leaveTranId || employee.LeaveTranId || employee.leave_tran_id;
+    const payload = {
+      leaveTranId: tranId,
       leaveStatus: "Reject",
       approverComment: approverComments,
-      isBillable: isBillable,
-      isCommunicatedToTeam: isCommunicatedToTeam,
-      isCustomerApprovalRequired: isCustomerApprovalRequired,
-      approvedById: approvedById
+      isBillable: false,
+      isCommunicatedToTeam: communicatedWithinTeam,
+      isCustomerApprovalRequired: false,
+      approvedById: approverId
     };
 
     try {
-      await updateLeaveStatus(
-        updatedData.leaveTranId,
-        updatedData.leaveStatus,
-        updatedData.approverComment,
-        updatedData.isBillable,
-        updatedData.isCommunicatedToTeam,
-        updatedData.isCustomerApprovalRequired,
-        updatedData.approvedById
-      );
-      fetchEmployeeData();
-      toast.success('Leave rejected');
+      const response = await updateLeaveStatus(payload);
+      await fetchEmployeeData();
+
+      setApproverComments('');
+      setInformedCustomer(false);
+      setCommunicatedWithinTeam(false);
+      setHandedOverResponsibilities(false);
+      setIsLeaveApprovalModalOpen(false);
+      onStatusChange(payload.leaveStatus);
+
+      toast.success(response?.data?.Message || 'Leave rejected successfully');
     } catch (error) {
       console.error('Failed to update leave status:', error);
+      const errorMsg = error?.response?.data?.Message || error?.response?.data?.message || 'Failed to reject leave';
+      toast.error(errorMsg);
+    } finally {
+      setIsButtonDisabled(false);
     }
-
-    setApproverComments('');
-    setInformedCustomer(false);
-    setCommunicatedWithinTeam(false);
-    setHandedOverResponsibilities(false);
-    setIsLeaveApprovalModalOpen(false);
-    onStatusChange(updatedData.leaveStatus);
-    setIsButtonDisabled(false);
   };
 
 
@@ -164,8 +169,13 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const handleCommentsChange = (e) => {
     const value = e.target.value;
     setApproverComments(value);
-    setIsCommentValid(false);
-    setErrorMessage("Comments must be at least 5 characters");
+    if (value.length >= 5) {
+      setIsCommentValid(true);
+      setErrorMessage("");
+    } else {
+      setIsCommentValid(false);
+      setErrorMessage("Comments must be at least 5 characters");
+    }
   };
 
   const handleCancel = () => {
@@ -178,11 +188,19 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
 
   return (
     <>
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+      />
       <Modal
-        title="Pending Leave Details"
+        title={readOnly ? "Leave Details" : "Pending Leave Details"}
         open={isLeaveApprovalModalOpen}
         onCancel={handleCancel}
-        footer={[
+        footer={readOnly ? null : [
           <Button key="cancel" onClick={handleReject} className={styles.cancelButton} disabled={isButtonDisabled}>
             Reject
           </Button>,
@@ -295,12 +313,13 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
           <div className={styles.heading}>Approver's Comments</div>
           <Input.TextArea
             rows={2}
-            placeholder="Enter your comments here"
+            placeholder={readOnly ? "No comments provided" : "Enter your comments here"}
             style={{ width: '100%', borderRadius: '8px' }}
             value={approverComments}
             onChange={handleCommentsChange}
+            disabled={readOnly}
           />
-          {employee.leaveTypeName === "Missed Door Entry" && !isCommentValid && (
+          {employee.leaveTypeName === "Missed Door Entry" && !isCommentValid && !readOnly && (
             <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errorMessage}</div>
           )}
         </div>
@@ -315,6 +334,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                   type="checkbox"
                   checked={informedCustomer}
                   onChange={handleCheckboxChange(setInformedCustomer)}
+                  disabled={readOnly}
                 />
                 <label className={styles.space}> Received and Reviewed Customer Approval?</label>
                 <div style={{ marginTop: '12px' }}>
@@ -344,6 +364,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                   type="checkbox"
                   checked={informedCustomer}
                   onChange={handleCheckboxChange(setInformedCustomer)}
+                  disabled={readOnly}
                 />
                 <label className={styles.space}> Received and Reviewed Customer Approval?</label>
                 <div style={{ marginTop: '12px' }}>
@@ -365,6 +386,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                       type="checkbox"
                       checked={informedCustomer}
                       onChange={handleCheckboxChange(setInformedCustomer)}
+                      disabled={readOnly}
                     />
                     <label className={styles.space}> Informed Customer?</label>
                   </div>
@@ -373,6 +395,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                       type="checkbox"
                       checked={communicatedWithinTeam}
                       onChange={handleCheckboxChange(setCommunicatedWithinTeam)}
+                      disabled={readOnly}
                     />
                     <label className={styles.space}> Communicated Within The Team?</label>
                   </div>
@@ -381,6 +404,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
                       type="checkbox"
                       checked={handedOverResponsibilities}
                       onChange={handleCheckboxChange(setHandedOverResponsibilities)}
+                      disabled={readOnly}
                     />
                     <label className={styles.space}> Handed Over Or Planned Responsibilities To Others?</label>
                   </div>
@@ -395,7 +419,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         setIsConfirmationChecklistModalOpen={handleConfirmationModalCancel}
         shouldReopenLeaveStatusPending={shouldReopenLeaveStatusPending}
         setShouldReopenLeaveStatusPending={setShouldReopenLeaveStatusPending}
-      // employee={updatedEmployee}
+        employee={employee}
       />
     </>
   );

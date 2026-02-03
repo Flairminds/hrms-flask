@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Select, Empty } from "antd";
 import styles from "./LeaveTable.module.css";
 import { LeaveStatusPending } from "../modal/leaveStatusPending/LeaveStatusPending";
-import { LeaveStatusApproved } from "../modal/leaveStatusApproved/LeaveStatusApproved";
 import { getLeaveTransactionsByApprover } from "../../services/api";
 // import {tableHeadersTM} from "../../util/leavetableData"
 import { tableHeadersTM } from "../../util/leavetableData"
@@ -52,7 +51,7 @@ export const LeaveTablePending = ({ isRole }) => {
   const [employeeNames, setEmployeeNames] = useState([]);
   const [selectedEmployeeName, setSelectedEmployeeName] = useState('');
 
-  const yearRanges = ["2022-2023", "2023-2024", "2024-2025", "2025-2026"];
+  const yearRanges = ["2022-2023", "2023-2024", "2024-2025", "2025-2026", "2026-2027"];
   const [selectedRange, setSelectedRange] = useState("2025");
 
 
@@ -119,20 +118,24 @@ export const LeaveTablePending = ({ isRole }) => {
   };
 
   const handleStatusChange = (newStatus) => {
+    const tranId = selectedEmployee.leaveTranId || selectedEmployee.LeaveTranId || selectedEmployee.leave_tran_id;
     setMyEmployeeData((prevData) =>
-      prevData.map((emp) =>
-        emp.LeaveTranId === selectedEmployee.leaveTranId
-          ? { ...emp, LeaveStatus: newStatus }
-          : emp
-      )
+      prevData.map((emp) => {
+        const empTranId = emp.leaveTranId || emp.LeaveTranId || emp.leave_tran_id;
+        return empTranId === tranId
+          ? { ...emp, leaveStatus: newStatus }
+          : emp;
+      })
     );
     setSelectedEmployee((prev) => ({ ...prev, leaveStatus: newStatus }));
   };
   const handleApprovedStatus = (employee) => {
+    console.log('handleApprovedStatus called for:', employee);
     const transformedEmployee = {
       ...employee,
       leaveTypeName: getLeaveTypeName(employee.leaveType),
     };
+    console.log('Transformed employee:', transformedEmployee);
     setSelectedEmployee(transformedEmployee);
     setLeaveModalOpen(true);
   };
@@ -208,13 +211,26 @@ export const LeaveTablePending = ({ isRole }) => {
               <tr key={index} onClick={() => {
                 if ((employee['leaveStatus'] === "Pending") || (employee['leaveStatus'] === "Partial Approved")) {
                   handlePendingStatus(employee);
-                } else if (employee['leaveStatus'] === "Approved" || employee['leaveStatus'] === "Reject") {
+                } else {
                   handleApprovedStatus(employee);
                 }
               }}>
                 {tableHeadersTM.map((header, subIndex) => (
                   <td key={subIndex}>
-                    <div className={`${header.key === "leaveStatus" ? styles.rejectedLeave : ""}`}>
+                    <div className={`${header.key === "leaveStatus"
+                      ? employee[header.key] === "Pending"
+                        ? styles.pendingLeave
+                        : employee[header.key] === "Approved"
+                          ? styles.approvedLeave
+                          : employee[header.key] === "Cancel"
+                            ? styles.canceledLeave
+                            : employee[header.key] === "Reject"
+                              ? styles.rejectedLeave
+                              : employee[header.key] === "Partial Approved"
+                                ? styles.partialApprovedLeave
+                                : ""
+                      : ""
+                      }`}>
                       {header.key === "leaveType" ? getLeaveTypeName(employee[header.key]) : header.dataFormat === "date" ? convertDate(employee[header.key]) : employee[header.key]}
                     </div>
                   </td>
@@ -231,19 +247,7 @@ export const LeaveTablePending = ({ isRole }) => {
           </tbody>
         </table>
       </div>
-      {
-        selectedEmployee && (selectedEmployee.leaveStatus === "Partial Approved") && (user.role !== "Lead") && (
-          <LeaveStatusPending
-            setMyEmployeeData={setMyEmployeeData} setLoading={setLoading}
-            isLeaveApprovalModalOpen={isLeaveModalOpen}
-            setIsLeaveApprovalModalOpen={setLeaveModalOpen}
-            employee={selectedEmployee}
-            onStatusChange={handleStatusChange}
-            selectedRange={selectedRange}
-          />
-        )
-      }
-      {selectedEmployee && (selectedEmployee.leaveStatus === "Pending") && (
+      {selectedEmployee && (
         <LeaveStatusPending
           setMyEmployeeData={setMyEmployeeData} setLoading={setLoading}
           isLeaveApprovalModalOpen={isLeaveModalOpen}
@@ -251,15 +255,7 @@ export const LeaveTablePending = ({ isRole }) => {
           employee={selectedEmployee}
           onStatusChange={handleStatusChange}
           selectedRange={selectedRange}
-        />
-      )}
-      {selectedEmployee && (selectedEmployee.leaveStatus === "Approved" || selectedEmployee.leaveStatus === "Reject" || (selectedEmployee.leaveStatus === "Partial Approved" && user.role === "Lead")) && (
-        <LeaveStatusApproved
-          isLeaveApprovalModalOpen={isLeaveModalOpen}
-          setIsLeaveApprovalModalOpen={setLeaveModalOpen}
-          employee={selectedEmployee}
-          onStatusChange={handleStatusChange}
-          selectedRange={selectedRange}
+          readOnly={selectedEmployee.leaveStatus === 'Pending' || selectedEmployee.leaveStatus === 'Partial Approved' ? false : true}
         />
       )}
     </div>

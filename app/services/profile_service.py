@@ -69,8 +69,9 @@ class ProfileService:
         Cancels a leave transaction using ORM.
         
         Business Rules:
-        1. If from_date is in the future: can cancel any status except already CANCELLED.
-        2. If from_date is in the past or today: can cancel only if status is PENDING or APPROVED.
+        1. Leave can be cancelled if from_date is today or in the future
+        2. Leave cannot be cancelled if status is already CANCELLED or REJECTED
+        3. Any other status (PENDING, APPROVED, PARTIAL_APPROVED, etc.) can be cancelled
         
         Returns:
             "Success" - Transaction cancelled successfully
@@ -83,20 +84,16 @@ class ProfileService:
                 Logger.warning("Leave cancellation failed - transaction not found", leave_tran_id=leave_tran_id)
                 return "Not Found"
             
-            now = datetime.now()
-            # If from_date is in the future, we allow cancellation for any status (except already cancelled)
-            # If from_date is in the past, we follow the existing rule (Pending/Approved only)
-            is_future = leave.from_date > now
+            today = datetime.now().date()
+            from_date = leave.from_date.date() if isinstance(leave.from_date, datetime) else leave.from_date
             
-            can_cancel = False
-            if is_future:
-                if leave.leave_status != LeaveStatus.CANCELLED:
-                    can_cancel = True
-            else:
-                if leave.leave_status in [LeaveStatus.PENDING, LeaveStatus.APPROVED]:
-                    can_cancel = True
+            # Check if from_date is today or in the future
+            is_cancellable_by_date = from_date >= today
             
-            if can_cancel:
+            # Check if status allows cancellation (not already Cancelled or Rejected)
+            is_cancellable_by_status = leave.leave_status not in [LeaveStatus.CANCELLED, LeaveStatus.REJECTED]
+            
+            if is_cancellable_by_date and is_cancellable_by_status:
                 old_status = leave.leave_status
                 leave.leave_status = LeaveStatus.CANCELLED
                 db.session.commit()
@@ -104,14 +101,20 @@ class ProfileService:
                            leave_tran_id=leave_tran_id, 
                            old_status=old_status,
                            new_status=LeaveStatus.CANCELLED,
-                           is_future=is_future)
+                           from_date=str(from_date))
                 return "Success"
             
-            Logger.warning("Leave cancellation failed - constraints not met", 
-                          leave_tran_id=leave_tran_id, 
-                          current_status=leave.leave_status,
-                          from_date=str(leave.from_date),
-                          is_future=is_future)
+            # Log the specific reason for failure
+            if not is_cancellable_by_date:
+                Logger.warning("Leave cancellation failed - from_date is in the past", 
+                              leave_tran_id=leave_tran_id, 
+                              from_date=str(from_date),
+                              today=str(today))
+            elif not is_cancellable_by_status:
+                Logger.warning("Leave cancellation failed - status is Cancelled or Rejected", 
+                              leave_tran_id=leave_tran_id, 
+                              current_status=leave.leave_status)
+            
             return "Not Cancellable"
         except Exception as e:
             db.session.rollback()

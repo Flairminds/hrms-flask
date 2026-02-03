@@ -124,7 +124,7 @@ class LeaveQueryService:
                         LeaveTransaction.to_date <= datetime(2026, 3, 31)
                     )
                 ),
-                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED]),
+                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED, "Rejected", "Cancelled"]),
                 ~LeaveTransaction.leave_tran_id.in_([10598, 10599, 10601, 10618, 10634])
             ).group_by(
                 LeaveTransaction.leave_type_id,

@@ -5,8 +5,8 @@ Centralized constants for the HRMS-LMS Flask backend.
 class LeaveStatus:
     PENDING = 'Pending'
     APPROVED = 'Approved'
-    REJECTED = 'Rejected'
-    CANCELLED = 'Cancelled'
+    REJECTED = 'Reject'
+    CANCELLED = 'Cancel'
     PARTIAL_APPROVED = 'Partial Approved'
 
 class LeaveTypeName:

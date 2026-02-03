@@ -117,27 +117,45 @@ class LeaveController:
         Logger.info("Update leave status request received")
         
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
             if not data:
-                Logger.warning("Empty request body for leave status update")
-                return jsonify({"Message": "Request body must be JSON"}), 400
+                Logger.warning("Invalid or empty JSON body")
+                return jsonify({"Message": "Request body must be a valid JSON"}), 400
                 
-            tran_id = data.get('LeaveTranId')
-            status = data.get('LeaveStatus')
-            approved_by = data.get('ApprovedBy')
+            Logger.info("Update leave status payload received", data=data)
             
-            approver_comment = data.get('ApproverComment')
-            is_billable = data.get('IsBillable', False)
-            is_communicated_to_team = data.get('IsCommunicatedToTeam', False)
-            is_customer_approval_required = data.get('IsCustomerApprovalRequired', False)
+            # Robust extraction with fallback and type safety
+            raw_tran_id = data.get('leaveTranId') or data.get('LeaveTranId')
+            raw_status = data.get('leaveStatus') or data.get('LeaveStatus')
+            
+            # Required fields validation
+            if raw_tran_id is None or raw_status is None:
+                Logger.warning("Missing required fields", tran_id=raw_tran_id, status=raw_status)
+                return jsonify({
+                    "Message": "LeaveTranId and LeaveStatus are required",
+                    "Received": {"leaveTranId": raw_tran_id, "leaveStatus": raw_status}
+                }), 400
+                
+            try:
+                tran_id = int(raw_tran_id)
+                status = str(raw_status)
+            except (ValueError, TypeError) as e:
+                Logger.warning("Type conversion failed", tran_id=raw_tran_id, error=str(e))
+                return jsonify({"Message": f"Invalid data format: {str(e)}"}), 400
+
+            approved_by = data.get('approvedById') or data.get('ApprovedBy') or data.get('approvedBy')
+            approver_comment = data.get('approverComment') or data.get('ApproverComment') or ""
+            
+            is_billable = data.get('isBillable', False)
+            is_communicated_to_team = data.get('isCommunicatedToTeam', False)
+            is_customer_approval_required = data.get('isCustomerApprovalRequired', False)
             have_customer_approval = data.get('havecustomerApproval')
             
-            if not tran_id or not status:
-                Logger.warning("Missing required fields for leave status update",
-                              tran_id=tran_id,
-                              status=status)
-                return jsonify({"Message": "LeaveTranId and LeaveStatus are required"}), 400
-                
+            Logger.info("Extracted parameters for update", 
+                       tran_id=tran_id, 
+                       status=status, 
+                       approved_by=approved_by)
+            
             message, send_mail_flag = LeaveService.update_leave_status(
                 tran_id, 
                 status, 
@@ -149,7 +167,7 @@ class LeaveController:
                 have_customer_approval
             )
             
-            Logger.info("Leave status updated",
+            Logger.info("Service response for status update",
                        transaction_id=tran_id,
                        status=status,
                        result_message=message)
@@ -160,24 +178,20 @@ class LeaveController:
                     "SendMailFlag": send_mail_flag
                 }), 200
             elif message == "Transaction not found":
-                Logger.warning("Leave transaction not found for update",
-                              transaction_id=tran_id)
                 return jsonify({"Message": message}), 404
             else:
                 return jsonify({"Message": message}), 200  # e.g. "Leave Already Approved"
                 
         except ValueError as ve:
-            Logger.warning("Validation error updating leave status",
-                          error=str(ve))
+            Logger.warning("Validation error in update_leave_status", error=str(ve))
             return jsonify({"Message": str(ve)}), 400
             
         except Exception as e:
-            Logger.error("Unexpected error updating leave status",
-                        transaction_id=tran_id if data else None,
+            Logger.error("Unexpected error in update_leave_status",
                         error=str(e),
                         error_type=type(e).__name__)
             return jsonify({
-                "Message": "An error occurred while updating leave status. Please try again."
+                "Message": "An internal error occurred. Please try again."
             }), 500
 
     @staticmethod

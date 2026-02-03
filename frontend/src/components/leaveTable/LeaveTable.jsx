@@ -370,10 +370,17 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                               e.stopPropagation();
                               showModal(employee.leaveTranId);
                             }}
-                            disabled={!(
-                              (new Date(employee.fromDate) > new Date() && employee.leaveStatus !== "Cancel") ||
-                              (employee.leaveStatus === "Pending")
-                            )}
+                            disabled={!(() => {
+                              const fromDate = new Date(employee.fromDate);
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              fromDate.setHours(0, 0, 0, 0);
+
+                              const isTodayOrFuture = fromDate >= today;
+                              const isCancellable = employee.leaveStatus !== "Cancel" && employee.leaveStatus !== "Reject";
+
+                              return isTodayOrFuture && isCancellable;
+                            })()}
                           >
                             Cancel
                           </Button>
@@ -471,6 +478,6 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
           </div>
         )}
       </Modal>
-    </div>
+    </div >
   );
 };

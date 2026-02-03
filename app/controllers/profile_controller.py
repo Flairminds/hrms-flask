@@ -77,7 +77,9 @@ class ProfileController:
                 return jsonify({"Message": "Leave transaction not found"}), 404
             elif result == "Not Cancellable":
                 Logger.warning("Leave cancellation failed - status not cancellable", leave_tran_id=tran_id)
-                return jsonify({"Message": "Leave cannot be cancelled in its current status"}), 400
+                return jsonify({
+                    "Message": "Leave cannot be cancelled. Either the leave date has passed or the status is already Cancelled/Rejected."
+                }), 400
             else:
                 Logger.error("Leave cancellation failed - unknown error", leave_tran_id=tran_id)
                 return jsonify({"Message": "Failed to cancel leave"}), 500

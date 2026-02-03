@@ -1,15 +1,16 @@
 import { Button, Modal } from 'antd';
-import React, { useState  , useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import style from './ConfirmationChecklist.module.css';
 import { updateLeaveStatus } from '../../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
+import { getCookie } from '../../../util/CookieSet';
 
 
 export const ConfirmationChecklistModal = ({
   isConfirmationChecklistModalOpen,
   setIsConfirmationChecklistModalOpen,
   shouldReopenLeaveStatusPending,
-  setShouldReopenLeaveStatusPending , 
+  setShouldReopenLeaveStatusPending,
   employee
 }) => {
   const [informedCustomer, setInformedCustomer] = useState(false);
@@ -29,35 +30,28 @@ export const ConfirmationChecklistModal = ({
     setHandedOverResponsibilities(false)
   };
   const handleApprove = async () => {
-    const {
-      LeaveTranId,
-      LeaveStatus,
-      ApproverComment,
-      IsBillable,
-      IsCommunicatedToTeam,
-      IsCustomerApprovalRequired , 
-      comments
-    } = employee;
-    
-    const isBillableNum = IsBillable ? 1 : 0
-    const isCommunicatedToTeamNum = IsCommunicatedToTeam ? 1 : 0
-    const isCustomerApprovalRequiredNum =  IsCustomerApprovalRequired ? 1 : 0
-    const updatedData = {
-      leaveTranId : LeaveTranId,
-      leaveStatus : "Approved",
-      approverComment : comments,
-      isBillable: isBillableNum,
-      isCommunicatedToTeam : isCommunicatedToTeamNum,
-      isCustomerApprovalRequired : isCustomerApprovalRequiredNum
+    const approverId = getCookie('employeeId');
+
+    const tranId = employee?.leaveTranId || employee?.LeaveTranId || employee?.leave_tran_id;
+    const payload = {
+      leaveTranId: tranId,
+      leaveStatus: "Approved",
+      approverComment: employee?.comments || "",
+      isBillable: employee?.isBillable || false,
+      isCommunicatedToTeam: communicatedWithinTeam,
+      isCustomerApprovalRequired: employee?.isCustomerApprovalRequired || false,
+      approvedById: approverId
     };
+
     try {
-      const response = await updateLeaveStatus(updatedData.leaveTranId , updatedData.leaveStatus ,updatedData.approverComment , updatedData.isBillable , updatedData.isCommunicatedToTeam , updatedData.isCustomerApprovalRequired );
-      if(response.statusCode === 200){
-      
-        toast.success('Leave approved successfully..')
-        }
+      const response = await updateLeaveStatus(payload);
+      if (response && (response.status === 200 || response.statusCode === 200)) {
+        toast.success('Leave approved successfully..');
+      }
     } catch (error) {
       console.error('Failed to update leave status:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve leave';
+      toast.error(errorMessage);
     }
 
     setIsConfirmationChecklistModalOpen(false);
@@ -68,38 +62,38 @@ export const ConfirmationChecklistModal = ({
 
   return (
     <>
-     <ToastContainer
-      position="top-center"
-      autoClose={3000}
-      hideProgressBar={false}
-      closeOnClick
-      pauseOnHover={true}
-      draggable
-      pauseOnFocusLoss={false}
-      newestOnTop
-    />  
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover={true}
+        draggable
+        pauseOnFocusLoss={false}
+        newestOnTop
+      />
       <Modal open={isConfirmationChecklistModalOpen} footer={null} width={600} closable={false}>
         <h2 className={style.heading}>Approver's Confirmation Checklist</h2>
         <div>
-          <input 
-            type="checkbox" 
-            checked={informedCustomer} 
+          <input
+            type="checkbox"
+            checked={informedCustomer}
             onChange={handleCheckboxChange(setInformedCustomer)}
           />
           <label className={style.space}> Informed Customer?</label>
         </div>
         <div>
-          <input 
-            type="checkbox" 
-            checked={communicatedWithinTeam} 
+          <input
+            type="checkbox"
+            checked={communicatedWithinTeam}
             onChange={handleCheckboxChange(setCommunicatedWithinTeam)}
           />
           <label className={style.space}> Communicated Within The Team?</label>
         </div>
         <div className={style.heading}>
-          <input 
-            type="checkbox" 
-            checked={handedOverResponsibilities} 
+          <input
+            type="checkbox"
+            checked={handedOverResponsibilities}
             onChange={handleCheckboxChange(setHandedOverResponsibilities)}
           />
           <label className={style.space}> Handed Over Or Planned Responsibilities To Others?</label>
