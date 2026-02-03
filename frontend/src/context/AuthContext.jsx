@@ -59,6 +59,10 @@ export const AuthProvider = ({ children }) => {
                 setUser(userData);
                 setIsAuthenticated(true);
 
+                // Set cookies for other components that might use them
+                setCookie('employeeId', userData.employeeId, 7);
+                setCookie('role', userData.roleName, 7);
+
                 // Fetch route permissions after successful authentication
                 await fetchRoutePermissions();
             }
@@ -94,6 +98,8 @@ export const AuthProvider = ({ children }) => {
     // Login function
     const login = (accessToken, userData) => {
         setCookie('accessToken', accessToken, 7); // 7 days expiry
+        setCookie('employeeId', userData.employeeId, 7);
+        setCookie('role', userData.roleName, 7);
         setUser(userData);
         setIsAuthenticated(true);
         // Fetch permissions after login

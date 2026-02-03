@@ -240,7 +240,8 @@ class LeaveQueryService:
                     else_=LeaveTransaction.approval_comment
                 ).label('approval_comment'),
                 LeaveTransaction.is_communicated_to_team,
-                LeaveTransaction.is_customer_approval_required
+                LeaveTransaction.is_customer_approval_required,
+                LeaveTransaction.duration
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
@@ -273,7 +274,8 @@ class LeaveQueryService:
                     'approved_by': row.approved_by or '',
                     'approval_comment': row.approval_comment or '',
                     'is_communicated_to_team': row.is_communicated_to_team or 0,
-                    'is_customer_approval_required': row.is_customer_approval_required or 0
+                    'is_customer_approval_required': row.is_customer_approval_required or 0,
+                    'duration': row.duration or ''
                 })
             
             return result

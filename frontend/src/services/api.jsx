@@ -107,11 +107,7 @@ export const getTypeApprover = () => {
 
 // 5.Get Leave Details- Retrieves all leave details for an employee for a given year (used for leave history/report).
 export const getLeaveDetails = (employeeId, year) => {
-  return axiosInstance.get(`${API_BASE_URL}/Leave/GetLeaveDetails/${employeeId}?year=${year}`, {
-    headers: {
-      'Accept': '*/*'
-    }
-  });
+  return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-details/${employeeId}?year=${year}`);
 };
 
 

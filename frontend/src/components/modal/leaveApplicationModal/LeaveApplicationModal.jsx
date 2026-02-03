@@ -69,8 +69,26 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const fetchEmployeeData = async () => {
     if (employeeId) {
       try {
-        const response = await getLeaveDetails(employeeId);
-        setEmployeeData(response.data.data);
+        const response = await getLeaveDetails(employeeId, new Date().getFullYear());
+        if (response.data) {
+          const mappedData = response.data.map(item => ({
+            ...item,
+            leaveTranId: item.leave_tran_id,
+            empName: item.emp_name,
+            description: item.comments,
+            leaveName: item.leave_name,
+            fromDate: item.from_date,
+            toDate: item.to_date,
+            duration: item.duration,
+            numberOfDays: item.no_of_days,
+            appliedLeaveCount: item.no_of_days,
+            applicationDate: item.application_date,
+            leaveStatus: item.leave_status,
+            approvedBy: item.approved_by,
+            approvalComment: item.approval_comment
+          }));
+          setEmployeeData(mappedData);
+        }
       } catch (error) {
         console.error('Failed to fetch employee data:', error);
       } finally {

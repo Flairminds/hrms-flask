@@ -260,7 +260,9 @@ export function LeaveManagementPage() {
               formattedLeaveData={formattedLeaveData} holidayData={holidayData} />
           )}
           <div className={styles.leaveTable}>
-            <LeaveTable leaveDates={leaveDates} holidayData={holidayData}
+            <LeaveTable
+              employeeId={user?.employeeId}
+              leaveDates={leaveDates} holidayData={holidayData}
               setLeaveCardData={setLeaveCardData} setLeaveDates={setLeaveDates}
               selectedLeave={selectedLeave} setSelectedLeave={setSelectedLeave} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} employeeData={employeeData} setEmployeeData={setEmployeeData} loadingLeaveTable={loadingLeaveTable} setLoadingLeaveTable={setLoadingLeaveTable}
             />

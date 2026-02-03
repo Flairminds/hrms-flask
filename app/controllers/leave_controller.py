@@ -45,10 +45,12 @@ class LeaveController:
         Logger.info("Get leave details request received", employee_id=emp_id)
         
         try:
-            details = LeaveService.get_leave_details(emp_id)
+            year = request.args.get('year', type=int)
+            details = LeaveService.get_leave_details(emp_id, year)
             
             Logger.info("Leave details retrieved successfully",
                        employee_id=emp_id,
+                       year=year,
                        record_count=len(details))
             
             return jsonify([dict(row) for row in details]), 200
@@ -62,7 +64,6 @@ class LeaveController:
         except Exception as e:
             Logger.error("Unexpected error fetching leave details",
                         employee_id=emp_id,
-                        year=year,
                         error=str(e),
                         error_type=type(e).__name__)
             return jsonify({

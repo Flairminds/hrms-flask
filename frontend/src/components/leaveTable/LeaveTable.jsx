@@ -32,7 +32,7 @@ const leaveStatusOptions = [
   { value: 'Partial Approved', label: 'Partial Approved' },
 ];
 const { Option } = Select;
-export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
+export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leaveDates, holidayData,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
   employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable, setLeaveDates
 }) => {
@@ -57,7 +57,9 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
 
   const leaveCardDetails = async () => {
     try {
-      const employeeId = getCookie('employeeId');
+      const employeeId = propEmployeeId || getCookie('employeeId');
+      if (!employeeId) return;
+
       const res = await getLeaveCards(employeeId);
 
       if (res.data) {
@@ -80,11 +82,32 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
 
   useEffect(() => {
     const fetchEmployeeData = async () => {
-      const employeeId = getCookie('employeeId');
+      const employeeId = propEmployeeId || getCookie('employeeId');
+      console.log('fetchEmployeeData called with employeeId:', employeeId, 'and selectedRange:', selectedRange);
       if (employeeId) {
+        setLoadingLeaveTable(true);
         try {
+          console.log(`Calling getLeaveDetails for ${employeeId} and year ${selectedRange}`);
           const response = await getLeaveDetails(employeeId, selectedRange);
-          setEmployeeData(response.data.data);
+          if (response.data) {
+            const mappedData = response.data.map(item => ({
+              ...item,
+              leaveTranId: item.leave_tran_id,
+              empName: item.emp_name,
+              description: item.comments,
+              leaveName: item.leave_name,
+              fromDate: item.from_date,
+              toDate: item.to_date,
+              duration: item.duration,
+              numberOfDays: item.no_of_days,
+              appliedLeaveCount: item.no_of_days,
+              applicationDate: item.application_date,
+              leaveStatus: item.leave_status,
+              approvedBy: item.approved_by,
+              approvalComment: item.approval_comment
+            }));
+            setEmployeeData(mappedData);
+          }
         } catch (error) {
           console.error('Failed to fetch employee data:', error);
         } finally {
@@ -96,7 +119,7 @@ export const LeaveTable = ({ setLeaveCardData, leaveDates, holidayData,
     };
 
     fetchEmployeeData();
-  }, [selectedRange]);
+  }, [selectedRange, propEmployeeId]);
 
 
   const formatDate = (dateString) => {
