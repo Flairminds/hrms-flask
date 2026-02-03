@@ -24,20 +24,34 @@ class EmployeeService:
                 Employee.first_name,
                 Employee.middle_name,
                 Employee.last_name,
+                Employee.employment_status,
+                Employee.date_of_joining,
+                Employee.team_lead_id,
                 MasterRole.role_name
             ).join(
                 EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
             ).join(
                 MasterRole, EmployeeRole.role_id == MasterRole.role_id
-            ).filter(
-                Employee.employment_status != 'Terminated'
+            ).order_by(
+                Employee.date_of_joining.asc()
             ).all()
+
+            # Helper to get approver name
+            def get_approver_name(approver_id):
+                if not approver_id: return "None"
+                approver = Employee.query.filter_by(employee_id=approver_id).first()
+                if approver:
+                    return f"{approver.first_name} {approver.last_name}"
+                return "Unknown"
 
             return [
                 {
-                    "EmployeeId": e.employee_id,
-                    "EmployeeName": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " "),
-                    "RoleName": e.role_name
+                    "employeeId": e.employee_id,
+                    "employeeName": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " "),
+                    "roleName": e.role_name,
+                    "employmentStatus": e.employment_status,
+                    "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
+                    "leaveApprover": get_approver_name(e.team_lead_id)
                 } for e in employees
             ]
         except Exception as e:

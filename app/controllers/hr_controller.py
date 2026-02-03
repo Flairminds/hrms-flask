@@ -16,6 +16,9 @@ class HRController:
         try:
             employees = EmployeeService.get_all_employees()
             
+            if employees:
+                Logger.info("First employee record keys", keys=list(employees[0].keys()))
+
             Logger.info("Employees retrieved successfully", count=len(employees))
             
             return jsonify([dict(row) for row in employees]), 200

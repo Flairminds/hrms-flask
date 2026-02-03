@@ -21,6 +21,7 @@
     display: flex;
     justify-content: space-between;
     gap: 8px;
+    margin-bottom: 1rem;
 }
 
 .statusButton {
@@ -133,45 +134,46 @@
     border: 1.4px solid #ff4d4f !important;
     background-color: #ff4d4f;
 }
-.statusNonFM{
+
+.statusNonFM {
     color: #7dceef;
     border-color: #7dceef;
 }
+
 .activeNonFM {
     color: white;
     border: 1.4px solid #7dceef !important;
     background-color: #7dceef;
 }
-.addBtn{
+
+.addBtn {
     background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
     color: white !important;
 }
+
 /* EmployeeData.module.css */
 
 .editButton {
-    background-color: #1890ff; 
+    background-color: #1890ff;
     border: none;
-    color: #fff; 
+    color: #fff;
     font-weight: 500;
     border-radius: 4px;
-    padding: 8px 16px; 
+    padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
-  }
-  
-  .editButton:hover {
-    background-color: #40a9ff; 
-    color: #fff; 
-  }
-  
-  .editButton:active {
+}
+
+.editButton:hover {
+    background-color: #40a9ff;
+    color: #fff;
+}
+
+.editButton:active {
     background-color: #096dd9;
-    color: #fff; 
-  }
-  
-  .editButton:focus {
-    outline: none; 
-  }
-  
-  
-  
+    color: #fff;
+}
+
+.editButton:focus {
+    outline: none;
+}

@@ -224,7 +224,7 @@ export const Sidebar = ({ isRole }) => {
             <AuditOutlined className={stylesSidebar.iconsSidebar} />
             <span>HR Leave Management</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/EmployeeData') ? stylesSidebar.active : ''}`} onClick={() => navigate('/EmployeeData')}>
+          <div className={`${stylesSidebar.divs} ${isActive('/employee-data') ? stylesSidebar.active : ''}`} onClick={() => navigate('/employee-data')}>
             <ContactsOutlined className={stylesSidebar.iconsSidebar} />
             <span>Employee Data</span>
           </div>
