@@ -309,7 +309,7 @@ def seed_leave_types():
         (4, N'Customer Approved Comp-off', 0, 0, true, false, NULL, false),
         (5, N'Customer Approved Work From Home', 0, 0, true, false, NULL, false),
         (6, N'Customer Holiday', 0, 0, true, false, NULL, false),
-        (7, N'Working Late Today', 0, 0, false, false, NULL, false),
+        (7, N'Working Late Today', 0, 0, false, false, NULL, true),
         (8, N'Visiting Client Location', 0, 0, false, false, NULL, false),
         (9, N'Casual Leave', 0, 0, false, false, NULL, true),
         (10, N'Swap Leave', 0, 0, false, false, NULL, true),

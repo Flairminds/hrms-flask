@@ -255,10 +255,15 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
           )}
 
           {showCustomerHolidayDetails && (
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>Worked Date</span>
-              <span className={styles.detailValue}>{employee.workedDate}</span>
-            </div>
+            <>
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>Worked Date</span>
+                <span className={styles.detailValue}>{employee.workedDate}</span>
+              </div>
+              <div style={{ padding: '8px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px', marginBottom: '10px', fontSize: '13px' }}>
+                Note: Approver has to verify the time log for worked date for approval.
+              </div>
+            </>
           )}
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Hand Over Comment</span>

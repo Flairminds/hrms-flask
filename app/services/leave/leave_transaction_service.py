@@ -217,6 +217,26 @@ class LeaveTransactionService:
                 if (remaining - no_of_days) < 0:
                     raise ValueError(f"Insufficient {leave_type_name} balance. Available: {remaining}")
 
+            # 5. Customer Holiday Validation
+            customer_holiday_date = None
+            if leave_type_name == LeaveTypeName.CUSTOMER_HOLIDAY:
+                ch_data = data.get('cutsomerHolidays', {})
+                worked_date_str = ch_data.get('workedDate')
+                
+                if not worked_date_str:
+                    raise ValueError("Please provide worked date for Customer Holiday.")
+                
+                try:
+                    customer_holiday_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
+                    # Validate worked_date < from_date
+                    if customer_holiday_date >= from_date_only:
+                        raise ValueError(f"Worked date ({worked_date_str}) must be before the leave date.")
+                except ValueError as e:
+                     if "must be before" in str(e):
+                         raise e
+                     pass # Ignore parse error, let db handle or fail later? Or strict? Raise error better.
+                     # raise ValueError(f"Invalid worked date format: {worked_date_str}")
+
             # Generate sequence if needed or use autoincrement
             # For now, following leave_tran_id = autoincrement in model definition
             is_second_approval = True if (flag_for_second_approval == 1 or leave_type_id == LeaveTypeID.CASUAL) else False
@@ -249,6 +269,13 @@ class LeaveTransactionService:
                     duration=co.get('numberOfHours')
                 )
                 db.session.add(new_co)
+            
+            if leave_type_name == LeaveTypeName.CUSTOMER_HOLIDAY and customer_holiday_date:
+                new_ch = CustomerHoliday(
+                    leave_tran_id=leave_tran_id,
+                    worked_date=customer_holiday_date
+                )
+                db.session.add(new_ch)
                 
             db.session.commit()
             return leave_tran_id

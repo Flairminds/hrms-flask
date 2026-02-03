@@ -12,6 +12,10 @@ const LEAVE_CONDITIONS = {
         "When applying full day comp off the logged time in zymmr for the day of compoff must be minimum of 8hrs",
         "When applying half day comp off the logged time in zymmr for the day of compoff must be minimum of 4hrs",
         "There must be approval from customer before applying compoff"
+    ],
+    "Customer Holiday": [
+        "Worked date must be before the leave date.",
+        "Time log will be verified by approver before approval."
     ]
 }
 
