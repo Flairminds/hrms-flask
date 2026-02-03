@@ -24,7 +24,7 @@ ROLE_PERMISSIONS = {
         "monthly_report": ["Admin", "HR"],
         "add_project": ["Admin", "HR"],
         "employee_details_for_relieving_letter": ["Admin", "HR"],
-        "employee_details": ["Admin", "HR"],  # GET /employee-details/<employee_id>
+        "employee_details": ["Admin", "HR", "Lead", "Employee"],  # GET /employee-details/<employee_id>
         "get_new_joinees": ["Admin", "HR", "Employee", "Lead"],  # New joinees widget
         "get_upcoming_birthdays": ["Admin", "HR", "Employee", "Lead"] # Upcoming birthdays widget
     },

@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, g
 from ..services.hr.employee_service import EmployeeService
 from ..services.hr.report_service import ReportService
 from ..services.hr_service import HRService
@@ -238,6 +238,19 @@ class HRController:
             500: Server error
         """
         Logger.info("Get employee with address and skills request received", employee_id=employee_id)
+        
+        # Security: Allow only Admin/HR or the employee themselves
+        user_role = getattr(g, 'user_role', None)
+        current_emp_id = getattr(g, 'employee_id', None)
+        
+        if user_role and user_role not in ['Admin', 'HR']:
+            if current_emp_id != employee_id:
+                Logger.warning("Access denied: User tried to access another employee's details", 
+                             requester=current_emp_id, target=employee_id)
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Access denied. You can only view your own details.'
+                }), 403
         
         try:
             if not employee_id or not employee_id.strip():

@@ -43,7 +43,7 @@ const getLeaveTypeName = (id) => {
 export const LeaveTablePending = ({ isRole }) => {
   const { user } = useAuth();
   const [isLeaveModalOpen, setLeaveModalOpen] = useState(false);
-  const [selectedLeaveStatus, setSelectedLeaveStatus] = useState(['Pending']);
+  const [selectedLeaveStatus, setSelectedLeaveStatus] = useState(['Pending', 'Partial Approved']);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [myEmployeeData, setMyEmployeeData] = useState([]);
   const [myEmployeeFilteredData, setMyEmployeeFilteredData] = useState([]);
