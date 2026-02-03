@@ -3,7 +3,7 @@ import { Input, Button, Modal, Descriptions } from 'antd';
 import styles from '../leaveStatusPending/LeaveStatusPending.module.css';
 import { ConfirmationChecklistModal } from '../ConfirmationChecklist/ConfirmationChecklist';
 import { getTeamLead, updateLeaveStatus } from '../../../services/api';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
 import { convertDate, getWeekDay } from '../../../util/helperFunctions';
 
@@ -188,14 +188,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
 
   return (
     <>
-      <ToastContainer
-        position="top-center"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-      />
+
       <Modal
         title={readOnly ? "Leave Details" : "Pending Leave Details"}
         open={isLeaveApprovalModalOpen}

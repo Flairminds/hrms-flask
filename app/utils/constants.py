@@ -102,3 +102,6 @@ class EmailConfig:
 
     # Secondary Approver for multi-level approval (e.g., Customer Approved WFH)
     SECONDARY_LEAVE_APPROVER_EMAIL = 'john.doe@flairminds.com'
+    
+    # Global CC list for leave notifications
+    LEAVE_NOTIFICATION_CC = ['']

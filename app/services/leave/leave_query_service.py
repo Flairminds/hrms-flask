@@ -845,7 +845,7 @@ class LeaveQueryService:
                 CompensatoryOff.comp_off_date,
                 CompensatoryOff.comp_off_time,
                 CustomerHoliday.worked_date,
-                MasterLeaveTypes.leave_name # Join to get name
+                MasterLeaveTypes.leave_name.label('leave_name') # Join to get name
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id

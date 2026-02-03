@@ -14,7 +14,7 @@ import smtplib
 from typing import Dict, Any, List, Optional
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from flask import current_app
 from sqlalchemy import text
@@ -328,6 +328,68 @@ class EmailService:
     # ==================================================================
     # LEAVE NOTIFICATIONS (Individual Leave Approval/Status Emails)
     # ==================================================================
+    # Helper Methods
+    # ==================================================================
+
+    @staticmethod
+    def _get_common_styles() -> str:
+        return """
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; }
+                .header { background-color: #f8f9fa; padding: 15px; text-align: center; border-bottom: 1px solid #eee; border-radius: 8px 8px 0 0; }
+                .header h2 { margin: 0; color: #2c3e50; font-size: 20px; }
+                .status-approved { color: #28a745; font-weight: bold; }
+                .status-rejected { color: #dc3545; font-weight: bold; }
+                .status-partial { color: #fd7e14; font-weight: bold; }
+                .content { padding: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+                th, td { padding: 10px; border-bottom: 1px solid #f0f0f0; text-align: left; }
+                th { width: 35%; color: #666; font-weight: 600; background-color: #f9f9f9; }
+                .checklist { background-color: #f8f9fa; padding: 15px; margin-top: 20px; border-radius: 6px; font-size: 14px; border: 1px solid #eee; }
+                .checklist h4 { margin: 0 0 10px 0; color: #555; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+                .checklist ul { list-style: none; padding: 0; margin: 0; }
+                .checklist li { padding: 5px 0; border-bottom: 1px dashed #eee; }
+                .checklist li:last-child { border-bottom: none; }
+                .button { display: inline-block; padding: 12px 24px; background-color: #f9f9f9; color: white; text-decoration: none; border-radius: 4px; margin-top: 25px; font-weight: 600; text-align: center; }
+                .footer { margin-top: 30px; font-size: 12px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+            </style>
+        """
+
+    @staticmethod
+    def _get_email_header(title: str) -> str:
+        return f"""
+            <div class="header">
+                <h2>{title}</h2>
+            </div>
+        """
+
+    @staticmethod
+    def _get_email_footer() -> str:
+        year = datetime.now().year
+        return f"""
+            <div class="footer">
+                <p>This is an automated message from HRMS. Please do not reply directly to this email.</p>
+                <p>&copy; {year} Flairminds. All rights reserved.</p>
+            </div>
+        """
+
+    @staticmethod
+    def _format_date(date_val: Any) -> str:
+        if not date_val or date_val == 'N/A':
+            return 'N/A'
+        if isinstance(date_val, (datetime, date)):
+             return date_val.strftime('%d-%b-%Y')
+        if isinstance(date_val, str):
+             try:
+                 # Check if string matches YYYY-MM-DD or other common formats
+                 # Cleaning potential time parts
+                 clean_date = date_val.split(' ')[0]
+                 return datetime.strptime(clean_date, '%Y-%m-%d').strftime('%d-%b-%Y')
+             except ValueError:
+                 return date_val
+        return str(date_val)
+
 
     @staticmethod
     def send_leave_notification_email(employee_name: str, recipients: str, leave_details: Dict[str, Any] = None) -> bool:
@@ -367,87 +429,39 @@ class EmailService:
             if leave_details is None:
                 leave_details = {}
                 
-            from_date = leave_details.get('from_date', 'N/A')
-            to_date = leave_details.get('to_date', 'N/A')
+            # Fetch and format details
+            from_date = EmailService._format_date(leave_details.get('from_date'))
+            to_date = EmailService._format_date(leave_details.get('to_date'))
             leave_type = leave_details.get('leave_type', 'N/A')
             description = leave_details.get('description', 'N/A')
             handover_comments = leave_details.get('handover_comments', 'N/A')
-            approver_name = leave_details.get('approver_name', 'N/A')
+            approver_name = leave_details.get('approver_name', 'Approver')
             
-            # Format dates if they are datetime/date objects
-            if hasattr(from_date, 'strftime'):
-                from_date = from_date.strftime('%d-%b-%Y')
-            if hasattr(to_date, 'strftime'):
-                to_date = to_date.strftime('%d-%b-%Y')
+            # Build Email Content
+            styles = EmailService._get_common_styles()
+            header = EmailService._get_email_header(f"New Leave Request")
+            footer = EmailService._get_email_footer()
             
-            body = f"""
-                <html>
-                <head>
-                    <style>
-                        table {{
-                            border-collapse: collapse;
-                            width: 100%;
-                            max-width: 600px;
-                        }}
-                        th, td {{
-                            text-align: left;
-                            padding: 8px;
-                            border: 1px solid #ddd;
-                        }}
-                        th {{
-                            background-color: #f2f2f2;
-                            width: 30%;
-                        }}
-                        .button {{
-                            border: none;
-                            background-color: #f2f2f2;
-                            color: white;
-                            padding: 10px 20px;
-                            text-align: center;
-                            text-decoration: none;
-                            display: inline-block;
-                            font-size: 16px;
-                            margin: 4px 2px;
-                            cursor: pointer;
-                            border-radius: 4px;
-                        }}
-                    </style>
-                </head>
-                <body>
+            body_content = f"""
+                <div class="content">
                     <p>Dear {approver_name},</p>
                     <p><b>{employee_name}</b> has requested your approval for leave.</p>
-                    <br>
+                    
                     <table>
-                        <tr>
-                            <th>Leave Type</th>
-                            <td>{leave_type}</td>
-                        </tr>
-                        <tr>
-                            <th>From Date</th>
-                            <td>{from_date}</td>
-                        </tr>
-                        <tr>
-                            <th>To Date</th>
-                            <td>{to_date}</td>
-                        </tr>
-                        <tr>
-                            <th>Reason</th>
-                            <td>{description}</td>
-                        </tr>
-                        <tr>
-                            <th>Handover Comments</th>
-                            <td>{handover_comments}</td>
-                        </tr>
+                        <tr><th>Leave Type</th><td>{leave_type}</td></tr>
+                        <tr><th>From Date</th><td>{from_date}</td></tr>
+                        <tr><th>To Date</th><td>{to_date}</td></tr>
+                        <tr><th>Reason</th><td>{description}</td></tr>
+                        <tr><th>Handover Comments</th><td>{handover_comments}</td></tr>
                     </table>
-                    <br>
-                    <p>Please log in to the HRMS portal to review and take action.</p>
-                    <p><a href='https://hrms.flairminds.com/login' class='button'>View in HRMS</a></p>
-                    <br>
-                    <p>Regards,</p>
-                    <p>HRMS Team</p>
-                </body>
-                </html>
+                    
+                    <div style="text-align: center;">
+                        <a href='https://hrms.flairminds.com/login' class='button'>View in HRMS</a>
+                    </div>
+                </div>
             """
+            
+            body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
             
             # Parse recipients
             recipient_list = [r.strip() for r in recipients.split(',') if r.strip()]
@@ -572,23 +586,48 @@ class EmailService:
                    leave_status=details.get('leave_status'))
         
         try:
-            # Determine recipient based on business logic
+            # Determine recipients
             to_address = details.get('employee_email')
             
             # Special case overrides
             if to_address in EmailConfig.SPECIAL_CASE_REDIRECTS:
-                original_address = to_address
                 to_address = EmailConfig.SPECIAL_CASE_REDIRECTS[to_address]
-                Logger.debug("Email recipient overridden for special case", 
-                           original=original_address,
-                           redirected_to=to_address)
             
-            # For second approver and not rejected, send to second approver
-            if details.get('is_second_approver') and details.get('leave_status') != 'Reject':
-                to_address = details.get('second_approver_mail_id')
-                Logger.debug("Email sent to second approver", second_approver=to_address)
+            cc_addresses = []
             
-            subject = "Employee Leave Report"
+            # Add Approver to CC
+            approver_email = details.get('approver_mail_id')
+            if approver_email:
+                cc_addresses.append(approver_email)
+                
+            # Add configured CCs
+            if hasattr(EmailConfig, 'LEAVE_NOTIFICATION_CC'):
+                cc_addresses.extend(EmailConfig.LEAVE_NOTIFICATION_CC)
+                
+            # Handle Second Approver
+            if details.get('is_second_approver'):
+                 second_approver_email = details.get('second_approver_mail_id')
+                 if second_approver_email:
+                     if details.get('leave_status') == LeaveStatus.PARTIAL_APPROVED:
+                         # For Partial Approval, notify Second Approver
+                         # Ideally they should be To or CC. User said "send email to the second approver"
+                         # Let's add them to CC to ensure they see it, or To?
+                         # "send email to the leave applier and the leave approver in cc... In case of partial approved also send email to the second approver"
+                         # This implies Second Approver is ALSO a recipient.
+                         cc_addresses.append(second_approver_email)
+                     elif details.get('leave_status') == LeaveStatus.APPROVED:
+                         # If finally approved by second approver, they are already the 'approver' context?
+                         pass
+
+            # Deduplicate CCs and remove To address if present
+            cc_addresses = list(set(cc_addresses))
+            if to_address in cc_addresses:
+                cc_addresses.remove(to_address)
+            
+            # Filter empty
+            cc_addresses = [email for email in cc_addresses if email]
+
+            subject = f"Leave for {details.get('employee_name')} {details.get('leave_status')}"
             
             # Build email body using helper method
             body = EmailService._build_leave_email_body(details)
@@ -600,22 +639,19 @@ class EmailService:
             if not from_address or not from_password:
                 Logger.error("SMTP credentials not configured for leave status notification")
                 raise ValueError("Email configuration missing: MAIL_USERNAME and MAIL_PASSWORD required")
-            from_name = "Leave Management System"
+            from_name = "HRMS"
             
             # Create message
             msg = MIMEMultipart()
             msg['From'] = f"{from_name} <{from_address}>"
             msg['To'] = to_address
+            if cc_addresses:
+                msg['Cc'] = ', '.join(cc_addresses)
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'html'))
             
-            # Add approvers to recipients if not rejected or partially approved
-            additional_recipients = []
-            if details.get('leave_status') not in ['Reject', 'Partial Approved']:
-                if details.get('approver_mail_id'):
-                    additional_recipients.append(details.get('approver_mail_id'))
-                if details.get('second_approver_mail_id'):
-                    additional_recipients.append(details.get('second_approver_mail_id'))
+            # Combine all recipients for SMTP transaction
+            all_recipients = [to_address] + cc_addresses
             
             # Send email
             server = smtplib.SMTP(
@@ -625,7 +661,6 @@ class EmailService:
             server.starttls()
             server.login(from_address, from_password)
             
-            all_recipients = [to_address] + additional_recipients
             server.sendmail(from_address, all_recipients, msg.as_string())
             server.quit()
             
@@ -651,140 +686,107 @@ class EmailService:
     @staticmethod
     def _build_leave_email_body(details: Dict[str, Any]) -> str:
         """
-        Builds leave notification email body with conditional logic.
-        
-        Internal helper method that constructs email HTML based on leave type,
-        approval status, and approver level (first vs second approver).
-        
-        Args:
-            details: Leave details dictionary (see send_leave_status_notification)
-        
-        Returns:
-            HTML string for email body
-        
-        Note:
-            - Different templates for standard leaves, comp-off, WFH
-            - Includes approver checklists for certain leave types
-            - Special handling for partial approvals and second approver
+        Builds leave notification email body with unified professional template.
         """
-        # CSS styles for email
-        mail_body_styles = """
-            <style>
-                p, ul {
-                    margin: 0;
-                    padding: 0;
-                }
-                ul {
-                    list-style-type: none;
-                    padding-left: 0;
-                }
-                br {
-                    margin: 0;
-                    padding: 0;
-                }
-            </style>
-        """
+        # Status formatting
+        status_raw = details.get('leave_status')
+        status_display = status_raw
+        status_class = "status-approved"
+        if status_raw == 'Reject':
+            status_display = 'Rejected'
+            status_class = "status-rejected"
+        elif status_raw == 'Partial Approved':
+            status_display = 'Partially Approved'
+            status_class = "status-partial"
+        elif status_raw == 'Cancel':
+            status_display = 'Cancelled'
+
+        # Checklist Logic
+        checklist_items = []
+        leave_type_id = str(details.get('leave_type'))
         
-        # Leave approval details section
-        mail_body_leave_approval_details = mail_body_styles + f"""
-            <p>Leave request for {details.get('employee_name')} has been {details.get('leave_status')} for the following details.....</p>
-            <p>Leave type: {details.get('leave_type_name')}</p>
-            <p>Start date: {details.get('start_date')}</p>
-            <p>End date: {details.get('end_date')}</p>
-            <p>Leave Description: {details.get('leave_description')}</p>
-            <p>Approver Comment: {details.get('description')}</p>
-            <p>Approved By: {details.get('approved_by')}</p>
-            <br />
-        """
+        # Determine strict base checklist eligibility
+        has_base_checklist = leave_type_id in [
+            str(LeaveTypeID.SICK), str(LeaveTypeID.PRIVILEGE), 
+            str(LeaveTypeID.LEAVE_WITHOUT_PAY), str(LeaveTypeID.UNPAID_LEAVE),
+            str(LeaveTypeID.COMP_OFF), str(LeaveTypeID.WFH)
+        ]
         
-        # Approver checklist section
-        mail_body_approver_checklist = f"""
-            <p><b>Approver Checklist Response</b></p>
-            <ul>
-                <li>Informed customer?: {details.get('is_cust_informed')}</li>
-                <li>Communicated within the team?: {details.get('is_communicated_with_team')}</li>
-                <li>Handed over or planned responsibilities to others?: {details.get('is_handover_responsibilities')}</li>
-        """
-        
-        # Customer approval checklist (for comp-off and WFH)
-        mail_body_customer_approval_checklist = f"""
-                <li>Received Customer Approval for Comp-off?: {details.get('is_com_off_approved')}</li>
-                <li>Received Customer Approval for Work from home?: {details.get('is_work_from_approved')}</li>
-            </ul>
-            <br>
-            <p>------ HRMS ------</p>
-            <p>Leave Management System</p>
-        """
-        
-        # Build body based on is_second_approver flag
-        if details.get('is_second_approver'):
-            # Leave type 4 or 5 (Comp-off or WFH with customer approval)
-            if details.get('leave_type') in [str(LeaveTypeID.COMP_OFF), str(LeaveTypeID.WFH)]:
-                if details.get('leave_status') != 'Partial Approved':
-                    body = f"""
-                        <p>Hi, </p>
-                        <p>{details.get('employee_name')} your leave is get {details.get('leave_status')}. <br />
-                        {details.get('approved_by')} comment is: {details.get('description')}</p>
-                        <br />
-                        <p>------ HRMS ------</p>
-                        <p>Leave Management System</p>
-                    """
-                else:
-                    body = f"""
-                        <p>{details.get('employee_name')} has requested your approval for {details.get('leave_type_name')}. 
-                        {details.get('approved_by')} already approved this leave. Team lead's comment is: {details.get('description')}</p>
-                        <p><b>Approver Checklist response is as below:</b></p>
-                        <ul>
-                            <li>Informed customer?: {details.get('is_cust_informed')}</li>
-                            <li>Communicated within the team?: {details.get('is_communicated_with_team')}</li>
-                            <li>Handed over or planned responsibilities to others?: {details.get('is_handover_responsibilities')}</li>
-                            <li>Received Customer Approval for Comp-off?: {details.get('is_com_off_approved')}</li>
-                            <li>Received Customer Approval for Work from home?: {details.get('is_work_from_approved')}</li>
-                        </ul>
-                        <p><a href='https://hrms.flairminds.com/login'>Click here for details</a>.</p>
-                        <p>Leave Management System</p>
-                    """
-            # Leave type 3 (WFH without customer approval checklist)
-            elif details.get('leave_type') == str(LeaveTypeID.WFH):
-                if details.get('leave_status') != 'Partial Approved':
-                    body = f"""
-                        <p>Hi, </p>
-                        <p>{details.get('employee_name')} your leave is get {details.get('leave_status')}. <br />
-                        {details.get('approved_by')} comment is: {details.get('description')}</p>
-                        <br />
-                        <p>------ HRMS ------</p>
-                        <p>Leave Management System</p>
-                    """
-                else:
-                    body = f"""
-                        <p>{details.get('employee_name')} has requested your approval for {details.get('leave_type_name')}. 
-                        {details.get('approved_by')} already approved this leave. Team lead's comment is: {details.get('description')}</p>
-                        <p><a href='https://hrms.flairminds.com/login'>Click here for details</a>.</p>
-                        <p>Leave Management System</p>
-                    """
-            else:
-                body = ""
-        else:
-            # Not second approver - build body based on leave type
-            body = mail_body_leave_approval_details
+        has_extended_checklist = leave_type_id in [str(LeaveTypeID.COMP_OFF), str(LeaveTypeID.WFH)]
+
+        if has_base_checklist:
+            checklist_items.extend([
+                ("Informed Customer", details.get('is_cust_informed')),
+                ("Communicated with Team", details.get('is_communicated_with_team')),
+                ("Handed over responsibilities", details.get('is_handover_responsibilities'))
+            ])
             
-            if details.get('leave_status') == 'Reject':
-                body = f"""
-                    <p>Hi, </p>
-                    <p>{details.get('employee_name')} your leave is get {details.get('leave_status')}. <br />
-                    {details.get('approved_by')} comment is: {details.get('description')}</p>
-                    <br />
-                    <p>Leave Management System</p>
-                """
-            elif details.get('leave_type') in [str(LeaveTypeID.SICK), str(LeaveTypeID.PRIVILEGE), 
-                                                   str(LeaveTypeID.LEAVE_WITHOUT_PAY), str(LeaveTypeID.UNPAID_LEAVE)]:
-                # Standard leave types with approver checklist
-                body += mail_body_approver_checklist
-            elif details.get('leave_type') in [str(LeaveTypeID.COMP_OFF), str(LeaveTypeID.WFH)]:
-                # Comp-off and WFH with full checklist
-                body += mail_body_approver_checklist + mail_body_customer_approval_checklist
-        
-        return body
+        if has_extended_checklist:
+             checklist_items.extend([
+                ("Customer Approved Comp-off", details.get('is_com_off_approved')),
+                ("Customer Approved WFH", details.get('is_work_from_approved'))
+            ])
+
+        # Generate Checklist HTML
+        checklist_html = ""
+        if checklist_items:
+            checklist_html = f"""
+                <div class="checklist">
+                    <h4>Approver Checklist</h4>
+                    <ul>
+            """
+            for label, val in checklist_items:
+                # Format Yes/No with color
+                val_display = f'<span style="color: {"green" if val == "Yes" else "red"}">{val}</span>'
+                checklist_html += f"<li>{label}: <b>{val_display}</b></li>"
+            checklist_html += """
+                    </ul>
+                </div>
+            """
+
+        # Supplemental Message for Partial Approval
+        partial_msg = ""
+        if status_raw == 'Partial Approved':
+            partial_msg = """
+                <div style="background-color: #fff7e6; border: 1px solid #ffd591; padding: 10px; margin: 15px 0; border-radius: 4px; color: #d46b08;">
+                    <strong>Note:</strong> Second approval is required. Please await the final decision.
+                </div>
+            """
+
+        # Format Dates
+        start_date = EmailService._format_date(details.get('start_date'))
+        end_date = EmailService._format_date(details.get('end_date'))
+
+        # Main Body Construction
+        styles = EmailService._get_common_styles()
+        header = EmailService._get_email_header("Leave Status Update")
+        footer = EmailService._get_email_footer()
+
+        body_content = f"""
+            <div class="content">
+                <p>Dear {details.get('employee_name')},</p>
+                
+                <p>Your leave request has been <span class="{status_class}">{status_display}</span>.</p>
+                
+                {partial_msg}
+                
+                <table>
+                    <tr><th>Leave Type</th><td>{details.get('leave_type_name')}</td></tr>
+                    <tr><th>Duration</th><td>{start_date} to {end_date}</td></tr>
+                    <tr><th>Reason</th><td>{details.get('leave_description') or 'N/A'}</td></tr>
+                    <tr><th>Approver</th><td>{details.get('approved_by')}</td></tr>
+                    <tr><th>Approver Comment</th><td>{details.get('description') or 'N/A'}</td></tr>
+                </table>
+                
+                {checklist_html}
+                
+                <div style="text-align: center;">
+                    <a href="https://hrms.flairminds.com/login" class="button">View in HRMS</a>
+                </div>
+            </div>
+        """
+
+        return f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
 
 
 # ==================================================================

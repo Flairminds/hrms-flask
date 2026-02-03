@@ -18,28 +18,6 @@ const leaveStatusOptions = [
   { value: 'Partial Approved', label: 'Partial Approved' },
 ];
 
-const leaveTypeMaster = {
-  1: "Sick/Emergency Leave",
-  2: "Privilege Leave",
-  3: "Work From Home",
-  4: "Customer Approved Comp-off",
-  5: "Customer Approved Work From Home",
-  6: "Customer Holiday",
-  7: "Working Late Today",
-  8: "Visiting Client Location",
-  9: "Casual Leave",
-  10: "Swap Leave",
-  11: "Exempt Work From Home",
-  12: "Unpaid Sick Leave",
-  13: "Unpaid Privilege Leave",
-  14: "Missed Door Entry"
-};
-
-const getLeaveTypeName = (id) => {
-
-  return leaveTypeMaster[id] || "Unknown Leave Type";
-};
-
 export const LeaveTablePending = ({ isRole }) => {
   const { user } = useAuth();
   const [isLeaveModalOpen, setLeaveModalOpen] = useState(false);
@@ -131,12 +109,7 @@ export const LeaveTablePending = ({ isRole }) => {
   };
   const handleApprovedStatus = (employee) => {
     console.log('handleApprovedStatus called for:', employee);
-    const transformedEmployee = {
-      ...employee,
-      leaveTypeName: getLeaveTypeName(employee.leaveType),
-    };
-    console.log('Transformed employee:', transformedEmployee);
-    setSelectedEmployee(transformedEmployee);
+    setSelectedEmployee(employee);
     setLeaveModalOpen(true);
   };
 
@@ -231,7 +204,7 @@ export const LeaveTablePending = ({ isRole }) => {
                                 : ""
                       : ""
                       }`}>
-                      {header.key === "leaveType" ? getLeaveTypeName(employee[header.key]) : header.dataFormat === "date" ? convertDate(employee[header.key]) : employee[header.key]}
+                      {header.dataFormat === "date" ? convertDate(employee[header.key]) : employee[header.key]}
                     </div>
                   </td>
                 ))}

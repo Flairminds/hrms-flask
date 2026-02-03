@@ -17,7 +17,7 @@ export const tableHeaders = [
 export const tableHeadersTM = [
   { key: "empName", displayName: "Employee Name" },
   // { key: "appliedBy", displayName: "Applied By" },
-  { key: 'leaveType', displayName: 'Leave Type' },
+  { key: 'leaveName', displayName: 'Leave Type' },
   { key: 'fromDate', displayName: 'From Date', dataFormat: 'date' },
   { key: 'toDate', displayName: 'To Date', dataFormat: 'date' },
   { key: 'duration', displayName: 'Duration' },
