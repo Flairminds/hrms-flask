@@ -119,6 +119,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
       }
     };
 
+    console.log('LeaveTable useEffect triggered. refreshTrigger:', refreshTrigger, 'selectedRange:', selectedRange);
     fetchEmployeeData();
   }, [selectedRange, propEmployeeId, refreshTrigger]);
 

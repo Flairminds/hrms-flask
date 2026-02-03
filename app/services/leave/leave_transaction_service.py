@@ -29,6 +29,8 @@ class LeaveTransactionService:
         to_date = data.get('toDate')
         no_of_days = data.get('noOfDays')
         applied_by = data.get('appliedBy')
+        duration = data.get('duration')
+        comments = data.get('comments', '')
         
         if not emp_id or not from_date or not to_date or not applied_by:
             raise ValueError("Missing required fields for leave transaction")
@@ -48,11 +50,29 @@ class LeaveTransactionService:
         balance_leaves = LeaveQueryService.get_employee_leave_cards(emp_id)
         target_card = next((c for c in balance_leaves if c['leave_name'] == leave_type_name), None)
         
+        # If leave type not found in balance cards, check if it exists in master_leave_types
+        # (for leave types that don't require balance tracking like "Visiting Client Location")
         if not target_card:
-            raise ValueError(f"Invalid or unauthorized leave type: {leave_type_name}")
+            from ...models.leave import MasterLeaveTypes
+            master_leave_type = MasterLeaveTypes.query.filter_by(
+                leave_name=leave_type_name,
+                is_deleted=False
+            ).first()
+            
+            if not master_leave_type:
+                raise ValueError(f"Invalid or unauthorized leave type: {leave_type_name}")
+            
+            # Create a card-like structure for consistency
+            target_card = {
+                'leave_type_id': master_leave_type.leave_type_id,
+                'leave_name': master_leave_type.leave_name,
+                'leave_cards_flag': master_leave_type.leave_cards_flag or False,
+                'total_alloted_leaves': 0,
+                'total_used_leaves': 0
+            }
             
         leave_type_id = int(target_card['leave_type_id'])
-        remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
+        remaining = target_card.get('total_alloted_leaves', 0) - target_card.get('total_used_leaves', 0)
 
         # validation - any leave should not overlap with existing leave
         existing_leaves = LeaveQueryService.get_leave_details(emp_id)
@@ -94,7 +114,17 @@ class LeaveTransactionService:
                 if remaining < no_of_days:
                     raise ValueError(f"Insufficient {LeaveTypeName.SICK_LEAVE} balance. Available: {remaining}")
 
-            # 2. WFH Validations
+            # 3. Missed Door Entry Validation
+            if leave_type_name == "Missed Door Entry":
+                # Only full day allowed
+                if duration != "Full Day":
+                    raise ValueError("Missed Door Entry leave must be Full Day only.")
+                
+                # Only past or current date allowed (not future)
+                if from_date_only > app_date_only:
+                    raise ValueError("Missed Door Entry leave can only be applied for past or current dates, not future dates.")
+
+            # 4. WFH Validations
             if leave_type_id == LeaveTypeID.WFH:
                 if no_of_days >= 5:
                     six_months_ago = from_date - timedelta(days=180)
@@ -154,7 +184,8 @@ class LeaveTransactionService:
                         flag_for_second_approval = 1
 
             # 4. General Balance Check (for any leave cards flagged types)
-            if target_card and target_card['leave_cards_flag']:
+            # Exclude "Missed Door Entry" from balance checks as it's for attendance correction
+            if target_card and target_card['leave_cards_flag'] and leave_type_name != "Missed Door Entry":
                 remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
                 if (remaining - no_of_days) < 0:
                     raise ValueError(f"Insufficient {leave_type_name} balance. Available: {remaining}")
@@ -165,7 +196,7 @@ class LeaveTransactionService:
             
             new_leave = LeaveTransaction(
                 employee_id=emp_id.upper(),
-                comments=data.get('comments'),
+                comments=comments,
                 leave_type_id=leave_type_id,
                 from_date=from_date,
                 to_date=to_date,
@@ -175,7 +206,8 @@ class LeaveTransactionService:
                 application_date=application_date,
                 approved_by=data.get('approvedBy'),
                 is_for_second_approval=is_second_approval,
-                leave_status=LeaveStatus.PENDING
+                leave_status=LeaveStatus.PENDING,
+                duration=duration
             )
             db.session.add(new_leave)
             db.session.flush() # To get the leave_tran_id

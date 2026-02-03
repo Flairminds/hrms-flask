@@ -737,6 +737,7 @@ class LeaveQueryService:
                 CustomerHoliday,
                 LeaveTransaction.leave_tran_id == CustomerHoliday.leave_tran_id
             ).order_by(
+                LeaveTransaction.from_date.desc(),
                 LeaveTransaction.leave_tran_id.desc()
             )
             

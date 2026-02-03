@@ -67,50 +67,6 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
     }
   };
 
-  const fetchEmployeeData = async () => {
-    if (employeeId) {
-      try {
-        const response = await getLeaveDetails(employeeId, new Date().getFullYear());
-        if (response.data) {
-          const mappedData = response.data.map(item => ({
-            ...item,
-            leaveTranId: item.leave_tran_id,
-            empName: item.emp_name,
-            description: item.comments,
-            leaveName: item.leave_name,
-            fromDate: item.from_date,
-            toDate: item.to_date,
-            duration: item.duration,
-            numberOfDays: item.no_of_days,
-            appliedLeaveCount: item.no_of_days,
-            applicationDate: item.application_date,
-            leaveStatus: item.leave_status,
-            approvedBy: item.approved_by,
-            approvalComment: item.approval_comment
-          }));
-          setEmployeeData(mappedData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch employee data:', error);
-      } finally {
-        setLoadingLeaveTable(false);
-      }
-    } else {
-      setLoadingLeaveTable(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isSetLeaveApplicationModal && preSelectedLeaveType) {
-      handleLeaveTypeChange(preSelectedLeaveType);
-    }
-  }, [isSetLeaveApplicationModal, preSelectedLeaveType]);
-
-  useEffect(() => {
-    if (employeeId) {
-      fetchEmployeeData();
-    }
-  }, [employeeId]);
 
 
   const handleCancel = () => {
@@ -209,10 +165,15 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
 
         // Refresh data
         if (setRefreshTrigger) {
-          setRefreshTrigger(prev => prev + 1);
+          console.log('Calling setRefreshTrigger to increment refresh counter');
+          setRefreshTrigger(prev => {
+            console.log('Current refreshTrigger:', prev, '-> New:', prev + 1);
+            return prev + 1;
+          });
+        } else {
+          console.warn('setRefreshTrigger is not available!');
         }
         leaveCardDetails();
-        fetchEmployeeData();
       } else {
         // Handle non-200 but not caught by Axios catch (if any)
         toast.info(res.data.Message);
@@ -483,7 +444,8 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
           comments;
       }
       else if (leaveType === 'Missed Door Entry') {
-        return isValidDescription;
+        // For Missed Door Entry: need leave type, duration (Full Day), start date, and comments
+        return leaveType && leaveDuration && startDate && comments && handOverComments;
       }
       else {
         return leaveType && leaveDuration && startDate && endDate && leaveDays > 0 && comments && handOverComments;
@@ -523,11 +485,6 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
           {showAlert && (
             <h3 className={stylesLeaveApplication.unpaidLeaveHeading}>
               *Since your leave balance is exhausted, {leaveType === 'Work From Home' ? 'You cannot apply for work from home' : 'this leave will be considered as unpaid leave'}*
-            </h3>
-          )}
-          {alertMissedDoorCount && (
-            <h3 className={stylesLeaveApplication.unpaidLeaveHeading}>
-              Remaining missed door entries for this quarter is {3 - (formattedLeaveData?.[3]?.totalUsedLeaves || 0)}
             </h3>
           )}
           <div className={stylesLeaveApplication.typeofLeaveDiv}>
