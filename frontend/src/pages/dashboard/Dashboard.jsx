@@ -3,6 +3,7 @@ import { Row, Col, List, Typography, Progress, Badge, Avatar, message } from 'an
 import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
 import { getNewJoinees, holidayListData, getUpcomingBirthdays } from '../../services/api';
+import { filterUpcomingHolidays } from '../../util/helperFunctions';
 
 const { Title, Text } = Typography;
 
@@ -46,7 +47,8 @@ export const Dashboard = () => {
       try {
         setLoadingHolidays(true);
         const res = await holidayListData();
-        setHolidayData(res.data);
+        const upcomingHolidays = filterUpcomingHolidays(res.data);
+        setHolidayData(upcomingHolidays);
       } catch (err) {
         console.error('Error fetching holiday data:', err);
         message.error('Failed to fetch holiday data');

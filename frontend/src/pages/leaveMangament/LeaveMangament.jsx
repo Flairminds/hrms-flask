@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react';
+import { filterUpcomingHolidays } from '../../util/helperFunctions';
 import styles from "./LeaveMangament.module.css"
 import FM from "../../assets/leave/FM.png"
 import { Button, Progress, Row, Col, List, Typography, Badge } from "antd";
@@ -97,7 +98,8 @@ export function LeaveManagementPage() {
   const fetchHolidayData = async () => {
     try {
       const res = await holidayListData();
-      setHolidayData(res.data);
+      const upcomingHolidays = filterUpcomingHolidays(res.data);
+      setHolidayData(upcomingHolidays);
     } catch (err) {
       console.error('Error fetching holiday data:', err);
       toast.error('Failed to fetch holiday data');
