@@ -106,6 +106,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             firstName: data.firstName,
             middleName: data.middleName,
             lastName: data.lastName,
+            password: data.password,
             contactNumber: data.contactNumber,
             emergencyContactNumber: data.emergencyContactNumber,
             emergencyContactPerson: data.emergencyContactPerson,
@@ -248,6 +249,18 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         rules={[{ required: true, message: 'Required' }]}
                                     >
                                         <Input placeholder="Last name" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        label="Password"
+                                        name="password"
+                                        rules={[
+                                            { required: true, message: 'Required' },
+                                            { min: 8, message: 'Min 8 characters' }
+                                        ]}
+                                    >
+                                        <Input.Password placeholder="Password" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
@@ -659,7 +672,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                     </Col>
                 </Row>
             </Form>
-        </Modal>
+        </Modal >
     );
 };
 

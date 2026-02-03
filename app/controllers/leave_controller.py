@@ -276,7 +276,7 @@ class LeaveController:
 
     @staticmethod
     def get_leave_transactions_by_approver():
-        """Retrieves leave transactions for a specific approver."""
+        """Retrieves leave transactions for a specific approver. HR/Admin can see all leaves."""
         Logger.info("Get leave transactions by approver request received")
         
         try:
@@ -287,11 +287,20 @@ class LeaveController:
                 year = datetime.now().year
             else:
                 year = int(year)
-                
-            transactions = LeaveService.get_leave_transactions_by_approver(approver_id, year)
+            
+            # Check if the current user is HR or Admin
+            user_role = g.get('user_role', '')
+            if user_role in ['HR', 'Admin']:
+                # HR and Admin can see all leave transactions
+                Logger.info("HR/Admin requesting all leave transactions", year=year)
+                transactions = LeaveService.get_all_leave_transactions(year)
+            else:
+                # Regular approvers only see their assigned leaves
+                transactions = LeaveService.get_leave_transactions_by_approver(approver_id, year)
             
             Logger.info("Team leave transactions retrieved successfully",
                        approver_id=approver_id,
+                       user_role=user_role,
                        year=year,
                        record_count=len(transactions))
             
@@ -308,6 +317,7 @@ class LeaveController:
                         approver_id=approver_id,
                         error=str(e),
                         error_type=type(e).__name__)
+            return jsonify({"Message": "Failed to fetch team transactions"}), 500
             return jsonify({
                 "Message": "An error occurred while fetching team transactions. Please try again."
             }), 500

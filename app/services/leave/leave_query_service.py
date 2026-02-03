@@ -636,6 +636,133 @@ class LeaveQueryService:
             raise
 
     @staticmethod
+    def get_all_leave_transactions(year: int) -> List[Dict[str, Any]]:
+        """
+        Retrieves ALL leave transactions for a given year (for HR/Admin).
+        """
+        month = None
+        
+        if not year:
+            year = datetime.now().year
+            month = datetime.now().month
+        
+        Logger.info("Getting all leave transactions (HR/Admin)", year=year)
+        
+        try:
+            # Get financial year dates
+            start_date, end_date = LeaveUtils.get_financial_year_dates(year, month)
+
+            # Helper for date formatting
+            def format_date(date_obj):
+                if date_obj:
+                    return date_obj.strftime('%d-%m-%Y')
+                return ''
+            
+            AppliedByEmployee = db.aliased(Employee)
+            
+            # Main query with all JOINs - NO APPROVER FILTER
+            query = db.session.query(
+                LeaveTransaction.leave_tran_id,
+                LeaveTransaction.employee_id,
+                (Employee.first_name + ' ' + 
+                 func.coalesce(Employee.middle_name, '') + ' ' + 
+                 Employee.last_name).label('emp_name'),
+                LeaveTransaction.comments,
+                LeaveTransaction.leave_type_id,
+                LeaveTransaction.from_date,
+                LeaveTransaction.to_date,
+                LeaveTransaction.duration,
+                LeaveTransaction.hand_over_comments,
+                (AppliedByEmployee.first_name + ' ' + 
+                 func.coalesce(AppliedByEmployee.middle_name, '') + ' ' + 
+                 AppliedByEmployee.last_name).label('applied_by_name'),
+                LeaveTransaction.application_date,
+                LeaveTransaction.approved_by,
+                LeaveTransaction.approved_date,
+                LeaveTransaction.approval_comment,
+                LeaveTransaction.leave_status,
+                LeaveTransaction.attachments,
+                LeaveTransaction.is_billable,
+                LeaveTransaction.is_communicated_to_team,
+                LeaveTransaction.is_customer_approval_required,
+                LeaveTransaction.no_of_days,
+                WorkingLate.from_time,
+                WorkingLate.to_time,
+                WorkingLate.reason_for_working_late,
+                CompensatoryOff.comp_off_date,
+                CompensatoryOff.comp_off_time,
+                CustomerHoliday.worked_date,
+                MasterLeaveTypes.leave_name
+            ).join(
+                Employee,
+                LeaveTransaction.employee_id == Employee.employee_id
+            ).join(
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
+            ).outerjoin(
+                AppliedByEmployee,
+                LeaveTransaction.applied_by == AppliedByEmployee.employee_id
+            ).outerjoin(
+                WorkingLate,
+                LeaveTransaction.leave_tran_id == WorkingLate.leave_tran_id
+            ).outerjoin(
+                CompensatoryOff,
+                LeaveTransaction.leave_tran_id == CompensatoryOff.leave_tran_id
+            ).outerjoin(
+                CustomerHoliday,
+                LeaveTransaction.leave_tran_id == CustomerHoliday.leave_tran_id
+            )
+            
+            # Only filter by date range - no approver filter
+            query = query.filter(
+                LeaveTransaction.from_date.between(start_date, end_date)
+            ).order_by(
+                LeaveTransaction.from_date.desc()
+            )
+
+            results = query.all()
+            Logger.info(f"Retrieved {len(results)} leave transactions")
+
+            # Format results
+            formatted_results = []
+            for row in results:
+                formatted_results.append({
+                    'leaveTranId': row.leave_tran_id,
+                    'employeeId': row.employee_id,
+                    'empName': row.emp_name,
+                    'comments': row.comments or '',
+                    'leaveTypeId': row.leave_type_id,
+                    'leaveName': row.leave_name,
+                    'fromDate': format_date(row.from_date),
+                    'toDate': format_date(row.to_date),
+                    'duration': row.duration or '',
+                    'handOverComments': row.hand_over_comments or '',
+                    'appliedByName': row.applied_by_name or '',
+                    'applicationDate': format_date(row.application_date),
+                    'approvedBy': row.approved_by or '',
+                    'approvedDate': format_date(row.approved_date),
+                    'approvalComment': row.approval_comment or '',
+                    'leaveStatus': row.leave_status,
+                    'attachments': row.attachments or '',
+                    'isBillable': row.is_billable or False,
+                    'isCommunicatedToTeam': row.is_communicated_to_team or False,
+                    'isCustomerApprovalRequired': row.is_customer_approval_required or False,
+                    'noOfDays': float(row.no_of_days) if row.no_of_days else 0.0,
+                    'fromTime': str(row.from_time) if row.from_time else '',
+                    'toTime': str(row.to_time) if row.to_time else '',
+                    'reasonForWorkingLate': row.reason_for_working_late or '',
+                    'compOffDate': format_date(row.comp_off_date),
+                    'compOffTime': str(row.comp_off_time) if row.comp_off_time else '',
+                    'workedDate': format_date(row.worked_date),
+                })
+
+            return formatted_results
+            
+        except Exception as e:
+            Logger.critical("Error fetching all leave transactions", error=str(e))
+            raise e
+
+    @staticmethod
     def get_leave_transactions_by_approver(approver_id: str, year: int) -> List[Dict[str, Any]]:
         """
         Retrieves all leave transactions approved by or requiring approval from a team lead.

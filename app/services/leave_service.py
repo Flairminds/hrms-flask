@@ -93,3 +93,7 @@ class LeaveService:
     @staticmethod
     def get_leave_transactions_by_approver(approver_id: str, year: int):
         return LeaveQueryService.get_leave_transactions_by_approver(approver_id, year)
+
+    @staticmethod
+    def get_all_leave_transactions(year: int):
+        return LeaveQueryService.get_all_leave_transactions(year)

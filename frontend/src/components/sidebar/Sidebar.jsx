@@ -179,10 +179,6 @@ export const Sidebar = ({ isRole }) => {
             <UserOutlined className={stylesSidebar.iconsSidebar} />
             <span className={stylesSidebar.info}>Personal Info</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/leave') ? stylesSidebar.active : ''}`} onClick={() => navigate('/leave')}>
-            <CalendarOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Leave Management</span>
-          </div>
           <div className={`${stylesSidebar.divs} ${isActive('/holiday') ? stylesSidebar.active : ''}`} onClick={() => navigate('/holiday')}>
             <GiftOutlined className={stylesSidebar.iconsSidebar} />
             <span>Holiday List</span>
@@ -190,6 +186,10 @@ export const Sidebar = ({ isRole }) => {
           <div className={`${stylesSidebar.divs} ${isActive('/company-policy') ? stylesSidebar.active : ''}`} onClick={() => navigate('/company-policy')}>
             <FileProtectOutlined className={stylesSidebar.iconsSidebar} />
             <span>Company Policy</span>
+          </div>
+          <div className={`${stylesSidebar.divs} ${isActive('/leave') ? stylesSidebar.active : ''}`} onClick={() => navigate('/leave')}>
+            <CalendarOutlined className={stylesSidebar.iconsSidebar} />
+            <span>Leave Management</span>
           </div>
         </>
       )}
@@ -200,15 +200,6 @@ export const Sidebar = ({ isRole }) => {
         </div>
       )}
 
-      <div className={`${stylesSidebar.divs} ${isActive('/goalSetting') ? stylesSidebar.active : ''}`} onClick={() => navigate('/goalSetting')}>
-        <TrophyOutlined className={stylesSidebar.iconsSidebar} />
-        <span className={stylesSidebar.info}>Goal Setting</span>
-      </div>
-
-
-
-
-
       {(isRole === "Lead" || isRole === "Manager" || isRole === "HR") && (
         <div className={`${stylesSidebar.divs} ${isActive('/team-leave-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/team-leave-management')}>
           <TeamOutlined className={stylesSidebar.iconsSidebar} />
@@ -216,19 +207,22 @@ export const Sidebar = ({ isRole }) => {
         </div>
       )}
 
-
+      <div className={`${stylesSidebar.divs} ${isActive('/goalSetting') ? stylesSidebar.active : ''}`} onClick={() => navigate('/goalSetting')}>
+        <TrophyOutlined className={stylesSidebar.iconsSidebar} />
+        <span className={stylesSidebar.info}>Goal Setting</span>
+      </div>
 
       {(isRole === "HR" || isRole === "Manager") && (
         <>
-          <div className={`${stylesSidebar.divs} ${isActive('/HRLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/HRLeaveManagement')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/HRLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/HRLeaveManagement')}>
             <AuditOutlined className={stylesSidebar.iconsSidebar} />
             <span>HR Leave Management</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/employee-data') ? stylesSidebar.active : ''}`} onClick={() => navigate('/employee-data')}>
+          </div> */}
+          <div className={`${stylesSidebar.divs} ${isActive('/employee-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/employee-management')}>
             <ContactsOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Employee Data</span>
+            <span>Employee Management</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/allLeaveRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/allLeaveRecords')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/allLeaveRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/allLeaveRecords')}>
             <FolderOpenOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Leave Records</span>
           </div>
@@ -244,18 +238,18 @@ export const Sidebar = ({ isRole }) => {
             <BarChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Report</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/Accessibility') ? stylesSidebar.active : ''}`} onClick={() => navigate('/Accessibility')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/Accessibility') ? stylesSidebar.active : ''}`} onClick={() => navigate('/Accessibility')}>
             <UnlockOutlined className={stylesSidebar.iconsSidebar} />
             <span>Accessibility</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/MasterHR') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MasterHR')}>
+          </div> */}
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/MasterHR') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MasterHR')}>
             <SettingOutlined className={stylesSidebar.iconsSidebar} />
             <span>MasterHR</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/SkillTracking') ? stylesSidebar.active : ''}`} onClick={() => navigate('/SkillTracking')}>
+          </div> */}
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/SkillTracking') ? stylesSidebar.active : ''}`} onClick={() => navigate('/SkillTracking')}>
             <LineChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Skill Tracking</span>
-          </div>
+          </div> */}
           <div className={`${stylesSidebar.divs} ${isActive('/AllDocumentRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/AllDocumentRecords')}>
             <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Document Records</span>

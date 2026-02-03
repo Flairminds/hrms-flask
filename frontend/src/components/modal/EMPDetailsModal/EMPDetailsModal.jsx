@@ -246,6 +246,13 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                 {isEditMode ? (
                   <div style={{ marginTop: '12px' }}>
                     <Form.Item
+                      name="password"
+                      label="Change Password"
+                      rules={[{ min: 8, message: 'Min 8 characters' }]}
+                    >
+                      <Input.Password placeholder="Enter new password to change" />
+                    </Form.Item>
+                    <Form.Item
                       name="employmentStatus"
                       label="Employment Status"
                       rules={[{ required: true, message: 'Please select employment status' }]}

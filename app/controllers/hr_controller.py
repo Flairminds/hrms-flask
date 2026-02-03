@@ -104,7 +104,8 @@ class HRController:
             update_data = {
                 'employee_id': employee_id,
                 'team_lead_id': data.get('teamLeadId'),
-                'employment_status': data.get('employmentStatus')
+                'employment_status': data.get('employmentStatus'),
+                'password': data.get('password')
             }
             
             result = EmployeeService.update_employee_details(update_data)

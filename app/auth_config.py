@@ -196,7 +196,7 @@ FRONTEND_ROUTE_PERMISSIONS = {
     
     # HR-only routes
     "/HRLeaveManagement": ["Admin", "HR"],
-    "/employee-data": ["Admin", "HR"],
+    "/employee-management": ["Admin", "HR"],
     "/allLeaveRecords": ["Admin", "HR"],
     "/updateLeaveApprover": ["Admin", "HR"],
     "/MasterHR": ["Admin", "HR"],

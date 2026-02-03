@@ -248,6 +248,30 @@ class EmployeeService:
                 
             if employee_data.get('employment_status') is not None:
                 employee.employment_status = employee_data['employment_status']
+            
+            # Handle password update
+            password = employee_data.get('password')
+            if password:
+                if len(password) < 8:
+                    raise ValueError("Password must be at least 8 characters long")
+                
+                credentials = EmployeeCredentials.query.filter_by(employee_id=emp_id).first()
+                password_hash = generate_password_hash(
+                    password,
+                    method='pbkdf2:sha256',
+                    salt_length=16
+                )
+                
+                if credentials:
+                    credentials.password = password
+                    credentials.password_hash = password_hash
+                else:
+                    new_credentials = EmployeeCredentials(
+                        employee_id=emp_id,
+                        password=password,
+                        password_hash=password_hash
+                    )
+                    db.session.add(new_credentials)
             if employee_data.get('mobile_no') is not None:
                 employee.contact_number = employee_data['mobile_no']
             if employee_data.get('internship_end_date') is not None:
@@ -659,6 +683,32 @@ class EmployeeService:
         Checks for duplicates based on email/name/contact before insertion.
         """
         Logger.info("Executing InsertEmployee logic")
+        
+        # Map camelCase to snake_case if needed
+        key_mapping = {
+            'firstName': 'first_name',
+            'lastName': 'last_name',
+            'middleName': 'middle_name',
+            'contactNumber': 'contact_number',
+            'dateOfBirth': 'date_of_birth',
+            'dateOfJoining': 'date_of_joining',
+            'teamLeadId': 'team_lead_id',
+            'employmentStatus': 'employment_status',
+            'emergencyContactNumber': 'emergency_contact_number',
+            'emergencyContactPerson': 'emergency_contact_person',
+            'emergencyContactRelation': 'emergency_contact_relation',
+            'personalEmail': 'personal_email',
+            'bloodGroup': 'blood_group',
+            'highestQualification': 'highest_qualification',
+            'dateOfResignation': 'date_of_resignation',
+            'internshipEndDate': 'internship_end_date',
+            'probationEndDate': 'probation_end_date',
+            'MasterSubRole': 'role_id'
+        }
+        for camel, snake in key_mapping.items():
+            if camel in employee_data and snake not in employee_data:
+                employee_data[snake] = employee_data[camel]
+
         required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 
                           'date_of_joining', 'sub_role', 'band', 'password', 'role_id']
         missing = [f for f in required_fields if not employee_data.get(f)]
@@ -679,11 +729,7 @@ class EmployeeService:
                         Employee.first_name == employee_data['first_name'],
                         Employee.last_name == employee_data['last_name']
                     ),
-                    and_(
-                        Employee.contact_number == employee_data['contact_number'],
-                        Employee.first_name == employee_data['first_name'],
-                        Employee.last_name == employee_data['last_name']
-                    )
+                    Employee.contact_number == employee_data['contact_number']
                 )
             ).first()
             
@@ -718,12 +764,12 @@ class EmployeeService:
             Logger.info("Generated new employee ID", employee_id=employee_id, id_number=new_id_num)
             
             
-            # Find default team lead (HR)
-            hr_employee = Employee.query.filter_by(email=EmailConfig.DEFAULT_TEAM_LEAD_EMAIL).first()
-            if hr_employee:
-                default_team_lead_id = hr_employee.employee_id
-            else:
-                default_team_lead_id = None
+            # Use provided team lead or find default (HR)
+            team_lead_id = employee_data.get('team_lead_id')
+            if not team_lead_id:
+                hr_employee = Employee.query.filter_by(email=EmailConfig.DEFAULT_TEAM_LEAD_EMAIL).first()
+                if hr_employee:
+                    team_lead_id = hr_employee.employee_id
             
             # Create employee record
             new_employee = Employee(
@@ -733,7 +779,7 @@ class EmployeeService:
                 emergency_contact_relation=employee_data.get('emergency_contact_relation'), email=employee_data['email'],
                 personal_email=employee_data.get('personal_email'), gender=employee_data.get('gender'), blood_group=employee_data.get('blood_group'),
                 date_of_joining=employee_data['date_of_joining'], sub_role=employee_data['sub_role'], highest_qualification=employee_data.get('highest_qualification'),
-                employment_status='Active', team_lead_id=default_team_lead_id, date_of_resignation=employee_data.get('date_of_resignation'),
+                employment_status=employee_data.get('employment_status', 'Active'), team_lead_id=team_lead_id, date_of_resignation=employee_data.get('date_of_resignation'),
                 lwd=employee_data.get('lwd'), lwp=employee_data.get('lwp'), internship_end_date=employee_data.get('internship_end_date'),
                 probation_end_date=employee_data.get('probation_end_date')
             )
