@@ -34,7 +34,8 @@ const leaveStatusOptions = [
 const { Option } = Select;
 export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leaveDates, holidayData,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
-  employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable, setLeaveDates
+  employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable, setLeaveDates,
+  refreshTrigger
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [leaveToCancel, setLeaveToCancel] = useState(null);
@@ -119,7 +120,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
     };
 
     fetchEmployeeData();
-  }, [selectedRange, propEmployeeId]);
+  }, [selectedRange, propEmployeeId, refreshTrigger]);
 
 
   const formatDate = (dateString) => {
@@ -369,7 +370,10 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                               e.stopPropagation();
                               showModal(employee.leaveTranId);
                             }}
-                            disabled={employee.leaveStatus !== "Pending"}
+                            disabled={!(
+                              (new Date(employee.fromDate) > new Date() && employee.leaveStatus !== "Cancel") ||
+                              (employee.leaveStatus === "Pending")
+                            )}
                           >
                             Cancel
                           </Button>

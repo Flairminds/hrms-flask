@@ -23,6 +23,11 @@ def roles_required(*roles):
             g.employee_id = employee_id
             
             if user_role not in roles:
+                from ..utils.logger import Logger
+                Logger.warning("ACCESS DENIED", 
+                               user_role=user_role, 
+                               allowed_roles=roles, 
+                               endpoint=request.endpoint)
                 return jsonify({"Message": "Access denied. Insufficient permissions."}), 403
             
             return fn(*args, **kwargs)

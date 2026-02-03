@@ -17,7 +17,8 @@ dayjs.extend(customParseFormat);
 export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDates, holidayData,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
   employeeData, setEmployeeData, loadingLeaveTable, setLoadingLeaveTable,
-  setLeaveApplicationModal, isSetLeaveApplicationModal, preSelectedLeaveType, leaveObj, formattedLeaveData }) => {
+  setLeaveApplicationModal, isSetLeaveApplicationModal, preSelectedLeaveType, leaveObj, formattedLeaveData,
+  setRefreshTrigger }) => {
 
   const { user } = useAuth();
   const employeeId = user?.employeeId;
@@ -207,6 +208,9 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
         setAlertMissedDoorCount(false);
 
         // Refresh data
+        if (setRefreshTrigger) {
+          setRefreshTrigger(prev => prev + 1);
+        }
         leaveCardDetails();
         fetchEmployeeData();
       } else {

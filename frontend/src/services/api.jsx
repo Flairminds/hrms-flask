@@ -158,9 +158,9 @@ export const updateLeaveStatus = (payload) => {
 
 /// 11. Cancel Leave : Cancels a leave request for a given leave transaction ID.
 export const cancelLeave = (leaveTranId) => {
-  return axiosInstance.patch('/EmployeesDetails/CancelLeave', {
-    leaveTranId,
-    leaveStatus: "Cancel"
+  return axiosInstance.patch('/employees-details/cancel-leave', {
+    LeaveTranId: leaveTranId,
+    LeaveStatus: "Cancel"
   });
 };
 

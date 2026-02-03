@@ -45,6 +45,7 @@ export function LeaveManagementPage() {
   const [windowSize, setWindowSize] = useState(0);
 
   const [leaveDates, setLeaveDates] = useState({})
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export function LeaveManagementPage() {
       leaveCardDetails(user.employeeId);
     }
     fetchHolidayData();
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   const showModal = (leaveType) => {
     setSelectedLeaveType(leaveType);
@@ -257,7 +258,8 @@ export function LeaveManagementPage() {
               setLeaveCardData={setLeaveCardData} leaveCardData={leaveCardData}
               selectedLeave={selectedLeave} setSelectedLeave={setSelectedLeave} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} employeeData={employeeData} setEmployeeData={setEmployeeData} loadingLeaveTable={loadingLeaveTable} setLoadingLeaveTable={setLoadingLeaveTable}
               setLeaveApplicationModal={setLeaveApplicationModal} isSetLeaveApplicationModal={isSetLeaveApplicationModal} preSelectedLeaveType={selectedLeaveType} leaveObj={leaveCardData}
-              formattedLeaveData={formattedLeaveData} holidayData={holidayData} />
+              formattedLeaveData={formattedLeaveData} holidayData={holidayData}
+              setRefreshTrigger={setRefreshTrigger} />
           )}
           <div className={styles.leaveTable}>
             <LeaveTable
@@ -265,6 +267,7 @@ export function LeaveManagementPage() {
               leaveDates={leaveDates} holidayData={holidayData}
               setLeaveCardData={setLeaveCardData} setLeaveDates={setLeaveDates}
               selectedLeave={selectedLeave} setSelectedLeave={setSelectedLeave} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} employeeData={employeeData} setEmployeeData={setEmployeeData} loadingLeaveTable={loadingLeaveTable} setLoadingLeaveTable={setLoadingLeaveTable}
+              refreshTrigger={refreshTrigger}
             />
           </div>
         </div>

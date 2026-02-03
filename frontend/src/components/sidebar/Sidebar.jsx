@@ -91,11 +91,11 @@ export const Sidebar = ({ isRole }) => {
       try {
         const employeeId = Cookies.get('employeeId');
         if (employeeId) {
-          const response = await getWarningCount(employeeId);
-          setWarningCount(response.data.warningCount);
+          // const response = await getWarningCount(employeeId);
+          // setWarningCount(response.data.warningCount);
 
-          const responsePersonal = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
-          setCountPersonalInfo(responsePersonal.data.data.Addresses[0].counter);
+          // const responsePersonal = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
+          // setCountPersonalInfo(responsePersonal.data.data.Addresses[0].counter);
         }
       } catch (error) {
         console.error('Error fetching warning count:', error);

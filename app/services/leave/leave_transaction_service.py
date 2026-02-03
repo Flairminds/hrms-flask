@@ -52,6 +52,7 @@ class LeaveTransactionService:
             raise ValueError(f"Invalid or unauthorized leave type: {leave_type_name}")
             
         leave_type_id = int(target_card['leave_type_id'])
+        remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
 
         # validation - any leave should not overlap with existing leave
         existing_leaves = LeaveQueryService.get_leave_details(emp_id)
@@ -85,9 +86,13 @@ class LeaveTransactionService:
                 if (from_date_only - app_date_only).days < 7:
                     raise ValueError("You must apply for Privilege Leave at least 7 days in advance.")
 
-                remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
                 if remaining < no_of_days:
                     raise ValueError(f"Insufficient Privilege Leave balance. Available: {remaining}")
+
+            # 2. Sick/Emergency Leave Validation
+            if leave_type_name == LeaveTypeName.SICK_LEAVE:
+                if remaining < no_of_days:
+                    raise ValueError(f"Insufficient {LeaveTypeName.SICK_LEAVE} balance. Available: {remaining}")
 
             # 2. WFH Validations
             if leave_type_id == LeaveTypeID.WFH:

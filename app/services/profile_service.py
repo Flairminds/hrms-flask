@@ -1,4 +1,5 @@
 from ..models.hr import db, Employee, EmployeeAddress, MasterSkill, EmployeeSkill
+from datetime import datetime
 from ..models.leave import LeaveTransaction
 from ..models.documents import EmployeeDocumentsBinary
 from sqlalchemy import text, func
@@ -64,20 +65,61 @@ class ProfileService:
 
     @staticmethod
     def cancel_leave(leave_tran_id):
-        """Cancels a pending or approved leave transaction using ORM."""
+        """
+        Cancels a leave transaction using ORM.
+        
+        Business Rules:
+        1. If from_date is in the future: can cancel any status except already CANCELLED.
+        2. If from_date is in the past or today: can cancel only if status is PENDING or APPROVED.
+        
+        Returns:
+            "Success" - Transaction cancelled successfully
+            "Not Found" - Transaction not found
+            "Not Cancellable" - Status/Date constraints not met
+        """
         try:
             leave = LeaveTransaction.query.get(leave_tran_id)
-            if leave and leave.leave_status in [LeaveStatus.PENDING, LeaveStatus.APPROVED]:
+            if not leave:
+                Logger.warning("Leave cancellation failed - transaction not found", leave_tran_id=leave_tran_id)
+                return "Not Found"
+            
+            now = datetime.now()
+            # If from_date is in the future, we allow cancellation for any status (except already cancelled)
+            # If from_date is in the past, we follow the existing rule (Pending/Approved only)
+            is_future = leave.from_date > now
+            
+            can_cancel = False
+            if is_future:
+                if leave.leave_status != LeaveStatus.CANCELLED:
+                    can_cancel = True
+            else:
+                if leave.leave_status in [LeaveStatus.PENDING, LeaveStatus.APPROVED]:
+                    can_cancel = True
+            
+            if can_cancel:
+                old_status = leave.leave_status
                 leave.leave_status = LeaveStatus.CANCELLED
                 db.session.commit()
-                Logger.info("Leave cancelled successfully", leave_tran_id=leave_tran_id)
-                return True
-            Logger.warning("Leave not found or not cancellable", leave_tran_id=leave_tran_id)
-            return False
+                Logger.info("Leave cancelled successfully", 
+                           leave_tran_id=leave_tran_id, 
+                           old_status=old_status,
+                           new_status=LeaveStatus.CANCELLED,
+                           is_future=is_future)
+                return "Success"
+            
+            Logger.warning("Leave cancellation failed - constraints not met", 
+                          leave_tran_id=leave_tran_id, 
+                          current_status=leave.leave_status,
+                          from_date=str(leave.from_date),
+                          is_future=is_future)
+            return "Not Cancellable"
         except Exception as e:
             db.session.rollback()
-            Logger.error("Error cancelling leave", leave_tran_id=leave_tran_id, error=str(e))
-            return False
+            Logger.error("Error cancelling leave", 
+                        leave_tran_id=leave_tran_id, 
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
 
     @staticmethod
     def get_complete_employee_details(employee_id):

@@ -1,5 +1,6 @@
-from flask import request, jsonify
+from flask import request, jsonify, g
 from ..services.profile_service import ProfileService
+from ..utils.logger import Logger
 
 class ProfileController:
     """Controller for handling employee profile and self-service requests."""
@@ -7,12 +8,15 @@ class ProfileController:
     @staticmethod
     def get_profile(emp_id):
         """Retrieves the full profile of an employee."""
+        Logger.info("Get profile request received", employee_id=emp_id)
         try:
             profile = ProfileService.get_employee_profile(emp_id)
             if not profile:
+                Logger.warning("Employee profile not found", employee_id=emp_id)
                 return jsonify({"Message": "Employee not found"}), 404
                 
             e = profile['employee']
+            Logger.info("Profile retrieved successfully", employee_id=emp_id)
             return jsonify({
                 "employee_id": e.employee_id,
                 "first_name": e.first_name,
@@ -23,35 +27,64 @@ class ProfileController:
                 "addresses": [{"type": a.address_type, "city": a.city, "state": a.state} for a in profile['addresses']]
             }), 200
         except Exception as e:
-            return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+            Logger.error("Unexpected error retrieving profile", employee_id=emp_id, error=str(e))
+            return jsonify({"Message": "An unexpected error occurred while fetching the profile"}), 500
 
     @staticmethod
     def update_profile_self(emp_id):
         """Endpoint for employees to update their own contact information."""
+        Logger.info("Update profile request received", employee_id=emp_id)
         try:
             data = request.get_json()
             if not data:
+                Logger.warning("Empty request body for profile update", employee_id=emp_id)
                 return jsonify({"Message": "Request body must be JSON"}), 400
                 
             if ProfileService.update_profile_self(emp_id, data):
+                Logger.info("Profile updated successfully", employee_id=emp_id)
                 return jsonify({"Message": "Profile updated successfully"}), 200
-            return jsonify({"Message": "Error updating profile or employee not found"}), 500
+            
+            Logger.warning("Profile update failed - employee not found", employee_id=emp_id)
+            return jsonify({"Message": "Error updating profile or employee not found"}), 404
         except Exception as e:
-            return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+            Logger.error("Unexpected error updating profile", employee_id=emp_id, error=str(e))
+            return jsonify({"Message": "An unexpected error occurred during profile update"}), 500
 
     @staticmethod
     def cancel_leave():
         """Endpoint for employees to cancel their own leave requests."""
+        Logger.info("Cancel leave request received")
         try:
             data = request.get_json()
-            if not data or not data.get('LeaveTranId'):
-                return jsonify({"Message": "LeaveTranId is required"}), 400
+            if not data:
+                Logger.warning("Cancel leave failed - empty request body")
+                return jsonify({"Message": "Request body is required"}), 400
                 
-            if ProfileService.cancel_leave(data.get('LeaveTranId')):
+            tran_id = data.get('LeaveTranId') or data.get('leaveTranId')
+            if not tran_id:
+                Logger.warning("Cancel leave failed - missing transaction ID")
+                return jsonify({"Message": "LeaveTranId is required"}), 400
+            
+            Logger.debug("Attempting to cancel leave", leave_tran_id=tran_id)
+            
+            result = ProfileService.cancel_leave(tran_id)
+            
+            if result == "Success":
+                Logger.info("Leave cancelled successfully", leave_tran_id=tran_id)
                 return jsonify({"Message": "Leave cancelled successfully"}), 200
-            return jsonify({"Message": "Leave transaction not found or cannot be cancelled"}), 404
+            elif result == "Not Found":
+                Logger.warning("Leave cancellation failed - transaction not found", leave_tran_id=tran_id)
+                return jsonify({"Message": "Leave transaction not found"}), 404
+            elif result == "Not Cancellable":
+                Logger.warning("Leave cancellation failed - status not cancellable", leave_tran_id=tran_id)
+                return jsonify({"Message": "Leave cannot be cancelled in its current status"}), 400
+            else:
+                Logger.error("Leave cancellation failed - unknown error", leave_tran_id=tran_id)
+                return jsonify({"Message": "Failed to cancel leave"}), 500
+                
         except Exception as e:
-            return jsonify({"Message": f"An unexpected error occurred: {str(e)}"}), 500
+            Logger.error("Unexpected error during leave cancellation", error=str(e))
+            return jsonify({"Message": "An unexpected error occurred while cancelling the leave"}), 500
 
     @staticmethod
     def get_complete_details(emp_id):
