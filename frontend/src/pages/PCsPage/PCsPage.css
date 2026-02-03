@@ -62,7 +62,7 @@
 .pc-table th,
 .pc-table td {
   text-align: center;
-  padding: 14px;
+  padding: 6px;
   border-bottom: 1px solid #eee;
 }
 
@@ -75,39 +75,42 @@
 /* Action buttons container */
 .pc-table td .action-buttons {
   display: flex;
-  justify-content: center; 
-  gap: 10px; 
+  justify-content: center;
+  gap: 10px;
 }
 
 /* Optional: make buttons equal width */
 .pc-table td .action-buttons button {
-  flex: 1; 
-  max-width: 80px; 
+  flex: 1;
+  max-width: 80px;
 }
+
 /* Edit button */
 .pc-edit-btn {
-   color: rgb(21, 3, 59) !important;           
-  background: transparent !important; 
-  border: none !important;         
-  box-shadow: none !important; 
+  color: rgb(21, 3, 59) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .pc-edit-btn:hover {
-color: rgb(17, 3, 44) !important;       
+  color: rgb(17, 3, 44) !important;
   background: transparent !important;
 }
+
 /* Delete button — same size & style but red */
 .pc-delete-btn1 {
-  color: red !important;          
-  background: transparent !important; 
-  border: none !important;        
-  box-shadow: none !important;     
+  color: red !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .pc-delete-btn1:hover {
-  color: darkred !important;       
+  color: darkred !important;
   background: transparent !important;
 }
+
 /* Empty state */
 .no-data {
   text-align: center;

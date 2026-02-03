@@ -28,6 +28,7 @@ import { RelievingLetter } from './pages/RelievingLetter/RelievingLetter.jsx'
 import PCsPage from './pages/PCsPage/PCsPage.jsx';
 import AssignmentsPage from "./pages/AssignmentsPage/AssignmentsPage.jsx";
 import MaintenancePage from "./pages/MaintenanceManagementPage/MaintenancePage.jsx";
+import SystemManagementPage from './pages/systemManagement/SystemManagementPage.jsx';
 import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
 
 function AppRoutes() {
@@ -77,6 +78,7 @@ function AppRoutes() {
                 <Route path="PCsPage" element={<PCsPage />} />
                 <Route path="Assignments" element={<AssignmentsPage />} />
                 <Route path="Maintenance" element={<MaintenancePage />} />
+                <Route path="system-management" element={<SystemManagementPage />} />
                 <Route path="*" element={<span>404 Not Found</span>} />
             </Route>
         </Routes>

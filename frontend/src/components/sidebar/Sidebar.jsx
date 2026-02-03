@@ -254,30 +254,10 @@ export const Sidebar = ({ isRole }) => {
             <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Document Records</span>
           </div>
-          <div className={stylesSidebar.sidebarContainer}>
-            <div className={`${stylesSidebar.divs} ${openSystem ? stylesSidebar.activeParent : ""}`} onClick={() => setOpenSystem(!openSystem)}>
-              <ToolOutlined className={stylesSidebar.iconsSidebar} />
-              <span className={stylesSidebar.info}>System Management</span>
-            </div>
 
-            {openSystem && (
-              <div className={stylesSidebar.subMenu}>
-                <div className={`${stylesSidebar.subItem} ${isActive("/PCsPage") ? stylesSidebar.active : ""}`} onClick={() => navigate("/PCsPage")}>
-                  <LaptopOutlined className={stylesSidebar.subIcon} />
-                  <span className={stylesSidebar.info}>PCs Page</span>
-                </div>
-
-                <div className={`${stylesSidebar.subItem} ${isActive("/Assignments") ? stylesSidebar.active : ""}`} onClick={() => navigate("/Assignments")} >
-                  <ContainerOutlined className={stylesSidebar.subIcon} />
-                  <span className={stylesSidebar.info}>Assignments</span>
-                </div>
-
-                <div className={`${stylesSidebar.subItem} ${isActive("/Maintenance") ? stylesSidebar.active : ""}`} onClick={() => navigate("/Maintenance")} >
-                  <ToolOutlined className={stylesSidebar.subIcon} />
-                  <span className={stylesSidebar.info}>Maintenance</span>
-                </div>
-              </div>
-            )}
+          <div className={`${stylesSidebar.divs} ${isActive('/system-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/system-management')}>
+            <ToolOutlined className={stylesSidebar.iconsSidebar} />
+            <span className={stylesSidebar.info}>System Management</span>
           </div>
         </>
       )}
