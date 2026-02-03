@@ -61,7 +61,7 @@ function PersonalInfoPage() {
         return;
       }
       const response = await getEmployeeDetails(employeeId);
-      setEmployeeData(response.data.data);
+      setEmployeeData(response.data);
     } catch (error) {
       console.error('Error fetching employee data:', error);
       setError(error.message || 'Error fetching employee data');
@@ -372,12 +372,12 @@ function PersonalInfoPage() {
               <Avatar size={100} src={defaultProfile} style={{ border: '4px solid #f0f2f5' }} />
               <div>
                 <Title level={3} style={{ margin: 0 }}>
-                  {employeeData?.last_name ? `${employeeData?.first_name} ${employeeData?.last_name}` : employeeData?.first_name}
+                  {employeeData?.lastName ? `${employeeData?.firstName} ${employeeData?.lastName}` : employeeData?.firstName}
                 </Title>
                 <Tag color="blue" style={{ marginTop: '4px' }}>{user?.roleName}</Tag>
                 <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <Text type="secondary"><MailOutlined style={{ marginRight: '8px' }} />{employeeData?.email}</Text>
-                  <Text type="secondary"><PhoneOutlined style={{ marginRight: '8px' }} />{employeeData?.contact_number}</Text>
+                  <Text type="secondary"><PhoneOutlined style={{ marginRight: '8px' }} />{employeeData?.contactNumber}</Text>
                 </div>
               </div>
             </div>
@@ -397,17 +397,17 @@ function PersonalInfoPage() {
             {/* Personal Details */}
             <Col xs={24} lg={12}>
               <WidgetCard title="Personal Details" icon={<UserOutlined />} iconColor="#1890ff">
-                <InfoRow label="Employee ID" value={employeeData.employee_id} />
-                <InfoRow label="First Name" value={employeeData.first_name} />
-                <InfoRow label="Middle Name" value={employeeData.middle_name} />
-                <InfoRow label="Last Name" value={employeeData.last_name} />
-                <InfoRow label="Date of Birth" value={employeeData.date_of_birth && new Date(employeeData.date_of_birth).toLocaleDateString('en-GB')} />
+                <InfoRow label="Employee ID" value={employeeData.employeeId} />
+                <InfoRow label="First Name" value={employeeData.firstName} />
+                <InfoRow label="Middle Name" value={employeeData.middleName} />
+                <InfoRow label="Last Name" value={employeeData.lastName} />
+                <InfoRow label="Date of Birth" value={employeeData.dateOfBirth && new Date(employeeData.dateOfBirth).toLocaleDateString('en-GB')} />
                 <InfoRow label="Gender" value={employeeData.gender} />
-                <InfoRow label="Blood Group" value={employeeData.blood_group} />
-                <InfoRow label="Personal Email" value={employeeData.personal_email} />
-                <InfoRow label="Date of Joining" value={employeeData.date_of_joining && new Date(employeeData.date_of_joining).toLocaleDateString('en-GB')} />
-                <InfoRow label="Band" value={employeeData.designation_name} />
-                <InfoRow label="Highest Qualification" value={employeeData.highest_qualification} />
+                <InfoRow label="Blood Group" value={employeeData.bloodGroup} />
+                <InfoRow label="Personal Email" value={employeeData.personalEmail} />
+                <InfoRow label="Date of Joining" value={employeeData.dateOfJoining && new Date(employeeData.dateOfJoining).toLocaleDateString('en-GB')} />
+                <InfoRow label="Band" value={employeeData.designationName} />
+                <InfoRow label="Highest Qualification" value={employeeData.highestQualification} />
                 <InfoRow label="Qualification Date" value={highestQualificationYearMonth} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                   <Text type="secondary">Full Stack Ready:</Text>
@@ -422,12 +422,12 @@ function PersonalInfoPage() {
                 <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a">
                   {employeeData.addresses ? (
                     <>
-                      <InfoRow label="Type" value={employeeData.addresses.residential_address_type} />
-                      <InfoRow label="Line 1" value={employeeData.addresses.residential_address1} />
-                      <InfoRow label="Line 2" value={employeeData.addresses.residential_address2} />
-                      <InfoRow label="City" value={employeeData.addresses.residential_city} />
-                      <InfoRow label="State" value={employeeData.addresses.residential_state} />
-                      <InfoRow label="Zipcode" value={employeeData.addresses.residential_zipcode} />
+                      <InfoRow label="Type" value={employeeData.addresses.residentialAddressType} />
+                      <InfoRow label="Line 1" value={employeeData.addresses.residentialAddress1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.residentialAddress2} />
+                      <InfoRow label="City" value={employeeData.addresses.residentialCity} />
+                      <InfoRow label="State" value={employeeData.addresses.residentialState} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.residentialZipcode} />
                     </>
                   ) : <Text type="secondary">No address info available</Text>}
                 </WidgetCard>
@@ -435,12 +435,12 @@ function PersonalInfoPage() {
                 <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14">
                   {employeeData.addresses ? (
                     <>
-                      <InfoRow label="Type" value={employeeData.addresses.permanent_address_type} />
-                      <InfoRow label="Line 1" value={employeeData.addresses.permanent_address1} />
-                      <InfoRow label="Line 2" value={employeeData.addresses.permanent_address2} />
-                      <InfoRow label="City" value={employeeData.addresses.permanent_city} />
-                      <InfoRow label="State" value={employeeData.addresses.permanent_state} />
-                      <InfoRow label="Zipcode" value={employeeData.addresses.permanent_zipcode} />
+                      <InfoRow label="Type" value={employeeData.addresses.permanentAddressType} />
+                      <InfoRow label="Line 1" value={employeeData.addresses.permanentAddress1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.permanentAddress2} />
+                      <InfoRow label="City" value={employeeData.addresses.permanentCity} />
+                      <InfoRow label="State" value={employeeData.addresses.permanentState} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.permanentZipcode} />
                     </>
                   ) : <Text type="secondary">No address info available</Text>}
                 </WidgetCard>
@@ -482,8 +482,8 @@ function PersonalInfoPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                     {employeeData.skills.map((skill, index) => (
                       <Tag key={index} color="blue" style={{ borderRadius: '4px', padding: '4px 8px', whiteSpace: 'pre-wrap' }}>
-                        <Text strong>{skill.skill_name}</Text>
-                        <Text type="secondary" style={{ marginLeft: '4px', fontSize: '12px' }}>({skill.skill_level})</Text>
+                        <Text strong>{skill.skillName}</Text>
+                        <Text type="secondary" style={{ marginLeft: '4px', fontSize: '12px' }}>({skill.skillLevel})</Text>
                       </Tag>
                     ))}
                   </div>
@@ -494,9 +494,9 @@ function PersonalInfoPage() {
             {/* Emergency Contact */}
             <Col xs={24} lg={12}>
               <WidgetCard title="Emergency Contact" icon={<ExclamationCircleOutlined />} iconColor="#ff4d4f">
-                <InfoRow label="Person" value={employeeData.emergency_contact_person} />
-                <InfoRow label="Relation" value={employeeData.emergency_contact_relation} />
-                <InfoRow label="Number" value={employeeData.emergency_contact_number} />
+                <InfoRow label="Person" value={employeeData.emergencyContactPerson} />
+                <InfoRow label="Relation" value={employeeData.emergencyContactRelation} />
+                <InfoRow label="Number" value={employeeData.emergencyContactNumber} />
               </WidgetCard>
             </Col>
           </Row>

@@ -32,6 +32,23 @@ class HRController:
             }), 500
 
     @staticmethod
+    def get_potential_approvers():
+        """Returns list of employees who can be approvers (Lead, HR, Admin)."""
+        Logger.info("Get potential approvers request received")
+        
+        try:
+            approvers = EmployeeService.get_potential_approvers()
+            Logger.info("Potential approvers retrieved successfully", count=len(approvers))
+            return jsonify(approvers), 200
+            
+        except Exception as e:
+            Logger.error("Error fetching potential approvers", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to retrieve potential approvers'
+            }), 500
+
+    @staticmethod
     def upsert_employee():
         """Endpoint to create or update employee profiles."""
         Logger.info("Upsert employee request received")
@@ -72,6 +89,35 @@ class HRController:
             return jsonify({
                 "Message": "An error occurred while updating employee. Please try again."
             }), 500
+
+    @staticmethod
+    def update_employee_details_by_hr(employee_id):
+        """Updates employee details (for HR/Admin) - team lead and employment status."""
+        Logger.info("Update employee details request", employee_id=employee_id)
+        
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"message": "Request body is required"}), 400
+            
+            # Build update data with employee_id
+            update_data = {
+                'employee_id': employee_id,
+                'team_lead_id': data.get('teamLeadId'),
+                'employment_status': data.get('employmentStatus')
+            }
+            
+            result = EmployeeService.update_employee_details(update_data)
+            
+            if result == -1:
+                return jsonify({"message": "Employee not found"}), 404
+                
+            Logger.info("Employee details updated", employee_id=employee_id)
+            return jsonify({"message": "Employee updated successfully"}), 200
+            
+        except Exception as e:
+            Logger.error("Error updating employee details", error=str(e))
+            return jsonify({"message": "Failed to update employee details"}), 500
 
     @staticmethod
     def insert_employee():
@@ -268,20 +314,16 @@ class HRController:
             Logger.info("Employee details with addresses and skills retrieved", 
                        employee_id=employee_id)
             
-            return jsonify({
-                'status': 'success',
-                'data': employee_data
-            }), 200
+            return jsonify(employee_data), 200
             
         except ValueError as ve:
-            Logger.warning("Validation error fetching employee details",
+            Logger.warning("Validation error fetching employee with address and skills",
                           employee_id=employee_id,
                           error=str(ve))
             return jsonify({
                 'status': 'error',
                 'message': str(ve)
             }), 400
-            
         except LookupError as le:
             Logger.warning("Employee not found",
                           employee_id=employee_id,

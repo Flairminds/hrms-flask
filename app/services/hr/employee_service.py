@@ -59,6 +59,39 @@ class EmployeeService:
             return []
 
     @staticmethod
+    def get_potential_approvers():
+        """Retrieves employees who can be approvers (Lead, HR, Admin roles)."""
+        try:
+            Logger.info("Fetching potential approvers")
+            approvers = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.middle_name,
+                Employee.last_name,
+                MasterRole.role_name
+            ).join(
+                EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
+            ).join(
+                MasterRole, EmployeeRole.role_id == MasterRole.role_id
+            ).filter(
+                MasterRole.role_name.in_(['Lead', 'HR', 'Admin']),
+                Employee.employment_status.notin_(['Resigned', 'Relieved', 'Absconding'])
+            ).order_by(
+                Employee.first_name.asc()
+            ).all()
+
+            return [
+                {
+                    "employeeId": a.employee_id,
+                    "employeeName": f"{a.first_name} {a.middle_name or ''} {a.last_name}".replace("  ", " "),
+                    "roleName": a.role_name
+                } for a in approvers
+            ]
+        except Exception as e:
+            Logger.error("Error fetching potential approvers", error=str(e))
+            return []
+
+    @staticmethod
     def upsert_employee(data):
         """Creates or updates an employee record."""
         try:
@@ -207,6 +240,11 @@ class EmployeeService:
             lob_lead = employee_data.get('lob_lead_id')
             if lob_lead and lob_lead not in ('', 'string'):
                 employee.lob_lead = lob_lead
+            
+            # Handle team_lead_id (leave approver)
+            team_lead = employee_data.get('team_lead_id')
+            if team_lead is not None:
+                employee.team_lead_id = team_lead
                 
             if employee_data.get('employment_status') is not None:
                 employee.employment_status = employee_data['employment_status']
@@ -530,71 +568,86 @@ class EmployeeService:
                 raise LookupError(f"Employee {emp_id} not found")
             
             employee, res_addr, perm_addr, employee_designation, resume_link, employee_sub_role = employee_query
+            
+            # Fetch Designation ID for 'band'
+            designation_query =  db.session.query(EmployeeDesignation.designation_id).filter_by(employee_id=emp_id).first()
+            designation_id = designation_query[0] if designation_query else None
+
             def format_date(date_obj): return date_obj.strftime('%d %b %Y') if date_obj else None
             
             addresses = {}
             if res_addr:
                 addresses = {
-                    'residential_address_type': res_addr.address_type,
-                    'residential_state': res_addr.state or '',
-                    'residential_city': res_addr.city or '',
-                    'residential_address1': res_addr.address1 or '',
-                    'residential_address2': res_addr.address2 or '',
-                    'residential_zipcode': res_addr.zip_code or '',
-                    'is_same_permanant': res_addr.is_same_permanant or False
+                    'residentialAddressType': res_addr.address_type,
+                    'residentialState': res_addr.state or '',
+                    'residentialCity': res_addr.city or '',
+                    'residentialAddress1': res_addr.address1 or '',
+                    'residentialAddress2': res_addr.address2 or '',
+                    'residentialZipcode': res_addr.zip_code or '',
+                    'isSamePermanant': res_addr.is_same_permanant or False
                 }
                 if res_addr.is_same_permanant:
                     addresses.update({
-                        'permanent_address_type': res_addr.address_type,
-                        'permanent_state': res_addr.state or '',
-                        'permanent_city': res_addr.city or '',
-                        'permanent_address1': res_addr.address1 or '',
-                        'permanent_address2': res_addr.address2 or '',
-                        'permanent_zipcode': res_addr.zip_code or ''
+                        'permanentAddressType': res_addr.address_type,
+                        'permanentState': res_addr.state or '',
+                        'permanentCity': res_addr.city or '',
+                        'permanentAddress1': res_addr.address1 or '',
+                        'permanentAddress2': res_addr.address2 or '',
+                        'permanentZipcode': res_addr.zip_code or ''
                     })
                 elif perm_addr:
                     addresses.update({
-                        'permanent_address_type': perm_addr.address_type,
-                        'permanent_state': perm_addr.state or '',
-                        'permanent_city': perm_addr.city or '',
-                        'permanent_address1': perm_addr.address1 or '',
-                        'permanent_address2': perm_addr.address2 or '',
-                        'permanent_zipcode': perm_addr.zip_code or ''
+                        'permanentAddressType': perm_addr.address_type,
+                        'permanentState': perm_addr.state or '',
+                        'permanentCity': perm_addr.city or '',
+                        'permanentAddress1': perm_addr.address1 or '',
+                        'permanentAddress2': perm_addr.address2 or '',
+                        'permanentZipcode': perm_addr.zip_code or ''
                     })
 
             skills_query = db.session.query(EmployeeSkill.skill_id, MasterSkill.skill_name, EmployeeSkill.skill_level).join(
                 MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id).filter(EmployeeSkill.employee_id == emp_id).all()
             
             return {
-                'employee_id': employee.employee_id,
-                'first_name': employee.first_name or '',
-                'middle_name': employee.middle_name or '',
-                'last_name': employee.last_name or '',
-                'date_of_birth': format_date(employee.date_of_birth),
-                'contact_number': employee.contact_number or '',
-                'personal_email': employee.personal_email or '',
-                'emergency_contact_number': employee.emergency_contact_number or '',
-                'emergency_contact_person': employee.emergency_contact_person or '',
-                'emergency_contact_relation': employee.emergency_contact_relation or '',
+                'employeeId': employee.employee_id,
+                'firstName': employee.first_name or '',
+                'middleName': employee.middle_name or '',
+                'lastName': employee.last_name or '',
+                'dateOfBirth': format_date(employee.date_of_birth),
+                'contactNumber': employee.contact_number or '',
+                'personalEmail': employee.personal_email or '',
+                'emergencyContactNumber': employee.emergency_contact_number or '',
+                'emergencyContactPerson': employee.emergency_contact_person or '',
+                'emergencyContactRelation': employee.emergency_contact_relation or '',
                 'email': employee.email or '',
                 'gender': employee.gender or '',
-                'employee_sub_role': employee_sub_role,
-                'designation_name': employee_designation,
-                'blood_group': employee.blood_group or '',
-                'date_of_joining': format_date(employee.date_of_joining),
+                'MasterSubRole': employee.sub_role, # Maps to sub_role ID
+                'subRoleName': employee_sub_role,
+                'band': designation_id, # Maps to designation_id
+                'designationName': employee_designation,
+                'bloodGroup': employee.blood_group or '',
+                'dateOfJoining': format_date(employee.date_of_joining),
                 'ctc': float(employee.ctc) if employee.ctc else 0.0,
-                'team_lead_id': employee.team_lead_id or '',
-                'highest_qualification': employee.highest_qualification or '',
-                'resume_link': resume_link or '',
+                'teamLeadId': employee.team_lead_id or '',
+                'employmentStatus': employee.employment_status or '',
+                'highestQualification': employee.highest_qualification or '',
+                'resumeLink': resume_link or '',
                 'lwp': employee.lwp or 0,
-                'internship_end_date': format_date(employee.internship_end_date),
-                # last working date
+                'internshipEndDate': format_date(employee.internship_end_date),
                 'lwd': format_date(employee.lwd),
-                'date_of_resignation': format_date(employee.date_of_resignation),
-                'probation_end_date': format_date(employee.probation_end_date),
+                'dateOfResignation': format_date(employee.date_of_resignation),
+                'probationEndDate': format_date(employee.probation_end_date),
                 'addresses': addresses,
-                'skills': [{'skill_id': s.skill_id, 'skill_name': s.skill_name, 'skill_level': s.skill_level or ''} for s in skills_query]
+                'skills': [{'skillId': s.skill_id, 'skillName': s.skill_name, 'skillLevel': s.skill_level or ''} for s in skills_query]
             }
+            
+            # Add leave approver name
+            if employee.team_lead_id:
+                approver = Employee.query.filter_by(employee_id=employee.team_lead_id).first()
+                if approver:
+                    result['leaveApproverName'] = f"{approver.first_name} {approver.last_name}"
+            
+            return result
         except Exception as e:
             Logger.error("Error fetching employee details with skills", error=str(e))
             raise e

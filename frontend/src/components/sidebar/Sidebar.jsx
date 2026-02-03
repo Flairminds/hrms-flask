@@ -232,10 +232,10 @@ export const Sidebar = ({ isRole }) => {
             <FolderOpenOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Leave Records</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/updateLeaveApprover') ? stylesSidebar.active : ''}`} onClick={() => navigate('/updateLeaveApprover')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/updateLeaveApprover') ? stylesSidebar.active : ''}`} onClick={() => navigate('/updateLeaveApprover')}>
             <UserSwitchOutlined className={stylesSidebar.iconsSidebar} />
             <span>Update Leave Approver</span>
-          </div>
+          </div> */}
           <div className={`${stylesSidebar.divs} ${isActive('https://hrms-monthly-report.streamlit.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://hrms-monthly-report.streamlit.app/', '_blank')}>
             <ClockCircleOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Attendance Data</span>

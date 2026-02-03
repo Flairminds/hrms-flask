@@ -946,4 +946,14 @@ export const getLeaveCards = () => {
   return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-cards`);
 };
 
+// Retrieves employees who can be leave approvers (Lead, HR, Admin)
+export const getPotentialApprovers = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/get-potential-approvers`);
+};
+
+// Updates employee details (for HR/Admin)
+export const updateEmployeeDetails = (employeeId, data) => {
+  return axiosInstance.put(`${API_BASE_URL}/hr/employee-details/${employeeId}`, data);
+};
+
 export default axiosInstance;

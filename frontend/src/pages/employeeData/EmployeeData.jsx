@@ -235,7 +235,7 @@ export const EmployeeData = () => {
           detailsModal={detailsModal}
           setDetailsModal={setDetailsModal}
           personalEmployeeDetails={personalEmployeeDetails}
-        // Note: If you need to edit, you might need to implement editing logic inside the modal or pass a handler
+          refreshEmployeeData={getEmployees}
         />
       )}
     </div>

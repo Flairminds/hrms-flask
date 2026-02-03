@@ -63,7 +63,7 @@ function AppRoutes() {
                 <Route path="HRLeaveManagement" element={<HRLeaveManagement />} />
                 <Route path="employee-data" element={<EmployeeData />} />
                 <Route path="allLeaveRecords" element={<AllLeavesRecords />} />
-                <Route path="updateLeaveApprover" element={<UpdateLeaveApprover />} />
+                {/* <Route path="updateLeaveApprover" element={<UpdateLeaveApprover />} /> */}
                 <Route path="Accessibility" element={<Accessibility />} />
                 <Route path="MasterHR" element={<MasterHR />} />
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />

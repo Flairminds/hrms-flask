@@ -10,6 +10,11 @@ hr_bp = Blueprint('hr', __name__)
 def get_all_employees():
     return HRController.get_all_employees()
 
+@hr_bp.route('/get-potential-approvers', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_potential_approvers():
+    return HRController.get_potential_approvers()
+
 @hr_bp.route('/upsert-employee', methods=['POST'])
 @roles_required(*ROLE_PERMISSIONS['hr']['upsert_employee'])
 def upsert_employee():
@@ -39,6 +44,11 @@ def get_employee_details_for_relieving_letter():
 @roles_required(*ROLE_PERMISSIONS['hr']['employee_details'])
 def get_employee_with_address_and_skills(employee_id):
     return HRController.get_employee_with_address_and_skills(employee_id)
+
+@hr_bp.route('/employee-details/<employee_id>', methods=['PUT'])
+@roles_required(*ROLE_PERMISSIONS['hr']['upsert_employee'])
+def update_employee_details_by_hr(employee_id):
+    return HRController.update_employee_details_by_hr(employee_id)
 
 @hr_bp.route('/get-new-joinees', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr']['get_new_joinees'])
