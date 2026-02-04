@@ -32,6 +32,19 @@ class ProfileController:
         except Exception as e:
             Logger.error("Error in upload_profile_image controller", error=str(e))
             return jsonify({'message': 'An error occurred'}), 500
+    
+    @staticmethod
+    def get_profile_completion(emp_id):
+        """Get profile completion percentage for an employee"""
+        Logger.info("Get profile completion request", employee_id=emp_id)
+        
+        try:
+            result = ProfileService.calculate_profile_completion(emp_id)
+            return jsonify(result), 200
+            
+        except Exception as e:
+            Logger.error("Error in get_profile_completion controller", error=str(e))
+            return jsonify({'message': 'An error occurred'}), 500
 
     @staticmethod
     def get_employee_profile(emp_id):

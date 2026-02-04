@@ -20,6 +20,11 @@ def update_profile_self(emp_id):
 def upload_profile_image(emp_id):
     return ProfileController.upload_profile_image(emp_id)
 
+@profile_bp.route('/profile-completion/<emp_id>', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['profile']['get_profile'])
+def get_profile_completion(emp_id):
+    return ProfileController.get_profile_completion(emp_id)
+
 @profile_bp.route('/<emp_id>', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['profile']['get_profile'])
 def get_profile(emp_id):

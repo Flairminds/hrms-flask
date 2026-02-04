@@ -45,6 +45,88 @@ class ProfileService:
             db.session.rollback()
             Logger.error("Error uploading profile image", employee_id=emp_id, error=str(e))
             return False, f"An error occurred: {str(e)}"
+    
+    @staticmethod
+    def calculate_profile_completion(emp_id):
+        """
+        Calculate profile completion percentage based on filled fields
+        Returns: {'completion_percentage': 85, 'missing_fields': ['blood_group', ...]}
+        """
+        try:
+            from ..models.hr import Employee, EmployeeAddress
+            
+            employee = Employee.query.filter_by(employee_id=emp_id).first()
+            if not employee:
+                return {'completion_percentage': 0, 'missing_fields': ['All fields']}
+            
+            # Define weighted fields (critical fields have higher weight)
+            employee_fields = {
+                'first_name': 2,
+                'last_name': 2,
+                'email': 3,
+                'contact_number': 3,
+                'date_of_birth': 2,
+                'gender': 1,
+                'blood_group': 1,
+                'personal_email': 2,
+                'emergency_contact_number': 3,
+                'emergency_contact_person': 3,
+                'emergency_contact_relation': 2,
+                'highest_qualification': 2,
+                'profile_image': 2,
+                'date_of_joining': 1,
+            }
+            
+            # Calculate employee fields completion
+            total_weight = sum(employee_fields.values())
+            filled_weight = 0
+            missing_fields = []
+            
+            for field, weight in employee_fields.items():
+                value = getattr(employee, field, None)
+                if value is not None and str(value).strip():
+                    filled_weight += weight
+                else:
+                    missing_fields.append(field.replace('_', ' ').title())
+            
+            # Check address completion
+            address = EmployeeAddress.query.filter_by(employee_id=emp_id).first()
+            address_fields = {
+                'permanent_address_line1': 2,
+                'permanent_city': 2,
+                'permanent_state': 2,
+                'permanent_pincode': 2,
+                'current_address_line1': 2,
+                'current_city': 2,
+                'current_state': 2,
+                'current_pincode': 2,
+            }
+            
+            total_weight += sum(address_fields.values())
+            
+            if address:
+                for field, weight in address_fields.items():
+                    value = getattr(address, field, None)
+                    if value is not None and str(value).strip():
+                        filled_weight += weight
+                    else:
+                        missing_fields.append(f"Address: {field.replace('_', ' ').title()}")
+            else:
+                missing_fields.extend([f"Address: {field.replace('_', ' ').title()}" for field in address_fields.keys()])
+            
+            # Calculate percentage
+            completion_percentage = round((filled_weight / total_weight) * 100)
+            
+            Logger.info(f"Profile completion calculated", emp_id=emp_id, percentage=completion_percentage)
+            
+            return {
+                'completion_percentage': completion_percentage,
+                'missing_fields': missing_fields[:10]  # Limit to top 10 missing fields
+            }
+            
+        except Exception as e:
+            Logger.error("Error calculating profile completion", error=str(e))
+            return {'completion_percentage': 0, 'missing_fields': ['Error calculating completion']}
 
     @staticmethod
     def get_employee_profile(emp_id):

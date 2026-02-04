@@ -67,6 +67,11 @@ export const uploadProfileImage = (employeeId, file) => {
   });
 };
 
+// Get profile completion percentage for an employee
+export const getProfileCompletion = (employeeId) => {
+  return axiosInstance.get(`${API_BASE_URL}/employees-details/profile-completion/${employeeId}`);
+};
+
 // 3.Get Cards Details - Retrieves leave card details for a specific employee (leave balances, history, etc).
 export const getLeaveCardDetails = (employeeId) => {
   const res = axiosInstance.get(`${API_BASE_URL}/leave/get-leave-details/${employeeId}`)

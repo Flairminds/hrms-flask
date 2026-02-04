@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import styles from './PersonalInfoPage.module.css';
 import defaultProfile from '../../assets/profile/prof.svg';
 import editIcon from "../../assets/HR/edit.svg";
-import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp, uploadProfileImage } from '../../services/api';
+import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp, uploadProfileImage, getProfileCompletion } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditPersonalDetails } from '../../components/modal/editPersonalDetails/EditPersonalDetails';
-import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space, Upload } from 'antd';
+import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space, Upload, Progress, Tooltip } from 'antd';
 import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined, HomeOutlined, FileTextOutlined, ToolOutlined, MailOutlined, PhoneOutlined, DownloadOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../../components/common/WidgetCard';
@@ -29,6 +29,7 @@ function PersonalInfoPage() {
   const [password, setPassword] = useState('');
   const [loader, setLoader] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState({ completion_percentage: 0, missing_fields: [] });
   const [month, setMonth] = useState([])
   const [year, setYear] = useState([])
   const [loginEMPId, setloginEMPID] = useState("")
@@ -80,8 +81,21 @@ function PersonalInfoPage() {
     // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-status-details/${employeeId}`);
   };
 
+  const fetchProfileCompletion = async () => {
+    try {
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+
+      const response = await getProfileCompletion(employeeId);
+      setProfileCompletion(response.data);
+    } catch (error) {
+      console.error('Error fetching profile completion:', error);
+    }
+  };
+
   useEffect(() => {
     fetchEmployeeData();
+    fetchProfileCompletion();
   }, []);
 
   const handleResumeClick = () => {
@@ -392,6 +406,7 @@ function PersonalInfoPage() {
                       await uploadProfileImage(employeeId, file);
                       message.success('Profile image uploaded successfully');
                       fetchEmployeeData(); // Refresh data
+                      fetchProfileCompletion(); // Refresh completion
                       onSuccess("ok");
                     } catch (err) {
                       console.error(err);
@@ -436,14 +451,40 @@ function PersonalInfoPage() {
                 </div>
               </div>
             </div>
-            <Space>
-              <Button type="primary" icon={<EditOutlined />} onClick={handleEditModal} style={{ borderRadius: '4px' }}>
-                Edit Profile
-              </Button>
-              {/* <Button icon={<CreditCardOutlined />} onClick={() => setIsSalarySlipModal(true)} style={{ borderRadius: '4px' }}>
-                Salary Slips
-              </Button> */}
-            </Space>
+
+            {/* Profile Completion Progress */}
+            <div style={{ marginTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text strong>Profile Completion</Text>
+                <Text strong style={{ color: profileCompletion.completion_percentage >= 80 ? '#52c41a' : profileCompletion.completion_percentage >= 50 ? '#faad14' : '#ff4d4f', padding: '0 0 0 8px' }}>
+                  {profileCompletion.completion_percentage}%
+                </Text>
+              </div>
+              <Tooltip
+                title={
+                  profileCompletion.missing_fields.length > 0
+                    ? `Missing: ${profileCompletion.missing_fields.join(', ')}`
+                    : 'Profile complete!'
+                }
+              >
+                <Progress
+                  percent={profileCompletion.completion_percentage}
+                  strokeColor={{
+                    '0%': profileCompletion.completion_percentage >= 80 ? '#52c41a' : profileCompletion.completion_percentage >= 50 ? '#faad14' : '#ff4d4f',
+                    '100%': profileCompletion.completion_percentage >= 80 ? '#73d13d' : profileCompletion.completion_percentage >= 50 ? '#ffc53d' : '#ff7875',
+                  }}
+                  showInfo={false}
+                />
+              </Tooltip>
+              <Space style={{ marginTop: '12px' }}>
+                <Button type="primary" icon={<EditOutlined />} onClick={handleEditModal} style={{ borderRadius: '4px' }}>
+                  Edit Profile
+                </Button>
+                {/* <Button icon={<CreditCardOutlined />} onClick={() => setIsSalarySlipModal(true)} style={{ borderRadius: '4px' }}>
+                  Salary Slips
+                </Button> */}
+              </Space>
+            </div>
           </div>
         </WidgetCard>
 
