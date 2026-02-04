@@ -20,7 +20,6 @@ def create_app(config_name):
         app = Flask(
             __name__,
             static_folder=frontend_folder,
-            static_url_path='',
             template_folder=frontend_folder
         )
         print(f"✓ Frontend build found at: {frontend_folder}")

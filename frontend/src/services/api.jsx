@@ -11,7 +11,6 @@ export const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:50
 
 // Axios instance using environment-based API base URL
 export const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -158,7 +157,7 @@ export const updateLeaveStatus = (payload) => {
 
 /// 11. Cancel Leave : Cancels a leave request for a given leave transaction ID.
 export const cancelLeave = (leaveTranId) => {
-  return axiosInstance.patch('/employees-details/cancel-leave', {
+  return axiosInstance.patch(`${API_BASE_URL}/employees-details/cancel-leave`, {
     LeaveTranId: leaveTranId,
     LeaveStatus: "Cancel"
   });
@@ -199,7 +198,7 @@ export const getLatencyData = () => {
 
 // Updates the lateral hire status for an employee.
 export const updateLateralStatus = (employeeId, checked) => {
-  return axiosInstance.put('/HRFunctionality/Updatelateralhire', {
+  return axiosInstance.put(`${API_BASE_URL}/HRFunctionality/Updatelateralhire`, {
     employeeId: employeeId,
     lateralHire: checked
   });
@@ -207,7 +206,7 @@ export const updateLateralStatus = (employeeId, checked) => {
 
 // Adds an exempt leave entry for an employee (special leave cases).
 export const addExemptLeave = (payload) => {
-  return axiosInstance.post('/HRFunctionality/addexempt', payload);
+  return axiosInstance.post(`${API_BASE_URL}/HRFunctionality/addexempt`, payload);
 };
 
 // Retrieves all exempt leave records.
@@ -347,7 +346,7 @@ export const getAllEmployeesList = () => {
 
 // Updates personal details for an employee (self-service).
 export const editPersonalDetails = (payload, employeeId) => {
-  return axiosInstance.put(`/employees-details/update-employee-details-by-self/${employeeId}`, payload);
+  return axiosInstance.put(`${API_BASE_URL}/employees-details/update-employee-details-by-self/${employeeId}`, payload);
 }
 
 // Updates employee details for an employee (HR service).
@@ -391,7 +390,7 @@ export const getMonthlyReport = (month, year) => {
 
 // Gets the list of all employee skills.
 export const getAllEmployeeSkills = () => {
-  return axiosInstance.get('/hr/get-all-skills');
+  return axiosInstance.get(`${API_BASE_URL}/hr/get-all-skills`);
 };
 
 // Gets the list of all projects.
@@ -439,7 +438,7 @@ export const VerifyOtp = (otp) => {
   return axiosInstance.post(`${API_BASE_URL}/Account/VerifyOtp`, { otp });
 };
 export const ResetPassword = (newPassword) => {
-  return axiosInstance.post('/api/Account/ResetPassword', {
+  return axiosInstance.post(`${API_BASE_URL}/Account/ResetPassword`, {
     newPassword
   });
 };
@@ -487,12 +486,12 @@ export const downloadSalarySlipViaEmail = (employeeId, month, year) => {
 
 // Adds or updates a skill for an employee.
 export const addUpdateSkill = (payload) => {
-  return axiosInstance.post('/skills/add-update-skills', payload);
+  return axiosInstance.post(`${API_BASE_URL}/skills/add-update-skills`, payload);
 };
 
 // Gets the skills of an employee.
 export const getSkillsForEmp = (employeeId) => {
-  return axiosInstance.get(`/skills/employee-skills/${employeeId}`);
+  return axiosInstance.get(`${API_BASE_URL}/skills/employee-skills/${employeeId}`);
 }
 
 // Gets the skills of all employees.
