@@ -494,10 +494,31 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                         // <Card key={key} size="small" style={{ marginBottom: 12 }}>
                         <Row gutter={12}>
                           <Col span={6}>
-                            <Form.Item {...restField} name={[name, 'SkillId']} label={`#${key + 1} Skill`} rules={[{ required: true }]}>
-                              <Select showSearch filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}>
-                                {availableSkills.map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
-                              </Select>
+                            <Form.Item shouldUpdate={(prevValues, currentValues) => prevValues.skills !== currentValues.skills} noStyle>
+                              {({ getFieldValue }) => {
+                                const allSkills = getFieldValue('skills') || [];
+                                const selectedSkillIds = allSkills
+                                  .map((skill, idx) => idx !== name ? skill?.SkillId : null)
+                                  .filter(id => id !== null && id !== undefined);
+
+                                return (
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'SkillId']}
+                                    label={`#${key + 1} Skill`}
+                                    rules={[{ required: true }]}
+                                  >
+                                    <Select
+                                      showSearch
+                                      filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+                                    >
+                                      {availableSkills
+                                        .filter(s => !selectedSkillIds.includes(s.skillId))
+                                        .map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
+                                    </Select>
+                                  </Form.Item>
+                                );
+                              }}
                             </Form.Item>
                           </Col>
                           <Col span={6}>

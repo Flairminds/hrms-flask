@@ -5,7 +5,7 @@ import Cookies from 'js-cookie';
 
 const { Option } = Select;
 
-export const SkillEvaluationAddNewSkill = ({ skillsList, onAddSkill }) => {
+export const SkillEvaluationAddNewSkill = ({ skillsList, onAddSkill, existingSkillIds = [] }) => {
   const [newSkill, setNewSkill] = useState({ skillId: null, skillName: "", skillType: "Secondary", evaluatorScore: 1, isReady: false, isCustom: false });
   const [form] = Form.useForm();
 
@@ -47,11 +47,13 @@ export const SkillEvaluationAddNewSkill = ({ skillsList, onAddSkill }) => {
             filterOption={(input, option) => option.children.toLowerCase().includes(input.toLowerCase())}
             allowClear
           >
-            {skillsList.map(skill => (
-              <Option key={skill.SkillId} value={skill.SkillId}>
-                {skill.SkillName}
-              </Option>
-            ))}
+            {skillsList
+              .filter(skill => !existingSkillIds.includes(skill.SkillId))
+              .map(skill => (
+                <Option key={skill.SkillId} value={skill.SkillId}>
+                  {skill.SkillName}
+                </Option>
+              ))}
             <Option value="other">Other (Add new skill)</Option>
           </Select>
         </Form.Item>

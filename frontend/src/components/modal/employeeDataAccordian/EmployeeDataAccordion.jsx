@@ -48,8 +48,8 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             const res = await getAllEmployeeSkills();
             // Map snake_case to camelCase for consistency with form
             const mappedSkills = res.data.map(skill => ({
-                skillId: skill.skill_id,
-                skillName: skill.skill_name
+                skillId: skill.skillId || skill.SkillId || skill.skill_id,
+                skillName: skill.skillName || skill.SkillName || skill.skill_name
             }));
             setSkillEmp(mappedSkills);
             optionsSkill.current = mappedSkills;
@@ -530,43 +530,58 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                         >
                             <Row gutter={[16, 8]}>
                                 <Col span={24}>
-                                    <Form.Item
-                                        label="Primary Skills"
-                                        name="primarySkills"
-                                        rules={[{ required: true, message: 'Required' }]}
-                                    >
-                                        <Select
-                                            mode="multiple"
-                                            placeholder="Select primary skills"
-                                            showSearch
-                                            filterOption={(input, option) =>
-                                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                            }
-                                        >
-                                            {skillEmp.map(skill => (
-                                                <Option key={skill.skillId} value={skill.skillId}>
-                                                    {skill.skillName}
-                                                </Option>
-                                            ))}
-                                        </Select>
+                                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.secondarySkills !== curr.secondarySkills}>
+                                        {({ getFieldValue }) => {
+                                            const secondary = getFieldValue('secondarySkills') || [];
+                                            const filteredOptions = skillEmp
+                                                .filter(skill => !secondary.some(id => String(id) === String(skill.skillId)))
+                                                .map(skill => ({
+                                                    label: skill.skillName,
+                                                    value: skill.skillId
+                                                }));
+                                            return (
+                                                <Form.Item
+                                                    label="Primary Skills"
+                                                    name="primarySkills"
+                                                    rules={[{ required: true, message: 'Required' }]}
+                                                >
+                                                    <Select
+                                                        mode="multiple"
+                                                        placeholder="Select primary skills"
+                                                        showSearch
+                                                        optionFilterProp="label"
+                                                        options={filteredOptions}
+                                                    />
+                                                </Form.Item>
+                                            );
+                                        }}
                                     </Form.Item>
                                 </Col>
                                 <Col span={24}>
-                                    <Form.Item label="Secondary Skills" name="secondarySkills">
-                                        <Select
-                                            mode="multiple"
-                                            placeholder="Select secondary skills"
-                                            showSearch
-                                            filterOption={(input, option) =>
-                                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                            }
-                                        >
-                                            {skillEmp.map(skill => (
-                                                <Option key={skill.skillId} value={skill.skillId}>
-                                                    {skill.skillName}
-                                                </Option>
-                                            ))}
-                                        </Select>
+                                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.primarySkills !== curr.primarySkills}>
+                                        {({ getFieldValue }) => {
+                                            const primary = getFieldValue('primarySkills') || [];
+                                            const filteredOptions = skillEmp
+                                                .filter(skill => !primary.some(id => String(id) === String(skill.skillId)))
+                                                .map(skill => ({
+                                                    label: skill.skillName,
+                                                    value: skill.skillId
+                                                }));
+                                            return (
+                                                <Form.Item
+                                                    label="Secondary Skills"
+                                                    name="secondarySkills"
+                                                >
+                                                    <Select
+                                                        mode="multiple"
+                                                        placeholder="Select secondary skills"
+                                                        showSearch
+                                                        optionFilterProp="label"
+                                                        options={filteredOptions}
+                                                    />
+                                                </Form.Item>
+                                            );
+                                        }}
                                     </Form.Item>
                                 </Col>
                             </Row>

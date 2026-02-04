@@ -244,8 +244,12 @@ export const SkillEvaluation = ({ employee, onClose }) => {
         message.error('Evaluator score must be between 0 and 5');
         return;
       }
-      const existingSkills = employeeSkills[skillType] || [];
-      const skillExists = existingSkills.some(s =>
+      const allExistingSkills = [
+        ...(employeeSkills.Primary || []),
+        ...(employeeSkills.Secondary || []),
+        ...(employeeSkills.CrossTechSkill || [])
+      ];
+      const skillExists = allExistingSkills.some(s =>
         skillId ? s.SkillId === skillId : s.SkillName.toLowerCase() === skillName.toLowerCase()
       );
       if (skillExists) {
@@ -479,6 +483,11 @@ export const SkillEvaluation = ({ employee, onClose }) => {
           <SkillEvaluationAddNewSkill
             skillsList={skillsList}
             onAddSkill={handleAddNewSkill}
+            existingSkillIds={[
+              ...(employeeSkills.Primary || []).map(s => s.SkillId),
+              ...(employeeSkills.Secondary || []).map(s => s.SkillId),
+              ...(employeeSkills.CrossTechSkill || []).map(s => s.SkillId)
+            ]}
           />
         </div>
       )}
