@@ -15,6 +15,11 @@ def cancel_leave():
 def update_profile_self(emp_id):
     return ProfileController.update_profile_self(emp_id)
 
+@profile_bp.route('/upload-profile-image/<emp_id>', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['profile']['update_profile_self'])
+def upload_profile_image(emp_id):
+    return ProfileController.upload_profile_image(emp_id)
+
 @profile_bp.route('/<emp_id>', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['profile']['get_profile'])
 def get_profile(emp_id):

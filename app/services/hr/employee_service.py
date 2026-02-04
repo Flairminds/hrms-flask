@@ -3,6 +3,7 @@ from sqlalchemy import text, func, case, or_, and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from datetime import datetime, date
 from werkzeug.security import generate_password_hash
+import base64
 
 from ... import db
 from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, MasterSkill,
@@ -660,7 +661,8 @@ class EmployeeService:
                 'dateOfResignation': format_date(employee.date_of_resignation),
                 'probationEndDate': format_date(employee.probation_end_date),
                 'addresses': addresses,
-                'skills': [{'skillId': s.skill_id, 'skillName': s.skill_name, 'skillLevel': s.skill_level or ''} for s in skills_query]
+                'skills': [{'skillId': s.skill_id, 'skillName': s.skill_name, 'skillLevel': s.skill_level or ''} for s in skills_query],
+                'profileImage': f"data:{employee.profile_image_type};base64,{base64.b64encode(employee.profile_image).decode('utf-8')}" if employee.profile_image else None
             }
             
             # Add leave approver name

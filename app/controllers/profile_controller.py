@@ -7,6 +7,34 @@ class ProfileController:
 
     @staticmethod
     def get_profile(emp_id):
+        return ProfileController.get_employee_profile(emp_id)
+
+    @staticmethod
+    def upload_profile_image(emp_id):
+        """Handle profile image upload request."""
+        Logger.info("Upload profile image request received", employee_id=emp_id)
+        
+        try:
+            if 'file' not in request.files:
+                return jsonify({'message': 'No file part'}), 400
+                
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({'message': 'No selected file'}), 400
+                
+            success, message = ProfileService.upload_profile_image(emp_id, file)
+            
+            if success:
+                return jsonify({'message': message}), 200
+            else:
+                return jsonify({'message': message}), 400
+                
+        except Exception as e:
+            Logger.error("Error in upload_profile_image controller", error=str(e))
+            return jsonify({'message': 'An error occurred'}), 500
+
+    @staticmethod
+    def get_employee_profile(emp_id):
         """Retrieves the full profile of an employee."""
         Logger.info("Get profile request received", employee_id=emp_id)
         try:

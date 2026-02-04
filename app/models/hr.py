@@ -37,6 +37,8 @@ class Employee(BaseModel):
     privilege_leaves = db.Column(db.Integer)
     sick_leaves = db.Column(db.Integer)
     remaining_leaves = db.Column(db.Integer)
+    profile_image = db.Column(db.LargeBinary)
+    profile_image_type = db.Column(db.String(20))
 
 
 class EmployeeAddress(BaseModel):

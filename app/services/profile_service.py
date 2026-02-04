@@ -11,6 +11,42 @@ class ProfileService:
     """Service class for employee self-service operations like profile viewing and leave cancellation."""
 
     @staticmethod
+    def upload_profile_image(emp_id, file):
+        """Uploads a profile image for the employee."""
+        try:
+            # 1. Validate file size (300KB = 300 * 1024 bytes)
+            file.seek(0, 2) # Seek to end
+            size = file.tell()
+            file.seek(0) # Reset to start
+            
+            if size > 307200: # 300KB
+                return False, "File size exceeds 300KB limit."
+            
+            # 2. Validate file type (simple check + MIME)
+            # Flask file object has mimetype
+            allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+            if file.mimetype not in allowed_types:
+                return False, "Invalid file format. Only JPEG, PNG, and WEBP are allowed."
+                
+            # 3. Read and save
+            image_data = file.read()
+            
+            employee = Employee.query.filter_by(employee_id=emp_id).first()
+            if not employee:
+                return False, "Employee not found."
+                
+            employee.profile_image = image_data
+            employee.profile_image_type = file.mimetype
+            db.session.commit()
+            
+            return True, "Profile image uploaded successfully."
+            
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error uploading profile image", employee_id=emp_id, error=str(e))
+            return False, f"An error occurred: {str(e)}"
+
+    @staticmethod
     def get_employee_profile(emp_id):
         """Retrieves a comprehensive profile for an employee, including addresses and skills using ORM."""
         try:

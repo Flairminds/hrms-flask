@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import styles from './PersonalInfoPage.module.css';
 import defaultProfile from '../../assets/profile/prof.svg';
 import editIcon from "../../assets/HR/edit.svg";
-import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp } from '../../services/api';
+import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp, uploadProfileImage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditPersonalDetails } from '../../components/modal/editPersonalDetails/EditPersonalDetails';
-import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space } from 'antd';
-import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined, HomeOutlined, FileTextOutlined, ToolOutlined, MailOutlined, PhoneOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
+import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space, Upload } from 'antd';
+import { UserOutlined, SolutionOutlined, CreditCardOutlined, SmileOutlined, EyeOutlined, EyeInvisibleOutlined, ExclamationCircleOutlined, HomeOutlined, FileTextOutlined, ToolOutlined, MailOutlined, PhoneOutlined, DownloadOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../../components/common/WidgetCard';
 
@@ -366,10 +366,65 @@ function PersonalInfoPage() {
         )}
 
         {/* Profile Header */}
-        <WidgetCard style={{ marginBottom: '24px' }}>
+        <WidgetCard title="Basic Details" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-              <Avatar size={100} src={defaultProfile} style={{ border: '4px solid #f0f2f5' }} />
+              <div style={{ position: 'relative', cursor: 'pointer' }}>
+                <Upload
+                  name="file"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+                    if (!isJpgOrPng) {
+                      message.error('You can only upload JPG/PNG/WEBP file!');
+                      return Upload.LIST_IGNORE;
+                    }
+                    const isLt300k = file.size / 1024 < 300;
+                    if (!isLt300k) {
+                      message.error('Image must be smaller than 300KB!');
+                      return Upload.LIST_IGNORE;
+                    }
+                    return true;
+                  }}
+                  customRequest={async ({ file, onSuccess, onError }) => {
+                    try {
+                      const employeeId = user?.employeeId;
+                      await uploadProfileImage(employeeId, file);
+                      message.success('Profile image uploaded successfully');
+                      fetchEmployeeData(); // Refresh data
+                      onSuccess("ok");
+                    } catch (err) {
+                      console.error(err);
+                      message.error('Upload failed.');
+                      onError({ err });
+                    }
+                  }}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <Avatar
+                      size={100}
+                      src={employeeData?.profileImage || defaultProfile}
+                      style={{ border: '4px solid #f0f2f5' }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      backgroundColor: '#1890ff',
+                      borderRadius: '50%',
+                      width: '30px',
+                      height: '30px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid white',
+                      cursor: 'pointer'
+                    }}>
+                      <EditOutlined style={{ color: 'white', fontSize: '16px' }} />
+                    </div>
+                  </div>
+                </Upload>
+              </div>
               <div>
                 <Title level={3} style={{ margin: 0 }}>
                   {employeeData?.lastName ? `${employeeData?.firstName} ${employeeData?.lastName}` : employeeData?.firstName}
@@ -385,9 +440,9 @@ function PersonalInfoPage() {
               <Button type="primary" icon={<EditOutlined />} onClick={handleEditModal} style={{ borderRadius: '4px' }}>
                 Edit Profile
               </Button>
-              <Button icon={<CreditCardOutlined />} onClick={() => setIsSalarySlipModal(true)} style={{ borderRadius: '4px' }}>
+              {/* <Button icon={<CreditCardOutlined />} onClick={() => setIsSalarySlipModal(true)} style={{ borderRadius: '4px' }}>
                 Salary Slips
-              </Button>
+              </Button> */}
             </Space>
           </div>
         </WidgetCard>

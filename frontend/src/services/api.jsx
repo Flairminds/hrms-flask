@@ -58,6 +58,15 @@ export const getEmployeeDetails = (employeeId) => {
   return axiosInstance.get(`${API_BASE_URL}/hr/employee-details/${employeeId}`);
 };
 
+// Upload profile image for an employee
+export const uploadProfileImage = (employeeId, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return axiosInstance.post(`${API_BASE_URL}/employees-details/upload-profile-image/${employeeId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
 // 3.Get Cards Details - Retrieves leave card details for a specific employee (leave balances, history, etc).
 export const getLeaveCardDetails = (employeeId) => {
   const res = axiosInstance.get(`${API_BASE_URL}/leave/get-leave-details/${employeeId}`)
