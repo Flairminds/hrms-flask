@@ -351,7 +351,7 @@ class EmailService:
                 .checklist ul { list-style: none; padding: 0; margin: 0; }
                 .checklist li { padding: 5px 0; border-bottom: 1px dashed #eee; }
                 .checklist li:last-child { border-bottom: none; }
-                .button { display: inline-block; padding: 12px 24px; background-color: #f9f9f9; color: white; text-decoration: none; border-radius: 4px; margin-top: 25px; font-weight: 600; text-align: center; }
+                .button { display: inline-block; padding: 12px 24px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 4px; margin-top: 25px; font-weight: 600; text-align: center; }
                 .footer { margin-top: 30px; font-size: 12px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
             </style>
         """
