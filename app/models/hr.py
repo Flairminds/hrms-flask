@@ -41,6 +41,210 @@ class Employee(BaseModel):
     profile_image_type = db.Column(db.String(20))
 
 
+class EmployeeHistory(db.Model):
+    """Audit table to track all changes to Employee records"""
+    __tablename__ = 'employee_history'
+    
+    # History metadata
+    history_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    operation_type = db.Column(db.String(10), nullable=False)  # INSERT, UPDATE, DELETE
+    operation_timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    changed_by = db.Column(db.String(20))  # Employee ID who made the change
+    
+    # Mirror all Employee table columns
+    id = db.Column(db.Integer)
+    employee_id = db.Column(db.String(20))
+    first_name = db.Column(db.String(50))
+    middle_name = db.Column(db.String(50))
+    last_name = db.Column(db.String(50))
+    date_of_birth = db.Column(db.Date)
+    contact_number = db.Column(db.String(15))
+    emergency_contact_number = db.Column(db.String(15))
+    emergency_contact_person = db.Column(db.String(50))
+    emergency_contact_relation = db.Column(db.String(50))
+    email = db.Column(db.String(100))
+    personal_email = db.Column(db.String(100))
+    gender = db.Column(db.String(1))
+    blood_group = db.Column(db.String(10))
+    date_of_joining = db.Column(db.Date)
+    ctc = db.Column(db.Numeric(18, 2))
+    team_lead_id = db.Column(db.String(20))
+    highest_qualification = db.Column(db.String(100))
+    employment_status = db.Column(db.String(50))
+    sub_role = db.Column(db.Integer)
+    lob_lead = db.Column(db.String(50))
+    is_lead = db.Column(db.Boolean)
+    qualification_year_month = db.Column(db.String(10))
+    full_stack_ready = db.Column(db.Boolean)
+    date_of_resignation = db.Column(db.Date)
+    lwd = db.Column(db.Date)
+    lwp = db.Column(db.Integer)
+    internship_end_date = db.Column(db.Date)
+    probation_end_date = db.Column(db.Date)
+    privilege_leaves = db.Column(db.Integer)
+    sick_leaves = db.Column(db.Integer)
+    remaining_leaves = db.Column(db.Integer)
+    profile_image_type = db.Column(db.String(20))
+
+
+# SQLAlchemy event listeners for automatic audit logging
+from sqlalchemy import event
+
+# Guard flag to prevent duplicate listener registration
+_listeners_registered = False
+
+def register_employee_history_listeners():
+    """Register event listeners for Employee history tracking (only once)"""
+    global _listeners_registered
+    if _listeners_registered:
+        return
+    _listeners_registered = True
+    
+    @event.listens_for(Employee, 'after_insert')
+    def log_employee_insert(mapper, connection, target):
+        """Log INSERT operations on Employee table"""
+        from sqlalchemy import text
+        connection.execute(
+            text("""
+                INSERT INTO employee_history (
+                    operation_type, operation_timestamp, changed_by, id, employee_id, first_name, 
+                    middle_name, last_name, date_of_birth, contact_number, emergency_contact_number,
+                    emergency_contact_person, emergency_contact_relation, email, personal_email,
+                    gender, blood_group, date_of_joining, ctc, team_lead_id, highest_qualification,
+                    employment_status, sub_role, lob_lead, is_lead, qualification_year_month,
+                    full_stack_ready, date_of_resignation, lwd, lwp, internship_end_date,
+                    probation_end_date, privilege_leaves, sick_leaves, remaining_leaves, profile_image_type
+                ) VALUES (
+                    :op_type, :op_time, :changed_by, :id, :employee_id, :first_name,
+                    :middle_name, :last_name, :date_of_birth, :contact_number, :emergency_contact_number,
+                    :emergency_contact_person, :emergency_contact_relation, :email, :personal_email,
+                    :gender, :blood_group, :date_of_joining, :ctc, :team_lead_id, :highest_qualification,
+                    :employment_status, :sub_role, :lob_lead, :is_lead, :qualification_year_month,
+                    :full_stack_ready, :date_of_resignation, :lwd, :lwp, :internship_end_date,
+                    :probation_end_date, :privilege_leaves, :sick_leaves, :remaining_leaves, :profile_image_type
+                )
+            """),
+            {
+                'op_type': 'INSERT', 'op_time': datetime.utcnow(), 'changed_by': None,
+                'id': target.id, 'employee_id': target.employee_id, 'first_name': target.first_name,
+                'middle_name': target.middle_name, 'last_name': target.last_name,
+                'date_of_birth': target.date_of_birth, 'contact_number': target.contact_number,
+                'emergency_contact_number': target.emergency_contact_number,
+                'emergency_contact_person': target.emergency_contact_person,
+                'emergency_contact_relation': target.emergency_contact_relation,
+                'email': target.email, 'personal_email': target.personal_email,
+                'gender': target.gender, 'blood_group': target.blood_group,
+                'date_of_joining': target.date_of_joining, 'ctc': target.ctc,
+                'team_lead_id': target.team_lead_id, 'highest_qualification': target.highest_qualification,
+                'employment_status': target.employment_status, 'sub_role': target.sub_role,
+                'lob_lead': target.lob_lead, 'is_lead': target.is_lead,
+                'qualification_year_month': target.qualification_year_month,
+                'full_stack_ready': target.full_stack_ready, 'date_of_resignation': target.date_of_resignation,
+                'lwd': target.lwd, 'lwp': target.lwp, 'internship_end_date': target.internship_end_date,
+                'probation_end_date': target.probation_end_date, 'privilege_leaves': target.privilege_leaves,
+                'sick_leaves': target.sick_leaves, 'remaining_leaves': target.remaining_leaves,
+                'profile_image_type': target.profile_image_type
+            }
+        )
+
+    @event.listens_for(Employee, 'after_update')
+    def log_employee_update(mapper, connection, target):
+        """Log UPDATE operations on Employee table"""
+        from sqlalchemy import text
+        connection.execute(
+            text("""
+                INSERT INTO employee_history (
+                    operation_type, operation_timestamp, changed_by, id, employee_id, first_name, 
+                    middle_name, last_name, date_of_birth, contact_number, emergency_contact_number,
+                    emergency_contact_person, emergency_contact_relation, email, personal_email,
+                    gender, blood_group, date_of_joining, ctc, team_lead_id, highest_qualification,
+                    employment_status, sub_role, lob_lead, is_lead, qualification_year_month,
+                    full_stack_ready, date_of_resignation, lwd, lwp, internship_end_date,
+                    probation_end_date, privilege_leaves, sick_leaves, remaining_leaves, profile_image_type
+                ) VALUES (
+                    :op_type, :op_time, :changed_by, :id, :employee_id, :first_name,
+                    :middle_name, :last_name, :date_of_birth, :contact_number, :emergency_contact_number,
+                    :emergency_contact_person, :emergency_contact_relation, :email, :personal_email,
+                    :gender, :blood_group, :date_of_joining, :ctc, :team_lead_id, :highest_qualification,
+                    :employment_status, :sub_role, :lob_lead, :is_lead, :qualification_year_month,
+                    :full_stack_ready, :date_of_resignation, :lwd, :lwp, :internship_end_date,
+                    :probation_end_date, :privilege_leaves, :sick_leaves, :remaining_leaves, :profile_image_type
+                )
+            """),
+            {
+                'op_type': 'UPDATE', 'op_time': datetime.utcnow(), 'changed_by': None,
+                'id': target.id, 'employee_id': target.employee_id, 'first_name': target.first_name,
+                'middle_name': target.middle_name, 'last_name': target.last_name,
+                'date_of_birth': target.date_of_birth, 'contact_number': target.contact_number,
+                'emergency_contact_number': target.emergency_contact_number,
+                'emergency_contact_person': target.emergency_contact_person,
+                'emergency_contact_relation': target.emergency_contact_relation,
+                'email': target.email, 'personal_email': target.personal_email,
+                'gender': target.gender, 'blood_group': target.blood_group,
+                'date_of_joining': target.date_of_joining, 'ctc': target.ctc,
+                'team_lead_id': target.team_lead_id, 'highest_qualification': target.highest_qualification,
+                'employment_status': target.employment_status, 'sub_role': target.sub_role,
+                'lob_lead': target.lob_lead, 'is_lead': target.is_lead,
+                'qualification_year_month': target.qualification_year_month,
+                'full_stack_ready': target.full_stack_ready, 'date_of_resignation': target.date_of_resignation,
+                'lwd': target.lwd, 'lwp': target.lwp, 'internship_end_date': target.internship_end_date,
+                'probation_end_date': target.probation_end_date, 'privilege_leaves': target.privilege_leaves,
+                'sick_leaves': target.sick_leaves, 'remaining_leaves': target.remaining_leaves,
+                'profile_image_type': target.profile_image_type
+            }
+        )
+
+    @event.listens_for(Employee, 'after_delete')
+    def log_employee_delete(mapper, connection, target):
+        """Log DELETE operations on Employee table"""
+        from sqlalchemy import text
+        connection.execute(
+            text("""
+                INSERT INTO employee_history (
+                    operation_type, operation_timestamp, changed_by, id, employee_id, first_name, 
+                    middle_name, last_name, date_of_birth, contact_number, emergency_contact_number,
+                    emergency_contact_person, emergency_contact_relation, email, personal_email,
+                    gender, blood_group, date_of_joining, ctc, team_lead_id, highest_qualification,
+                    employment_status, sub_role, lob_lead, is_lead, qualification_year_month,
+                    full_stack_ready, date_of_resignation, lwd, lwp, internship_end_date,
+                    probation_end_date, privilege_leaves, sick_leaves, remaining_leaves, profile_image_type
+                ) VALUES (
+                    :op_type, :op_time, :changed_by, :id, :employee_id, :first_name,
+                    :middle_name, :last_name, :date_of_birth, :contact_number, :emergency_contact_number,
+                    :emergency_contact_person, :emergency_contact_relation, :email, :personal_email,
+                    :gender, :blood_group, :date_of_joining, :ctc, :team_lead_id, :highest_qualification,
+                    :employment_status, :sub_role, :lob_lead, :is_lead, :qualification_year_month,
+                    :full_stack_ready, :date_of_resignation, :lwd, :lwp, :internship_end_date,
+                    :probation_end_date, :privilege_leaves, :sick_leaves, :remaining_leaves, :profile_image_type
+                )
+            """),
+            {
+                'op_type': 'DELETE', 'op_time': datetime.utcnow(), 'changed_by': None,
+                'id': target.id, 'employee_id': target.employee_id, 'first_name': target.first_name,
+                'middle_name': target.middle_name, 'last_name': target.last_name,
+                'date_of_birth': target.date_of_birth, 'contact_number': target.contact_number,
+                'emergency_contact_number': target.emergency_contact_number,
+                'emergency_contact_person': target.emergency_contact_person,
+                'emergency_contact_relation': target.emergency_contact_relation,
+                'email': target.email, 'personal_email': target.personal_email,
+                'gender': target.gender, 'blood_group': target.blood_group,
+                'date_of_joining': target.date_of_joining, 'ctc': target.ctc,
+                'team_lead_id': target.team_lead_id, 'highest_qualification': target.highest_qualification,
+                'employment_status': target.employment_status, 'sub_role': target.sub_role,
+                'lob_lead': target.lob_lead, 'is_lead': target.is_lead,
+                'qualification_year_month': target.qualification_year_month,
+                'full_stack_ready': target.full_stack_ready, 'date_of_resignation': target.date_of_resignation,
+                'lwd': target.lwd, 'lwp': target.lwp, 'internship_end_date': target.internship_end_date,
+                'probation_end_date': target.probation_end_date, 'privilege_leaves': target.privilege_leaves,
+                'sick_leaves': target.sick_leaves, 'remaining_leaves': target.remaining_leaves,
+                'profile_image_type': target.profile_image_type
+            }
+        )
+
+# Register listeners on module load
+register_employee_history_listeners()
+
+
 class EmployeeAddress(BaseModel):
     __tablename__ = 'employee_address'
     employee_id = db.Column(db.String(20), primary_key=True)
