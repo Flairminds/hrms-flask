@@ -422,7 +422,6 @@ function PersonalInfoPage() {
                 <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a">
                   {employeeData.addresses ? (
                     <>
-                      <InfoRow label="Type" value={employeeData.addresses.residentialAddressType} />
                       <InfoRow label="Line 1" value={employeeData.addresses.residentialAddress1} />
                       <InfoRow label="Line 2" value={employeeData.addresses.residentialAddress2} />
                       <InfoRow label="City" value={employeeData.addresses.residentialCity} />
@@ -435,7 +434,6 @@ function PersonalInfoPage() {
                 <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14">
                   {employeeData.addresses ? (
                     <>
-                      <InfoRow label="Type" value={employeeData.addresses.permanentAddressType} />
                       <InfoRow label="Line 1" value={employeeData.addresses.permanentAddress1} />
                       <InfoRow label="Line 2" value={employeeData.addresses.permanentAddress2} />
                       <InfoRow label="City" value={employeeData.addresses.permanentCity} />

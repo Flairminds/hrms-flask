@@ -14,7 +14,7 @@ class ProfileService:
     def get_employee_profile(emp_id):
         """Retrieves a comprehensive profile for an employee, including addresses and skills using ORM."""
         try:
-            employee = Employee.query.get(emp_id)
+            employee = Employee.query.filter_by(employee_id=emp_id).first()
             if not employee:
                 return None
                 
@@ -43,9 +43,9 @@ class ProfileService:
 
     @staticmethod
     def update_profile_self(emp_id, data):
-        """Updates contact and emergency information for an employee profile using ORM."""
+        """Updates personal info, qualification, and contacts for an employee profile using ORM."""
         try:
-            employee = Employee.query.get(emp_id)
+            employee = Employee.query.filter_by(employee_id=emp_id).first()
             if not employee:
                 return False
                 
@@ -53,8 +53,53 @@ class ProfileService:
             employee.emergency_contact_number = data.get('emergency_contact_number')
             employee.emergency_contact_person = data.get('emergency_contact_person')
             employee.emergency_contact_relation = data.get('emergency_contact_relation')
+            employee.personal_email = data.get('personal_email')
+            employee.highest_qualification = data.get('highest_qualification')
+            employee.qualification_year_month = data.get('qualification_year_month')
             
-            # TODO: Implement additional profile update logic as needed
+            # Handle addresses
+            addresses_data = data.get('addresses', [])
+            for addr_data in addresses_data:
+                # We expect addr_data to contain fields for both Residential and Permanent
+                # The frontend sends a single object with keys like 'residential_address1', 'permanent_address1', etc.
+                # But looking at EditPersonalDetails.jsx, it constructs `addressPayload` which has flattened keys.
+                # Wait, let's look at how the data is structured coming in. 
+                # Frontend sends `addresses: [addressPayload]`. 
+                # And `addressPayload` has keys: residential_address_type, residential_address1, ..., permanent_address1, ...
+                
+                # Update Residential Address
+                res_addr = EmployeeAddress.query.filter_by(employee_id=emp_id, address_type='Residential').first()
+                if not res_addr:
+                    res_addr = EmployeeAddress(employee_id=emp_id, address_type='Residential')
+                    db.session.add(res_addr)
+                
+                res_addr.address1 = addr_data.get('residential_address1')
+                res_addr.address2 = addr_data.get('residential_address2')
+                res_addr.city = addr_data.get('residential_city')
+                res_addr.state = addr_data.get('residential_state')
+                res_addr.zip_code = addr_data.get('residential_zipcode')
+                res_addr.is_same_permanant = addr_data.get('is_same_permanant')
+                
+                # Update Permanent Address
+                perm_addr = EmployeeAddress.query.filter_by(employee_id=emp_id, address_type='Permanent').first()
+                if not perm_addr:
+                    perm_addr = EmployeeAddress(employee_id=emp_id, address_type='Permanent')
+                    db.session.add(perm_addr)
+                    
+                if addr_data.get('is_same_permanant'):
+                    perm_addr.address1 = res_addr.address1
+                    perm_addr.address2 = res_addr.address2
+                    perm_addr.city = res_addr.city
+                    perm_addr.state = res_addr.state
+                    perm_addr.zip_code = res_addr.zip_code
+                    perm_addr.is_same_permanant = True
+                else:
+                    perm_addr.address1 = addr_data.get('permanent_address1')
+                    perm_addr.address2 = addr_data.get('permanent_address2')
+                    perm_addr.city = addr_data.get('permanent_city')
+                    perm_addr.state = addr_data.get('permanent_state')
+                    perm_addr.zip_code = addr_data.get('permanent_zipcode')
+                    perm_addr.is_same_permanant = False
             
             db.session.commit()
             return True

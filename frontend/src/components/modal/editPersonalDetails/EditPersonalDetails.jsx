@@ -1,57 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Button, Input, Modal, Collapse, Checkbox, Select, message } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
-import stylesEdit from './EditPersonalDetails.module.css';
-import axiosInstance, { addUpdateSkill, editPersonalDetails, getAllEmployeeSkills, getDocStatus, getSkillsForEmp } from '../../../services/api';
+import {
+  Modal, Form, Input, Button, Tabs, Select, Row, Col,
+  Checkbox, Upload, message, DatePicker, Divider, Card
+} from 'antd';
+import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import axiosInstance, {
+  addUpdateSkill,
+  editPersonalDetails,
+  getAllEmployeeSkills,
+  getDocStatus,
+  getSkillsForEmp
+} from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const { Panel } = Collapse;
+const { Option } = Select;
 
 export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData, fetchEmployeeData, fetchSkills }) => {
-  const [loader, setLoader] = useState(false);
-  const [availableSkills, setAvailableSkills] = useState([]);
-  const [errorNumber, setErrorNumber] = useState('');
+  const [form] = Form.useForm();
   const { user } = useAuth();
-
-  const [formData, setFormData] = useState({
-    contact_number: '',
-    emergency_contact_person: '',
-    emergency_contact_relation: '',
-    emergency_contact_number: '',
-    personal_email: '',
-    first_name: '',
-    middle_name: '',
-    last_name: '',
-    date_of_birth: '',
-    gender: '',
-    blood_group: '',
-    employee_skills: [],
-    addresses: {
-      residential_address_type: '',
-      residential_state: '',
-      residential_city: '',
-      residential_address1: '',
-      residential_address2: '',
-      residential_zipcode: '',
-      permanent_address_type: '',
-      permanent_state: '',
-      permanent_city: '',
-      permanent_address1: '',
-      permanent_address2: '',
-      permanent_zipcode: '',
-      is_same_permanant: false
-    }
-  });
-
-  const [qualificationYearMonth, setQualificationYearMonth] = useState(null);
-  const [fullStackReady, setFullStackReady] = useState(false);
-  const [empSkill, setEmpSkill] = useState([]);
-  const [docStatus, setDocStatus] = useState([]);
-
   const employeeId = user?.employeeId;
 
+  const [loader, setLoader] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [docStatus, setDocStatus] = useState([]);
+  const [isSameAddress, setIsSameAddress] = useState(false);
+
+  // Fetch available skills content
+  useEffect(() => {
+    const fetchAllAvailableSkills = async () => {
+      try {
+        const response = await getAllEmployeeSkills();
+        setAvailableSkills(response.data || []);
+      } catch (error) {
+        console.error('Error fetching skills:', error);
+      }
+    };
+    if (isEditModal) {
+      fetchAllAvailableSkills();
+    }
+  }, [isEditModal]);
+
+  // Fetch Documents Status
   const fetchDocStatus = async () => {
     if (!employeeId) return;
     try {
@@ -68,219 +60,114 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     }
   }, [isEditModal]);
 
+  // Fetch User Skills & Populate Form
   useEffect(() => {
-    if (employeeData && isEditModal) {
-      setFormData({
-        contact_number: employeeData.contact_number || '',
-        emergency_contact_number: employeeData.emergency_contact_number || '',
-        emergency_contact_person: employeeData.emergency_contact_person || '',
-        emergency_contact_relation: employeeData.emergency_contact_relation || '',
-        personal_email: employeeData.personal_email || '',
-        first_name: employeeData.first_name || '',
-        middle_name: employeeData.middle_name || '',
-        last_name: employeeData.last_name || '',
-        date_of_birth: employeeData.date_of_birth || '',
-        gender: employeeData.gender || '',
-        blood_group: employeeData.blood_group || '',
-        addresses: {
-          residential_address_type: employeeData.addresses?.residential_address_type || '',
-          residential_state: employeeData.addresses?.residential_state || '',
-          residential_city: employeeData.addresses?.residential_city || '',
-          residential_address1: employeeData.addresses?.residential_address1 || '',
-          residential_address2: employeeData.addresses?.residential_address2 || '',
-          residential_zipcode: employeeData.addresses?.residential_zipcode || '',
-          permanent_address_type: employeeData.addresses?.permanent_address_type || '',
-          permanent_state: employeeData.addresses?.permanent_state || '',
-          permanent_city: employeeData.addresses?.permanent_city || '',
-          permanent_address1: employeeData.addresses?.permanent_address1 || '',
-          permanent_address2: employeeData.addresses?.permanent_address2 || '',
-          permanent_zipcode: employeeData.addresses?.permanent_zipcode || '',
-          is_same_permanant: employeeData.addresses?.is_same_permanant || false,
-        },
-        employee_skills: employeeData.skills || []
-      });
-    }
+    if (!isEditModal || !employeeData) return;
 
-    const fetchAllAvailableSkills = async () => {
+    const loadData = async () => {
       try {
-        const response = await getAllEmployeeSkills();
-        setAvailableSkills(response.data || []);
+        // Fetch User Skills
+        let userSkillsData = { skills: [], QualificationYearMonth: null, FullStackReady: false };
+        if (employeeId) {
+          try {
+            const skillRes = await getSkillsForEmp(employeeId);
+            userSkillsData = skillRes.data;
+          } catch (err) {
+            console.error("Error fetching user skills", err);
+          }
+        }
+
+        const addresses = employeeData.addresses || {};
+        setIsSameAddress(addresses.is_same_permanant || false);
+
+        // Prepare Base Form Values
+        const initialValues = {
+          // Personal
+          // Read-only fields
+          employee_id: employeeData.employeeId,
+          first_name: employeeData.firstName,
+          middle_name: employeeData.middleName,
+          last_name: employeeData.lastName,
+          company_email: employeeData.email,
+          gender: employeeData.gender,
+          date_of_birth: employeeData.dateOfBirth ? dayjs(employeeData.dateOfBirth) : null,
+
+          // Personal
+          contact_number: employeeData.contact_number || employeeData.contactNumber,
+          emergency_contact_person: employeeData.emergency_contact_person || employeeData.emergencyContactPerson,
+          emergency_contact_relation: employeeData.emergency_contact_relation || employeeData.emergencyContactRelation,
+          emergency_contact_number: employeeData.emergency_contact_number || employeeData.emergencyContactNumber,
+          personal_email: employeeData.personal_email || employeeData.personalEmail,
+
+          // Qualification
+          highest_qualification: employeeData.highestQualification || employeeData.highest_qualification,
+          QualificationYearMonth: userSkillsData.QualificationYearMonth ? dayjs(userSkillsData.QualificationYearMonth) : null,
+          FullStackReady: userSkillsData.FullStackReady,
+
+          // Address
+          addresses: {
+            residential_address_type: addresses.residential_address_type || addresses.residentialAddressType,
+            residential_state: addresses.residential_state || addresses.residentialState,
+            residential_city: addresses.residential_city || addresses.residentialCity,
+            residential_address1: addresses.residential_address1 || addresses.residentialAddress1,
+            residential_address2: addresses.residential_address2 || addresses.residentialAddress2,
+            residential_zipcode: addresses.residential_zipcode || addresses.residentialZipcode,
+
+            is_same_permanant: addresses.is_same_permanant || false,
+
+            permanent_address_type: addresses.permanent_address_type || addresses.permanentAddressType,
+            permanent_state: addresses.permanent_state || addresses.permanentState,
+            permanent_city: addresses.permanent_city || addresses.permanentCity,
+            permanent_address1: addresses.permanent_address1 || addresses.permanentAddress1,
+            permanent_address2: addresses.permanent_address2 || addresses.permanentAddress2,
+            permanent_zipcode: addresses.permanent_zipcode || addresses.permanentZipcode,
+          },
+
+          // Skills
+          skills: userSkillsData.skills.map(s => ({
+            ...s,
+            isReadyDate: s.isReadyDate ? dayjs(s.isReadyDate) : null,
+            // Ensure boolean/number matching for Select/Checkbox
+            isReady: s.isReady === 1 || s.isReady === true,
+          }))
+        };
+
+        form.setFieldsValue(initialValues);
+
       } catch (error) {
-        console.error('Error fetching skills:', error);
+        console.error("Error populating form:", error);
       }
     };
 
-    if (isEditModal) {
-      fetchAllAvailableSkills();
-    }
-  }, [employeeData, isEditModal]);
+    loadData();
 
-  useEffect(() => {
-    const fetchUserSkills = async () => {
-      if (!employeeId) return;
-      try {
-        const response = await getSkillsForEmp(employeeId);
-        setQualificationYearMonth(response.data.QualificationYearMonth);
-        setFullStackReady(response.data.FullStackReady);
-        const mappedSkills = response.data.skills.map(skill => ({
-          SkillId: skill.SkillId,
-          SkillName: skill.SkillName,
-          SkillLevel: skill.SkillLevel,
-          isReady: skill.isReady,
-          isReadyDate: skill.isReadyDate,
-          SelfEvaluation: skill.SelfEvaluation || "1"
-        }));
-        setEmpSkill(mappedSkills);
-      } catch (error) {
-        console.error("Error fetching user skills:", error);
-      }
-    };
-
-    if (isEditModal) {
-      fetchUserSkills();
-    }
-  }, [isEditModal, employeeId]);
+  }, [employeeData, isEditModal, form, employeeId]);
 
   const handleCancel = () => {
     setIsEditModal(false);
+    form.resetFields();
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target || e;
-    const [field, subField] = name.split('.');
-
-    if (field === 'addresses') {
-      setFormData(prevState => ({
-        ...prevState,
+  const onSameAddressChange = (e) => {
+    const checked = e.target.checked;
+    setIsSameAddress(checked);
+    if (checked) {
+      const residential = form.getFieldValue(['addresses']);
+      form.setFieldsValue({
         addresses: {
-          ...prevState.addresses,
-          [subField]: value,
-          is_same_permanant: false
+          ...residential,
+          is_same_permanant: true,
+          permanent_address_type: residential.residential_address_type,
+          permanent_state: residential.residential_state,
+          permanent_city: residential.residential_city,
+          permanent_address1: residential.residential_address1,
+          permanent_address2: residential.residential_address2,
+          permanent_zipcode: residential.residential_zipcode,
         }
-      }));
+      });
     } else {
-      setFormData(prevState => ({
-        ...prevState,
-        [name]: value
-      }));
+      form.setFieldValue(['addresses', 'is_same_permanant'], false);
     }
-  };
-
-  const handleEditPersonalInfo = async () => {
-    if (formData.contact_number === formData.emergency_contact_number && formData.contact_number !== '') {
-      setErrorNumber('Contact Number and Emergency Contact Number cannot be the same.');
-      return;
-    }
-
-    const payload = {
-      ...formData,
-      addresses: [formData.addresses]
-    };
-
-    setErrorNumber('');
-    setLoader(true);
-
-    try {
-      const response = await editPersonalDetails(payload, employeeId);
-      if (response.status === 200) {
-        fetchEmployeeData();
-        message.success("Updated Successfully");
-        await handleUpdateSkill(employeeId);
-        setIsEditModal(false);
-      }
-
-      const responsePersonal = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
-      if (responsePersonal.data.status) {
-        // reload only if specifically needed, but fetchEmployeeData might be enough
-        // window.location.reload(); 
-      }
-    } catch (error) {
-      console.error('Error updating personal details:', error);
-      toast.error("Error updating personal details");
-    } finally {
-      setLoader(false);
-    }
-  };
-
-  const handleQualification = (dateString) => {
-    setQualificationYearMonth(dateString || "2025-10-31");
-  };
-
-  const handleUpdateSkill = async (empId) => {
-    const payload = {
-      EmployeeId: empId,
-      QualificationYearMonth: qualificationYearMonth,
-      skills: empSkill,
-      FullStackReady: fullStackReady
-    };
-
-    try {
-      await addUpdateSkill(payload);
-    } catch (err) {
-      console.error("Error updating skills:", err);
-    }
-  };
-
-  const handleAddSkill = () => {
-    const newSkill = {
-      SkillId: null,
-      SkillLevel: null,
-      isReady: 1,
-      isReadyDate: "2025-10-31",
-      SelfEvaluation: "1"
-    };
-    setEmpSkill([...empSkill, newSkill]);
-  };
-
-  const handleSkillChange = (index, value) => {
-    const updatedSkills = [...empSkill];
-    updatedSkills[index] = { ...updatedSkills[index], SkillId: value };
-    setEmpSkill(updatedSkills);
-  };
-
-  const handleSkillLevelChange = (index, value) => {
-    const updatedSkills = [...empSkill];
-    updatedSkills[index] = { ...updatedSkills[index], SkillLevel: value };
-    setEmpSkill(updatedSkills);
-  };
-
-  const handleSelfEvaluationChange = (index, value) => {
-    const updatedSkills = [...empSkill];
-    updatedSkills[index] = { ...updatedSkills[index], SelfEvaluation: value };
-    setEmpSkill(updatedSkills);
-  };
-
-  const handleIsReadyChange = (index, value) => {
-    const updatedSkills = empSkill.map((skill, i) =>
-      i === index ? {
-        ...skill,
-        isReady: value,
-        isReadyDate: value === 1 ? null : (skill.isReadyDate || "2025-10-31")
-      } : skill
-    );
-    setEmpSkill(updatedSkills);
-  };
-
-  const handleDateChange = (index, dateString) => {
-    const updatedSkills = [...empSkill];
-    updatedSkills[index] = { ...updatedSkills[index], isReadyDate: dateString || null };
-    setEmpSkill(updatedSkills);
-  };
-
-  const convertDate = (dateString) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? null : date.toISOString().split("T")[0];
-  };
-
-  const getEvaluationMessage = (score) => {
-    const numScore = parseFloat(score);
-    if (numScore >= 0 && numScore < 2) return "Does not meet requirements";
-    if (numScore >= 2 && numScore < 3) return "Occasionally meets requirements";
-    if (numScore >= 3 && numScore < 4) return "Meets requirements / Average";
-    if (numScore >= 4 && numScore < 5) return "Above average";
-    if (numScore === 5) return "Exceeds expectations";
-    return "";
   };
 
   const uploadFile = async (file, docType) => {
@@ -313,6 +200,75 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     return false;
   };
 
+  const onFinish = async (values) => {
+    setLoader(true);
+    try {
+      // 1. Prepare Personal Details Payload
+      // Check for contact number conflict
+      if (values.contact_number && values.contact_number === values.emergency_contact_number) {
+        message.error('Contact Number and Emergency Contact Number cannot be the same.');
+        setLoader(false);
+        return;
+      }
+
+      const addressPayload = {
+        ...values.addresses,
+        is_same_permanant: isSameAddress
+      };
+
+      const personalPayload = {
+        contact_number: values.contact_number,
+        emergency_contact_person: values.emergency_contact_person,
+        emergency_contact_relation: values.emergency_contact_relation,
+        emergency_contact_number: values.emergency_contact_number,
+        personal_email: values.personal_email,
+        highest_qualification: values.highest_qualification,
+        qualification_year_month: values.QualificationYearMonth ? values.QualificationYearMonth.format("YYYY-MM-DD") : null,
+        // Include other non-editable fields if necessary for backend compatibility, 
+        // but usually we only send what calls for update.
+        // The original code merged ...formData which included read-only fields. 
+        // The backend update_profile_self likely only picks specific fields.
+        addresses: [addressPayload]
+      };
+
+      // 2. Prepare Skills Payload
+      const skillsPayload = {
+        EmployeeId: employeeId,
+        QualificationYearMonth: values.QualificationYearMonth ? values.QualificationYearMonth.format("YYYY-MM-DD") : null,
+        FullStackReady: values.FullStackReady,
+        skills: (values.skills || []).map(s => ({
+          SkillId: s.SkillId,
+          SkillLevel: s.SkillLevel,
+          SelfEvaluation: s.SelfEvaluation,
+          isReady: s.isReady ? 1 : 0,
+          isReadyDate: s.isReady && s.isReadyDate ? s.isReadyDate.format("YYYY-MM-DD") : null
+        }))
+      };
+
+      // 3. API Calls
+      // Update Personal
+      const personalRes = await editPersonalDetails(personalPayload, employeeId);
+      if (personalRes.status === 200) {
+        message.success("Personal details updated successfully");
+      }
+
+      // Update Skills
+      await addUpdateSkill(skillsPayload);
+
+      // Refresh Data
+      fetchEmployeeData();
+      if (fetchSkills) fetchSkills();
+
+      setIsEditModal(false);
+
+    } catch (error) {
+      console.error("Error updating details:", error);
+      toast.error("Error updating details");
+    } finally {
+      setLoader(false);
+    }
+  };
+
   const documentTypes = [
     { key: "tenth", label: "10th Marksheet" },
     { key: "twelve", label: "12th Marksheet" },
@@ -322,194 +278,307 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     { key: "resume", label: "Resume" }
   ];
 
+  const getEvaluationMessage = (score) => {
+    const numScore = parseFloat(score);
+    if (numScore >= 0 && numScore < 2) return "Does not meet requirements";
+    if (numScore >= 2 && numScore < 3) return "Occasionally meets requirements";
+    if (numScore >= 3 && numScore < 4) return "Meets requirements / Average";
+    if (numScore >= 4 && numScore < 5) return "Above average";
+    if (numScore === 5) return "Exceeds expectations";
+    return "";
+  };
+
   return (
     <Modal
       title="Edit Personal Details"
       open={isEditModal}
       onCancel={handleCancel}
-      centered
+      width={700}
       footer={[
-        <Button key="back" onClick={handleCancel}>Cancel</Button>,
-        <Button key="submit" type="primary" className={stylesEdit.btnEdit} onClick={handleEditPersonalInfo} loading={loader}>Update</Button>,
+        <Button key="cancel" onClick={handleCancel}>Cancel</Button>,
+        <Button key="submit" type="primary" loading={loader} onClick={() => form.submit()}>
+          Update All
+        </Button>
       ]}
-      width={650}
+      style={{ top: 20 }}
     >
-      <div className={stylesEdit.main}>
-        <div className={stylesEdit.inputDiv}>
-          <span className={stylesEdit.heading}>Contact Number</span>
-          <Input name="contact_number" value={formData.contact_number} onChange={handleInputChange} />
-        </div>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={{ addresses: { is_same_permanant: false } }}
+      >
+        <Tabs defaultActiveKey="1" items={[
+          {
+            key: '1',
+            label: 'Personal Info',
+            children: (
+              <>
+                <Card size="small" title="Basic Info (Read Only)" style={{ marginBottom: 16 }}>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item name="employee_id" label="Employee ID">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={16}>
+                      <Form.Item name="company_email" label="Company Email">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="first_name" label="First Name">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="middle_name" label="Middle Name">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="last_name" label="Last Name">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="date_of_birth" label="Date of Birth">
+                        <DatePicker disabled style={{ width: '100%' }} format="DD-MM-YYYY" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="gender" label="Gender">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
 
-        <div className={stylesEdit.inputDiv}>
-          <span className={stylesEdit.heading}>Emergency Contact Person</span>
-          <Input name="emergency_contact_person" value={formData.emergency_contact_person} onChange={handleInputChange} />
-        </div>
+                <Card size="small" title="Contact Details" style={{ marginBottom: 16 }}>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="contact_number" label="Contact Number" rules={[{ required: true, message: 'Please enter contact number' }]}>
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="personal_email" label="Personal Email" rules={[{ type: 'email' }]}>
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Card size="small" title="Emergency Contact" style={{ marginBottom: 16 }}>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="emergency_contact_person" label="Contact Person">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="emergency_contact_relation" label="Relation">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="emergency_contact_number" label="Emergency Number">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Card>
+                  <Card size="small" title="Qualification" style={{ marginBottom: 16 }}>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="highest_qualification" label="Highest Qualification">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="QualificationYearMonth" label="Year-Month">
+                          <DatePicker picker="month" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="FullStackReady" valuePropName="checked" label="Full Stack Ready?">
+                          <Checkbox>Yes, I am ready (Level 1+)</Checkbox>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Card>
+                </Card>
+              </>
+            ),
+          },
+          {
+            key: '2',
+            label: 'Addresses',
+            children: (
+              <>
+                <Card size="small" title="Residential Address" style={{ marginBottom: 16 }}>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name={['addresses', 'residential_address1']} label="Address Line 1">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name={['addresses', 'residential_address2']} label="Address Line 2">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'residential_city']} label="City">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'residential_state']} label="State">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'residential_zipcode']} label="Zipcode">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
 
-        <div className={stylesEdit.inputDiv}>
-          <span className={stylesEdit.heading}>Emergency Contact Relation</span>
-          <Input name="emergency_contact_relation" value={formData.emergency_contact_relation} onChange={handleInputChange} />
-        </div>
-
-        <div className={stylesEdit.inputDiv}>
-          {errorNumber && <p style={{ color: 'red', marginTop: '5px' }}>{errorNumber}</p>}
-          <span className={stylesEdit.heading}>Emergency Contact Number</span>
-          <Input name="emergency_contact_number" value={formData.emergency_contact_number} onChange={handleInputChange} />
-        </div>
-
-        <div className={stylesEdit.inputDiv}>
-          <span className={stylesEdit.heading}>Highest Qualification Year-Month</span>
-          <input
-            type="date" className={stylesEdit.customdatepicker} style={{ width: "100%" }}
-            value={qualificationYearMonth || ""}
-            onChange={(e) => handleQualification(e.target.value)}
-          />
-        </div>
-
-        <div className={stylesEdit.inputDiv}>
-          <span className={stylesEdit.heading}>Full Stack Ready</span>
-          <p style={{ color: "orange" }}>Are you ready for customer project skills at least level 1? (Both backend and frontend technologies required)</p>
-          <Checkbox checked={fullStackReady === true} onChange={() => setFullStackReady(true)}>Yes</Checkbox>
-          <Checkbox checked={fullStackReady === false} onChange={() => setFullStackReady(false)}>No</Checkbox>
-        </div>
-
-        <Collapse className={stylesEdit.collapseDiv} defaultActiveKey={['1', '2', '3']} accordion>
-          <Panel header="Residential Address" key="1">
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address Type</span>
-              <Input name="addresses.residential_address_type" value={formData.addresses.residential_address_type} onChange={handleInputChange} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address 1</span>
-              <Input name="addresses.residential_address1" value={formData.addresses.residential_address1} onChange={handleInputChange} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address 2</span>
-              <Input name="addresses.residential_address2" value={formData.addresses.residential_address2} onChange={handleInputChange} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>City</span>
-              <Input name="addresses.residential_city" value={formData.addresses.residential_city} onChange={handleInputChange} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>State</span>
-              <Input name="addresses.residential_state" value={formData.addresses.residential_state} onChange={handleInputChange} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Zipcode</span>
-              <Input name="addresses.residential_zipcode" value={formData.addresses.residential_zipcode} onChange={handleInputChange} />
-            </div>
-          </Panel>
-
-          <Panel className={stylesEdit.panel} header="Permanent Address" key="2">
-            <div className={stylesEdit.inputDiv}>
-              <Checkbox
-                checked={formData.addresses.is_same_permanant}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setFormData(prevState => ({
-                    ...prevState,
-                    addresses: {
-                      ...prevState.addresses,
-                      is_same_permanant: isChecked,
-                      permanent_address_type: isChecked ? prevState.addresses.residential_address_type : '',
-                      permanent_address1: isChecked ? prevState.addresses.residential_address1 : '',
-                      permanent_address2: isChecked ? prevState.addresses.residential_address2 : '',
-                      permanent_city: isChecked ? prevState.addresses.residential_city : '',
-                      permanent_state: isChecked ? prevState.addresses.residential_state : '',
-                      permanent_zipcode: isChecked ? prevState.addresses.residential_zipcode : ''
-                    }
-                  }));
-                }}
-              >
-                Same as Residential Address
-              </Checkbox>
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address Type</span>
-              <Input name="addresses.permanent_address_type" value={formData.addresses.permanent_address_type} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address 1</span>
-              <Input name="addresses.permanent_address1" value={formData.addresses.permanent_address1} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Address 2</span>
-              <Input name="addresses.permanent_address2" value={formData.addresses.permanent_address2} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>City</span>
-              <Input name="addresses.permanent_city" value={formData.addresses.permanent_city} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>State</span>
-              <Input name="addresses.permanent_state" value={formData.addresses.permanent_state} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-            <div className={stylesEdit.inputDiv}>
-              <span className={stylesEdit.heading}>Zipcode</span>
-              <Input name="addresses.permanent_zipcode" value={formData.addresses.permanent_zipcode} onChange={handleInputChange} disabled={formData.addresses.is_same_permanant} />
-            </div>
-          </Panel>
-
-          <Panel header="Skills" key="3">
-            {empSkill?.map((skill, index) => (
-              <div key={index} style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px", padding: "10px", border: "1px solid #f0f0f0", borderRadius: "8px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span className="headingSkill">Skill Name</span>
-                  <Select
-                    showSearch placeholder="Select a skill" style={{ width: "80%" }}
-                    onChange={(value) => handleSkillChange(index, value)}
-                    value={skill.SkillId}
-                    filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
-                  >
-                    {availableSkills.map((s) => <Select.Option key={s.skillId} value={s.skillId}>{s.skillName}</Select.Option>)}
-                  </Select>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span className="headingSkill">Skill Level</span>
-                  <Select style={{ width: "80%" }} onChange={(value) => handleSkillLevelChange(index, value)} value={skill.SkillLevel}>
-                    <Select.Option value="Primary">Primary</Select.Option>
-                    <Select.Option value="Secondary">Secondary</Select.Option>
-                    <Select.Option value="Cross Tech Skill">Cross Tech Skill</Select.Option>
-                  </Select>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span className="headingSkill">Self Evaluation (0-5)</span>
-                  <Input type="number" min="0" max="5" step="0.1" value={skill.SelfEvaluation} onChange={(e) => handleSelfEvaluationChange(index, e.target.value)} style={{ width: "80px" }} />
-                  <span style={{ fontSize: "12px", color: "#888" }}>{getEvaluationMessage(skill.SelfEvaluation)}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span className="headingSkill">Is Ready?</span>
-                  <Checkbox checked={skill.isReady === 1} onChange={() => handleIsReadyChange(index, 1)}>Yes</Checkbox>
-                  <Checkbox checked={skill.isReady === 0} onChange={() => handleIsReadyChange(index, 0)}>No</Checkbox>
-                  {skill.isReady === 0 && (
-                    <input type="date" value={skill.isReadyDate ? convertDate(skill.isReadyDate) : ""} onChange={(e) => handleDateChange(index, e.target.value)} className={stylesEdit.customdatepicker} />
+                <Card size="small" title="Permanent Address" extra={
+                  <Checkbox checked={isSameAddress} onChange={onSameAddressChange}>Same as Residential</Checkbox>
+                }>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name={['addresses', 'permanent_address1']} label="Address Line 1">
+                        <Input disabled={isSameAddress} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name={['addresses', 'permanent_address2']} label="Address Line 2">
+                        <Input disabled={isSameAddress} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'permanent_city']} label="City">
+                        <Input disabled={isSameAddress} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'permanent_state']} label="State">
+                        <Input disabled={isSameAddress} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name={['addresses', 'permanent_zipcode']} label="Zipcode">
+                        <Input disabled={isSameAddress} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
+              </>
+            ),
+          },
+          {
+            key: '3',
+            label: 'Skills',
+            children: (
+              <>
+                <p>Manage your technical skills.</p>
+                <Form.List name="skills">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...restField }) => (
+                        <Card key={key} size="small" style={{ marginBottom: 12 }} actions={[
+                          <DeleteOutlined key="delete" onClick={() => remove(name)} style={{ color: 'red' }} />
+                        ]}>
+                          <Row gutter={16}>
+                            <Col span={12}>
+                              <Form.Item {...restField} name={[name, 'SkillId']} label="Skill Name" rules={[{ required: true }]}>
+                                <Select showSearch filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}>
+                                  {availableSkills.map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
+                                </Select>
+                              </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                              <Form.Item {...restField} name={[name, 'SkillLevel']} label="Level">
+                                <Select>
+                                  <Option value="Primary">Primary</Option>
+                                  <Option value="Secondary">Secondary</Option>
+                                  <Option value="Cross Tech Skill">Cross Tech Skill</Option>
+                                </Select>
+                              </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                              <Form.Item shouldUpdate={(prev, curr) => prev.skills?.[name]?.SelfEvaluation !== curr.skills?.[name]?.SelfEvaluation}>
+                                {({ getFieldValue }) => {
+                                  const score = getFieldValue(['skills', name, 'SelfEvaluation']);
+                                  return (
+                                    <Form.Item {...restField} name={[name, 'SelfEvaluation']} label="Self Eval (1-5)" help={getEvaluationMessage(score)}>
+                                      <Input type="number" min="0" max="5" step="0.1" />
+                                    </Form.Item>
+                                  );
+                                }}
+                              </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                              <Form.Item {...restField} name={[name, 'isReady']} valuePropName="checked" label="Ready for Project?">
+                                <Checkbox>Yes</Checkbox>
+                              </Form.Item>
+                              <Form.Item noStyle shouldUpdate={(prev, curr) => prev.skills?.[name]?.isReady !== curr.skills?.[name]?.isReady}>
+                                {({ getFieldValue }) => {
+                                  const isReady = getFieldValue(['skills', name, 'isReady']);
+                                  return isReady ? (
+                                    <Form.Item {...restField} name={[name, 'isReadyDate']} label="Since">
+                                      <DatePicker style={{ width: '100%' }} />
+                                    </Form.Item>
+                                  ) : null;
+                                }}
+                              </Form.Item>
+                            </Col>
+                          </Row>
+                        </Card>
+                      ))}
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                        Add Skill
+                      </Button>
+                    </>
                   )}
-                </div>
+                </Form.List>
+              </>
+            ),
+          },
+          {
+            key: '4',
+            label: 'Documents',
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {documentTypes.map(({ key, label }) => {
+                  const doc = docStatus?.find((d) => d.doc_type === key);
+                  return (
+                    <Card key={key} size="small" bodyStyle={{ padding: 12 }}>
+                      <Row align="middle" justify="space-between">
+                        <Col>{label}</Col>
+                        <Col>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            <span style={{ color: doc?.uploaded ? "green" : "red", fontSize: "12px" }}>
+                              {doc?.uploaded ? "Uploaded" : "Pending"}
+                            </span>
+                            <Upload beforeUpload={(file) => beforeUpload(file, key)} showUploadList={false}>
+                              <Button size="small" icon={<UploadOutlined />}>
+                                {doc?.uploaded ? "Update" : "Upload"}
+                              </Button>
+                            </Upload>
+                          </div>
+                        </Col>
+                      </Row>
+                    </Card>
+                  );
+                })}
               </div>
-            ))}
-            <Button type="dashed" block icon={<PlusOutlined />} onClick={handleAddSkill}>Add Skill</Button>
-          </Panel>
-
-          <Panel header="Documents" key="4">
-            <div className={stylesEdit.docStatusDiv}>
-              {documentTypes.map(({ key, label }) => {
-                const doc = docStatus?.find((d) => d.doc_type === key);
-                return (
-                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px", borderBottom: "1px solid #f0f0f0" }}>
-                    <span>{label}</span>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                      <Upload beforeUpload={(file) => beforeUpload(file, key)} showUploadList={false}>
-                        <Button size="small" icon={<UploadOutlined />}>{doc?.uploaded ? "Update" : "Upload"}</Button>
-                      </Upload>
-                      <span style={{ color: doc?.uploaded ? "green" : "red", fontSize: "12px" }}>{doc?.uploaded ? "Uploaded" : "Pending"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Panel>
-        </Collapse>
-      </div>
+            ),
+          }
+        ]} />
+      </Form>
       <ToastContainer />
     </Modal>
   );

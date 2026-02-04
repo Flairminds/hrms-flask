@@ -71,11 +71,10 @@ class SkillsService:
             qualification_year_month = payload.get("QualificationYearMonth")
             full_stack_ready = payload.get("FullStackReady", 0)
 
-            if not employee_id or not skills:
-                Logger.warning("Missing employee_id or skills",
-                             employee_id_present=bool(employee_id),
-                             skills_present=bool(skills))
-                raise ValueError("EmployeeId and skills are required")
+            if not employee_id:
+                Logger.warning("Missing employee_id",
+                             employee_id_present=bool(employee_id))
+                raise ValueError("EmployeeId is required")
 
             if qualification_year_month:
                 try:

@@ -49,8 +49,8 @@ ROLE_PERMISSIONS = {
     # ===========================
     "skills": {
         "employee_skills": ["Admin", "HR"],  # Overview
-        "add_update_skills": ["Admin", "HR"],
-        "get_employee_skills": ["Admin", "HR"],  # By employee_id
+        "add_update_skills": ["Admin", "HR", "Lead", "Employee"],
+        "get_employee_skills": ["Admin", "HR", "Lead", "Employee"],  # By employee_id
         "employees_with_skills": ["Admin", "HR"]  # All employees skills
     },
     
