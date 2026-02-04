@@ -76,6 +76,6 @@ def get_roles():
     return HRController.get_roles()
 
 @hr_bp.route('/get-all-skills', methods=['GET'])
-@roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_all_skills'])
 def get_all_skills():
     return HRController.get_all_skills()

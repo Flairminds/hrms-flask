@@ -1,44 +1,44 @@
-.inputDiv{
-    display: flex;
-    flex-direction: column;
-    padding-bottom:1rem ;
+.inputDiv {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 1rem;
 }
 
-.inputDivSkill{
+.inputDivSkill {
   display: flex;
   flex-direction: column;
   /* justify-content: space-between; */
   gap: 20px;
   padding: 0.8rem 0.5rem 1rem 0.5rem;
-  border-bottom: 1px solid  #697df7;
+  border-bottom: 1px solid #697df7;
 }
 
-.heading{
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #34495e;
-    padding-bottom: 0.3rem;
-}
-
-.headingSkill{
+.heading {
   font-weight: 600;
-    font-size: 0.9rem;
-    color: #34495e;
-    padding-bottom: 0.3rem;
-    padding-right: 0.3rem;
+  font-size: 0.9rem;
+  color: #34495e;
+  padding-bottom: 0.3rem;
 }
 
-.collapseDiv{
+.headingSkill {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #34495e;
+  padding-bottom: 0.3rem;
+  padding-right: 0.3rem;
+}
+
+.collapseDiv {
   background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
 }
 
-.panelDiv{
+.panelDiv {
   display: flex;
   flex-direction: column;
 }
 
-.btnEdit{
-    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+.btnEdit {
+  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
   color: #fff !important;
   border: none !important;
   padding: 0.75rem 1.5rem !important;
@@ -46,8 +46,8 @@
   border-radius: 6px !important;
 }
 
-.btnEdit :hover{
-    background-color: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+.btnEdit :hover {
+  background-color: linear-gradient(135deg, #b3c7ff, #697df7) !important;
   color: #fff !important;
   border: none !important;
   /* padding: 0.75rem 1.5rem !important; */
@@ -55,7 +55,7 @@
   border-radius: 6px !important;
 }
 
-.selectDiv{
+.selectDiv {
   display: flex;
   background-color: #697df7;
 }
@@ -71,9 +71,11 @@
   transition: border-color 0.3s, box-shadow 0.3s;
   cursor: pointer;
 }
+
 .full-width {
   width: 100%;
 }
+
 .customdatepicker:hover {
   border-color: #40a9ff;
 }
@@ -94,15 +96,15 @@
   cursor: not-allowed;
 }
 
-.uploadDiv{
+.uploadDiv {
   display: flex;
   justify-content: space-between;
 }
 
-.deleteDiv{
-  display:flex ;
+.deleteDiv {
+  display: flex;
 }
 
-.docStatusDiv{
+.docStatusDiv {
   /* background-color: #40a9ff; */
 }

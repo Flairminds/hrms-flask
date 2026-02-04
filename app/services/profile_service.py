@@ -73,12 +73,12 @@ class ProfileService:
                     res_addr = EmployeeAddress(employee_id=emp_id, address_type='Residential')
                     db.session.add(res_addr)
                 
-                res_addr.address1 = addr_data.get('residential_address1')
-                res_addr.address2 = addr_data.get('residential_address2')
-                res_addr.city = addr_data.get('residential_city')
-                res_addr.state = addr_data.get('residential_state')
-                res_addr.zip_code = addr_data.get('residential_zipcode')
-                res_addr.is_same_permanant = addr_data.get('is_same_permanant')
+                if 'residential_address1' in addr_data: res_addr.address1 = addr_data['residential_address1']
+                if 'residential_address2' in addr_data: res_addr.address2 = addr_data['residential_address2']
+                if 'residential_city' in addr_data: res_addr.city = addr_data['residential_city']
+                if 'residential_state' in addr_data: res_addr.state = addr_data['residential_state']
+                if 'residential_zipcode' in addr_data: res_addr.zip_code = addr_data['residential_zipcode']
+                if 'is_same_permanant' in addr_data: res_addr.is_same_permanant = addr_data['is_same_permanant']
                 
                 # Update Permanent Address
                 perm_addr = EmployeeAddress.query.filter_by(employee_id=emp_id, address_type='Permanent').first()
@@ -94,11 +94,11 @@ class ProfileService:
                     perm_addr.zip_code = res_addr.zip_code
                     perm_addr.is_same_permanant = True
                 else:
-                    perm_addr.address1 = addr_data.get('permanent_address1')
-                    perm_addr.address2 = addr_data.get('permanent_address2')
-                    perm_addr.city = addr_data.get('permanent_city')
-                    perm_addr.state = addr_data.get('permanent_state')
-                    perm_addr.zip_code = addr_data.get('permanent_zipcode')
+                    if 'permanent_address1' in addr_data: perm_addr.address1 = addr_data['permanent_address1']
+                    if 'permanent_address2' in addr_data: perm_addr.address2 = addr_data['permanent_address2']
+                    if 'permanent_city' in addr_data: perm_addr.city = addr_data['permanent_city']
+                    if 'permanent_state' in addr_data: perm_addr.state = addr_data['permanent_state']
+                    if 'permanent_zipcode' in addr_data: perm_addr.zip_code = addr_data['permanent_zipcode']
                     perm_addr.is_same_permanant = False
             
             db.session.commit()

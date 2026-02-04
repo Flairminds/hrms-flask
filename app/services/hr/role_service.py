@@ -13,7 +13,7 @@ class RoleService:
         """Retrieves all available skills."""
         try:
             skills = MasterSkill.query.with_entities(MasterSkill.skill_id, MasterSkill.skill_name).all()
-            return [{'skill_id': s.skill_id, 'skill_name': s.skill_name} for s in skills]
+            return [{'skillId': s.skill_id, 'skillName': s.skill_name} for s in skills]
         except Exception as e:
             Logger.error("Error fetching all skills", error=str(e))
             raise e

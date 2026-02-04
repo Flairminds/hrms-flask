@@ -129,6 +129,8 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
             isReadyDate: s.isReadyDate ? dayjs(s.isReadyDate) : null,
             // Ensure boolean/number matching for Select/Checkbox
             isReady: s.isReady === 1 || s.isReady === true,
+            SkillLevel: s.SkillLevel, // Proficiency: Beginner, Intermediate, Expert
+            SkillCategory: s.SkillCategory // Category: Primary, Secondary, Cross Tech
           }))
         };
 
@@ -238,7 +240,8 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
         FullStackReady: values.FullStackReady,
         skills: (values.skills || []).map(s => ({
           SkillId: s.SkillId,
-          SkillLevel: s.SkillLevel,
+          SkillLevel: s.SkillLevel, // Proficiency
+          SkillCategory: s.SkillCategory, // Category
           SelfEvaluation: s.SelfEvaluation,
           isReady: s.isReady ? 1 : 0,
           isReadyDate: s.isReady && s.isReadyDate ? s.isReadyDate.format("YYYY-MM-DD") : null
@@ -293,7 +296,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
       title="Edit Personal Details"
       open={isEditModal}
       onCancel={handleCancel}
-      width={700}
+      width={800}
       footer={[
         <Button key="cancel" onClick={handleCancel}>Cancel</Button>,
         <Button key="submit" type="primary" loading={loader} onClick={() => form.submit()}>
@@ -483,44 +486,54 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
             label: 'Skills',
             children: (
               <>
-                <p>Manage your technical skills.</p>
+                {/* <p>Total Skills: {userSkillsData.skills.length}</p> */}
                 <Form.List name="skills">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map(({ key, name, ...restField }) => (
-                        <Card key={key} size="small" style={{ marginBottom: 12 }} actions={[
-                          <DeleteOutlined key="delete" onClick={() => remove(name)} style={{ color: 'red' }} />
-                        ]}>
-                          <Row gutter={16}>
-                            <Col span={12}>
-                              <Form.Item {...restField} name={[name, 'SkillId']} label="Skill Name" rules={[{ required: true }]}>
-                                <Select showSearch filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}>
-                                  {availableSkills.map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
-                                </Select>
-                              </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                              <Form.Item {...restField} name={[name, 'SkillLevel']} label="Level">
-                                <Select>
-                                  <Option value="Primary">Primary</Option>
-                                  <Option value="Secondary">Secondary</Option>
-                                  <Option value="Cross Tech Skill">Cross Tech Skill</Option>
-                                </Select>
-                              </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                              <Form.Item shouldUpdate={(prev, curr) => prev.skills?.[name]?.SelfEvaluation !== curr.skills?.[name]?.SelfEvaluation}>
-                                {({ getFieldValue }) => {
-                                  const score = getFieldValue(['skills', name, 'SelfEvaluation']);
-                                  return (
-                                    <Form.Item {...restField} name={[name, 'SelfEvaluation']} label="Self Eval (1-5)" help={getEvaluationMessage(score)}>
-                                      <Input type="number" min="0" max="5" step="0.1" />
-                                    </Form.Item>
-                                  );
-                                }}
-                              </Form.Item>
-                            </Col>
-                            <Col span={12}>
+                        // <Card key={key} size="small" style={{ marginBottom: 12 }}>
+                        <Row gutter={12}>
+                          <Col span={6}>
+                            <Form.Item {...restField} name={[name, 'SkillId']} label={`#${key + 1} Skill`} rules={[{ required: true }]}>
+                              <Select showSearch filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}>
+                                {availableSkills.map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col span={6}>
+                            <Form.Item {...restField} name={[name, 'SkillLevel']} label="Proficiency">
+                              <Select placeholder="Select Proficiency">
+                                <Option value="Beginner">Beginner</Option>
+                                <Option value="Intermediate">Intermediate</Option>
+                                <Option value="Expert">Expert</Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col span={6}>
+                            <Form.Item {...restField} name={[name, 'SkillCategory']} label="Category">
+                              <Select placeholder="Select Category">
+                                <Option value="Primary">Primary</Option>
+                                <Option value="Secondary">Secondary</Option>
+                                <Option value="Cross Tech Skill">Cross Tech Skill</Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col span={4}>
+                            <Form.Item shouldUpdate={(prev, curr) => prev.skills?.[name]?.SelfEvaluation !== curr.skills?.[name]?.SelfEvaluation}>
+                              {({ getFieldValue }) => {
+                                const score = getFieldValue(['skills', name, 'SelfEvaluation']);
+                                return (
+                                  <Form.Item {...restField} name={[name, 'SelfEvaluation']} label="Self Eval (1-5)" help={getEvaluationMessage(score)}>
+                                    <Input type="number" min="0" max="5" step="0.1" />
+                                  </Form.Item>
+                                );
+                              }}
+                            </Form.Item>
+                          </Col>
+                          <Col span={2}>
+                            <DeleteOutlined key="delete" onClick={() => remove(name)} style={{ color: 'red', marginTop: '36px' }} />
+                          </Col>
+                          {/* <Col span={12}>
                               <Form.Item {...restField} name={[name, 'isReady']} valuePropName="checked" label="Ready for Project?">
                                 <Checkbox>Yes</Checkbox>
                               </Form.Item>
@@ -534,9 +547,9 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                                   ) : null;
                                 }}
                               </Form.Item>
-                            </Col>
-                          </Row>
-                        </Card>
+                            </Col> */}
+                        </Row>
+                        // </Card>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
                         Add Skill

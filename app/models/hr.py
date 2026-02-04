@@ -77,6 +77,7 @@ class EmployeeSkill(BaseModel):
     employee_id = db.Column(db.String(20), nullable=False)
     skill_id = db.Column(db.Integer, nullable=False)
     skill_level = db.Column(db.String(50))
+    skill_category = db.Column(db.String(50))
     is_ready = db.Column(db.Boolean, nullable=False, default=False)
     is_ready_date = db.Column(db.DateTime)
     self_evaluation = db.Column(db.Numeric(5, 2))

@@ -26,7 +26,8 @@ ROLE_PERMISSIONS = {
         "employee_details_for_relieving_letter": ["Admin", "HR"],
         "employee_details": ["Admin", "HR", "Lead", "Employee"],  # GET /employee-details/<employee_id>
         "get_new_joinees": ["Admin", "HR", "Employee", "Lead"],  # New joinees widget
-        "get_upcoming_birthdays": ["Admin", "HR", "Employee", "Lead"] # Upcoming birthdays widget
+        "get_upcoming_birthdays": ["Admin", "HR", "Employee", "Lead"], # Upcoming birthdays widget
+        "get_all_skills": ["Admin", "HR", "Employee", "Lead"] # For skills dropdown
     },
     
     # ===========================

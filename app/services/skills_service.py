@@ -85,7 +85,7 @@ class SkillsService:
                     raise ValueError("Invalid QualificationYearMonth format. Expected YYYY-MM.")
 
             # Get employee using ORM
-            employee = Employee.query.get(employee_id)
+            employee = Employee.query.filter_by(employee_id=employee_id).first()
             if not employee:
                 Logger.warning("Employee not found", employee_id=employee_id)
                 raise ValueError(f"Employee {employee_id} not found")
@@ -100,16 +100,16 @@ class SkillsService:
             # Upsert skills using ORM
             for skill in skills:
                 skill_id = skill.get("SkillId")
-                skill_level = skill.get("SkillLevel")
+                skill_level = skill.get("SkillLevel") # This is now Proficiency (Beginner, Intermediate, Expert)
+                skill_category = skill.get("SkillCategory") # This is now Category (Primary, Secondary, Cross Tech)
                 is_ready = skill.get("isReady", 0)
                 is_ready_date = skill.get("isReadyDate")
                 self_evaluation = skill.get("SelfEvaluation")
 
-                if not skill_id or not skill_level:
+                if not skill_id:
                     Logger.warning("Skill missing required fields",
-                                 skill_id_present=bool(skill_id),
-                                 skill_level_present=bool(skill_level))
-                    raise ValueError("Each skill must have SkillId and SkillLevel")
+                                 skill_id_present=bool(skill_id))
+                    raise ValueError("Each skill must have SkillId")
 
                 if is_ready_date:
                     try:
@@ -136,6 +136,7 @@ class SkillsService:
                 if existing_emp_skill:
                     # Update existing using ORM
                     existing_emp_skill.skill_level = skill_level
+                    existing_emp_skill.skill_category = skill_category
                     existing_emp_skill.is_ready = is_ready
                     existing_emp_skill.is_ready_date = is_ready_date
                     existing_emp_skill.self_evaluation = self_evaluation
@@ -148,6 +149,7 @@ class SkillsService:
                         employee_id=employee_id,
                         skill_id=skill_id,
                         skill_level=skill_level,
+                        skill_category=skill_category,
                         is_ready=is_ready,
                         is_ready_date=is_ready_date,
                         self_evaluation=self_evaluation
@@ -156,6 +158,26 @@ class SkillsService:
                     Logger.debug("Added new skill",
                                employee_id=employee_id,
                                skill_id=skill_id)
+
+            # --- DELETION LOGIC STARTS HERE ---
+            # 1. Get all current skill IDs from DB for this employee
+            current_db_skills = db.session.query(EmployeeSkill.skill_id)\
+                .filter_by(employee_id=employee_id).all()
+            current_db_skill_ids = {s.skill_id for s in current_db_skills}
+            
+            # 2. Get all skill IDs from the payload
+            payload_skill_ids = {s.get("SkillId") for s in skills if s.get("SkillId")}
+            
+            # 3. Find IDs that are in DB but NOT in payload
+            ids_to_delete = current_db_skill_ids - payload_skill_ids
+            
+            if ids_to_delete:
+                Logger.info("Deleting removed skills", employee_id=employee_id, count=len(ids_to_delete))
+                EmployeeSkill.query.filter(
+                    EmployeeSkill.employee_id == employee_id,
+                    EmployeeSkill.skill_id.in_(ids_to_delete)
+                ).delete(synchronize_session=False)
+            # --- DELETION LOGIC ENDS HERE ---
 
             db.session.commit()
             Logger.info("Employee skills updated successfully",
@@ -199,6 +221,7 @@ class SkillsService:
             employee_skills = db.session.query(
                 EmployeeSkill.skill_id,
                 EmployeeSkill.skill_level,
+                EmployeeSkill.skill_category,
                 EmployeeSkill.self_evaluation,
                 MasterSkill.skill_name,
                 EmployeeSkill.is_ready,
@@ -212,10 +235,20 @@ class SkillsService:
 
             skills = []
             for skill_row in employee_skills:
+                # Compatibility logic for legacy data
+                # If skill_category is missing and skill_level contains a category keyword
+                s_level = skill_row.skill_level
+                s_category = skill_row.skill_category
+                
+                if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
+                    s_category = s_level
+                    s_level = None # Reset level so user can select Proficiency cleanly
+                
                 skills.append(
                     {
                         "SkillId": skill_row.skill_id,
-                        "SkillLevel": skill_row.skill_level,
+                        "SkillLevel": s_level, # Proficiency
+                        "SkillCategory": s_category, # Category
                         "SkillName": skill_row.skill_name,
                         "isReady": int(skill_row.is_ready) if skill_row.is_ready else 0,
                         "isReadyDate": skill_row.is_ready_date,
@@ -265,6 +298,7 @@ class SkillsService:
                 EmployeeSkill.skill_id,
                 MasterSkill.skill_name,
                 EmployeeSkill.skill_level,
+                EmployeeSkill.skill_category,
                 EmployeeSkill.is_ready,
                 EmployeeSkill.is_ready_date,
                 EmployeeSkill.self_evaluation
@@ -294,10 +328,11 @@ class SkillsService:
                         "Skills": {"Primary": [], "Secondary": [], "CrossTechSkill": []},
                     }
 
-                skill_level = row.skill_level
+                skill_category = row.skill_category # Use category for grouping
                 skill_entry = {
                     "SkillId": row.skill_id,
                     "SkillName": row.skill_name,
+                    "SkillLevel": row.skill_level, # Proficiency
                     "isReady": row.is_ready,
                     "isReadyDate": row.is_ready_date,
                     "SelfEvaluation": row.self_evaluation,
@@ -306,13 +341,22 @@ class SkillsService:
                 if not row.skill_id:
                     continue
 
-                if skill_level == "Primary":
+                if skill_category == "Primary":
                     employees_dict[emp_id]["Skills"]["Primary"].append(skill_entry)
-                elif skill_level == "Secondary":
+                elif skill_category == "Secondary":
                     employees_dict[emp_id]["Skills"]["Secondary"].append(skill_entry)
-                elif skill_level == "Cross Tech Skill":
+                elif skill_category == "Cross Tech Skill":
                     employees_dict[emp_id]["Skills"]["CrossTechSkill"].append(skill_entry)
-
+                # Fallback for old data or mismatches - maybe assume Primary or just ignore?
+                # For now let's also check old style if category is empty
+                elif not skill_category and row.skill_level in ["Primary", "Secondary", "Cross Tech Skill"]:
+                     if row.skill_level == "Primary":
+                        employees_dict[emp_id]["Skills"]["Primary"].append(skill_entry)
+                     elif row.skill_level == "Secondary":
+                        employees_dict[emp_id]["Skills"]["Secondary"].append(skill_entry)
+                     elif row.skill_level == "Cross Tech Skill":
+                        employees_dict[emp_id]["Skills"]["CrossTechSkill"].append(skill_entry)
+                        
             result = list(employees_dict.values())
             Logger.info("Employees with skills retrieved", employee_count=len(result))
             return result
