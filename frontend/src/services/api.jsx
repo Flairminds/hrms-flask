@@ -7,7 +7,7 @@ import { getCookie } from '../util/CookieSet';
 // In development: http://localhost:5000/api (via proxy)
 // In production: /api (relative path, same origin)
 // export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-export const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:5000/api';
+export const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
 
 // Axios instance using environment-based API base URL
 export const axiosInstance = axios.create({
