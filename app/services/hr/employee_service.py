@@ -52,7 +52,8 @@ class EmployeeService:
                     "roleName": e.role_name,
                     "employmentStatus": e.employment_status,
                     "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
-                    "leaveApprover": get_approver_name(e.team_lead_id)
+                    "leaveApprover": get_approver_name(e.team_lead_id),
+                    "teamLeadName": get_approver_name(e.team_lead_id)
                 } for e in employees
             ]
         except Exception as e:

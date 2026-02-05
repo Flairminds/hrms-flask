@@ -105,11 +105,17 @@ export const EmployeeData = () => {
 
   const columns = [
     {
+      title: 'Employee ID',
+      dataIndex: 'employeeId',
+      key: 'employeeId',
+      sorter: (a, b) => a.employeeId.localeCompare(b.employeeId),
+      render: (text) => <b>{text}</b>,
+    },
+    {
       title: 'Employee Name',
       dataIndex: 'employeeName',
       key: 'employeeName',
       sorter: (a, b) => a.employeeName.localeCompare(b.employeeName),
-      render: (text) => <b>{text}</b>,
     },
     {
       title: 'Employment Status',
@@ -123,7 +129,13 @@ export const EmployeeData = () => {
       title: 'Leave Approver',
       dataIndex: 'leaveApprover',
       key: 'leaveApprover',
-      sorter: (a, b) => a.leaveApprover.localeCompare(b.leaveApprover),
+      sorter: (a, b) => (a.leaveApprover || "").localeCompare(b.leaveApprover || ""),
+    },
+    {
+      title: 'Team Lead',
+      dataIndex: 'teamLeadName',
+      key: 'teamLeadName',
+      sorter: (a, b) => (a.teamLeadName || "").localeCompare(b.teamLeadName || ""),
     },
     {
       title: 'Joining Date',
