@@ -24,6 +24,7 @@ class LeaveTypeName:
     UNPAID_SICK_LEAVE = 'Unpaid Sick/Emergency Leave'
     UNPAID_PRIVILEGE_LEAVE = 'Unpaid Privilege Leave'
     MISSED_DOOR_ENTRY = 'Missed Door Entry'
+    UNPAID_LEAVE = 'Unpaid Leave'
 
 class LeaveTypeID:
     SICK = 1
@@ -32,8 +33,9 @@ class LeaveTypeID:
     COMP_OFF = 4
     CASUAL = 5
     WORKING_LATE = 9
-    LEAVE_WITHOUT_PAY = 12
-    UNPAID_LEAVE = 13
+    UNPAID_LEAVE = 15
+    # Leave without pay can map to 15 as well or be separate, keeping current ones for legacy if needed
+    LEAVE_WITHOUT_PAY = 12 
 
 class EmployeeStatus:
     ACTIVE = 'Active'

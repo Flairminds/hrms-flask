@@ -316,7 +316,8 @@ def seed_leave_types():
         (11, N'Exempt Work From Home', 0, 0, false, false, NULL, true),
         (12, N'Unpaid Sick/Emergency Leave', 0, 0, false, true, NULL, true),
         (13, N'Unpaid Privilege Leave', 0, 0, false, true, NULL, true),
-        (14, N'Missed Door Entry', 12, 0, false, true, 3, false);
+        (14, N'Missed Door Entry', 12, 0, false, true, 3, false),
+        (15, N'Unpaid Leave', 0, 0, false, false, NULL, false);
     """)
     db.session.execute(leave_type_sql)
     print("✓ Leave types seeded")
