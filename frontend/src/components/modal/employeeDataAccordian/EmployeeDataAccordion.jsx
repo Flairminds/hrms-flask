@@ -196,7 +196,8 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             }
         } catch (error) {
             console.error('Error adding employee:', error);
-            toast.error(error?.response?.data?.message || error.message || "Failed to add employee");
+            const errorMsg = error?.response?.data?.message || error.message || "Failed to add employee";
+            message.error(errorMsg);
         } finally {
             setLoader(false);
         }
@@ -427,7 +428,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                     <Form.Item
                                         label="Sub-Role"
                                         name="MasterSubRole"
-                                        rules={[{ required: false, message: 'Required' }]}
+                                        rules={[{ required: false }]}
                                     >
                                         <Select placeholder="Select sub-role" showSearch>
                                             {companyRole.map(role => (

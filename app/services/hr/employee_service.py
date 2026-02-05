@@ -704,7 +704,7 @@ class EmployeeService:
                 employee_data[snake] = employee_data[camel]
 
         required_fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'contact_number', 
-                          'date_of_joining', 'sub_role', 'band', 'password', 'role_id']
+                          'date_of_joining', 'band', 'password', 'role_id']
         missing = [f for f in required_fields if not employee_data.get(f)]
         if missing: 
             raise ValueError(f"Missing required fields: {', '.join(missing)}")

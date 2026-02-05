@@ -586,8 +586,8 @@ function PersonalInfoPage() {
                           ) : <Text type="secondary" style={{ fontSize: '12px' }}>Pending</Text>}
                         </div>
                         <Space>
-                          <Button size="small" icon={<DownloadOutlined />} onClick={() => fetchDocuments(key)} disabled={!docStatus?.uploaded} />
-                          <Button size="small" icon={<EyeOutlined />} onClick={() => fetchDocumentsView(key)} disabled={!docStatus?.uploaded} />
+                          <Button size="small" icon={<DownloadOutlined />} onClick={() => fetchDocuments(key)} disabled={!docStatus?.uploaded}>Download</Button>
+                          <Button size="small" icon={<EyeOutlined />} onClick={() => fetchDocumentsView(key)} disabled={!docStatus?.uploaded}>Preview</Button>
                         </Space>
                       </div>
                     );

@@ -559,9 +559,14 @@ export const uploadDocument = (employeeId, docType, file) => {
 };
 
 
+// Gets the policy acknowledgment status for an employee.
+export const getPolicyAcknowledgment = (employeeId) => {
+  return axiosInstance.get(`${API_BASE_URL}/policy-acknowledgment/${employeeId}`);
+};
+
 // Updates the policy acknowledgment for an employee.
 export const updatePolicyAcknowledgment = (employeeId, policyName) => {
-  return axiosInstance.post('https://hrms-flask.azurewebsites.net/api/policy-acknowledgment', {
+  return axiosInstance.post(`${API_BASE_URL}/policy-acknowledgment`, {
     employeeId,
     policyName,
     acknowledged: true
@@ -576,7 +581,7 @@ export const updatePolicyAcknowledgment = (employeeId, policyName) => {
 
 // Updates the warning count for an employee.
 export const updateWarningCount = (employeeId) => {
-  return axiosInstance.post('https://hrms-flask.azurewebsites.net/api/update-warning-count', {
+  return axiosInstance.post(`${API_BASE_URL}/update-warning-count`, {
     employeeId
   }, {
     headers: {
@@ -589,7 +594,7 @@ export const updateWarningCount = (employeeId) => {
 
 // Gets the warning count of an employee.
 export const getWarningCount = (employeeId) => {
-  return axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/warning-count/${employeeId}`, {
+  return axiosInstance.get(`${API_BASE_URL}/warning-count/${employeeId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json'

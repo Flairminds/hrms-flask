@@ -30,7 +30,7 @@ import FMLogo from '../../assets/login/FMLogonew.png';
 import axiosInstance, { getWarningCount } from '../../services/api';
 import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext';
-import { getAllEmployeeEvaluators } from '../../services/api';
+import { getAllEmployeeEvaluators, getPolicyAcknowledgment } from '../../services/api';
 
 
 export const Sidebar = ({ isRole }) => {
@@ -51,18 +51,20 @@ export const Sidebar = ({ isRole }) => {
         const employeeId = Cookies.get('employeeId');
         if (!employeeId) return;
 
-        const response = await axios.get(`https://hrms-flask.azurewebsites.net/api/policy-acknowledgment/${employeeId}`);
+        const response = await getPolicyAcknowledgment(employeeId);
         const data = response.data;
 
-        const allAcknowledged =
-          data.LeavePolicyAcknowledged &&
-          data.WorkFromHomePolicyAcknowledged &&
-          data.ExitPolicyAndProcessAcknowledged &&
-          data.SalaryAdvanceRecoveryPolicyAcknowledged &&
-          data.ProbationToConfirmationPolicyAcknowledged &&
-          data.SalaryAndAppraisalPolicyAcknowledged;
+        if (data) {
+          const allAcknowledged =
+            data.LeavePolicyAcknowledged &&
+            data.WorkFromHomePolicyAcknowledged &&
+            data.ExitPolicyAndProcessAcknowledged &&
+            data.SalaryAdvanceRecoveryPolicyAcknowledged &&
+            data.ProbationToConfirmationPolicyAcknowledged &&
+            data.SalaryAndAppraisalPolicyAcknowledged;
 
-        setAreAllPoliciesAcknowledged(allAcknowledged);
+          setAreAllPoliciesAcknowledged(allAcknowledged);
+        }
       } catch (error) {
         console.error('Error fetching policy status:', error);
       }
@@ -75,8 +77,10 @@ export const Sidebar = ({ isRole }) => {
 
         const response = await getAllEmployeeEvaluators();
         const evaluators = response.data;
-        const isUserEvaluator = evaluators.some(emp => emp.evaluatorIds.includes(employeeId));
-        setIsEvaluator(isUserEvaluator);
+        if (Array.isArray(evaluators)) {
+          const isUserEvaluator = evaluators.some(emp => emp.evaluatorIds && emp.evaluatorIds.includes(employeeId));
+          setIsEvaluator(isUserEvaluator);
+        }
       } catch (error) {
         console.error('Error checking evaluator status:', error);
       }
