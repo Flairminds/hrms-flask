@@ -7,7 +7,6 @@ from sqlalchemy import func
 
 from ... import db
 from ...models.hr import Employee, EmployeeAddress, EmployeeSkill
-from ...models.documents import EmployeeDocumentsBinary
 from ...utils.logger import Logger
 from .document_utils import DocumentUtils
 

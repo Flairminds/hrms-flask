@@ -5,12 +5,13 @@ import {
 } from 'antd';
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import axiosInstance, {
+import {
   addUpdateSkill,
   editPersonalDetails,
   getAllEmployeeSkills,
   getDocStatus,
-  getSkillsForEmp
+  getSkillsForEmp,
+  uploadDocument
 } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
@@ -173,18 +174,8 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
   };
 
   const uploadFile = async (file, docType) => {
-    const uploadFormData = new FormData();
-    uploadFormData.append("emp_id", employeeId);
-    uploadFormData.append("doc_type", docType);
-    uploadFormData.append("file", file);
-    uploadFormData.append("set_verified_null", "true");
-
     try {
-      const response = await fetch("https://hrms-flask.azurewebsites.net/api/upload-document", {
-        method: "POST",
-        body: uploadFormData,
-      });
-      if (!response.ok) throw new Error("Upload failed");
+      await uploadDocument(employeeId, docType, file);
       message.success(`${docType} uploaded successfully!`);
       fetchDocStatus();
     } catch (error) {
@@ -194,10 +185,17 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
   };
 
   const beforeUpload = (file, docType) => {
-    if (file.type !== "application/pdf") {
-      message.error("Only PDF files are allowed!");
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+      "application/msword" // .doc (legacy)
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      message.error("Only PDF and DOCX files are allowed!");
       return false;
     }
+
     uploadFile(file, docType);
     return false;
   };

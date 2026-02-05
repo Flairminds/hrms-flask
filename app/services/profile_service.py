@@ -1,7 +1,6 @@
 from ..models.hr import db, Employee, EmployeeAddress, MasterSkill, EmployeeSkill
 from datetime import datetime
 from ..models.leave import LeaveTransaction
-from ..models.documents import EmployeeDocumentsBinary
 from sqlalchemy import text, func
 from ..utils.logger import Logger
 from ..utils.constants import LeaveStatus
@@ -298,9 +297,6 @@ class ProfileService:
 
             # Get address details using ORM
             addresses = EmployeeAddress.query.filter_by(employee_id=employee_id).all()
-            
-            # Get document details from emp_documents table using ORM
-            doc_record = EmployeeDocumentsBinary.query.filter_by(emp_id=employee_id).first()
 
             # Get skills using ORM
             skills = db.session.query(
@@ -325,18 +321,6 @@ class ProfileService:
             if not skills: missing_fields.append("Skills Information")
             
             docs = {}
-            if doc_record:
-                docs = {
-                    'tenth': bool(doc_record.tenth),
-                    'twelve': bool(doc_record.twelve),
-                    'pan': bool(doc_record.pan),
-                    'adhar': bool(doc_record.adhar),
-                    'grad': bool(doc_record.grad),
-                    'resume': bool(doc_record.resume)
-                }
-                if not all(docs.values()): missing_fields.append("Documents")
-            else:
-                missing_fields.append("All Documents")
 
             return {
                 'status': len(missing_fields) == 0,

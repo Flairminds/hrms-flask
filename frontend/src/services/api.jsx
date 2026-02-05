@@ -546,6 +546,21 @@ export const getEmpDocRecords = () => {
   return res;
 };
 
+// Uploads a document for an employee - uses API_BASE_URL
+export const uploadDocument = (employeeId, docType, file) => {
+  const formData = new FormData();
+  formData.append("emp_id", employeeId);
+  formData.append("doc_type", docType);
+  formData.append("file", file);
+
+  return axiosInstance.post(`${API_BASE_URL}/documents/upload-document`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
+
+
 // Updates the policy acknowledgment for an employee.
 export const updatePolicyAcknowledgment = (employeeId, policyName) => {
   return axiosInstance.post('https://hrms-flask.azurewebsites.net/api/policy-acknowledgment', {

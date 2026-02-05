@@ -812,3 +812,190 @@ class DocumentController:
                 "status": "error",
                 "message": "An error occurred while fetching document status. Please try again."
             }), 500
+
+    # ============= BLOB STORAGE SPECIFIC ENDPOINTS =============
+
+    @staticmethod
+    def get_document_view_url(emp_id: str, doc_type: str) -> Tuple[Response, int]:
+        """
+        Generate temporary SAS URL for viewing document (blob storage only).
+        
+        Args:
+            emp_id: Employee ID from URL
+            doc_type: Document type from URL
+            
+        Query Parameters:
+            expiry_hours: Optional, hours until URL expires (default: 1)
+        
+        Returns:
+            Success (200): JSON with view_url
+            Error (400): Invalid parameters
+            Error (404): Document not found
+            Error (501): Not available in binary storage mode
+            Error (500): Server error
+        """
+        Logger.info("Get document view URL request received", 
+                   employee_id=emp_id, 
+                   doc_type=doc_type)
+        
+        try:
+            expiry_hours = request.args.get('expiry_hours', 1, type=int)
+            
+            view_url = DocumentService.generate_document_view_url(
+                emp_id, 
+                doc_type, 
+                expiry_hours
+            )
+            
+            Logger.info("Document view URL generated", 
+                       employee_id=emp_id, 
+                       doc_type=doc_type)
+            
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "view_url": view_url,
+                    "expires_in_hours": expiry_hours
+                },
+                "message": "View URL generated successfully"
+            }), 200
+            
+        except NotImplementedError as nie:
+            Logger.warning("View URL not available", error=str(nie))
+            return jsonify({
+                "status": "error",
+                "message": str(nie)
+            }), 501
+            
+        except FileNotFoundError as fnf:
+            Logger.warning("Document not found for view URL", 
+                          employee_id=emp_id,
+                          doc_type=doc_type,
+                          error=str(fnf))
+            return jsonify({
+                "status": "error",
+                "message": str(fnf)
+            }), 404
+            
+        except ValueError as ve:
+            Logger.warning("Invalid parameters for view URL", error=str(ve))
+            return jsonify({
+                "status": "error",
+                "message": str(ve)
+            }), 400
+            
+        except Exception as e:
+            Logger.error("Unexpected error generating view URL", 
+                        employee_id=emp_id,
+                        doc_type=doc_type,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "status": "error",
+                "message": "An error occurred while generating view URL. Please try again."
+            }), 500
+
+    @staticmethod
+    def get_document_metadata_endpoint(emp_id: str, doc_type: str) -> Tuple[Response, int]:
+        """
+        Get document metadata without downloading (blob storage only).
+        
+        Args:
+            emp_id: Employee ID from URL
+            doc_type: Document type from URL
+        
+        Returns:
+            Success (200): JSON with metadata
+            Error (404): Document not found
+            Error (501): Not available in binary storage mode
+            Error (500): Server error
+        """
+        Logger.info("Get document metadata request received", 
+                   employee_id=emp_id, 
+                   doc_type=doc_type)
+        
+        try:
+            metadata = DocumentService.get_document_metadata(emp_id, doc_type)
+            
+            Logger.info("Document metadata retrieved", 
+                       employee_id=emp_id, 
+                       doc_type=doc_type)
+            
+            return jsonify({
+                "status": "success",
+                "data": metadata,
+                "message": "Metadata retrieved successfully"
+            }), 200
+            
+        except NotImplementedError as nie:
+            Logger.warning("Metadata not available", error=str(nie))
+            return jsonify({
+                "status": "error",
+                "message": str(nie)
+            }), 501
+            
+        except FileNotFoundError as fnf:
+            Logger.warning("Document not found for metadata", 
+                          employee_id=emp_id,
+                          doc_type=doc_type,
+                          error=str(fnf))
+            return jsonify({
+                "status": "error",
+                "message": str(fnf)
+            }), 404
+            
+        except Exception as e:
+            Logger.error("Unexpected error getting metadata", 
+                        employee_id=emp_id,
+                        doc_type=doc_type,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "status": "error",
+                "message": "An error occurred while retrieving metadata. Please try again."
+            }), 500
+
+    @staticmethod
+    def list_employee_documents_endpoint(emp_id: str) -> Tuple[Response, int]:
+        """
+        List all documents for an employee (blob storage only).
+        
+        Args:
+            emp_id: Employee ID from URL
+        
+        Returns:
+            Success (200): JSON with list of documents
+            Error (501): Not available in binary storage mode
+            Error (500): Server error
+        """
+        Logger.info("List employee documents request received", employee_id=emp_id)
+        
+        try:
+            documents = DocumentService.list_employee_documents(emp_id)
+            
+            Logger.info("Employee documents listed", 
+                       employee_id=emp_id, 
+                       count=len(documents))
+            
+            return jsonify({
+                "status": "success",
+                "data": documents,
+                "message": "Documents listed successfully"
+            }), 200
+            
+        except NotImplementedError as nie:
+            Logger.warning("Document listing not available", error=str(nie))
+            return jsonify({
+                "status": "error",
+                "message": str(nie)
+            }), 501
+            
+        except Exception as e:
+            Logger.error("Unexpected error listing documents", 
+                        employee_id=emp_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "status": "error",
+                "message": "An error occurred while listing documents. Please try again."
+            }), 500

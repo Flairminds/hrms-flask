@@ -51,9 +51,11 @@ def download_relieving_letter(letter_id):
 
 
 @documents_bp.route("/upload-document", methods=["POST"])
-@roles_required(*ROLE_PERMISSIONS["hr"])
+@roles_required(*ROLE_PERMISSIONS["documents"]["upload_document"])
 def upload_document():
     return DocumentController.upload_document()
+
+
 
 
 @documents_bp.route("/get-document/<emp_id>/<doc_type>", methods=["GET"])
@@ -101,4 +103,27 @@ def incomplete_employees():
 @roles_required(*ROLE_PERMISSIONS["hr"])
 def all_employees_docs_status():
     return DocumentController.all_employees_docs_status()
+
+
+# ============= BLOB STORAGE SPECIFIC ROUTES =============
+
+@documents_bp.route("/document-view-url/<emp_id>/<doc_type>", methods=["GET"])
+@roles_required(*ROLE_PERMISSIONS["hr"])
+def get_document_view_url(emp_id, doc_type):
+    """Generate temporary SAS URL for viewing document (blob storage only)."""
+    return DocumentController.get_document_view_url(emp_id, doc_type)
+
+
+@documents_bp.route("/document-metadata/<emp_id>/<doc_type>", methods=["GET"])
+@roles_required(*ROLE_PERMISSIONS["hr"])
+def get_document_metadata(emp_id, doc_type):
+    """Get document metadata without downloading (blob storage only)."""
+    return DocumentController.get_document_metadata_endpoint(emp_id, doc_type)
+
+
+@documents_bp.route("/list-documents/<emp_id>", methods=["GET"])
+@roles_required(*ROLE_PERMISSIONS["hr"])
+def list_employee_documents(emp_id):
+    """List all documents for an employee (blob storage only)."""
+    return DocumentController.list_employee_documents_endpoint(emp_id)
 

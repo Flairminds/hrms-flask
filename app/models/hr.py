@@ -420,19 +420,6 @@ class EmployeeDesignation(BaseModel):
         {}
     )
 
-
-class EmployeeDocuments(BaseModel):
-    __tablename__ = 'employee_documents'
-    employee_id = db.Column(db.String(20), primary_key=True)
-    document_id = db.Column(db.Integer, primary_key=True)
-    document_link = db.Column(db.String(1000))
-    
-    __table_args__ = (
-        db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
-        {}
-    )
-
-
 class EmployeeEvaluators(BaseModel):
     __tablename__ = 'employee_evaluators'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

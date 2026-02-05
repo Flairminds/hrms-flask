@@ -9,7 +9,7 @@ from ... import db
 from ...models.hr import (Employee, EmployeeAddress, EmployeeSkill, Project, MasterSkill,
                           LateralAndExempt, Lob, MasterDesignation, MasterSubRole, 
                           EmployeeCredentials, EmployeeRole, MasterRole, ProjectAllocation,
-                          EmployeeDesignation, EmployeeDocuments)
+                          EmployeeDesignation)
 from ...models.leave import LeaveTransaction, LeaveOpeningTransaction
 from ...utils.logger import Logger
 from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailConfig, LeaveConfiguration
@@ -293,14 +293,8 @@ class EmployeeService:
                     new_ed = EmployeeDesignation(employee_id=emp_id, designation_id=designation_id)
                     db.session.add(new_ed)
             
-            resume_link = employee_data.get('resume_link')
-            if resume_link is not None:
-                emp_doc = EmployeeDocuments.query.filter_by(employee_id=emp_id, document_id=1).first()
-                if emp_doc:
-                    emp_doc.document_link = resume_link
-                else:
-                    new_doc = EmployeeDocuments(employee_id=emp_id, document_id=1, document_link=resume_link)
-                    db.session.add(new_doc)
+            # Resume link handling removed - now managed via Azure Blob Storage
+            # Use DocumentService.upload_document() to upload resumes
             
             project_details = employee_data.get('project_details', [])
             for source in project_details:
@@ -458,9 +452,8 @@ class EmployeeService:
                 primary_skill = skills_ranked[0].skill_name if len(skills_ranked) > 0 else None
                 secondary_skill = skills_ranked[1].skill_name if len(skills_ranked) > 1 else None
                 
-                resume_doc = db.session.query(
-                    func.max(EmployeeDocuments.document_link)
-                ).filter(EmployeeDocuments.employee_id == emp_id).scalar()
+                # Resume document link removed - now stored in Azure Blob Storage
+                resume_doc = None
                 
                 # Calculate current FY start date dynamically
                 current_year = datetime.now().year
@@ -572,13 +565,11 @@ class EmployeeService:
             ResidentialAddr = db.aliased(EmployeeAddress)
             PermanentAddr = db.aliased(EmployeeAddress)
             employee_query = db.session.query(
-                Employee, ResidentialAddr, PermanentAddr, MasterDesignation.designation_name.label('designation_name'), EmployeeDocuments.document_link.label('resume_link'), MasterSubRole.sub_role_name.label('employee_sub_role')
+                Employee, ResidentialAddr, PermanentAddr, MasterDesignation.designation_name.label('designation_name'), MasterSubRole.sub_role_name.label('employee_sub_role')
             ).outerjoin(
                 ResidentialAddr, and_(Employee.employee_id == ResidentialAddr.employee_id, ResidentialAddr.address_type == 'Residential')
             ).outerjoin(
                 PermanentAddr, and_(Employee.employee_id == PermanentAddr.employee_id, PermanentAddr.address_type == 'Permanent')
-            ).outerjoin(
-                EmployeeDocuments, and_(Employee.employee_id == EmployeeDocuments.employee_id, EmployeeDocuments.document_id == 1)
             ).outerjoin(
                 EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
             ).outerjoin(
@@ -590,7 +581,10 @@ class EmployeeService:
             if not employee_query or not employee_query[0]:
                 raise LookupError(f"Employee {emp_id} not found")
             
-            employee, res_addr, perm_addr, employee_designation, resume_link, employee_sub_role = employee_query
+            employee, res_addr, perm_addr, employee_designation, employee_sub_role = employee_query
+            
+            # Resume link is now in Azure Blob Storage - would need to fetch separately if needed
+            resume_link = None
             
             # Fetch Designation ID for 'band'
             designation_query =  db.session.query(EmployeeDesignation.designation_id).filter_by(employee_id=emp_id).first()

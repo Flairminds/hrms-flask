@@ -18,3 +18,4 @@ typing_extensions==4.12.2
 pytz==2025.1
 tzdata==2025.1
 tzlocal==5.2
+azure-storage-blob==12.19.0
