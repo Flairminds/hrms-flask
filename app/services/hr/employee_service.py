@@ -270,7 +270,9 @@ class EmployeeService:
                 employee.email = employee_data['email']
             if employee_data.get('date_of_joining') is not None:
                 employee.date_of_joining = employee_data['date_of_joining']
-            if employee_data.get('highest_qualification') is not None:
+            if employee_data.get('highestQualification') is not None:
+                employee.highest_qualification = employee_data['highestQualification']
+            elif employee_data.get('highest_qualification') is not None:
                 employee.highest_qualification = employee_data['highest_qualification']
             if employee_data.get('emergency_contact_person') is not None:
                 employee.emergency_contact_person = employee_data['emergency_contact_person']
@@ -278,6 +280,10 @@ class EmployeeService:
                 employee.emergency_contact_relation = employee_data['emergency_contact_relation']
             if employee_data.get('emergency_contact_number') is not None:
                 employee.emergency_contact_number = employee_data['emergency_contact_number']
+            if employee_data.get('qualificationYearMonth') is not None:
+                employee.qualification_year_month = employee_data['qualificationYearMonth']
+            elif employee_data.get('qualification_year_month') is not None:
+                employee.qualification_year_month = employee_data['qualification_year_month']
 
             # Handle password update
             password = employee_data.get('password')
@@ -713,6 +719,7 @@ class EmployeeService:
                 'teamLeadId': employee.team_lead_id or '',
                 'employmentStatus': employee.employment_status or '',
                 'highestQualification': employee.highest_qualification or '',
+                'qualificationYearMonth': employee.qualification_year_month or '',
                 'resumeLink': resume_link or '',
                 'lwp': employee.lwp or 0,
                 'internshipEndDate': format_date(employee.internship_end_date),

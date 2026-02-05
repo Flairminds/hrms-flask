@@ -1,5 +1,5 @@
 import { Modal, Row, Col, Typography, Tag, Space, Button, Select, Form, Input, message, Tabs, Card, DatePicker, Upload, Divider, Checkbox } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styles from "./EMPDetailsModal.module.css";
 import {
   getCompanyBands,
@@ -111,7 +111,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     fetchPotentialApprovers();
   }, []);
 
-  useEffect(() => {
+  const populateForm = useCallback(() => {
     if (personalEmployeeDetails) {
       const addresses = personalEmployeeDetails.addresses || {};
       setIsSameAddress(addresses.isSamePermanant || false);
@@ -128,9 +128,10 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         email: personalEmployeeDetails.email,
         contactNumber: personalEmployeeDetails.contactNumber,
         dateOfJoining: personalEmployeeDetails.dateOfJoining ? dayjs(personalEmployeeDetails.dateOfJoining) : null,
-        band: personalEmployeeDetails.band,
-        MasterSubRole: personalEmployeeDetails.MasterSubRole,
+        band: personalEmployeeDetails.band ? Number(personalEmployeeDetails.band) : null,
+        MasterSubRole: personalEmployeeDetails.MasterSubRole ? Number(personalEmployeeDetails.MasterSubRole) : null,
         highestQualification: personalEmployeeDetails.highestQualification,
+        qualificationYearMonth: personalEmployeeDetails.qualificationYearMonth,
         employmentStatus: personalEmployeeDetails.employmentStatus,
         teamLeadId: personalEmployeeDetails.teamLeadId,
         emergencyContactPerson: personalEmployeeDetails.emergencyContactPerson,
@@ -161,6 +162,10 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
       fetchDocStatus(personalEmployeeDetails.employeeId);
     }
   }, [personalEmployeeDetails, form]);
+
+  useEffect(() => {
+    populateForm();
+  }, [populateForm]);
 
   const fetchDocStatus = async (empId) => {
     try {
@@ -199,6 +204,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const handleCancelEdit = () => {
     setIsEditMode(false);
     form.resetFields();
+    populateForm(); // Re-populate with original data
   };
 
   const handleSave = async () => {
@@ -234,7 +240,8 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         skills: values.skills?.map(s => ({
           skill_id: s.skillId,
           skill_level: s.skillLevel
-        })) || []
+        })) || [],
+        qualificationYearMonth: values.qualificationYearMonth
       };
 
       await updateEmployeeDetails(personalEmployeeDetails.employeeId, payload);
@@ -430,9 +437,14 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                     <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
-                <Col span={24}>
-                  <Form.Item name="email" label="Official Email">
+                <Col span={12}>
+                  <Form.Item name="highestQualification" label="Highest Qualification">
                     <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="qualificationYearMonth" label="Qualification Month & Year">
+                    <Input disabled={!isEditMode} placeholder="e.g. May 2020" />
                   </Form.Item>
                 </Col>
                 {isEditMode && (
@@ -458,7 +470,12 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                     <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>
-                <Col span={24}>
+                <Col span={12}>
+                  <Form.Item name="email" label="Official Email">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
                   <Form.Item name="teamLeadId" label="Leave Approver">
                     <Select
                       disabled={!isEditMode}
@@ -488,12 +505,6 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                 </Col>
                 <Col span={8}>
                   <Form.Item name="emergencyContactNumber" label="Contact Number">
-                    <Input disabled={!isEditMode} />
-                  </Form.Item>
-                </Col>
-                <Divider orientation="left">Qualification</Divider>
-                <Col span={24}>
-                  <Form.Item name="highestQualification" label="Highest Qualification">
                     <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>

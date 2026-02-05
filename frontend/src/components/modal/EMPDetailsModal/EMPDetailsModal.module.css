@@ -1,1 +1,21 @@
 /* CSS cleaned up as we moved to inline styles and Ant Design Grid */
+/* CSS for improving visibility of disabled fields in the modal */
+:global(.ant-input[disabled]),
+:global(.ant-input-affix-wrapper-disabled),
+:global(.ant-picker-input > input[disabled]),
+:global(.ant-select-disabled .ant-select-selection-item) {
+  color: rgba(0, 0, 0, 0.85) !important; /* High contrast black */
+  cursor: default !important;
+}
+
+:global(.ant-input-affix-wrapper-disabled .ant-input[disabled]) {
+    color: rgba(0, 0, 0, 0.85) !important;
+}
+
+:global(.ant-select-disabled .ant-select-selection-placeholder) {
+    color: rgba(0, 0, 0, 0.45) !important;
+}
+
+:global(.ant-form-item-label > label) {
+    font-weight: 500;
+}
