@@ -374,6 +374,12 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   };
 
   useEffect(() => {
+    if (preSelectedLeaveType) {
+      handleLeaveTypeChange(preSelectedLeaveType);
+    }
+  }, [preSelectedLeaveType]);
+
+  useEffect(() => {
     const fetchLeaveOptions = async () => {
       try {
         const response = await getTypeApprover();
