@@ -154,7 +154,9 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         },
         skills: personalEmployeeDetails.skills?.map(s => ({
           skillId: s.skillId,
-          skillLevel: s.skillLevel
+          skillLevel: s.skillLevel,
+          skillCategory: s.skillCategory,
+          selfEvaluation: s.selfEvaluation
         })) || []
       });
 
@@ -239,7 +241,9 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         ],
         skills: values.skills?.map(s => ({
           skill_id: s.skillId,
-          skill_level: s.skillLevel
+          skill_level: s.skillLevel,
+          skill_category: s.skillCategory,
+          self_evaluation: s.selfEvaluation
         })) || [],
         qualificationYearMonth: values.qualificationYearMonth
       };
@@ -588,8 +592,8 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map(({ key, name, ...restField }) => (
-                      <Row gutter={12} key={key} align="middle">
-                        <Col span={10}>
+                      <Row gutter={12} key={key} align="middle" style={{ marginBottom: 8, borderBottom: '1px dashed #f0f0f0', paddingBottom: 8 }}>
+                        <Col span={6}>
                           <Form.Item
                             {...restField}
                             name={[name, 'skillId']}
@@ -605,7 +609,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                             </Select>
                           </Form.Item>
                         </Col>
-                        <Col span={10}>
+                        <Col span={6}>
                           <Form.Item
                             {...restField}
                             name={[name, 'skillLevel']}
@@ -618,13 +622,31 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                             </Select>
                           </Form.Item>
                         </Col>
+                        <Col span={5}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'skillCategory']}
+                            label="Category"
+                          >
+                            <Input disabled={!isEditMode} placeholder="Category" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={5}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'selfEvaluation']}
+                            label="Self Eval"
+                          >
+                            <Input disabled={true} placeholder="Self Eval" />
+                          </Form.Item>
+                        </Col>
                         {isEditMode && (
-                          <Col span={4}>
+                          <Col span={2}>
                             <Button
                               danger
                               icon={<DeleteOutlined />}
                               onClick={() => remove(name)}
-                              style={{ marginTop: '5px' }}
+                              style={{ marginTop: '24px' }}
                             />
                           </Col>
                         )}

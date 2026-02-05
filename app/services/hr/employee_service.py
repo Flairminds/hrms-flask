@@ -360,7 +360,9 @@ class EmployeeService:
                     new_skill = EmployeeSkill(
                         employee_id=emp_id,
                         skill_id=skill_id,
-                        skill_level=skill_data.get('skill_level')
+                        skill_level=skill_data.get('skill_level'),
+                        skill_category=skill_data.get('skill_category'),
+                        self_evaluation=skill_data.get('self_evaluation')
                     )
                     db.session.add(new_skill)
             
@@ -693,8 +695,15 @@ class EmployeeService:
                         'permanentZipcode': perm_addr.zip_code or ''
                     })
 
-            skills_query = db.session.query(EmployeeSkill.skill_id, MasterSkill.skill_name, EmployeeSkill.skill_level).join(
-                MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id).filter(EmployeeSkill.employee_id == emp_id).all()
+            skills_query = db.session.query(
+                EmployeeSkill.skill_id, 
+                MasterSkill.skill_name, 
+                EmployeeSkill.skill_level,
+                EmployeeSkill.skill_category,
+                EmployeeSkill.self_evaluation
+            ).join(
+                MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id
+            ).filter(EmployeeSkill.employee_id == emp_id).all()
             
             result = {
                 'employeeId': employee.employee_id,
@@ -727,7 +736,13 @@ class EmployeeService:
                 'dateOfResignation': format_date(employee.date_of_resignation),
                 'probationEndDate': format_date(employee.probation_end_date),
                 'addresses': addresses,
-                'skills': [{'skillId': s.skill_id, 'skillName': s.skill_name, 'skillLevel': s.skill_level or ''} for s in skills_query],
+                'skills': [{
+                    'skillId': s.skill_id, 
+                    'skillName': s.skill_name, 
+                    'skillLevel': s.skill_level or '',
+                    'skillCategory': s.skill_category or '',
+                    'selfEvaluation': float(s.self_evaluation) if s.self_evaluation else 0.0
+                } for s in skills_query],
                 'profileImage': f"data:{employee.profile_image_type};base64,{base64.b64encode(employee.profile_image).decode('utf-8')}" if employee.profile_image else None
             }
             
