@@ -212,6 +212,9 @@ class LeaveQueryService:
                     return date_obj.strftime('%d %b %Y')
                 return ''
             
+            from sqlalchemy.orm import aliased
+            Approver = aliased(Employee)
+            
             # Main query with JOINs
             query = db.session.query(
                 LeaveTransaction.leave_tran_id,
@@ -240,14 +243,18 @@ class LeaveQueryService:
                     else_=LeaveTransaction.approval_comment
                 ).label('approval_comment'),
                 LeaveTransaction.is_communicated_to_team,
-                LeaveTransaction.is_customer_approval_required,
-                LeaveTransaction.duration
+                LeaveTransaction.is_custom_approval_required if hasattr(LeaveTransaction, 'is_custom_approval_required') else LeaveTransaction.is_customer_approval_required,
+                LeaveTransaction.duration,
+                (Approver.first_name + ' ' + Approver.last_name).label('approver_name')
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
             ).join(
                 MasterLeaveTypes,
                 LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
+            ).outerjoin(
+                Approver,
+                LeaveTransaction.approver_id == Approver.employee_id
             ).filter(
                 Employee.employee_id == employee_id,
                 LeaveTransaction.from_date >= start_date,
@@ -275,7 +282,8 @@ class LeaveQueryService:
                     'approval_comment': row.approval_comment or '',
                     'is_communicated_to_team': row.is_communicated_to_team or 0,
                     'is_customer_approval_required': row.is_customer_approval_required or 0,
-                    'duration': row.duration or ''
+                    'duration': row.duration or '',
+                    'approver_name': row.approver_name or 'N/A'
                 })
             
             return result
@@ -659,6 +667,7 @@ class LeaveQueryService:
                 return ''
             
             AppliedByEmployee = db.aliased(Employee)
+            Approver = db.aliased(Employee)
             
             # Main query with all JOINs - NO APPROVER FILTER
             query = db.session.query(
@@ -692,7 +701,8 @@ class LeaveQueryService:
                 CompensatoryOff.comp_off_date,
                 CompensatoryOff.comp_off_time,
                 CustomerHoliday.worked_date,
-                MasterLeaveTypes.leave_name
+                MasterLeaveTypes.leave_name,
+                (Approver.first_name + ' ' + Approver.last_name).label('approver_name')
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
@@ -702,6 +712,9 @@ class LeaveQueryService:
             ).outerjoin(
                 AppliedByEmployee,
                 LeaveTransaction.applied_by == AppliedByEmployee.employee_id
+            ).outerjoin(
+                Approver,
+                LeaveTransaction.approver_id == Approver.employee_id
             ).outerjoin(
                 WorkingLate,
                 LeaveTransaction.leave_tran_id == WorkingLate.leave_tran_id
@@ -754,6 +767,7 @@ class LeaveQueryService:
                     'compOffDate': format_date(row.comp_off_date),
                     'compOffTime': str(row.comp_off_time) if row.comp_off_time else '',
                     'workedDate': format_date(row.worked_date),
+                    'approverName': row.approver_name or 'N/A'
                 })
 
             return formatted_results
@@ -800,6 +814,7 @@ class LeaveQueryService:
                 return ''
             
             AppliedByEmployee = db.aliased(Employee)
+            Approver = db.aliased(Employee)
             
             # Main query with all JOINs
             query = db.session.query(
@@ -845,7 +860,8 @@ class LeaveQueryService:
                 CompensatoryOff.comp_off_date,
                 CompensatoryOff.comp_off_time,
                 CustomerHoliday.worked_date,
-                MasterLeaveTypes.leave_name.label('leave_name') # Join to get name
+                MasterLeaveTypes.leave_name.label('leave_name'), # Join to get name
+                (Approver.first_name + ' ' + Approver.last_name).label('approver_name')
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
@@ -855,6 +871,9 @@ class LeaveQueryService:
             ).outerjoin(
                 AppliedByEmployee,
                 LeaveTransaction.applied_by == AppliedByEmployee.employee_id
+            ).outerjoin(
+                Approver,
+                LeaveTransaction.approver_id == Approver.employee_id
             ).outerjoin(
                 WorkingLate,
                 LeaveTransaction.leave_tran_id == WorkingLate.leave_tran_id
@@ -937,7 +956,8 @@ class LeaveQueryService:
                     'reasonForWorkingLate': row.reason_for_working_late or '',
                     'compOffDate': row.comp_off_date,
                     'workedDate': row.worked_date,
-                    'compOffTransactions': comp_off_map.get(row.leave_tran_id, [])
+                    'compOffTransactions': comp_off_map.get(row.leave_tran_id, []),
+                    'approverName': row.approver_name or 'N/A'
                 })
             
             return transactions

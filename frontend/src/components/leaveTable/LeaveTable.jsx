@@ -104,6 +104,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
               appliedLeaveCount: item.no_of_days,
               applicationDate: item.application_date,
               leaveStatus: item.leave_status,
+              approverName: item.approver_name,
               approvedBy: item.approved_by,
               approvalComment: item.approval_comment
             }));
@@ -453,6 +454,10 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
             <div className={styles.leaveDetailsRow}>
               <strong>Applied Leave Count:</strong>
               <span>{selectedLeaveDetails.appliedLeaveCount}</span>
+            </div>
+            <div className={styles.leaveDetailsRow}>
+              <strong>Leave Approver:</strong>
+              <span>{selectedLeaveDetails.approverName}</span>
             </div>
             <div className={styles.leaveDetailsRow}>
               <strong>Approved By:</strong>
