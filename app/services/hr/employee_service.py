@@ -235,9 +235,9 @@ class EmployeeService:
                 Logger.warning("Employee not found for update", employee_id=emp_id)
                 return -1
             
-            sub_role_id = employee_data.get('sub_role_id')
-            if sub_role_id and int(sub_role_id) != 0:
-                employee.sub_role = sub_role_id
+            sub_role_id = employee_data.get('sub_role_id') or employee_data.get('sub_role') or employee_data.get('MasterSubRole')
+            if sub_role_id and str(sub_role_id).isdigit() and int(sub_role_id) != 0:
+                employee.sub_role = int(sub_role_id)
                 
             lob_lead = employee_data.get('lob_lead_id')
             if lob_lead and lob_lead not in ('', 'string'):
@@ -251,6 +251,34 @@ class EmployeeService:
             if employee_data.get('employment_status') is not None:
                 employee.employment_status = employee_data['employment_status']
             
+            # New fields for HR/Admin editing
+            if employee_data.get('first_name') is not None:
+                employee.first_name = employee_data['first_name']
+            if employee_data.get('middle_name') is not None:
+                employee.middle_name = employee_data['middle_name']
+            if employee_data.get('last_name') is not None:
+                employee.last_name = employee_data['last_name']
+            if employee_data.get('date_of_birth') is not None:
+                employee.date_of_birth = employee_data['date_of_birth']
+            if employee_data.get('gender') is not None:
+                employee.gender = employee_data['gender']
+            if employee_data.get('blood_group') is not None:
+                employee.blood_group = employee_data['blood_group']
+            if employee_data.get('personal_email') is not None:
+                employee.personal_email = employee_data['personal_email']
+            if employee_data.get('email') is not None:
+                employee.email = employee_data['email']
+            if employee_data.get('date_of_joining') is not None:
+                employee.date_of_joining = employee_data['date_of_joining']
+            if employee_data.get('highest_qualification') is not None:
+                employee.highest_qualification = employee_data['highest_qualification']
+            if employee_data.get('emergency_contact_person') is not None:
+                employee.emergency_contact_person = employee_data['emergency_contact_person']
+            if employee_data.get('emergency_contact_relation') is not None:
+                employee.emergency_contact_relation = employee_data['emergency_contact_relation']
+            if employee_data.get('emergency_contact_number') is not None:
+                employee.emergency_contact_number = employee_data['emergency_contact_number']
+
             # Handle password update
             password = employee_data.get('password')
             if password:
@@ -272,8 +300,10 @@ class EmployeeService:
                         password_hash=password_hash
                     )
                     db.session.add(new_credentials)
-            if employee_data.get('mobile_no') is not None:
-                employee.contact_number = employee_data['mobile_no']
+            
+            contact_number = employee_data.get('mobile_no') or employee_data.get('contactNumber') or employee_data.get('contact_number')
+            if contact_number is not None:
+                employee.contact_number = contact_number
             if employee_data.get('internship_end_date') is not None:
                 employee.internship_end_date = employee_data['internship_end_date']
             if employee_data.get('date_of_resignation') is not None:
@@ -285,14 +315,48 @@ class EmployeeService:
             if employee_data.get('probation_end_date') is not None:
                 employee.probation_end_date = employee_data['probation_end_date']
             
-            designation_id = employee_data.get('designation_id')
-            if designation_id and int(designation_id) != 0:
+            # Handle Band/Designation update
+            band_id = employee_data.get('band') or employee_data.get('designation_id')
+            if band_id and str(band_id).isdigit() and int(band_id) != 0:
                 emp_designation = EmployeeDesignation.query.filter_by(employee_id=emp_id).first()
                 if emp_designation:
-                    emp_designation.designation_id = designation_id
+                    emp_designation.designation_id = int(band_id)
                 else:
-                    new_ed = EmployeeDesignation(employee_id=emp_id, designation_id=designation_id)
+                    new_ed = EmployeeDesignation(employee_id=emp_id, designation_id=int(band_id))
                     db.session.add(new_ed)
+
+            # Handle Addresses
+            addresses = employee_data.get('addresses', [])
+            if addresses:
+                # Delete existing and re-insert or update
+                EmployeeAddress.query.filter_by(employee_id=emp_id).delete()
+                for addr in addresses:
+                    new_addr = EmployeeAddress(
+                        employee_id=emp_id,
+                        address_type=addr.get('address_type'),
+                        state=addr.get('state'),
+                        city=addr.get('city'),
+                        address1=addr.get('address1'),
+                        address2=addr.get('address2'),
+                        is_same_permanant=addr.get('is_same_permanant', False),
+                        zip_code=addr.get('zip_code')
+                    )
+                    db.session.add(new_addr)
+
+            # Handle Skills
+            skills = employee_data.get('skills', [])
+            if skills:
+                # Delete existing and re-insert
+                EmployeeSkill.query.filter_by(employee_id=emp_id).delete()
+                for skill_data in skills:
+                    skill_id = skill_data.get('skill_id')
+                    if not skill_id: continue
+                    new_skill = EmployeeSkill(
+                        employee_id=emp_id,
+                        skill_id=skill_id,
+                        skill_level=skill_data.get('skill_level')
+                    )
+                    db.session.add(new_skill)
             
             # Resume link handling removed - now managed via Azure Blob Storage
             # Use DocumentService.upload_document() to upload resumes
@@ -626,7 +690,7 @@ class EmployeeService:
             skills_query = db.session.query(EmployeeSkill.skill_id, MasterSkill.skill_name, EmployeeSkill.skill_level).join(
                 MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id).filter(EmployeeSkill.employee_id == emp_id).all()
             
-            return {
+            result = {
                 'employeeId': employee.employee_id,
                 'firstName': employee.first_name or '',
                 'middleName': employee.middle_name or '',

@@ -257,17 +257,20 @@ export const addAccessibility = (payload) => {
   return res;
 };
 
-// Retrieves all company bands.
+// Standardized exports
 export const getCompanyBands = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getbands`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-designations`)
   return res;
 }
 
-// Retrieves all company roles.
 export const getCompanyRoles = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getsubrole`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-sub-roles`)
   return res;
 }
+
+// Aliases for backward compatibility
+export const getBands1 = getCompanyBands;
+export const getRoles1 = getCompanyRoles;
 
 // Inserts a new employee record.
 export const insertEmployee = async (payload) => {
@@ -275,17 +278,6 @@ export const insertEmployee = async (payload) => {
   return res;
 }
 
-// Retrieves all company bands.
-export const getBands1 = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-designations`)
-  return res;
-}
-
-// Retrieves all company roles.
-export const getRoles1 = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-sub-roles`)
-  return res;
-}
 
 // Retrieves all master roles.
 export const getMasterRoles = () => {

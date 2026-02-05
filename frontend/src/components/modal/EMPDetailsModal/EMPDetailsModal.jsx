@@ -1,10 +1,21 @@
-import { Modal, Row, Col, Typography, Tag, Space, Button, Select, Form, Input, message } from 'antd';
+import { Modal, Row, Col, Typography, Tag, Space, Button, Select, Form, Input, message, Tabs, Card, DatePicker, Upload, Divider, Checkbox } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from "./EMPDetailsModal.module.css";
-import { getCompanyBands, getCompanyRoles, getSkillsForEmp, getPotentialApprovers, updateEmployeeDetails } from '../../../services/api';
+import {
+  getCompanyBands,
+  getCompanyRoles,
+  getSkillsForEmp,
+  getPotentialApprovers,
+  updateEmployeeDetails,
+  getDocStatus,
+  getDocuments,
+  uploadDocument,
+  getAllEmployeeSkills
+} from '../../../services/api';
 import { getCookie } from '../../../util/CookieSet';
 import { useAuth } from '../../../context/AuthContext';
 import WidgetCard from '../../common/WidgetCard';
+import dayjs from 'dayjs';
 import {
   UserOutlined,
   HomeOutlined,
@@ -14,7 +25,13 @@ import {
   PhoneOutlined,
   EditOutlined,
   SaveOutlined,
-  CloseOutlined
+  CloseOutlined,
+  FileTextOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  UploadOutlined,
+  DeleteOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
@@ -25,11 +42,12 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const [form] = Form.useForm();
   const [bandsData, setBandsData] = useState([]);
   const [roleData, setRoleData] = useState([]);
-  const [highestQualificationYearMonth, setHighestQualificationYearMonth] = useState(null);
-  const [fullStackReady, setFullStackReady] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [potentialApprovers, setPotentialApprovers] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [docStatus, setDocStatus] = useState([]);
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [isSameAddress, setIsSameAddress] = useState(false);
 
   // Check if current user can edit (HR or Admin)
   const canEdit = user && (user.roleName === 'HR' || user.roleName === 'Admin');
@@ -45,17 +63,18 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     'Absconding'
   ];
 
-  // Helper component for consistent row styling
-  const InfoRow = ({ label, value }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-      <Text type="secondary">{label}:</Text>
-      <Text strong style={{ textAlign: 'right' }}>{value || 'N/A'}</Text>
-    </div>
-  );
 
   const getRoleData = async () => {
-    const response = await getCompanyRoles();
-    setRoleData(response.data);
+    try {
+      const response = await getCompanyRoles();
+      if (Array.isArray(response.data)) {
+        setRoleData(response.data);
+      } else {
+        console.error('Expected an array from getCompanyRoles', response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching role data:', error);
+    }
   };
 
   const getCompanyBandsData = async () => {
@@ -93,14 +112,79 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   }, []);
 
   useEffect(() => {
-    if (personalEmployeeDetails && isEditMode) {
-      // Pre-fill form with current values
+    if (personalEmployeeDetails) {
+      const addresses = personalEmployeeDetails.addresses || {};
+      setIsSameAddress(addresses.isSamePermanant || false);
+
+      // Pre-fill form with all values
       form.setFieldsValue({
+        firstName: personalEmployeeDetails.firstName,
+        middleName: personalEmployeeDetails.middleName,
+        lastName: personalEmployeeDetails.lastName,
+        dateOfBirth: personalEmployeeDetails.dateOfBirth ? dayjs(personalEmployeeDetails.dateOfBirth) : null,
+        gender: personalEmployeeDetails.gender,
+        bloodGroup: personalEmployeeDetails.bloodGroup,
+        personalEmail: personalEmployeeDetails.personalEmail,
+        email: personalEmployeeDetails.email,
+        contactNumber: personalEmployeeDetails.contactNumber,
+        dateOfJoining: personalEmployeeDetails.dateOfJoining ? dayjs(personalEmployeeDetails.dateOfJoining) : null,
+        band: personalEmployeeDetails.band,
+        MasterSubRole: personalEmployeeDetails.MasterSubRole,
+        highestQualification: personalEmployeeDetails.highestQualification,
+        employmentStatus: personalEmployeeDetails.employmentStatus,
         teamLeadId: personalEmployeeDetails.teamLeadId,
-        employmentStatus: personalEmployeeDetails.employmentStatus
+        emergencyContactPerson: personalEmployeeDetails.emergencyContactPerson,
+        emergencyContactRelation: personalEmployeeDetails.emergencyContactRelation,
+        emergencyContactNumber: personalEmployeeDetails.emergencyContactNumber,
+        addresses: {
+          residential_address_type: addresses.residentialAddressType || 'Residential',
+          residential_state: addresses.residentialState,
+          residential_city: addresses.residentialCity,
+          residential_address1: addresses.residentialAddress1,
+          residential_address2: addresses.residentialAddress2,
+          residential_zipcode: addresses.residentialZipcode,
+          is_same_permanant: addresses.isSamePermanant || false,
+          permanent_address_type: addresses.permanentAddressType || 'Permanent',
+          permanent_state: addresses.permanentState,
+          permanent_city: addresses.permanentCity,
+          permanent_address1: addresses.permanentAddress1,
+          permanent_address2: addresses.permanentAddress2,
+          permanent_zipcode: addresses.permanentZipcode,
+        },
+        skills: personalEmployeeDetails.skills?.map(s => ({
+          skillId: s.skillId,
+          skillLevel: s.skillLevel
+        })) || []
       });
+
+      // Fetch documents status for this employee
+      fetchDocStatus(personalEmployeeDetails.employeeId);
     }
-  }, [personalEmployeeDetails, isEditMode, form]);
+  }, [personalEmployeeDetails, form]);
+
+  const fetchDocStatus = async (empId) => {
+    try {
+      const response = await getDocStatus(empId);
+      setDocStatus(response.data.documents || []);
+    } catch (error) {
+      console.error("Error fetching doc status:", error);
+    }
+  };
+
+  const fetchAllAvailableSkills = async () => {
+    try {
+      const response = await getAllEmployeeSkills();
+      setAvailableSkills(response.data || []);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (detailsModal) {
+      fetchAllAvailableSkills();
+    }
+  }, [detailsModal]);
 
   const handleCancel = () => {
     setIsEditMode(false);
@@ -122,15 +206,42 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
       const values = await form.validateFields();
       setSaving(true);
 
-      await updateEmployeeDetails(personalEmployeeDetails.employeeId, {
-        teamLeadId: values.teamLeadId,
-        employmentStatus: values.employmentStatus
-      });
+      const payload = {
+        ...values,
+        employee_id: personalEmployeeDetails.employeeId,
+        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
+        dateOfJoining: values.dateOfJoining ? values.dateOfJoining.format('YYYY-MM-DD') : null,
+        addresses: [
+          {
+            address_type: values.addresses.residential_address_type,
+            state: values.addresses.residential_state,
+            city: values.addresses.residential_city,
+            address1: values.addresses.residential_address1,
+            address2: values.addresses.residential_address2,
+            zip_code: values.addresses.residential_zipcode,
+            is_same_permanant: isSameAddress
+          },
+          ...(!isSameAddress ? [{
+            address_type: values.addresses.permanent_address_type,
+            state: values.addresses.permanent_state,
+            city: values.addresses.permanent_city,
+            address1: values.addresses.permanent_address1,
+            address2: values.addresses.permanent_address2,
+            zip_code: values.addresses.permanent_zipcode,
+            is_same_permanant: false
+          }] : [])
+        ],
+        skills: values.skills?.map(s => ({
+          skill_id: s.skillId,
+          skill_level: s.skillLevel
+        })) || []
+      };
+
+      await updateEmployeeDetails(personalEmployeeDetails.employeeId, payload);
 
       message.success('Employee details updated successfully');
       setIsEditMode(false);
 
-      // Refresh parent data if callback provided
       if (refreshEmployeeData) {
         refreshEmployeeData();
       }
@@ -142,46 +253,73 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     }
   };
 
-  const getBandName = (bandNumber) => {
-    if (Array.isArray(bandsData)) {
-      const band = bandsData.find(b => b.DesignationId === bandNumber);
-      return band?.Band;
-    }
-    return 'N/A';
-  };
-
-  const getRoleName = (roleNumber) => {
-    if (Array.isArray(roleData)) {
-      const role = roleData.find(b => b.SubRoleId === roleNumber);
-      return role?.Role;
-    }
-    return 'N/A';
-  };
-
-  const employeeIdCookie = getCookie('employeeId');
-
-  useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        if (employeeIdCookie) {
-          const response = await getSkillsForEmp(employeeIdCookie);
-          setHighestQualificationYearMonth(response.data.QualificationYearMonth);
-          setFullStackReady(response.data.FullStackReady);
+  const onSameAddressChange = (e) => {
+    const checked = e.target.checked;
+    setIsSameAddress(checked);
+    if (checked) {
+      const residential = form.getFieldValue(['addresses']);
+      form.setFieldsValue({
+        addresses: {
+          ...residential,
+          is_same_permanant: true,
+          permanent_address_type: 'Permanent',
+          permanent_state: residential.residential_state,
+          permanent_city: residential.residential_city,
+          permanent_address1: residential.residential_address1,
+          permanent_address2: residential.residential_address2,
+          permanent_zipcode: residential.residential_zipcode,
         }
-      } catch (error) {
-        console.error("Error fetching additional skills info:", error);
-      }
-    };
-    fetchSkills();
-  }, [employeeIdCookie]);
+      });
+    }
+  };
+
+  const downloadDoc = async (docType) => {
+    try {
+      const response = await getDocuments(personalEmployeeDetails.employeeId, docType);
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = `${personalEmployeeDetails.firstName}_${docType}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success("Download started");
+    } catch (error) {
+      message.error("Failed to download document");
+    }
+  };
+
+  const previewDoc = async (docType) => {
+    try {
+      const response = await getDocuments(personalEmployeeDetails.employeeId, docType);
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      window.open(fileURL, "_blank");
+    } catch (error) {
+      message.error("Failed to preview document");
+    }
+  };
+
+  const handleUpload = async (file, docType) => {
+    try {
+      await uploadDocument(personalEmployeeDetails.employeeId, docType, file);
+      message.success(`${docType} uploaded successfully!`);
+      fetchDocStatus(personalEmployeeDetails.employeeId);
+    } catch (error) {
+      message.error(`Failed to upload ${docType}`);
+    }
+    return false;
+  };
+
 
   return (
     <Modal
       open={detailsModal}
       footer={null}
-      width={1000}
+      width={800}
       onCancel={handleCancel}
-      centered
+      style={{ top: 10 }}
       title={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingRight: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -221,158 +359,326 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     >
       {personalEmployeeDetails ? (
         <Form form={form} layout="vertical">
-          <Row gutter={[24, 24]}>
-            {/* Personal Details */}
-            <Col xs={24} lg={12}>
-              <WidgetCard title="Personal Details" icon={<UserOutlined />} iconColor="#1890ff" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                <InfoRow label="Employee ID" value={personalEmployeeDetails.employeeId} />
-                <InfoRow label="First Name" value={personalEmployeeDetails.firstName} />
-                <InfoRow label="Middle Name" value={personalEmployeeDetails.middleName} />
-                <InfoRow label="Last Name" value={personalEmployeeDetails.lastName} />
-                <InfoRow label="Date of Birth" value={personalEmployeeDetails.dateOfBirth && new Date(personalEmployeeDetails.dateOfBirth).toLocaleDateString('en-GB')} />
-                <InfoRow label="Gender" value={personalEmployeeDetails.gender} />
-                <InfoRow label="Blood Group" value={personalEmployeeDetails.bloodGroup} />
-                <InfoRow label="Personal Email" value={personalEmployeeDetails.personalEmail} />
-                <InfoRow label="Date of Joining" value={personalEmployeeDetails.dateOfJoining && new Date(personalEmployeeDetails.dateOfJoining).toLocaleDateString('en-GB')} />
-                <InfoRow label="Band" value={personalEmployeeDetails.designationName || getBandName(personalEmployeeDetails.band)} />
-                <InfoRow label="Role" value={personalEmployeeDetails.subRoleName || getRoleName(personalEmployeeDetails.MasterSubRole)} />
-                <InfoRow label="Highest Qualification" value={personalEmployeeDetails.highestQualification} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                  <Text type="secondary">Full Stack Ready:</Text>
-                  <Tag color={fullStackReady ? 'success' : 'default'}>{fullStackReady ? "Yes" : "No"}</Tag>
-                </div>
-
-                {/* Editable Employment Status */}
-                {isEditMode ? (
-                  <div style={{ marginTop: '12px' }}>
-                    <Form.Item
-                      name="password"
-                      label="Change Password"
-                      rules={[{ min: 8, message: 'Min 8 characters' }]}
-                    >
-                      <Input.Password placeholder="Enter new password to change" />
+          <Tabs defaultActiveKey="1" style={{ marginTop: '-10px' }}>
+            {/* Tab 1: Personal & Employment */}
+            <Tabs.TabPane tab={<span><UserOutlined /> Personal Info</span>} key="1">
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item name="firstName" label="First Name">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="lastName" label="Last Name">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="middleName" label="Middle Name">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="dateOfBirth" label="Date of Birth">
+                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="gender" label="Gender">
+                    <Select disabled={!isEditMode}>
+                      <Option value="Male">Male</Option>
+                      <Option value="Female">Female</Option>
+                      <Option value="Other">Other</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="bloodGroup" label="Blood Group">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Divider orientation="left">Employment Details</Divider>
+                <Col span={12}>
+                  <Form.Item name="employmentStatus" label="Employment Status">
+                    <Select disabled={!isEditMode}>
+                      {employmentStatusOptions.map(status => (
+                        <Option key={status} value={status}>{status}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="band" label="Band/Designation">
+                    <Select disabled={!isEditMode}>
+                      {bandsData.map((band) => (
+                        <Option key={band.designation_id} value={band.designation_id}>{band.designation_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="MasterSubRole" label="Role">
+                    <Select disabled={!isEditMode}>
+                      {roleData.map((role) => (
+                        <Option key={role.sub_role_id} value={role.sub_role_id}>{role.sub_role_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="dateOfJoining" label="Date of Joining">
+                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name="email" label="Official Email">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                {isEditMode && (
+                  <Col span={24}>
+                    <Form.Item name="password" label="Change Password" extra="Leave blank to keep current password">
+                      <Input.Password placeholder="Enter new password" />
                     </Form.Item>
-                    <Form.Item
-                      name="employmentStatus"
-                      label="Employment Status"
-                      rules={[{ required: true, message: 'Please select employment status' }]}
-                    >
-                      <Select placeholder="Select status">
-                        {employmentStatusOptions.map(status => (
-                          <Option key={status} value={status}>{status}</Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  </div>
-                ) : (
-                  <InfoRow label="Employment Status" value={personalEmployeeDetails.employmentStatus} />
+                  </Col>
                 )}
-              </WidgetCard>
-            </Col>
+              </Row>
+            </Tabs.TabPane>
 
-            {/* Contact & Emergency */}
-            <Col xs={24} lg={12}>
-              <Space direction="vertical" size={24} style={{ width: '100%' }}>
-                <WidgetCard title="Contact Information" icon={<PhoneOutlined />} iconColor="#fa8c16" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
-                    <Text type="secondary"><MailOutlined style={{ marginRight: '8px' }} />Official Email</Text>
-                    <Text strong>{personalEmployeeDetails.email}</Text>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <Text type="secondary"><PhoneOutlined style={{ marginRight: '8px' }} />Contact Number</Text>
-                    <Text strong>{personalEmployeeDetails.contactNumber}</Text>
-                  </div>
+            {/* Tab 2: Contact & Emergency */}
+            <Tabs.TabPane tab={<span><PhoneOutlined /> Contact</span>} key="2">
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item name="contactNumber" label="Personal Contact Number">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="personalEmail" label="Personal Email">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name="teamLeadId" label="Leave Approver">
+                    <Select
+                      disabled={!isEditMode}
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                      }
+                    >
+                      {potentialApprovers.map(approver => (
+                        <Option key={approver.employeeId} value={approver.employeeId}>
+                          {approver.employeeName} ({approver.roleName})
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Divider orientation="left">Emergency Contact</Divider>
+                <Col span={8}>
+                  <Form.Item name="emergencyContactPerson" label="Person Name">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="emergencyContactRelation" label="Relation">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="emergencyContactNumber" label="Contact Number">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Divider orientation="left">Qualification</Divider>
+                <Col span={24}>
+                  <Form.Item name="highestQualification" label="Highest Qualification">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Tabs.TabPane>
 
-                  {/* Editable Leave Approver */}
-                  <div style={{ marginTop: '16px' }}>
-                    {isEditMode ? (
-                      <Form.Item
-                        name="teamLeadId"
-                        label="Leave Approver"
-                        rules={[{ required: true, message: 'Please select a leave approver' }]}
-                      >
-                        <Select
-                          placeholder="Select leave approver"
-                          showSearch
-                          filterOption={(input, option) =>
-                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                          }
-                        >
-                          {potentialApprovers.map(approver => (
-                            <Option key={approver.employeeId} value={approver.employeeId}>
-                              {approver.employeeName} ({approver.roleName})
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #f0f0f0' }}>
-                        <Text type="secondary">Leave Approver:</Text>
-                        <Text strong>{
-                          personalEmployeeDetails.leaveApproverName ||
-                          potentialApprovers.find(a => a.employeeId === personalEmployeeDetails.teamLeadId)?.employeeName ||
-                          (personalEmployeeDetails.teamLeadId ? `ID: ${personalEmployeeDetails.teamLeadId}` : 'Not Assigned')
-                        }</Text>
-                      </div>
-                    )}
-                  </div>
-                </WidgetCard>
+            {/* Tab 3: Addresses */}
+            <Tabs.TabPane tab={<span><HomeOutlined /> Addresses</span>} key="3">
+              <Card size="small" title="Residential Address" style={{ marginBottom: 16 }}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item name={['addresses', 'residential_address1']} label="Address Line 1">
+                      <Input disabled={!isEditMode} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name={['addresses', 'residential_address2']} label="Address Line 2">
+                      <Input disabled={!isEditMode} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'residential_city']} label="City">
+                      <Input disabled={!isEditMode} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'residential_state']} label="State">
+                      <Input disabled={!isEditMode} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'residential_zipcode']} label="Zipcode">
+                      <Input disabled={!isEditMode} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Card>
 
-                <WidgetCard title="Emergency Contact" icon={<ExclamationCircleOutlined />} iconColor="#ff4d4f" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                  <InfoRow label="Person" value={personalEmployeeDetails.emergencyContactPerson} />
-                  <InfoRow label="Relation" value={personalEmployeeDetails.emergencyContactRelation} />
-                  <InfoRow label="Number" value={personalEmployeeDetails.emergencyContactNumber} />
-                </WidgetCard>
-              </Space>
-            </Col>
+              <Card size="small" title="Permanent Address" extra={
+                <Checkbox
+                  disabled={!isEditMode}
+                  checked={isSameAddress}
+                  onChange={onSameAddressChange}
+                >
+                  Same as Residential
+                </Checkbox>
+              }>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item name={['addresses', 'permanent_address1']} label="Address Line 1">
+                      <Input disabled={!isEditMode || isSameAddress} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name={['addresses', 'permanent_address2']} label="Address Line 2">
+                      <Input disabled={!isEditMode || isSameAddress} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'permanent_city']} label="City">
+                      <Input disabled={!isEditMode || isSameAddress} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'permanent_state']} label="State">
+                      <Input disabled={!isEditMode || isSameAddress} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name={['addresses', 'permanent_zipcode']} label="Zipcode">
+                      <Input disabled={!isEditMode || isSameAddress} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Card>
+            </Tabs.TabPane>
 
-            {/* Addresses */}
-            <Col xs={24} lg={12}>
-              <Space direction="vertical" size={24} style={{ width: '100%' }}>
-                <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                  {personalEmployeeDetails.addresses ? (
-                    <>
-                      <InfoRow label="Type" value={personalEmployeeDetails.addresses.residentialAddressType} />
-                      <InfoRow label="Line 1" value={personalEmployeeDetails.addresses.residentialAddress1} />
-                      <InfoRow label="Line 2" value={personalEmployeeDetails.addresses.residentialAddress2} />
-                      <InfoRow label="City" value={personalEmployeeDetails.addresses.residentialCity} />
-                      <InfoRow label="State" value={personalEmployeeDetails.addresses.residentialState} />
-                      <InfoRow label="Zipcode" value={personalEmployeeDetails.addresses.residentialZipcode} />
-                    </>
-                  ) : <Text type="secondary">No address info available</Text>}
-                </WidgetCard>
-
-                <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                  {personalEmployeeDetails.addresses ? (
-                    <>
-                      <InfoRow label="Type" value={personalEmployeeDetails.addresses.permanentAddressType} />
-                      <InfoRow label="Line 1" value={personalEmployeeDetails.addresses.permanentAddress1} />
-                      <InfoRow label="Line 2" value={personalEmployeeDetails.addresses.permanentAddress2} />
-                      <InfoRow label="City" value={personalEmployeeDetails.addresses.permanentCity} />
-                      <InfoRow label="State" value={personalEmployeeDetails.addresses.permanentState} />
-                      <InfoRow label="Zipcode" value={personalEmployeeDetails.addresses.permanentZipcode} />
-                    </>
-                  ) : <Text type="secondary">No address info available</Text>}
-                </WidgetCard>
-              </Space>
-            </Col>
-
-            {/* Skills */}
-            <Col xs={24} lg={12}>
-              <WidgetCard title="Skills" icon={<ToolOutlined />} iconColor="#722ed1" style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}>
-                {personalEmployeeDetails.skills && personalEmployeeDetails.skills.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {personalEmployeeDetails.skills.map((skill, index) => (
-                      <Tag key={index} color="blue" style={{ padding: '4px 8px', fontSize: '14px' }}>
-                        <strong>{skill.skillName}</strong>
-                        <span style={{ marginLeft: '4px', opacity: 0.8 }}>({skill.skillLevel})</span>
-                      </Tag>
+            {/* Tab 4: Skills */}
+            <Tabs.TabPane tab={<span><ToolOutlined /> Skills</span>} key="4">
+              <Form.List name="skills">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <Row gutter={12} key={key} align="middle">
+                        <Col span={10}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'skillId']}
+                            label="Skill"
+                            rules={[{ required: true, message: 'Select skill' }]}
+                          >
+                            <Select
+                              disabled={!isEditMode}
+                              showSearch
+                              filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+                            >
+                              {availableSkills.map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                        <Col span={10}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'skillLevel']}
+                            label="Proficiency"
+                          >
+                            <Select disabled={!isEditMode}>
+                              <Option value="Beginner">Beginner</Option>
+                              <Option value="Intermediate">Intermediate</Option>
+                              <Option value="Expert">Expert</Option>
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                        {isEditMode && (
+                          <Col span={4}>
+                            <Button
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
+                              style={{ marginTop: '5px' }}
+                            />
+                          </Col>
+                        )}
+                      </Row>
                     ))}
-                  </div>
-                ) : <Text type="secondary">No skills listed</Text>}
-              </WidgetCard>
-            </Col>
-          </Row>
+                    {isEditMode && (
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />} style={{ marginTop: '10px' }}>
+                        Add Skill
+                      </Button>
+                    )}
+                  </>
+                )}
+              </Form.List>
+            </Tabs.TabPane>
+
+            {/* Tab 5: Documents */}
+            <Tabs.TabPane tab={<span><FileTextOutlined /> Documents</span>} key="5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { key: "tenth", label: "10th Marksheet" },
+                  { key: "twelve", label: "12th Marksheet" },
+                  { key: "adhar", label: "Aadhar Card" },
+                  { key: "pan", label: "Pan Card" },
+                  { key: "grad", label: "Graduation Degree" },
+                  { key: "resume", label: "Resume" }
+                ].map(({ key, label }) => {
+                  const doc = docStatus?.find((d) => d.doc_type === key);
+                  return (
+                    <Card key={key} size="small">
+                      <Row align="middle" justify="space-between">
+                        <Col span={6}>
+                          <Text strong>{label}</Text>
+                        </Col>
+                        <Col span={4}>
+                          <Tag color={doc?.uploaded ? "success" : "error"}>
+                            {doc?.uploaded ? "Uploaded" : "Pending"}
+                          </Tag>
+                        </Col>
+                        <Col span={14} style={{ textAlign: 'right' }}>
+                          <Space>
+                            {doc?.uploaded && (
+                              <>
+                                <Button size="small" icon={<EyeOutlined />} onClick={() => previewDoc(key)}>Preview</Button>
+                                <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadDoc(key)}>Download</Button>
+                              </>
+                            )}
+                            {canEdit && (
+                              <Upload
+                                beforeUpload={(file) => handleUpload(file, key)}
+                                showUploadList={false}
+                              >
+                                <Button size="small" icon={<UploadOutlined />} type={doc?.uploaded ? "default" : "primary"}>
+                                  {doc?.uploaded ? "Update" : "Upload"}
+                                </Button>
+                              </Upload>
+                            )}
+                          </Space>
+                        </Col>
+                      </Row>
+                    </Card>
+                  );
+                })}
+              </div>
+            </Tabs.TabPane>
+          </Tabs>
         </Form>
       ) : (
         <div style={{ textAlign: 'center', padding: '50px' }}>Loading employee details...</div>

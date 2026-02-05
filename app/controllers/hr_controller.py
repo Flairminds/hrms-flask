@@ -105,7 +105,26 @@ class HRController:
                 'employee_id': employee_id,
                 'team_lead_id': data.get('teamLeadId'),
                 'employment_status': data.get('employmentStatus'),
-                'password': data.get('password')
+                'password': data.get('password'),
+                
+                # New fields
+                'first_name': data.get('firstName'),
+                'middle_name': data.get('middleName'),
+                'last_name': data.get('lastName'),
+                'date_of_birth': data.get('dateOfBirth'),
+                'gender': data.get('gender'),
+                'blood_group': data.get('bloodGroup'),
+                'personal_email': data.get('personalEmail'),
+                'mobile_no': data.get('contactNumber'), # map contactNumber to mobile_no for service
+                'date_of_joining': data.get('dateOfJoining'),
+                'highest_qualification': data.get('highestQualification'),
+                'emergency_contact_person': data.get('emergencyContactPerson'),
+                'emergency_contact_relation': data.get('emergencyContactRelation'),
+                'emergency_contact_number': data.get('emergencyContactNumber'),
+                'designation_id': data.get('band'),
+                'sub_role_id': data.get('MasterSubRole'),
+                'addresses': data.get('addresses', []),
+                'skills': data.get('skills', [])
             }
             
             result = EmployeeService.update_employee_details(update_data)
