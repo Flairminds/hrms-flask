@@ -413,14 +413,55 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   }
 
   const disableDatesForPrivilegeLeave = (current) => {
-    // All date validations removed - backend will handle
+    if (!current) return false;
+
+    const today = dayjs().startOf('day');
+
+    // Privilege Leave & Unpaid Privilege Leave: must be at least 7 days in advance
+    if (leaveType === 'Privilege Leave' || leaveType === 'Unpaid Privilege Leave') {
+      return current.isBefore(today.add(7, 'day'), 'day');
+    }
+
+    // Missed Door Entry: only past or current dates allowed
+    if (leaveType === 'Missed Door Entry') {
+      return current.isAfter(today, 'day');
+    }
+
+    // Work From Home: cannot apply for Monday and must be today or future
+    if (leaveType === 'Work From Home') {
+      return current.isBefore(today, 'day');
+    }
+
     return false;
   };
 
 
 
   const disableDatesForPrivilegeLeaveEnd = (current, type, startDate) => {
-    // All date validations removed - backend will handle
+    if (!current) return false;
+
+    const today = dayjs().startOf('day');
+
+    // Always disable dates before the start date if start date is selected
+    if (startDate && current.isBefore(startDate, 'day')) {
+      return true;
+    }
+
+    // Privilege Leave & Unpaid Privilege Leave: must also be at least 7 days in advance
+    if (type === 'Privilege Leave' || type === 'Unpaid Privilege Leave') {
+      return current.isBefore(today.add(7, 'day'), 'day');
+    }
+
+    // Missed Door Entry: only past or current dates allowed
+    if (type === 'Missed Door Entry') {
+      return current.isAfter(today, 'day');
+    }
+
+    // Work From Home: cannot apply for Monday and must be today or future
+    if (type === 'Work From Home') {
+      return current.day() === 1 || current.isBefore(today, 'day');
+    }
+
     return false;
   };
 
