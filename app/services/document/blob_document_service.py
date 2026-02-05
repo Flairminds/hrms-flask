@@ -114,20 +114,6 @@ class BlobDocumentService:
             Logger.debug("Calculated blob names", new_blob_name=f"[{blob_name}]", existing=f"[{existing_doc.blob_name if existing_doc else 'None'}]")
             
             if existing_doc:
-                # Delete old blob if it exists
-                if existing_doc.blob_name != blob_name:
-                    try:
-                        AzureBlobService.delete_blob(
-                            existing_doc.blob_name,
-                            existing_doc.container_name
-                        )
-                    except Exception as e:
-                        Logger.warning(
-                            "Failed to delete old blob",
-                            blob_name=existing_doc.blob_name,
-                            error=str(e)
-                        )
-                
                 # Update existing record
                 existing_doc.blob_name = blob_name
                 existing_doc.container_name = container_name or current_app.config.get('AZURE_STORAGE_CONTAINER_NAME', 'employee-documents')

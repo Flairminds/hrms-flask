@@ -10,6 +10,7 @@ This module provides helper functions for:
 
 import os
 import re
+import uuid
 from typing import Optional
 from werkzeug.utils import secure_filename
 
@@ -47,10 +48,14 @@ class BlobUtils:
             Unique blob name with path structure
         """
         sanitized = BlobUtils.sanitize_filename(filename)
-        extension = BlobUtils._get_file_extension(filename)
+        name_part, extension = os.path.splitext(sanitized)
+        
+        # Add a random suffix to ensure uniqueness and prevent overwriting/deletion issues
+        suffix = uuid.uuid4().hex[:8]
+        unique_filename = f"{doc_type}_{name_part}_{suffix}{extension}"
         
         # Create structured blob name: emp_id/doc_type/filename
-        blob_name = f"{emp_id}/{doc_type}/{doc_type}_{sanitized}"
+        blob_name = f"{emp_id}/{doc_type}/{unique_filename}"
         
         return blob_name
 
