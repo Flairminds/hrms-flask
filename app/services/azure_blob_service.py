@@ -83,6 +83,7 @@ class AzureBlobService:
         if not container_name:
             container_name = current_app.config.get('AZURE_STORAGE_CONTAINER_NAME', 'employee-documents')
         
+        Logger.debug("Getting container client", container_name=f"[{container_name}]")
         blob_service_client = AzureBlobService._get_blob_service_client()
         return blob_service_client.get_container_client(container_name)
 
@@ -139,6 +140,7 @@ class AzureBlobService:
             AzureError: If upload fails
         """
         try:
+            Logger.debug("Uploading blob to container", blob_name=f"[{blob_name}]", container_name=f"[{container_name}]")
             AzureBlobService._ensure_container_exists(container_name)
             container_client = AzureBlobService._get_container_client(container_name)
             
@@ -179,6 +181,7 @@ class AzureBlobService:
             AzureError: If download fails
         """
         try:
+            Logger.debug("Downloading blob from container", blob_name=f"[{blob_name}]", container_name=f"[{container_name}]")
             container_client = AzureBlobService._get_container_client(container_name)
             blob_client = container_client.get_blob_client(blob_name)
             

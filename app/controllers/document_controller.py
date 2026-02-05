@@ -479,6 +479,7 @@ class DocumentController:
                    doc_type=doc_type)
         
         try:
+            Logger.debug("Calling DocumentService.get_document", emp_id=emp_id, doc_type=doc_type)
             file_blob, download_name = DocumentService.get_document(emp_id, doc_type)
             
             Logger.info("Document download initiated", 
@@ -501,11 +502,14 @@ class DocumentController:
             return jsonify({"error": str(ve)}), 400
             
         except FileNotFoundError as fnf:
-            Logger.warning("Document not found", 
+            Logger.warning("Document not found in get_document", 
                           employee_id=emp_id,
                           doc_type=doc_type,
                           error=str(fnf))
-            return jsonify({"error": str(fnf)}), 404
+            return jsonify({
+                "status": "error",
+                "message": str(fnf)
+            }), 404
             
         except Exception as e:
             Logger.error("Unexpected error retrieving document", 

@@ -517,33 +517,31 @@ export const getSkillsForAllEmp = () => {
 
 // Gets the documents of an employee.
 export const getDocuments = (employeeId, docType) => {
-  return axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/get-document/${employeeId}/${docType}`, {
+  return axiosInstance.get(`${API_BASE_URL}/documents/get-document/${employeeId}/${docType}`, {
     responseType: "blob",
   });
 };
 
 // Deletes a document for an employee.
 export const deleteDocument = (employeeId, docType) => {
-  const res = axiosInstance.delete("https://hrms-flask.azurewebsites.net/api/delete-document", {
-    // headers: { "Content-Type": "application/json" },
-    withCredentials: true,
-    params: { employeeId, docType }, // Sending as query params
+  return axiosInstance.delete(`${API_BASE_URL}/documents/delete-document`, {
+    params: { employeeId, docType },
   });
-  return res;
 };
 
-// Gets the document status of an employee.
+// Gets the document upload status of an employee.
 export const getDocStatus = (employeeId) => {
-  const res = axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-status/${employeeId}`,
-  );
-  return res;
+  return axiosInstance.get(`${API_BASE_URL}/documents/document-status/${employeeId}`);
 };
 
-// Gets the document records of all employees.
+// Gets the detailed document status (including verification) of an employee.
+export const getDocStatusDetails = (employeeId) => {
+  return axiosInstance.get(`${API_BASE_URL}/documents/document-status-details/${employeeId}`);
+};
+
+// Gets the document records of all employees (HR).
 export const getEmpDocRecords = () => {
-  const res = axiosInstance.get("https://hrms-flask.azurewebsites.net/api/all-employees",
-  );
-  return res;
+  return axiosInstance.get(`${API_BASE_URL}/documents/all-employees`);
 };
 
 // Uploads a document for an employee - uses API_BASE_URL

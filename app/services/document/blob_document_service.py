@@ -12,6 +12,7 @@ instead of database binary storage. It manages:
 
 from typing import Dict, Any, List, Tuple, Optional
 from datetime import datetime
+from flask import current_app
 from werkzeug.datastructures import FileStorage
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
@@ -67,7 +68,8 @@ class BlobDocumentService:
                 f"Invalid file type. Allowed: {', '.join(BlobUtils.ALLOWED_EXTENSIONS)}"
             )
         
-        emp_id = emp_id.strip()
+        emp_id = emp_id.strip() if emp_id else ""
+        doc_type = doc_type.strip() if doc_type else ""
         filename = file_storage.filename
         
         Logger.info(
@@ -109,6 +111,8 @@ class BlobDocumentService:
                 doc_type=doc_type
             ).first()
             
+            Logger.debug("Calculated blob names", new_blob_name=f"[{blob_name}]", existing=f"[{existing_doc.blob_name if existing_doc else 'None'}]")
+            
             if existing_doc:
                 # Delete old blob if it exists
                 if existing_doc.blob_name != blob_name:
@@ -126,7 +130,7 @@ class BlobDocumentService:
                 
                 # Update existing record
                 existing_doc.blob_name = blob_name
-                existing_doc.container_name = container_name or db.session.get_bind().engine.url.database
+                existing_doc.container_name = container_name or current_app.config.get('AZURE_STORAGE_CONTAINER_NAME', 'employee-documents')
                 existing_doc.blob_url = blob_url
                 existing_doc.file_name = filename
                 existing_doc.file_size = file_size
@@ -143,7 +147,7 @@ class BlobDocumentService:
                     emp_id=emp_id,
                     doc_type=doc_type,
                     blob_name=blob_name,
-                    container_name=container_name or 'employee-documents',
+                    container_name=container_name or current_app.config.get('AZURE_STORAGE_CONTAINER_NAME', 'employee-documents'),
                     blob_url=blob_url,
                     file_name=filename,
                     file_size=file_size,
@@ -202,6 +206,9 @@ class BlobDocumentService:
             ValueError: If document type is invalid
             FileNotFoundError: If document not found
         """
+        emp_id = emp_id.strip() if emp_id else ""
+        doc_type = doc_type.strip() if doc_type else ""
+        
         if doc_type not in BlobDocumentService.VALID_DOC_TYPES:
             raise ValueError(
                 f"Invalid document type. Must be one of: {', '.join(BlobDocumentService.VALID_DOC_TYPES)}"
@@ -249,6 +256,9 @@ class BlobDocumentService:
         Raises:
             ValueError: If parameters invalid
         """
+        emp_id = emp_id.strip() if emp_id else ""
+        doc_type = doc_type.strip() if doc_type else ""
+        
         if not emp_id or doc_type not in BlobDocumentService.VALID_DOC_TYPES:
             raise ValueError("Invalid parameters for document deletion")
         

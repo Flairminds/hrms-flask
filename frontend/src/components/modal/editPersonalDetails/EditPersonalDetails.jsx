@@ -10,16 +10,19 @@ import {
   editPersonalDetails,
   getAllEmployeeSkills,
   getDocStatus,
+  getDocStatusDetails,
   getSkillsForEmp,
-  uploadDocument
+  uploadDocument,
+  getDocuments  // ✅ Added
 } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
+import { EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // ✅ Added
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const { Option } = Select;
 
-export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData, fetchEmployeeData, fetchSkills }) => {
+export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData, fetchEmployeeData, fetchSkills, fetchDocumentStatus, fetchDocumentStatusDetails }) => {
   const [form] = Form.useForm();
   const { user } = useAuth();
   const employeeId = user?.employeeId;
@@ -49,7 +52,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     if (!employeeId) return;
     try {
       const response = await getDocStatus(employeeId);
-      setDocStatus(response.data.documents);
+      setDocStatus(response.data.documents || []);
     } catch (error) {
       console.error("Error fetching doc status:", error);
     }
@@ -178,9 +181,67 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
       await uploadDocument(employeeId, docType, file);
       message.success(`${docType} uploaded successfully!`);
       fetchDocStatus();
+      if (fetchDocumentStatus) fetchDocumentStatus();
+      if (fetchDocumentStatusDetails) fetchDocumentStatusDetails();
     } catch (error) {
       console.error("Upload error:", error);
       message.error(`Failed to upload ${docType}`);
+    }
+  };
+
+  const fetchDocuments = async (docType) => {
+    try {
+      if (!employeeId) return;
+      const response = await getDocuments(employeeId, docType);
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to download: ${response.statusText}`);
+      }
+
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = fileURL;
+
+      let extension = "pdf";
+      if (response.data.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        extension = "docx";
+      } else if (response.data.type === "application/msword") {
+        extension = "doc";
+      }
+
+      const firstName = employeeData?.firstName || "";
+      const lastName = employeeData?.lastName || "";
+      const fullName = `${firstName}_${lastName}`.replace(/ /g, "_").replace(/_{2,}/g, "_");
+
+      link.download = `${fullName}_${docType}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(fileURL), 1000);
+      message.success("Download started");
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      message.error("Failed to download document");
+    }
+  };
+
+  const fetchDocumentsView = async (docType) => {
+    try {
+      if (!employeeId) return;
+      const response = await getDocuments(employeeId, docType);
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to fetch document: ${response.statusText}`);
+      }
+
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      window.open(fileURL, "_blank");
+      setTimeout(() => URL.revokeObjectURL(fileURL), 5000);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      message.error("Failed to preview document");
     }
   };
 
@@ -595,11 +656,19 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                             <span style={{ color: doc?.uploaded ? "green" : "red", fontSize: "12px" }}>
                               {doc?.uploaded ? "Uploaded" : "Pending"}
                             </span>
-                            <Upload beforeUpload={(file) => beforeUpload(file, key)} showUploadList={false}>
-                              <Button size="small" icon={<UploadOutlined />}>
-                                {doc?.uploaded ? "Update" : "Upload"}
-                              </Button>
-                            </Upload>
+                            <div style={{ display: 'flex', gap: 5 }}>
+                              {doc?.uploaded && (
+                                <>
+                                  <Button size="small" icon={<DownloadOutlined />} onClick={() => fetchDocuments(key)}>Download</Button>
+                                  <Button size="small" icon={<EyeOutlined />} onClick={() => fetchDocumentsView(key)}>Preview</Button>
+                                </>
+                              )}
+                              <Upload beforeUpload={(file) => beforeUpload(file, key)} showUploadList={false}>
+                                <Button size="small" icon={<UploadOutlined />}>
+                                  {doc?.uploaded ? "Update" : "Upload"}
+                                </Button>
+                              </Upload>
+                            </div>
                           </div>
                         </Col>
                       </Row>

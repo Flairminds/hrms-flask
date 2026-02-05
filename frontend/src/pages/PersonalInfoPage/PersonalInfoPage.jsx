@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './PersonalInfoPage.module.css';
 import defaultProfile from '../../assets/profile/prof.svg';
 import editIcon from "../../assets/HR/edit.svg";
-import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getEmployeeDetails, getSkillsForEmp, uploadProfileImage, getProfileCompletion } from '../../services/api';
+import axiosInstance, { downloadSalarySlip, downloadSalarySlipViaEmail, getCompanyBands, getCompanyRoles, getDocuments, getDocStatus, getDocStatusDetails, getEmployeeDetails, getSkillsForEmp, uploadProfileImage, getProfileCompletion } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditPersonalDetails } from '../../components/modal/editPersonalDetails/EditPersonalDetails';
 import { Modal, Button, Steps, message, Select, Row, Col, Typography, Avatar, Card, Tag, Space, Upload, Progress, Tooltip } from 'antd';
@@ -74,11 +74,25 @@ function PersonalInfoPage() {
   };
 
   const fetchDocumentStatus = async () => {
-    // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-verification-status/${employeeId}`);
+    try {
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+      const response = await getDocStatus(employeeId);
+      setDocumentStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching document status:', error);
+    }
   };
 
   const fetchDocumentStatusDetails = async () => {
-    // const response = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/document-status-details/${employeeId}`);
+    try {
+      const employeeId = user?.employeeId;
+      if (!employeeId) return;
+      const response = await getDocStatusDetails(employeeId);
+      setDocumentStatusDetails(response.data);
+    } catch (error) {
+      console.error('Error fetching document status details:', error);
+    }
   };
 
   const fetchProfileCompletion = async () => {
@@ -96,6 +110,8 @@ function PersonalInfoPage() {
   useEffect(() => {
     fetchEmployeeData();
     fetchProfileCompletion();
+    fetchDocumentStatus();
+    fetchDocumentStatusDetails();
   }, []);
 
   const handleResumeClick = () => {
@@ -264,13 +280,25 @@ function PersonalInfoPage() {
         throw new Error(`Failed to download: ${response.statusText}`);
       }
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
 
       // ✅ Create URL and trigger download
       const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = "document.pdf"; // File name
+
+      let extension = "pdf";
+      if (response.data.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        extension = "docx";
+      } else if (response.data.type === "application/msword") {
+        extension = "doc";
+      }
+
+      const firstName = employeeData?.first_name || "";
+      const lastName = employeeData?.last_name || "";
+      const fullName = `${firstName}_${lastName}`.replace(/ /g, "_").replace(/_{2,}/g, "_");
+
+      link.download = `${fullName}_${docType}.${extension}`; // File name
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -306,7 +334,7 @@ function PersonalInfoPage() {
         throw new Error(`Failed to fetch document: ${response.statusText}`);
       }
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
+      const blob = new Blob([response.data], { type: response.data.type || "application/pdf" });
 
       const fileURL = window.URL.createObjectURL(blob);
 
@@ -551,12 +579,11 @@ function PersonalInfoPage() {
                       <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
                         <div>
                           <Text strong>{label}</Text>
-                          <br />
                           {docStatus ? (
                             <Tag color={docStatus.status === 'Accepted' ? 'success' : docStatus.status === 'Rejected' ? 'error' : 'warning'}>
-                              {docStatus.status}
+                              {docStatus?.uploaded ? "Uploaded" : 'Pending'}
                             </Tag>
-                          ) : <Text type="secondary" style={{ fontSize: '12px' }}>Not Uploaded</Text>}
+                          ) : <Text type="secondary" style={{ fontSize: '12px' }}>Pending</Text>}
                         </div>
                         <Space>
                           <Button size="small" icon={<DownloadOutlined />} onClick={() => fetchDocuments(key)} disabled={!docStatus?.uploaded} />
@@ -605,6 +632,8 @@ function PersonalInfoPage() {
         employeeData={employeeData}
         fetchEmployeeData={fetchEmployeeData}
         fetchSkills={fetchSkills}
+        fetchDocumentStatus={fetchDocumentStatus}
+        fetchDocumentStatusDetails={fetchDocumentStatusDetails}
       />
 
       <Modal
