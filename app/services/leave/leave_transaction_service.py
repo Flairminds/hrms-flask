@@ -1,5 +1,5 @@
 from typing import Dict, List, Any, Optional
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
 from sqlalchemy import text, func, case, and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
@@ -28,6 +28,13 @@ class LeaveTransactionService:
         from_date = data.get('fromDate')
         to_date = data.get('toDate')
         no_of_days = data.get('noOfDays')
+        if no_of_days is not None:
+             try:
+                 no_of_days = float(no_of_days)
+             except (ValueError, TypeError):
+                 no_of_days = 0.0
+        else:
+             no_of_days = 0.0
         applied_by = data.get('appliedBy')
         duration = data.get('duration')
         comments = data.get('comments', '')
@@ -50,6 +57,7 @@ class LeaveTransactionService:
         application_date = datetime.utcnow() + timedelta(minutes=330)
         app_date_only = application_date.date()
         from_date_only = from_date.date()
+        to_date_only = to_date.date()
         
         flag_for_second_approval = 0
 
@@ -185,7 +193,7 @@ class LeaveTransactionService:
                     LeaveTransaction.employee_id == emp_id,
                     LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
                     LeaveTransaction.no_of_days == 5,
-                    func.datepart(text('WEEK'), LeaveTransaction.to_date) == from_week,
+                    func.extract('week', LeaveTransaction.to_date) == from_week,
                     LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
                 ).first()
                 
@@ -198,7 +206,7 @@ class LeaveTransactionService:
                 wfh_in_week = db.session.query(func.sum(LeaveTransaction.no_of_days)).filter(
                     LeaveTransaction.employee_id == emp_id,
                     LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
-                    func.datepart(text('WEEK'), LeaveTransaction.from_date) == from_week,
+                    func.extract('week', LeaveTransaction.from_date) == from_week,
                     LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
                     LeaveTransaction.from_date >= fy_start,
                     LeaveTransaction.to_date <= fy_end
@@ -486,7 +494,7 @@ class LeaveTransactionService:
         
         try:
             ist_application_date = datetime.utcnow() + timedelta(minutes=330)
-            leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
+            # leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
             
             new_leave = LeaveTransaction(
                 employee_id=employee_id.upper(),
@@ -539,7 +547,7 @@ class LeaveTransactionService:
                    
         try:
             application_date = datetime.utcnow() + timedelta(minutes=330)
-            leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
+            # leave_tran_seq = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
             
             new_leave = LeaveTransaction(
                 employee_id=employee_id.upper(),
@@ -581,7 +589,7 @@ class LeaveTransactionService:
         Logger.info("Executing InsertWorkingLate logic", employee_id=employee_id)
         
         try:
-            leave_tran_id = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
+            # leave_tran_id = db.session.execute(text("SELECT NEXT VALUE FOR [dbo].[leave_transaction_seq]")).scalar()
             application_date = datetime.utcnow() + timedelta(minutes=330)
             
             new_leave = LeaveTransaction(
