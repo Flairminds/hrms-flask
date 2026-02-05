@@ -239,6 +239,17 @@ class EmployeeService:
             if sub_role_id and str(sub_role_id).isdigit() and int(sub_role_id) != 0:
                 employee.sub_role = int(sub_role_id)
                 
+            # Handle system role (role_id)
+            if employee_data.get('role_id'):
+                role_id = employee_data.get('role_id')
+                # Update EmployeeRole
+                emp_role = EmployeeRole.query.filter_by(employee_id=emp_id).first()
+                if emp_role:
+                    emp_role.role_id = int(role_id)
+                else:
+                    new_role = EmployeeRole(employee_id=emp_id, role_id=int(role_id))
+                    db.session.add(new_role)
+                
             lob_lead = employee_data.get('lob_lead_id')
             if lob_lead and lob_lead not in ('', 'string'):
                 employee.lob_lead = lob_lead
@@ -704,6 +715,15 @@ class EmployeeService:
             ).join(
                 MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id
             ).filter(EmployeeSkill.employee_id == emp_id).all()
+
+            # Get System Role ID
+            system_role = EmployeeRole.query.filter_by(employee_id=emp_id).first()
+            system_role_id = system_role.role_id if system_role else None
+            system_role_name = None
+            if system_role_id:
+                master_role = MasterRole.query.filter_by(role_id=system_role_id).first()
+                if master_role:
+                    system_role_name = master_role.role_name
             
             result = {
                 'employeeId': employee.employee_id,
@@ -718,8 +738,12 @@ class EmployeeService:
                 'emergencyContactRelation': employee.emergency_contact_relation or '',
                 'email': employee.email or '',
                 'gender': employee.gender or '',
+                'email': employee.email or '',
+                'gender': employee.gender or '',
                 'MasterSubRole': employee.sub_role, # Maps to sub_role ID
                 'subRoleName': employee_sub_role,
+                'role_id': system_role_id, # System Role ID
+                'roleName': system_role_name, # System Role Name
                 'band': designation_id, # Maps to designation_id
                 'designationName': employee_designation,
                 'bloodGroup': employee.blood_group or '',

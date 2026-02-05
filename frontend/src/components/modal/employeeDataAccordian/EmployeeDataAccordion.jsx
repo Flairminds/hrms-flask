@@ -426,7 +426,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item
-                                        label="Sub-Role"
+                                        label="Designation"
                                         name="MasterSubRole"
                                         rules={[{ required: false }]}
                                     >

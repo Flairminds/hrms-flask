@@ -10,7 +10,10 @@ import {
   getDocStatus,
   getDocuments,
   uploadDocument,
-  getAllEmployeeSkills
+  getAllEmployeeSkills,
+  getMasterRoles,
+  getCompanyRoles,
+  getCompanyBands
 } from '../../../services/api';
 import { getCookie } from '../../../util/CookieSet';
 import { useAuth } from '../../../context/AuthContext';
@@ -42,6 +45,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const [form] = Form.useForm();
   const [bandsData, setBandsData] = useState([]);
   const [roleData, setRoleData] = useState([]);
+  const [masterRolesData, setMasterRolesData] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [potentialApprovers, setPotentialApprovers] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -90,6 +94,20 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     }
   };
 
+  const getMasterRolesData = async () => {
+    try {
+      const response = await getMasterRoles();
+      if (Array.isArray(response.data)) {
+        // console.log("Master Roles Data:", response.data);
+        setMasterRolesData(response.data);
+      } else {
+        console.error('Expected an array from getMasterRoles');
+      }
+    } catch (error) {
+      console.error('Error fetching master roles:', error);
+    }
+  };
+
   const fetchPotentialApprovers = async () => {
     try {
       const response = await getPotentialApprovers();
@@ -105,11 +123,14 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   };
 
   useEffect(() => {
-    getCompanyBandsData();
-    getRoleData();
-    // Always fetch approvers to display names correctly
-    fetchPotentialApprovers();
-  }, []);
+    if (detailsModal) {
+      getCompanyBandsData();
+      getRoleData();
+      getMasterRolesData();
+      // Always fetch approvers to display names correctly
+      fetchPotentialApprovers();
+    }
+  }, [detailsModal]);
 
   const populateForm = useCallback(() => {
     if (personalEmployeeDetails) {
@@ -130,6 +151,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         dateOfJoining: personalEmployeeDetails.dateOfJoining ? dayjs(personalEmployeeDetails.dateOfJoining) : null,
         band: personalEmployeeDetails.band ? Number(personalEmployeeDetails.band) : null,
         MasterSubRole: personalEmployeeDetails.MasterSubRole ? Number(personalEmployeeDetails.MasterSubRole) : null,
+        role_id: personalEmployeeDetails.role_id ? Number(personalEmployeeDetails.role_id) : null,
         highestQualification: personalEmployeeDetails.highestQualification,
         qualificationYearMonth: personalEmployeeDetails.qualificationYearMonth,
         employmentStatus: personalEmployeeDetails.employmentStatus,
@@ -419,7 +441,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="band" label="Band/Designation">
+                  <Form.Item name="band" label="Band">
                     <Select disabled={!isEditMode}>
                       {bandsData.map((band) => (
                         <Option key={band.designation_id} value={band.designation_id}>{band.designation_name}</Option>
@@ -428,10 +450,19 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="MasterSubRole" label="Role">
+                  <Form.Item name="MasterSubRole" label="Designation">
                     <Select disabled={!isEditMode}>
                       {roleData.map((role) => (
                         <Option key={role.sub_role_id} value={role.sub_role_id}>{role.sub_role_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="role_id" label="Role">
+                    <Select disabled={!isEditMode}>
+                      {masterRolesData.map((role) => (
+                        <Option key={role.role_id} value={role.role_id}>{role.role_name}</Option>
                       ))}
                     </Select>
                   </Form.Item>
