@@ -178,6 +178,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
         };
     };
 
+
     const handleSubmit = async (values) => {
         setLoader(true);
         try {
@@ -202,6 +203,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
             setLoader(false);
         }
     };
+
 
     const handleCheckboxChange = (e) => {
         setCopyAddress(e.target.checked);
@@ -732,8 +734,8 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             </Button>
                         </div>
                     </Col>
-                </Row>
-            </Form>
+                </Row >
+            </Form >
         </Modal >
     );
 };

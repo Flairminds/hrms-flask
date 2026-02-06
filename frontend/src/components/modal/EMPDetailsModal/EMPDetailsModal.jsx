@@ -50,6 +50,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const [docStatus, setDocStatus] = useState([]);
   const [availableSkills, setAvailableSkills] = useState([]);
   const [isSameAddress, setIsSameAddress] = useState(false);
+  const [medicalCertFile, setMedicalCertFile] = useState(null);
 
   // Check if current user can edit (HR or Admin)
   const canEdit = user && (user.roleName === 'HR' || user.roleName === 'Admin');
@@ -270,8 +271,20 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
 
       await updateEmployeeDetails(personalEmployeeDetails.employeeId, payload);
 
+      // Upload medical certificate if file is selected
+      if (medicalCertFile) {
+        try {
+          await uploadDocument(personalEmployeeDetails.employeeId, 'medical_certificate', medicalCertFile);
+          console.log('Medical certificate uploaded successfully');
+        } catch (uploadError) {
+          console.error('Error uploading medical certificate:', uploadError);
+          message.warning('Employee updated but medical certificate upload failed');
+        }
+      }
+
       message.success('Employee details updated successfully');
       setIsEditMode(false);
+      setMedicalCertFile(null);
 
       if (refreshEmployeeData) {
         refreshEmployeeData();
@@ -501,6 +514,28 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                   <Col span={24}>
                     <Form.Item name="password" label="Change Password" extra="Leave blank to keep current password">
                       <Input.Password placeholder="Enter new password" />
+                    </Form.Item>
+                  </Col>
+                )}
+                {isEditMode && (
+                  <Col span={24}>
+                    <Divider orientation="left">Document Upload</Divider>
+                    <Form.Item label="Medical Certificate">
+                      <Upload
+                        beforeUpload={(file) => {
+                          setMedicalCertFile(file);
+                          return false; // Prevent auto-upload
+                        }}
+                        onRemove={() => setMedicalCertFile(null)}
+                        maxCount={1}
+                      >
+                        <Button icon={<UploadOutlined />}>Select Medical Certificate</Button>
+                      </Upload>
+                      {medicalCertFile && (
+                        <Text type="secondary" style={{ display: 'block', marginTop: '8px' }}>
+                          Selected: {medicalCertFile.name}
+                        </Text>
+                      )}
                     </Form.Item>
                   </Col>
                 )}

@@ -18,7 +18,8 @@ import {
     getTeamLeadList,
     getProjectNameForHR,
     getCompanyBands,
-    getCompanyRoles
+    getCompanyRoles,
+    uploadDocument
 } from '../../../services/api';
 
 const { Option } = Select;
@@ -30,6 +31,7 @@ const EditEmployeeAccordian = ({ getEmployees, visible, editingRow, setIsEditMod
     const [projectName, setProjectName] = useState([]);
     const [lobLeads, setLobLeads] = useState([]);
     const [loader, setLoader] = useState(false);
+    const [medicalCertFile, setMedicalCertFile] = useState(null);
     const [form] = Form.useForm();
     const [bandsData, setBandsData] = useState([]);
     const [roleData, setRoleData] = useState([]);
@@ -140,31 +142,43 @@ const EditEmployeeAccordian = ({ getEmployees, visible, editingRow, setIsEditMod
             }) || [];
 
             const requestData = {
-                
-                    employeeId: editingRow.employeeId,
-                    designationId: getBandId(values.designationId),
-                    subRoleId: getRoleId(values.subRoleId),
-                    lobLeadId: getLobId(values.lobLeadId),
-                    employmentStatus: values.employmentStatus,
-                    mobileNo: values.mobileNo,
-                    resumeLink: values.resumeLink,
-                    internshipEndDate: values.internshipEndDate || null,
-                    dateOfResignation: values.dateOfResignation || null,
-                    lwd: values.lwd || null,
-                    probationEndDate: values.probationEndDate || null,
-                    lwp: values.lwp,
-                    projectDetails: mappedProjectDetails
-               
+
+                employeeId: editingRow.employeeId,
+                designationId: getBandId(values.designationId),
+                subRoleId: getRoleId(values.subRoleId),
+                lobLeadId: getLobId(values.lobLeadId),
+                employmentStatus: values.employmentStatus,
+                mobileNo: values.mobileNo,
+                resumeLink: values.resumeLink,
+                internshipEndDate: values.internshipEndDate || null,
+                dateOfResignation: values.dateOfResignation || null,
+                lwd: values.lwd || null,
+                probationEndDate: values.probationEndDate || null,
+                lwp: values.lwp,
+                projectDetails: mappedProjectDetails
+
             };
 
-          // console.log("Final Payload:", JSON.stringify(requestData, null, 2));
+            // console.log("Final Payload:", JSON.stringify(requestData, null, 2));
 
             const res = await updateEmployeeDetailsByHR(requestData, editingRow.employeeId);
-           // console.log("API response:", res);
+            // console.log("API response:", res);
 
             if (res.status === 200) {
+                // Upload medical certificate if file is selected
+                if (medicalCertFile && editingRow.employeeId) {
+                    try {
+                        await uploadDocument(editingRow.employeeId, 'medical_certificate', medicalCertFile);
+                        console.log('Medical certificate uploaded successfully');
+                    } catch (uploadError) {
+                        console.error('Error uploading medical certificate:', uploadError);
+                        message.warning('Employee updated but medical certificate upload failed');
+                    }
+                }
+
                 await getEmployees();
                 message.success("Employee Details updated successfully.");
+                setMedicalCertFile(null);
                 setIsEditModalOpen(false);
                 setDetailsModal(false);
             } else {
@@ -259,7 +273,7 @@ const EditEmployeeAccordian = ({ getEmployees, visible, editingRow, setIsEditMod
                     else if (field === 'probationEndDate') label = 'Probation End Date';
                     else if (field === 'dateOfResignation') label = 'Date of Resignation';
                     else if (field === 'lwd') label = 'Last Working Day';
-                  
+
                     return (
                         <Form.Item name={field} label={label} key={field}>
                             <input
@@ -281,6 +295,14 @@ const EditEmployeeAccordian = ({ getEmployees, visible, editingRow, setIsEditMod
 
                 <Form.Item name="lwp" label="LWP (Leave Without Pay)">
                     <InputNumber style={{ width: '100%' }} placeholder="Enter LWP days" />
+                </Form.Item>
+
+                <Form.Item label="Medical Certificate">
+                    <Input
+                        type="file"
+                        onChange={(e) => setMedicalCertFile(e.target.files[0])}
+                        style={{ padding: '4px' }}
+                    />
                 </Form.Item>
 
                 <Form.List name="projectDetails">

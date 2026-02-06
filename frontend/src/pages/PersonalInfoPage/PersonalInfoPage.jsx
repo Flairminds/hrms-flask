@@ -366,6 +366,7 @@ function PersonalInfoPage() {
     { key: "pan", label: "Pan Card" },
     { key: "grad", label: "Graduation Degree" },
     { key: "resume", label: "FM Resume" },
+    { key: "medical_certificate", label: "Medical Certificate" },
   ];
 
 
@@ -634,6 +635,7 @@ function PersonalInfoPage() {
         fetchSkills={fetchSkills}
         fetchDocumentStatus={fetchDocumentStatus}
         fetchDocumentStatusDetails={fetchDocumentStatusDetails}
+        documentTypes={documentTypes}
       />
 
       <Modal

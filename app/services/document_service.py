@@ -67,7 +67,7 @@ class DocumentService:
     def get_document_status(emp_id: str) -> Dict[str, Any]:
         """Get document upload status from Azure Blob Storage."""
         docs = BlobDocumentService.list_employee_documents(emp_id)
-        doc_types = ['tenth', 'twelve', 'adhar', 'pan', 'grad', 'resume']
+        doc_types = ['tenth', 'twelve', 'adhar', 'pan', 'grad', 'resume', 'medical_certificate']
         uploaded_types = {doc['doc_type'] for doc in docs}
         
         return {
@@ -91,7 +91,8 @@ class DocumentService:
                 "pan": verification_status.get('pan'),
                 "adhar": verification_status.get('adhar'),
                 "grad": verification_status.get('grad'),
-                "resume": verification_status.get('resume')
+                "resume": verification_status.get('resume'),
+                "medical_certificate": verification_status.get('medical_certificate')
             }
         }
 

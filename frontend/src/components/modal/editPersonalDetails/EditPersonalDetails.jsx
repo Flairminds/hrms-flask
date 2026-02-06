@@ -22,7 +22,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const { Option } = Select;
 
-export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData, fetchEmployeeData, fetchSkills, fetchDocumentStatus, fetchDocumentStatusDetails }) => {
+export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData, fetchEmployeeData, fetchSkills, fetchDocumentStatus, fetchDocumentStatusDetails, documentTypes }) => {
   const [form] = Form.useForm();
   const { user } = useAuth();
   const employeeId = user?.employeeId;
@@ -330,15 +330,6 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
       setLoader(false);
     }
   };
-
-  const documentTypes = [
-    { key: "tenth", label: "10th Marksheet" },
-    { key: "twelve", label: "12th Marksheet" },
-    { key: "adhar", label: "Aadhar Card" },
-    { key: "pan", label: "Pan Card" },
-    { key: "grad", label: "Graduation Degree" },
-    { key: "resume", label: "Resume" }
-  ];
 
   const getEvaluationMessage = (score) => {
     const numScore = parseFloat(score);
