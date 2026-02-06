@@ -268,10 +268,10 @@ export const Sidebar = ({ isRole }) => {
             <span>All Document Records</span>
           </div>
 
-          <div className={`${stylesSidebar.divs} ${isActive('/system-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/system-management')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('/system-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/system-management')}>
             <ToolOutlined className={stylesSidebar.iconsSidebar} />
             <span className={stylesSidebar.info}>System Management</span>
-          </div>
+          </div> */}
         </>
       )}
 

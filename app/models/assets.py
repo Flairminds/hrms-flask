@@ -166,6 +166,6 @@ class HardwareMaintenance(BaseModel):
     maintenance_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     asset_id = db.Column(db.Integer, db.ForeignKey('hardware_assets.asset_id'), nullable=False)
     issue_description = db.Column(db.String(500))
-    maintenance_date = db.Column(db.Date, nullable=False)
+    maintenance_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(50), nullable=False)
     notes = db.Column(db.String(500))

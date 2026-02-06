@@ -164,7 +164,26 @@ class AssetService:
         Logger.info("Fetching all hardware assignments")
         
         try:
-            assignments = HardwareAssignment.query.order_by(
+            # Import Employee model
+            from ..models.hr import Employee
+            
+            # Join with HardwareAssets to get asset details and Employee for names
+            # Need to alias Employee table since we join it twice (for employee_id and assigned_by)
+            EmployeeAssigned = db.aliased(Employee)
+            EmployeeAssignedBy = db.aliased(Employee)
+            
+            assignments = db.session.query(
+                HardwareAssignment, 
+                HardwareAssets,
+                EmployeeAssigned,
+                EmployeeAssignedBy
+            ).join(
+                HardwareAssets, HardwareAssignment.asset_id == HardwareAssets.asset_id
+            ).outerjoin(
+                EmployeeAssigned, HardwareAssignment.employee_id == EmployeeAssigned.employee_id
+            ).outerjoin(
+                EmployeeAssignedBy, HardwareAssignment.assigned_by == EmployeeAssignedBy.employee_id
+            ).order_by(
                 HardwareAssignment.assignment_date.desc()
             ).all()
             
@@ -172,9 +191,16 @@ class AssetService:
                 {
                     'assignment_id': assignment.assignment_id,
                     'asset_id': assignment.asset_id,
+                    'asset_type': asset.type,
+                    'asset_brand': asset.brand,
+                    'asset_model': asset.model,
+                    'asset_serial_number': asset.serial_number,
+                    'asset_name': f"{asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
                     'employee_id': assignment.employee_id,
+                    'employee_name': f"{emp.first_name or ''} {emp.last_name or ''}".strip() if emp else assignment.employee_id,
                     'assignment_date': assignment.assignment_date.strftime('%Y-%m-%d') if assignment.assignment_date else None,
                     'assigned_by': assignment.assigned_by,
+                    'assigned_by_name': f"{emp_by.first_name or ''} {emp_by.last_name or ''}".strip() if emp_by else assignment.assigned_by,
                     'return_date': assignment.return_date.strftime('%Y-%m-%d') if assignment.return_date else None,
                     'returned_by': assignment.returned_by,
                     'status': assignment.status,
@@ -183,7 +209,7 @@ class AssetService:
                     'assignment_notes': assignment.assignment_notes,
                     'return_notes': assignment.return_notes
                 }
-                for assignment in assignments
+                for assignment, asset, emp, emp_by in assignments
             ]
             
             Logger.info("Hardware assignments fetched", count=len(assignment_list))
@@ -299,7 +325,12 @@ class AssetService:
         Logger.info("Fetching all hardware maintenance records")
         
         try:
-            records = HardwareMaintenance.query.order_by(
+            # Join with HardwareAssets to get asset details
+            records = db.session.query(
+                HardwareMaintenance, HardwareAssets
+            ).join(
+                HardwareAssets, HardwareMaintenance.asset_id == HardwareAssets.asset_id
+            ).order_by(
                 HardwareMaintenance.maintenance_date.desc()
             ).all()
             
@@ -307,12 +338,17 @@ class AssetService:
                 {
                     'maintenance_id': rec.maintenance_id,
                     'asset_id': rec.asset_id,
+                    'asset_type': asset.type,
+                    'asset_brand': asset.brand,
+                    'asset_model': asset.model,
+                    'asset_serial_number': asset.serial_number,
+                    'asset_name': f"{asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
                     'issue_description': rec.issue_description,
                     'maintenance_date': rec.maintenance_date.strftime('%Y-%m-%d') if rec.maintenance_date else None,
                     'status': rec.status,
                     'notes': rec.notes
                 }
-                for rec in records
+                for rec, asset in records
             ]
             
             Logger.info("Maintenance records fetched", count=len(maintenance_list))
@@ -335,10 +371,15 @@ class AssetService:
         Logger.info("Creating maintenance record", asset_id=maintenance_data.get('asset_id'))
         
         try:
+            # Ensure maintenance_date is set (use today if not provided)
+            maint_date = maintenance_data.get('maintenance_date')
+            if maint_date is None:
+                maint_date = date.today()
+            
             new_record = HardwareMaintenance(
                 asset_id=maintenance_data['asset_id'],
                 issue_description=maintenance_data['issue_description'],
-                maintenance_date=maintenance_data.get('maintenance_date', date.today()),
+                maintenance_date=maint_date,
                 status=maintenance_data['status'],
                 notes=maintenance_data.get('notes')
             )

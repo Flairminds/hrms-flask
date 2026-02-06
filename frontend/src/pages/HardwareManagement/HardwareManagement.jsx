@@ -253,9 +253,27 @@ const HardwareManagement = () => {
     // ============= TABLE COLUMNS =============
     const assetColumns = [
         { title: 'ID', dataIndex: 'asset_id', key: 'asset_id' },
-        { title: 'Type', dataIndex: 'type', key: 'type' },
-        { title: 'Brand', dataIndex: 'brand', key: 'brand' },
-        { title: 'Model', dataIndex: 'model', key: 'model' },
+        {
+            title: 'Type',
+            dataIndex: 'type',
+            key: 'type',
+            filters: [...new Set(assets.map(a => a.type))].map(type => ({ text: type, value: type })),
+            onFilter: (value, record) => record.type === value,
+        },
+        {
+            title: 'Brand',
+            dataIndex: 'brand',
+            key: 'brand',
+            filters: [...new Set(assets.map(a => a.brand))].filter(Boolean).map(brand => ({ text: brand, value: brand })),
+            onFilter: (value, record) => record.brand === value,
+        },
+        {
+            title: 'Model',
+            dataIndex: 'model',
+            key: 'model',
+            filters: [...new Set(assets.map(a => a.model))].filter(Boolean).map(model => ({ text: model, value: model })),
+            onFilter: (value, record) => record.model === value,
+        },
         { title: 'Serial Number', dataIndex: 'serial_number', key: 'serial_number' },
         { title: 'Status', dataIndex: 'status', key: 'status' },
         { title: 'Purchase Date', dataIndex: 'purchase_date', key: 'purchase_date' },
@@ -281,10 +299,17 @@ const HardwareManagement = () => {
 
     const assignmentColumns = [
         { title: 'ID', dataIndex: 'assignment_id', key: 'assignment_id' },
-        { title: 'Asset ID', dataIndex: 'asset_id', key: 'asset_id' },
-        { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
+        {
+            title: 'Asset',
+            dataIndex: 'asset_name',
+            key: 'asset_name',
+            width: 250,
+            filters: [...new Set(assignments.map(a => a.asset_name))].filter(Boolean).map(name => ({ text: name, value: name })),
+            onFilter: (value, record) => record.asset_name === value,
+        },
+        { title: 'Employee', dataIndex: 'employee_name', key: 'employee_name' },
         { title: 'Assigned Date', dataIndex: 'assignment_date', key: 'assignment_date' },
-        { title: 'Assigned By', dataIndex: 'assigned_by', key: 'assigned_by' },
+        { title: 'Assigned By', dataIndex: 'assigned_by_name', key: 'assigned_by_name' },
         { title: 'Return Date', dataIndex: 'return_date', key: 'return_date' },
         { title: 'Status', dataIndex: 'status', key: 'status' },
         {
@@ -308,7 +333,7 @@ const HardwareManagement = () => {
 
     const maintenanceColumns = [
         { title: 'ID', dataIndex: 'maintenance_id', key: 'maintenance_id' },
-        { title: 'Asset ID', dataIndex: 'asset_id', key: 'asset_id' },
+        { title: 'Asset', dataIndex: 'asset_name', key: 'asset_name', width: 250 },
         { title: 'Issue', dataIndex: 'issue_description', key: 'issue_description' },
         { title: 'Date', dataIndex: 'maintenance_date', key: 'maintenance_date' },
         { title: 'Status', dataIndex: 'status', key: 'status' },
@@ -360,7 +385,7 @@ const HardwareManagement = () => {
                         onClick={handleAddAssignment}
                         style={{ marginBottom: 16 }}
                     >
-                        Assign Hardware
+                        Assign Asset
                     </Button>
                     <Table
                         columns={assignmentColumns}
@@ -394,45 +419,49 @@ const HardwareManagement = () => {
                 open={assetModalVisible}
                 onCancel={() => setAssetModalVisible(false)}
                 onOk={() => assetForm.submit()}
+                width={700}
+                style={{ top: 20 }}
             >
                 <Form form={assetForm} layout="vertical" onFinish={handleAssetSubmit}>
-                    <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="Laptop">Laptop</Option>
-                            <Option value="Desktop">Desktop</Option>
-                            <Option value="Monitor">Monitor</Option>
-                            <Option value="Keyboard">Keyboard</Option>
-                            <Option value="Mouse">Mouse</Option>
-                            <Option value="Headset">Headset</Option>
-                            <Option value="Other">Other</Option>
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="brand" label="Brand">
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="model" label="Model">
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="serial_number" label="Serial Number">
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="Available">Available</Option>
-                            <Option value="Assigned">Assigned</Option>
-                            <Option value="Under Maintenance">Under Maintenance</Option>
-                            <Option value="Retired">Retired</Option>
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="purchase_date" label="Purchase Date">
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="warranty_till" label="Warranty Till">
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="notes" label="Notes">
-                        <TextArea rows={3} />
-                    </Form.Item>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                        <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+                            <Select>
+                                <Option value="Laptop">Laptop</Option>
+                                <Option value="Desktop">Desktop</Option>
+                                <Option value="Monitor">Monitor</Option>
+                                <Option value="Keyboard">Keyboard</Option>
+                                <Option value="Mouse">Mouse</Option>
+                                <Option value="Headset">Headset</Option>
+                                <Option value="Other">Other</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="brand" label="Brand">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="model" label="Model">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="serial_number" label="Serial Number">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                            <Select>
+                                <Option value="Available">Available</Option>
+                                <Option value="Assigned">Assigned</Option>
+                                <Option value="Under Maintenance">Under Maintenance</Option>
+                                <Option value="Retired">Retired</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="purchase_date" label="Purchase Date">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                        <Form.Item name="warranty_till" label="Warranty Till">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                        <Form.Item name="notes" label="Notes">
+                            <TextArea rows={3} />
+                        </Form.Item>
+                    </div>
                 </Form>
             </Modal>
 
@@ -442,62 +471,78 @@ const HardwareManagement = () => {
                 open={assignmentModalVisible}
                 onCancel={() => setAssignmentModalVisible(false)}
                 onOk={() => assignmentForm.submit()}
+                width={700}
+                style={{ top: 20 }}
             >
                 <Form form={assignmentForm} layout="vertical" onFinish={handleAssignmentSubmit}>
-                    <Form.Item name="asset_id" label="Asset" rules={[{ required: true }]}>
-                        <Select showSearch optionFilterProp="children">
-                            {assets.map(asset => (
-                                <Option key={asset.asset_id} value={asset.asset_id}>
-                                    {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="employee_id" label="Employee" rules={[{ required: true }]}>
-                        <Select showSearch optionFilterProp="children">
-                            {employees.map(emp => (
-                                <Option key={emp.employee_id} value={emp.employee_id}>
-                                    {emp.employee_id} - {emp.first_name} {emp.last_name}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="assigned_by" label="Assigned By" rules={[{ required: true }]}>
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="assignment_date" label="Assignment Date">
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="status" label="Status" initialValue="Active">
-                        <Select>
-                            <Option value="Active">Active</Option>
-                            <Option value="Returned">Returned</Option>
-                            <Option value="Lost">Lost</Option>
-                            <Option value="Damaged">Damaged</Option>
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="condition_at_assignment" label="Condition at Assignment">
-                        <TextArea rows={2} />
-                    </Form.Item>
-                    <Form.Item name="assignment_notes" label="Assignment Notes">
-                        <TextArea rows={2} />
-                    </Form.Item>
-                    {editingAssignment && (
-                        <>
-                            <Form.Item name="return_date" label="Return Date">
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                            <Form.Item name="returned_by" label="Returned By">
-                                <Input />
-                            </Form.Item>
-                            <Form.Item name="condition_at_return" label="Condition at Return">
-                                <TextArea rows={2} />
-                            </Form.Item>
-                            <Form.Item name="return_notes" label="Return Notes">
-                                <TextArea rows={2} />
-                            </Form.Item>
-                        </>
-                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <Form.Item name="asset_id" label="Asset" rules={[{ required: true }]}>
+                            <Select showSearch optionFilterProp="children">
+                                {assets.map(asset => (
+                                    <Option key={asset.asset_id} value={asset.asset_id}>
+                                        {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="employee_id" label="Employee" rules={[{ required: true }]}>
+                            <Select showSearch optionFilterProp="children">
+                                {employees.map(emp => (
+                                    <Option key={emp.employeeId} value={emp.employeeId}>
+                                        {emp.employeeId} - {emp.employeeName}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="assigned_by" label="Assigned By" rules={[{ required: true }]}>
+                            <Select showSearch optionFilterProp="children">
+                                {employees.map(emp => (
+                                    <Option key={`assigned-${emp.employeeId}`} value={emp.employeeId}>
+                                        {emp.employeeId} - {emp.employeeName}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="assignment_date" label="Assignment Date">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                        <Form.Item name="status" label="Status" initialValue="Active">
+                            <Select>
+                                <Option value="Active">Active</Option>
+                                <Option value="Returned">Returned</Option>
+                                <Option value="Lost">Lost</Option>
+                                <Option value="Damaged">Damaged</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="condition_at_assignment" label="Condition at Assignment">
+                            <TextArea rows={2} />
+                        </Form.Item>
+                        <Form.Item name="assignment_notes" label="Assignment Notes">
+                            <TextArea rows={2} />
+                        </Form.Item>
+                        {editingAssignment && (
+                            <>
+                                <Form.Item name="return_date" label="Return Date">
+                                    <DatePicker style={{ width: '100%' }} />
+                                </Form.Item>
+                                <Form.Item name="returned_by" label="Returned By">
+                                    <Select showSearch optionFilterProp="children">
+                                        {employees.map(emp => (
+                                            <Option key={`returned-${emp.employeeId}`} value={emp.employeeId}>
+                                                {emp.employeeId} - {emp.employeeName}
+                                            </Option>
+                                        ))}
+                                    </Select>
+                                </Form.Item>
+                                <Form.Item name="condition_at_return" label="Condition at Return">
+                                    <TextArea rows={2} />
+                                </Form.Item>
+                                <Form.Item name="return_notes" label="Return Notes">
+                                    <TextArea rows={2} />
+                                </Form.Item>
+                            </>
+                        )}
+                    </div>
                 </Form>
             </Modal>
 
@@ -507,34 +552,38 @@ const HardwareManagement = () => {
                 open={maintenanceModalVisible}
                 onCancel={() => setMaintenanceModalVisible(false)}
                 onOk={() => maintenanceForm.submit()}
+                width={700}
+                style={{ top: 20 }}
             >
                 <Form form={maintenanceForm} layout="vertical" onFinish={handleMaintenanceSubmit}>
-                    <Form.Item name="asset_id" label="Asset" rules={[{ required: true }]}>
-                        <Select showSearch optionFilterProp="children">
-                            {assets.map(asset => (
-                                <Option key={asset.asset_id} value={asset.asset_id}>
-                                    {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="issue_description" label="Issue Description" rules={[{ required: true }]}>
-                        <TextArea rows={3} />
-                    </Form.Item>
-                    <Form.Item name="maintenance_date" label="Maintenance Date">
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="Pending">Pending</Option>
-                            <Option value="In Progress">In Progress</Option>
-                            <Option value="Completed">Completed</Option>
-                            <Option value="Cancelled">Cancelled</Option>
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="notes" label="Notes">
-                        <TextArea rows={3} />
-                    </Form.Item>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <Form.Item name="asset_id" label="Asset" rules={[{ required: true }]}>
+                            <Select showSearch optionFilterProp="children">
+                                {assets.map(asset => (
+                                    <Option key={asset.asset_id} value={asset.asset_id}>
+                                        {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="issue_description" label="Issue Description" rules={[{ required: true }]}>
+                            <TextArea rows={3} />
+                        </Form.Item>
+                        <Form.Item name="maintenance_date" label="Maintenance Date">
+                            <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                        <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                            <Select>
+                                <Option value="Pending">Pending</Option>
+                                <Option value="In Progress">In Progress</Option>
+                                <Option value="Completed">Completed</Option>
+                                <Option value="Cancelled">Cancelled</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="notes" label="Notes">
+                            <TextArea rows={3} />
+                        </Form.Item>
+                    </div>
                 </Form>
             </Modal>
         </div>
