@@ -18,6 +18,7 @@ class ProjectService:
                 Project.client,
                 Project.start_date,
                 Project.end_date,
+                Project.project_status,
                 Project.lead_by,
                 func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name')
             ).outerjoin(
@@ -32,6 +33,7 @@ class ProjectService:
                     'client': p.client,
                     'start_date': p.start_date.strftime('%Y-%m-%d') if p.start_date else None,
                     'end_date': p.end_date.strftime('%Y-%m-%d') if p.end_date else None,
+                    'project_status': p.project_status,
                     'lead_by': p.lead_by,
                     'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else ''
                 } for p in projects
@@ -58,6 +60,7 @@ class ProjectService:
                 description=data.get('description'),
                 client=data.get('client'),
                 lead_by=data.get('lead_by'),
+                project_status=data.get('project_status', 'Active'),
                 start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
                 end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
             )
@@ -80,6 +83,7 @@ class ProjectService:
             project.project_name = data.get('project_name', project.project_name)
             project.description = data.get('description', project.description)
             project.client = data.get('client', project.client)
+            project.project_status = data.get('project_status', project.project_status)
             project.lead_by = data.get('lead_by', project.lead_by)
             
             if 'start_date' in data:

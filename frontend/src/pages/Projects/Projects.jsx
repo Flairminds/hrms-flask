@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Popconfirm, Tooltip, Card } from 'antd';
+import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { getProjects, deleteProject } from '../../services/api';
 import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
@@ -73,8 +73,28 @@ const Projects = () => {
             onFilter: (value, record) => record.client === value,
         },
         {
+            title: 'Status',
+            dataIndex: 'project_status',
+            filters: [
+                { text: 'Active', value: 'Active' },
+                { text: 'Future Prospect', value: 'Future Prospect' },
+                { text: 'Closed', value: 'Closed' },
+                { text: 'On-Hold', value: 'On-Hold' }
+            ],
+            onFilter: (value, record) => record.project_status === value,
+            render: (status) => {
+                let color = 'geekblue';
+                if (status === 'Active') color = 'green';
+                if (status === 'Closed') color = 'red';
+                if (status === 'On-Hold') color = 'orange';
+                return <Tag color={color}>{status || 'Active'}</Tag>;
+            }
+        },
+        {
             title: 'Lead',
             dataIndex: 'lead_name',
+            filters: [...new Set(projects.map(p => p.lead_name).filter(Boolean))].sort().map(l => ({ text: l, value: l })),
+            onFilter: (value, record) => record.lead_name === value,
         },
         {
             title: 'Dates',

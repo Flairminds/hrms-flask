@@ -307,6 +307,7 @@ class Project(BaseModel):
     lead_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date) # Optional
+    project_status = db.Column(db.String(50), nullable=False, default='Active')
 
 class ProjectHistory(BaseModel):
     __tablename__ = 'project_history'
@@ -318,6 +319,7 @@ class ProjectHistory(BaseModel):
     lead_by = db.Column(db.String(20))
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
+    project_status = db.Column(db.String(50))
     action = db.Column(db.String(10), nullable=False)  # INSERT, UPDATE, DELETE
     modified_by = db.Column(db.String(50))  # User ID or 'System'
     modified_on = db.Column(db.DateTime, server_default=db.func.now())
@@ -341,6 +343,7 @@ def register_project_history_listeners():
                  lead_by=target.lead_by,
                  start_date=target.start_date,
                  end_date=target.end_date,
+                 project_status=target.project_status,
                  action=action,
                  modified_by=user_id
              )
@@ -354,6 +357,7 @@ def register_project_history_listeners():
                      'lead_by': history.lead_by,
                      'start_date': history.start_date,
                      'end_date': history.end_date,
+                     'project_status': history.project_status,
                      'action': history.action,
                      'modified_by': history.modified_by
                  }

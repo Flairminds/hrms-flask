@@ -40,6 +40,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                     project_name: project.project_name,
                     description: project.description,
                     client: project.client,
+                    project_status: project.project_status,
                     lead_by: project.lead_by,
                     start_date: project.start_date ? moment(project.start_date) : null,
                     end_date: project.end_date ? moment(project.end_date) : null,
@@ -216,6 +217,16 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                                     placeholder="Select Project Lead"
                                                 >
                                                     {employees.map(e => <Option key={e.employeeId} value={e.employeeId}>{e.employeeName}</Option>)}
+                                                </Select>
+                                            </Form.Item>
+                                        </Col>
+                                        <Col xs={24} md={8}>
+                                            <Form.Item name="project_status" label="Status" initialValue="Active">
+                                                <Select>
+                                                    <Option value="Active">Active</Option>
+                                                    <Option value="Future Prospect">Future Prospect</Option>
+                                                    <Option value="Closed">Closed</Option>
+                                                    <Option value="On-Hold">On-Hold</Option>
                                                 </Select>
                                             </Form.Item>
                                         </Col>
