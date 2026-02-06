@@ -1,9 +1,193 @@
-from sqlalchemy import text
-from ..models.hr import db, Project
+from sqlalchemy import text, func, and_
+from ..models.hr import db, Project, ProjectAllocation, Employee, ProjectHistory, ProjectAllocationHistory
 from ..utils.logger import Logger
+from datetime import datetime
 
 class ProjectService:
     """Service class for project management operations."""
+    
+    @staticmethod
+    def get_all_projects():
+        """Retrieves all projects with lead information and details."""
+        try:
+            # Using ORM for cleaner queries
+            projects = db.session.query(
+                Project.project_id,
+                Project.project_name,
+                Project.description,
+                Project.client,
+                Project.start_date,
+                Project.end_date,
+                Project.lead_by,
+                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name')
+            ).outerjoin(
+                Employee, Project.lead_by == Employee.employee_id
+            ).all()
+            
+            return [
+                {
+                    'project_id': p.project_id,
+                    'project_name': p.project_name,
+                    'description': p.description,
+                    'client': p.client,
+                    'start_date': p.start_date.strftime('%Y-%m-%d') if p.start_date else None,
+                    'end_date': p.end_date.strftime('%Y-%m-%d') if p.end_date else None,
+                    'lead_by': p.lead_by,
+                    'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else ''
+                } for p in projects
+            ]
+        except Exception as e:
+            Logger.error("Error fetching all projects", error=str(e))
+            return []
+
+    @staticmethod
+    def get_project_by_id(project_id):
+        """Retrieves a single project by ID."""
+        try:
+            return Project.query.filter_by(project_id=project_id).first()
+        except Exception as e:
+            Logger.error("Error fetching project", project_id=project_id, error=str(e))
+            return None
+
+    @staticmethod
+    def create_project(data):
+        """Creates a new project."""
+        try:
+            new_project = Project(
+                project_name=data.get('project_name'),
+                description=data.get('description'),
+                client=data.get('client'),
+                lead_by=data.get('lead_by'),
+                start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
+                end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
+            )
+            db.session.add(new_project)
+            db.session.commit()
+            return new_project.project_id
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error creating project", error=str(e))
+            raise
+
+    @staticmethod
+    def update_project(project_id, data):
+        """Updates an existing project."""
+        try:
+            project = Project.query.get(project_id)
+            if not project:
+                return False
+            
+            project.project_name = data.get('project_name', project.project_name)
+            project.description = data.get('description', project.description)
+            project.client = data.get('client', project.client)
+            project.lead_by = data.get('lead_by', project.lead_by)
+            
+            if 'start_date' in data:
+                project.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data['start_date'] else None
+            if 'end_date' in data:
+                project.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data['end_date'] else None
+
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating project", project_id=project_id, error=str(e))
+            raise
+
+    @staticmethod
+    def get_allocations(project_id):
+        """Retrieves all allocations for a specific project."""
+        try:
+            allocations = db.session.query(
+                ProjectAllocation,
+                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('emp_name')
+            ).join(
+                Employee, ProjectAllocation.employee_id == Employee.employee_id
+            ).filter(
+                ProjectAllocation.project_id == project_id
+            ).all()
+            
+            return [
+                {
+                    'employee_id': a.ProjectAllocation.employee_id,
+                    'emp_name': ' '.join(a.emp_name.split()),
+                    'project_id': a.ProjectAllocation.project_id,
+                    'project_allocation': float(a.ProjectAllocation.project_allocation),
+                    'project_billing': float(a.ProjectAllocation.project_billing),
+                    'is_billing': a.ProjectAllocation.is_billing,
+                    'employee_role': a.ProjectAllocation.employee_role,
+                    'is_trainee': a.ProjectAllocation.is_trainee,
+                    'comments': a.ProjectAllocation.comments,
+                    'start_date': a.ProjectAllocation.start_date.strftime('%Y-%m-%d') if a.ProjectAllocation.start_date else None,
+                    'end_date': a.ProjectAllocation.end_date.strftime('%Y-%m-%d') if a.ProjectAllocation.end_date else None,
+                    'relevant_skills': a.ProjectAllocation.relevant_skills
+                } for a in allocations
+            ]
+        except Exception as e:
+            Logger.error("Error fetching allocations", project_id=project_id, error=str(e))
+            return []
+
+    @staticmethod
+    def delete_allocation(project_id, employee_id):
+         """Deletes a project allocation."""
+         try:
+            allocation = ProjectAllocation.query.filter_by(project_id=project_id, employee_id=employee_id).first()
+            if allocation:
+                db.session.delete(allocation)
+                db.session.commit()
+                return True
+            return False
+         except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting allocation", project_id=project_id, employee_id=employee_id, error=str(e))
+            raise
+
+    @staticmethod
+    def manage_allocation(data):
+        """Creates or Updates an allocation."""
+        try:
+            project_id = data.get('project_id')
+            employee_id = data.get('employee_id')
+            
+            # Check if allocation exists
+            allocation = ProjectAllocation.query.filter_by(
+                project_id=project_id, 
+                employee_id=employee_id
+            ).first()
+            
+            is_new = False
+            if not allocation:
+                is_new = True
+                allocation = ProjectAllocation(
+                    project_id=project_id, 
+                    employee_id=employee_id
+                )
+            
+            # Update fields
+            allocation.project_allocation = data.get('project_allocation', 0)
+            allocation.project_billing = data.get('project_billing', 0) # Legacy support
+            allocation.is_billing = data.get('is_billing', False)
+            allocation.employee_role = data.get('employee_role')
+            allocation.is_trainee = data.get('is_trainee', False)
+            allocation.comments = data.get('comments')
+            allocation.relevant_skills = data.get('relevant_skills')
+            
+            if 'start_date' in data and data['start_date']:
+                 allocation.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            if 'end_date' in data and data['end_date']:
+                 allocation.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            else:
+                 allocation.end_date = None
+
+            if is_new:
+                db.session.add(allocation)
+            
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error managing allocation", error=str(e))
+            raise
     
     @staticmethod
     def get_projects():
@@ -47,106 +231,4 @@ class ProjectService:
             Logger.error("Error deleting project", project_id=project_id, error=str(e))
             raise
 
-    # ============= NEW METHODS FROM C# MIGRATION =============
-
-    @staticmethod
-    def get_all_projects():
-        """Retrieves all projects with lead information via employee JOIN."""
-        try:
-            query = text("""
-                SELECT p.project_name, p.client, 
-                e.first_name + ' ' + ISNULL(e.middle_name, '') + ' ' + e.last_name AS lead_name,
-                p.lead_by
-                FROM project p 
-                JOIN employee e ON p.lead_by = e.employee_id
-            """)
-            result = db.session.execute(query).fetchall()
-            return [
-                {
-                    'project_name': row[0],
-                    'client': row[1],
-                    'lead_name': row[2],
-                    'lead_by': row[3]
-                } for row in result
-            ]
-        except Exception as e:
-            Logger.error("Error fetching all projects", error=str(e))
-            return []
-
-    @staticmethod
-    def get_project_names():
-        """Retrieves project IDs and names for dropdowns and autocomplete."""
-        try:
-            query = text("SELECT project_id, project_name FROM project")
-            result = db.session.execute(query).fetchall()
-            return [
-                {
-                    'project_id': row[0],
-                    'project_name': row[1]
-                } for row in result
-            ]
-        except Exception as e:
-            Logger.error("Error fetching project names", error=str(e))
-            return []
-
-    @staticmethod
-    def insert_project(project_name, client, lead_by):
-        """Inserts a new project and returns the auto-generated project ID."""
-        try:
-            query = text("""
-                INSERT INTO project (project_name, client, lead_by)
-                VALUES (:project_name, :client, :lead_by);
-                SELECT CAST(SCOPE_IDENTITY() as int);
-            """)
-            result = db.session.execute(query, {
-                'project_name': project_name,
-                'client': client,
-                'lead_by': lead_by
-            })
-            db.session.commit()
-            # Get the inserted ID
-            project_id = result.scalar()
-            return project_id
-        except Exception as e:
-            db.session.rollback()
-            Logger.error("Error inserting project", error=str(e), project_name=project_name)
-            return None
-
-    @staticmethod
-    def update_project(project_id: int, project_name: str = None, client: str = None, lead_by: str = None) -> int:
-        """
-        Updates project with selective field validation.
-        Returns 1 on success, -1 if project not found.
-        """
-        Logger.info("Updating project details", project_id=project_id)
-        
-        try:
-            # 1. Fetch project and check existence
-            project = Project.query.filter_by(project_id=project_id).first()
-            if not project:
-                Logger.warning("Project not found for update", project_id=project_id)
-                return -1
-            
-            # 2. Selective Update Logic (migrated from legacy stored procedure logic)
-            # Conditions: IS NOT NULL AND != '' AND != 'string'
-            def is_valid_update(val):
-                return val is not None and str(val).strip() != '' and str(val).lower() != 'string'
-
-            if is_valid_update(project_name):
-                project.project_name = project_name
-                
-            if is_valid_update(client):
-                project.client = client
-                
-            if is_valid_update(lead_by):
-                project.lead_by = lead_by
-            
-            db.session.commit()
-            Logger.info("Project details updated successfully", project_id=project_id)
-            return 1
-            
-        except Exception as e:
-            db.session.rollback()
-            Logger.critical("Error updating project", project_id=project_id, error=str(e))
-            raise e
 

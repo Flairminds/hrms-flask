@@ -24,7 +24,8 @@ import {
   FileTextOutlined,
   LogoutOutlined,
   LaptopOutlined,
-  ContainerOutlined
+  ContainerOutlined,
+  ProjectOutlined
 } from '@ant-design/icons';
 import FMLogo from '../../assets/login/FMLogonew.png';
 import axiosInstance, { getWarningCount } from '../../services/api';
@@ -194,6 +195,10 @@ export const Sidebar = ({ isRole }) => {
           <div className={`${stylesSidebar.divs} ${isActive('/leave') ? stylesSidebar.active : ''}`} onClick={() => navigate('/leave')}>
             <CalendarOutlined className={stylesSidebar.iconsSidebar} />
             <span>Leave Management</span>
+          </div>
+          <div className={`${stylesSidebar.divs} ${isActive('/projects') ? stylesSidebar.active : ''}`} onClick={() => navigate('/projects')}>
+            <ProjectOutlined className={stylesSidebar.iconsSidebar} />
+            <span>Projects</span>
           </div>
         </>
       )}

@@ -5,7 +5,7 @@ import Role from '../../components/Role/Role';
 import Band from '../../components/Band/Band';
 import Holiday from '../../components/Holiday/Holiday';
 import TeamLead from '../../components/TeamLead/TeamLead';
-import Projects from '../../components/Projects/Projects';
+import Projects from '../../pages/Projects/Projects';
 import SkillsAssessment from '../../components/SkillsAssessment/SkillsAssessment';
 import CapabilityDevelopmentLead from '../CapabilityDevelopmentLead/CapabilityDevelopmentLead';
 
@@ -17,7 +17,7 @@ const MasterHR = () => {
             case 'Lob':
                 return <Lob />;
             case 'Role':
-                return <Role/>;
+                return <Role />;
             case 'Band':
                 return <Band />;
             case 'Holiday List':
@@ -30,7 +30,7 @@ const MasterHR = () => {
                 return <SkillsAssessment />;
             case 'Capability Development Lead':
                 return <CapabilityDevelopmentLead />;
-    
+
             default:
                 return <Lob />;
         }
@@ -49,32 +49,32 @@ const MasterHR = () => {
                     className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Role' ? styleMasterHrLeave.activeTab : ''}`}
                     onClick={() => setActiveTab('Role')}
                 >
-                   Role
+                    Role
                 </button>
                 <button
                     className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Band' ? styleMasterHrLeave.activeTab : ''}`}
                     onClick={() => setActiveTab('Band')}
                 >
-                  Band
+                    Band
                 </button>
                 <button
                     className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Holiday List' ? styleMasterHrLeave.activeTab : ''}`}
                     onClick={() => setActiveTab('Holiday List')}
                 >
-                   Holiday List
+                    Holiday List
                 </button>
                 <button
                     className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Team Lead' ? styleMasterHrLeave.activeTab : ''}`}
                     onClick={() => setActiveTab('Team Lead')}
                 >
-                  Team Lead
+                    Team Lead
                 </button>
 
                 <button
                     className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Projects' ? styleMasterHrLeave.activeTab : ''}`}
                     onClick={() => setActiveTab('Projects')}
                 >
-                  Projects
+                    Projects
                 </button>
 
                 <button

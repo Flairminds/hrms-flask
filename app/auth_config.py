@@ -15,6 +15,20 @@ ROLE_PERMISSIONS = {
     },
     
     # ===========================
+    # Project Module - Project & Allocation Management
+    # ===========================
+    "project": {
+        "get_projects": ["Admin", "HR", "Lead", "Employee"],
+        "get_project": ["Admin", "HR", "Lead", "Employee"],
+        "add_project": ["Admin", "HR"],
+        "update_project": ["Admin", "HR"],
+        "delete_project": ["Admin", "HR"],
+        "get_allocations": ["Admin", "HR", "Lead", "Employee"],
+        "manage_allocation": ["Admin", "HR"],
+        "delete_allocation": ["Admin", "HR"]
+    },
+
+    # ===========================
     # HR Module - Employee Management
     # ===========================
     "hr": {

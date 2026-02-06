@@ -302,8 +302,69 @@ class Project(BaseModel):
     __tablename__ = 'project'
     project_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     project_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
     client = db.Column(db.String(50))
     lead_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date) # Optional
+
+class ProjectHistory(BaseModel):
+    __tablename__ = 'project_history'
+    history_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer)
+    project_name = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    client = db.Column(db.String(50))
+    lead_by = db.Column(db.String(20))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    action = db.Column(db.String(10), nullable=False)  # INSERT, UPDATE, DELETE
+    modified_by = db.Column(db.String(50))  # User ID or 'System'
+    modified_on = db.Column(db.DateTime, server_default=db.func.now())
+
+def register_project_history_listeners():
+     if not _listeners_registered:
+        from sqlalchemy import inspect
+        
+        def log_project_change(mapper, connection, target, action):
+             # Basic implementation that logs changes. 
+             # In a real app with Flask-Login, we'd get current_user here.
+             # For now, we'll try to get it if available, else system.
+             user_id = 'System'
+             # Note: Accessing flask global 'g' might fail if outside context
+             
+             history = ProjectHistory(
+                 project_id=target.project_id,
+                 project_name=target.project_name,
+                 description=target.description,
+                 client=target.client,
+                 lead_by=target.lead_by,
+                 start_date=target.start_date,
+                 end_date=target.end_date,
+                 action=action,
+                 modified_by=user_id
+             )
+             connection.execute(
+                 ProjectHistory.__table__.insert(),
+                 {
+                     'project_id': history.project_id,
+                     'project_name': history.project_name,
+                     'description': history.description,
+                     'client': history.client,
+                     'lead_by': history.lead_by,
+                     'start_date': history.start_date,
+                     'end_date': history.end_date,
+                     'action': history.action,
+                     'modified_by': history.modified_by
+                 }
+             )
+
+        event.listen(Project, 'after_insert', lambda m, c, t: log_project_change(m, c, t, 'INSERT'))
+        event.listen(Project, 'after_update', lambda m, c, t: log_project_change(m, c, t, 'UPDATE'))
+        event.listen(Project, 'after_delete', lambda m, c, t: log_project_change(m, c, t, 'DELETE'))
+
+# Register immediately
+register_project_history_listeners()
 
 
 class ProjectList(BaseModel):
@@ -547,13 +608,69 @@ class ProjectAllocation(BaseModel):
     project_id = db.Column(db.Integer, primary_key=True)
     project_allocation = db.Column(db.Numeric(10, 2), nullable=False)
     project_billing = db.Column(db.Numeric(10, 2), nullable=False)
+    is_billing = db.Column(db.Boolean, default=False)
     employee_role = db.Column(db.String(50))
+    is_trainee = db.Column(db.Boolean, default=False)
+    comments = db.Column(db.Text)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date)
+    relevant_skills = db.Column(db.Text)
     
     __table_args__ = (
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
         db.ForeignKeyConstraint(['project_id'], ['project.project_id']),
         {}
     )
+
+class ProjectAllocationHistory(BaseModel):
+    __tablename__ = 'project_allocation_history'
+    history_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20))
+    project_id = db.Column(db.Integer)
+    project_allocation = db.Column(db.Numeric(10, 2))
+    project_billing = db.Column(db.Numeric(10, 2))
+    is_billing = db.Column(db.Boolean)
+    employee_role = db.Column(db.String(50))
+    is_trainee = db.Column(db.Boolean)
+    comments = db.Column(db.Text)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    relevant_skills = db.Column(db.Text)
+    action = db.Column(db.String(10), nullable=False)
+    modified_by = db.Column(db.String(50))
+    modified_on = db.Column(db.DateTime, server_default=db.func.now())
+
+def register_allocation_history_listeners():
+     if not _listeners_registered:
+
+        def log_allocation_change(mapper, connection, target, action):
+             user_id = 'System'
+             
+             connection.execute(
+                 ProjectAllocationHistory.__table__.insert(),
+                 {
+                     'employee_id': target.employee_id,
+                     'project_id': target.project_id,
+                     'project_allocation': target.project_allocation,
+                     'project_billing': target.project_billing,
+                     'is_billing': target.is_billing,
+                     'employee_role': target.employee_role,
+                     'is_trainee': target.is_trainee,
+                     'comments': target.comments,
+                     'start_date': target.start_date,
+                     'end_date': target.end_date,
+                     'relevant_skills': target.relevant_skills,
+                     'action': action,
+                     'modified_by': user_id
+                 }
+             )
+
+        event.listen(ProjectAllocation, 'after_insert', lambda m, c, t: log_allocation_change(m, c, t, 'INSERT'))
+        event.listen(ProjectAllocation, 'after_update', lambda m, c, t: log_allocation_change(m, c, t, 'UPDATE'))
+        event.listen(ProjectAllocation, 'after_delete', lambda m, c, t: log_allocation_change(m, c, t, 'DELETE'))
+
+# Register immediately
+register_allocation_history_listeners()
 
 
 class CapabilityDevelopmentLead(BaseModel):

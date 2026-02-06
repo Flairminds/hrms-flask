@@ -399,24 +399,24 @@ export const getAllEmployeeSkills = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/get-all-skills`);
 };
 
-// Gets the list of all projects.
-export const getProjectsDetails = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getallprojectdetails`);
-  return res;
-};
-
-// Adds a new project to the company.
-export const addProjects = (payload) => {
-  const res = axiosInstance.post(`${API_BASE_URL}/HRFunctionality/AddProject`, payload)
-  return res;
-}
-
-// Updates a project's details.
-export const updateProject = (payload, projectId) => {
-  const res = axiosInstance.put(`${API_BASE_URL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
-  );
-  return res;
-}
+// // Gets the list of all projects.
+// export const getProjectsDetails = () => {
+//   const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getallprojectdetails`);
+//   return res;
+// };
+// 
+// // Adds a new project to the company.
+// export const addProjects = (payload) => {
+//   const res = axiosInstance.post(`${API_BASE_URL}/HRFunctionality/AddProject`, payload)
+//   return res;
+// }
+// 
+// // Updates a project's details.
+// // export const updateProject = (payload, projectId) => {
+// //   const res = axiosInstance.put(`${API_BASE_URL}/HRFunctionality/UpdateProjectDetails/${projectId}`, payload
+// //   );
+// //   return res;
+// // }
 
 // Gets the roles of an employee.
 export const getEmployeeRoles = (employeeId) => {
@@ -683,8 +683,9 @@ export const sendEvaluatorReminder = (empId, evaluatorIds) => {
 // }
 
 // 10.Get Employee List : Retrieves a list of all employees.
+// 10.Get Employee List : Retrieves a list of all employees.
 export const getEmployeeList = () => {
-  const res = axiosInstance.get(`https://hrms.flairminds.com/api/HRFunctionality/GetAllEmployees`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-all-employees`)
   return res
 }
 
@@ -991,3 +992,46 @@ export const updateEmployeeDetails = (employeeId, data) => {
 };
 
 export default axiosInstance;
+// ==========================
+// Project and Allocation APIs
+// ==========================
+
+// Get all projects
+export const getProjects = () => {
+  return axiosInstance.get(`${API_BASE_URL}/project/projects`);
+};
+
+// Get single project
+export const getProject = (projectId) => {
+  return axiosInstance.get(`${API_BASE_URL}/project/projects/${projectId}`);
+};
+
+// Add new project
+export const addProject = (projectData) => {
+  return axiosInstance.post(`${API_BASE_URL}/project/projects`, projectData);
+};
+
+// Update project
+export const updateProject = (projectId, projectData) => {
+  return axiosInstance.put(`${API_BASE_URL}/project/projects/${projectId}`, projectData);
+};
+
+// Delete project
+export const deleteProject = (projectId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/project/projects/${projectId}`);
+};
+
+// Get allocations for a project
+export const getProjectAllocations = (projectId) => {
+  return axiosInstance.get(`${API_BASE_URL}/project/projects/${projectId}/allocations`);
+};
+
+// Manage allocation (Add/Update)
+export const manageAllocation = (allocationData) => {
+  return axiosInstance.post(`${API_BASE_URL}/project/projects/allocations`, allocationData);
+};
+
+// Delete allocation
+export const deleteAllocation = (projectId, employeeId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/project/projects/${projectId}/allocations/${employeeId}`);
+};

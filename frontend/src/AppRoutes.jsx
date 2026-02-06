@@ -30,6 +30,7 @@ import AssignmentsPage from "./pages/AssignmentsPage/AssignmentsPage.jsx";
 import MaintenancePage from "./pages/MaintenanceManagementPage/MaintenancePage.jsx";
 import SystemManagementPage from './pages/systemManagement/SystemManagementPage.jsx';
 import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
+import Projects from './pages/Projects/Projects.jsx';
 
 function AppRoutes() {
     const { user, isAuthenticated } = useAuth();
@@ -79,6 +80,7 @@ function AppRoutes() {
                 <Route path="Assignments" element={<AssignmentsPage />} />
                 <Route path="Maintenance" element={<MaintenancePage />} />
                 <Route path="system-management" element={<SystemManagementPage />} />
+                <Route path="projects" element={<Projects />} />
                 <Route path="*" element={<span>404 Not Found</span>} />
             </Route>
         </Routes>
