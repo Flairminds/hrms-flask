@@ -231,6 +231,10 @@ export const Sidebar = ({ isRole }) => {
             <ContactsOutlined className={stylesSidebar.iconsSidebar} />
             <span>Employee Management</span>
           </div>
+          <div className={`${stylesSidebar.divs} ${isActive('/hardware-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/hardware-management')}>
+            <LaptopOutlined className={stylesSidebar.iconsSidebar} />
+            <span>Hardware Management</span>
+          </div>
           {/* <div className={`${stylesSidebar.divs} ${isActive('/allLeaveRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/allLeaveRecords')}>
             <FolderOpenOutlined className={stylesSidebar.iconsSidebar} />
             <span>All Leave Records</span>

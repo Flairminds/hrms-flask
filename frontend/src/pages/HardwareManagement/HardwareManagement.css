@@ -1,0 +1,28 @@
+.hardware-management {
+    padding: 24px;
+    background: #fff;
+    min-height: 100vh;
+}
+
+.hardware-management h1 {
+    margin-bottom: 24px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.hardware-management .ant-tabs {
+    background: #fff;
+}
+
+.hardware-management .ant-table {
+    background: #fff;
+}
+
+.hardware-management .ant-btn {
+    border-radius: 4px;
+}
+
+.hardware-management .ant-modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}

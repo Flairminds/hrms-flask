@@ -31,6 +31,7 @@ import MaintenancePage from "./pages/MaintenanceManagementPage/MaintenancePage.j
 import SystemManagementPage from './pages/systemManagement/SystemManagementPage.jsx';
 import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
 import Projects from './pages/Projects/Projects.jsx';
+import HardwareManagement from './pages/HardwareManagement/HardwareManagement.jsx';
 
 function AppRoutes() {
     const { user, isAuthenticated } = useAuth();
@@ -81,6 +82,7 @@ function AppRoutes() {
                 <Route path="Maintenance" element={<MaintenancePage />} />
                 <Route path="system-management" element={<SystemManagementPage />} />
                 <Route path="projects" element={<Projects />} />
+                <Route path="hardware-management" element={<HardwareManagement />} />
                 <Route path="*" element={<span>404 Not Found</span>} />
             </Route>
         </Routes>

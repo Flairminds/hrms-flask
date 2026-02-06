@@ -286,10 +286,64 @@ export const getMasterRoles = () => {
 }
 
 // Retrieves all LOB leads.
-export const getLobLead = async () => {
-  const res = await axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getlobleads`)
-  return res;
-}
+export const getLobLead = async (policyId) => {
+  const response = await axiosInstance.get(`${API_BASE_URL}/policy/download/${policyId}`);
+  return response;
+};
+
+// ============= HARDWARE MANAGEMENT API FUNCTIONS =============
+
+// Hardware Assets
+export const getAllHardwareAssets = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hardware/assets`);
+};
+
+export const createHardwareAsset = (assetData) => {
+  return axiosInstance.post(`${API_BASE_URL}/hardware/assets`, assetData);
+};
+
+export const updateHardwareAsset = (assetId, assetData) => {
+  return axiosInstance.put(`${API_BASE_URL}/hardware/assets/${assetId}`, assetData);
+};
+
+export const deleteHardwareAsset = (assetId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/hardware/assets/${assetId}`);
+};
+
+// Hardware Assignments
+export const getAllHardwareAssignments = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hardware/assignments`);
+};
+
+export const createHardwareAssignment = (assignmentData) => {
+  return axiosInstance.post(`${API_BASE_URL}/hardware/assignments`, assignmentData);
+};
+
+export const updateHardwareAssignment = (assignmentId, assignmentData) => {
+  return axiosInstance.put(`${API_BASE_URL}/hardware/assignments/${assignmentId}`, assignmentData);
+};
+
+export const deleteHardwareAssignment = (assignmentId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/hardware/assignments/${assignmentId}`);
+};
+
+// Hardware Maintenance
+export const getAllHardwareMaintenance = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hardware/maintenance`);
+};
+
+export const createHardwareMaintenance = (maintenanceData) => {
+  return axiosInstance.post(`${API_BASE_URL}/hardware/maintenance`, maintenanceData);
+};
+
+export const updateHardwareMaintenance = (maintenanceId, maintenanceData) => {
+  return axiosInstance.put(`${API_BASE_URL}/hardware/maintenance/${maintenanceId}`, maintenanceData);
+};
+
+export const deleteHardwareMaintenance = (maintenanceId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/hardware/maintenance/${maintenanceId}`);
+};
+
 
 // Adds a new LOB lead.
 export const addLobLead = (payload) => {
