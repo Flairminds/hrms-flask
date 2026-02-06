@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Table, Input, message, Button, Space, Tag, Popconfirm } from "antd";
+import { Table, Input, message, Button, Space, Tag, Popconfirm, Tabs } from "antd";
 import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined } from "@ant-design/icons";
-import { getAllEmployeeDocuments, getDocuments, verifyDocument } from "../../services/api";
+import { getAllEmployeeDocuments, getDocuments, verifyDocument, getEmployeeDocumentStats } from "../../services/api";
 
 export const AllDocRecords = () => {
   const [documents, setDocuments] = useState([]);
+  const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     fetchDocuments();
+    fetchStats();
   }, []);
 
   const fetchDocuments = async () => {
@@ -26,6 +29,22 @@ export const AllDocRecords = () => {
       setDocuments([]); // Set empty array on error
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await getEmployeeDocumentStats();
+      console.log("Document Stats Response:", response.data);
+      const statsData = Array.isArray(response.data) ? response.data : [];
+      setStats(statsData);
+    } catch (error) {
+      console.error("Error fetching document statistics:", error);
+      message.error("Failed to fetch document statistics");
+      setStats([]);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -102,8 +121,9 @@ export const AllDocRecords = () => {
 
       if (response.status === 200) {
         message.success(newStatus === true ? "Document verified successfully" : "Document verification removed");
-        // Refresh the documents list
+        // Refresh the documents list and stats
         fetchDocuments();
+        fetchStats();
       }
     } catch (error) {
       console.error("Error verifying document:", error);
@@ -260,32 +280,127 @@ export const AllDocRecords = () => {
     },
   ];
 
+  const statsColumns = [
+    {
+      title: 'Employee ID',
+      dataIndex: 'emp_id',
+      key: 'emp_id',
+      sorter: (a, b) => a.emp_id.localeCompare(b.emp_id),
+    },
+    {
+      title: 'Employee Name',
+      dataIndex: 'employee_name',
+      key: 'employee_name',
+      sorter: (a, b) => a.employee_name.localeCompare(b.employee_name),
+    },
+    {
+      title: 'Total Expected',
+      dataIndex: 'total_expected',
+      key: 'total_expected',
+      align: 'center',
+    },
+    {
+      title: 'Uploaded',
+      dataIndex: 'uploaded',
+      key: 'uploaded',
+      align: 'center',
+      render: (count) => count > 0 ? <Tag color="blue">{count}</Tag> : <Tag color="red">0</Tag>,
+    },
+    {
+      title: 'Not Uploaded',
+      dataIndex: 'not_uploaded',
+      key: 'not_uploaded',
+      align: 'center',
+      render: (count) => count > 0 ? <Tag color="red">{count}</Tag> : <Tag color="green">0</Tag>,
+    },
+    {
+      title: 'Upload %',
+      dataIndex: 'upload_percentage',
+      key: 'upload_percentage',
+      align: 'center',
+      sorter: (a, b) => a.upload_percentage - b.upload_percentage,
+      render: (percent) => `${percent}%`,
+    },
+    {
+      title: 'Verified',
+      dataIndex: 'verified',
+      key: 'verified',
+      align: 'center',
+      render: (count) => <Tag color="green">{count}</Tag>,
+    },
+    {
+      title: 'Not Verified',
+      dataIndex: 'not_verified',
+      key: 'not_verified',
+      align: 'center',
+      render: (count) => count > 0 ? <Tag color="orange">{count}</Tag> : <Tag color="green">0</Tag>,
+    },
+    {
+      title: 'Verification %',
+      dataIndex: 'verification_percentage',
+      key: 'verification_percentage',
+      align: 'center',
+      sorter: (a, b) => a.verification_percentage - b.verification_percentage,
+      render: (percent) => `${percent}%`,
+    },
+  ];
+
+  const tabItems = [
+    {
+      key: '1',
+      label: 'All Documents',
+      children: (
+        <>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Input
+              placeholder="Search by Employee ID, Name, or Document Type..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: '400px' }}
+              allowClear
+            />
+          </div>
+
+          <Table
+            columns={columns}
+            dataSource={documents}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} documents`,
+            }}
+            scroll={{ x: 1200 }}
+          />
+        </>
+      ),
+    },
+    {
+      key: '2',
+      label: 'Statistics',
+      children: (
+        <Table
+          columns={statsColumns}
+          dataSource={stats}
+          rowKey="emp_id"
+          loading={statsLoading}
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} employees`,
+          }}
+          scroll={{ x: 1000 }}
+        />
+      ),
+    },
+  ];
+
   return (
     <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Employee Document Repository</h2>
-        <Input
-          placeholder="Search by Employee ID, Name, or Document Type..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: '400px' }}
-          allowClear
-        />
-      </div>
-
-      <Table
-        columns={columns}
-        dataSource={documents}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} documents`,
-        }}
-        scroll={{ x: 1200 }}
-      />
+      <h2>Employee Document Repository</h2>
+      <Tabs defaultActiveKey="1" items={tabItems} />
     </div>
   );
 };

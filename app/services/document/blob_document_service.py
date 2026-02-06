@@ -26,7 +26,9 @@ from ...utils.logger import Logger
 class BlobDocumentService:
     """Service for blob-based employee document operations."""
 
-    VALID_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume"]
+    VALID_UPLOAD_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume"]
+
+    ALL_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume", "salary_slips", "relieving_letter"]
 
     @staticmethod
     def upload_document_to_blob(
@@ -55,9 +57,9 @@ class BlobDocumentService:
         if not emp_id or not emp_id.strip():
             raise ValueError("Employee ID is required")
         
-        if doc_type not in BlobDocumentService.VALID_DOC_TYPES:
+        if doc_type not in BlobDocumentService.VALID_UPLOAD_DOC_TYPES:
             raise ValueError(
-                f"Invalid document type. Must be one of: {', '.join(BlobDocumentService.VALID_DOC_TYPES)}"
+                f"Invalid document type. Must be one of: {', '.join(BlobDocumentService.VALID_UPLOAD_DOC_TYPES)}"
             )
         
         if not file_storage or file_storage.filename == "":
@@ -195,9 +197,9 @@ class BlobDocumentService:
         emp_id = emp_id.strip() if emp_id else ""
         doc_type = doc_type.strip() if doc_type else ""
         
-        if doc_type not in BlobDocumentService.VALID_DOC_TYPES:
+        if doc_type not in BlobDocumentService.VALID_UPLOAD_DOC_TYPES:
             raise ValueError(
-                f"Invalid document type. Must be one of: {', '.join(BlobDocumentService.VALID_DOC_TYPES)}"
+                f"Invalid document type. Must be one of: {', '.join(BlobDocumentService.VALID_UPLOAD_DOC_TYPES)}"
             )
         
         Logger.debug("Retrieving document from blob", employee_id=emp_id, doc_type=doc_type)
@@ -245,7 +247,7 @@ class BlobDocumentService:
         emp_id = emp_id.strip() if emp_id else ""
         doc_type = doc_type.strip() if doc_type else ""
         
-        if not emp_id or doc_type not in BlobDocumentService.VALID_DOC_TYPES:
+        if not emp_id or doc_type not in BlobDocumentService.VALID_UPLOAD_DOC_TYPES:
             raise ValueError("Invalid parameters for document deletion")
         
         Logger.info("Deleting document from blob", employee_id=emp_id, doc_type=doc_type)
@@ -414,7 +416,7 @@ class BlobDocumentService:
         Returns:
             True if updated successfully
         """
-        if not emp_id or doc_type not in BlobDocumentService.VALID_DOC_TYPES:
+        if not emp_id or doc_type not in BlobDocumentService.VALID_UPLOAD_DOC_TYPES:
             raise ValueError("Invalid parameters")
         
         Logger.info("Updating verification status", employee_id=emp_id, doc_type=doc_type, is_verified=is_verified)
@@ -491,7 +493,7 @@ class BlobDocumentService:
                 docs = EmployeeDocument.query.filter_by(emp_id=emp.employee_id).all()
                 
                 # Create status map
-                doc_status = {doc_type: False for doc_type in BlobDocumentService.VALID_DOC_TYPES}
+                doc_status = {doc_type: False for doc_type in BlobDocumentService.VALID_UPLOAD_DOC_TYPES}
                 for doc in docs:
                     doc_status[doc.doc_type] = True
                 
@@ -508,3 +510,54 @@ class BlobDocumentService:
         except Exception as e:
             Logger.error("Error getting all employees docs status", error=str(e))
             raise
+
+    @staticmethod
+    def get_employee_document_stats() -> List[Dict[str, Any]]:
+        """
+        Get document upload and verification statistics for all employees.
+        Returns summary showing uploaded, not uploaded, verified, and not verified counts per employee.
+        """
+        Logger.info("Fetching employee document statistics")
+        
+        try:
+            from ...models.hr import Employee
+            
+            # Get all employees
+            employees = Employee.query.all()
+            stats_list = []
+            
+            for emp in employees:
+                # Get documents for this employee
+                docs = EmployeeDocument.query.filter_by(emp_id=emp.employee_id).all()
+                
+                # Count statistics
+                total_expected = len(BlobDocumentService.VALID_UPLOAD_DOC_TYPES)
+                uploaded_count = len(docs)
+                not_uploaded_count = total_expected - uploaded_count
+                
+                verified_count = sum(1 for doc in docs if doc.is_verified is True)
+                not_verified_count = uploaded_count - verified_count
+                
+                employee_name = f"{emp.first_name or ''} {emp.last_name or ''}".strip()
+                
+                stats_list.append({
+                    'emp_id': emp.employee_id,
+                    'employee_name': employee_name,
+                    'total_expected': total_expected,
+                    'uploaded': uploaded_count,
+                    'not_uploaded': not_uploaded_count,
+                    'verified': verified_count,
+                    'not_verified': not_verified_count,
+                    'upload_percentage': round((uploaded_count / total_expected) * 100, 1) if total_expected > 0 else 0,
+                    'verification_percentage': round((verified_count / uploaded_count) * 100, 1) if uploaded_count > 0 else 0
+                })
+            
+            # Sort by employee_id
+            stats_list.sort(key=lambda x: x['emp_id'])
+            
+            Logger.info("Employee document statistics fetched", count=len(stats_list))
+            return stats_list
+            
+        except Exception as e:
+            Logger.error("Error fetching employee document statistics", error=str(e))
+            return []

@@ -1113,3 +1113,8 @@ export const deleteAllocation = (projectId, employeeId) => {
 export const getAllEmployeeDocuments = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/employee-documents/all`);
 };
+
+// Get employee document statistics (HR/Admin only)
+export const getEmployeeDocumentStats = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/employee-documents/stats`);
+};

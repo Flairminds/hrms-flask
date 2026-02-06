@@ -180,6 +180,11 @@ class DocumentService:
         """Get all documents from all employees for HR/Admin document repository."""
         return BlobDocumentService.get_all_employee_documents()
 
+    @staticmethod
+    def get_employee_document_stats() -> List[Dict[str, Any]]:
+        """Get document upload and verification statistics for all employees."""
+        return BlobDocumentService.get_employee_document_stats()
+
     # ============= BLOB-SPECIFIC METHODS =============
 
     @staticmethod

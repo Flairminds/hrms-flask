@@ -509,3 +509,22 @@ class HRController:
                 'status': 'error',
                 'message': 'Failed to retrieve employee documents'
             }), 500
+
+    @staticmethod
+    def get_employee_document_stats():
+        """Get document upload and verification statistics for all employees."""
+        Logger.info("Get employee document statistics request received")
+        
+        try:
+            from ..services.document_service import DocumentService
+            
+            stats = DocumentService.get_employee_document_stats()
+            Logger.info("Employee document statistics retrieved successfully", count=len(stats))
+            return jsonify(stats), 200
+            
+        except Exception as e:
+            Logger.error("Error fetching employee document statistics", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to retrieve document statistics'
+            }), 500

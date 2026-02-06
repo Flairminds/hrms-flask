@@ -89,3 +89,8 @@ def get_all_skills():
 @roles_required('HR', 'Admin')
 def get_all_employee_documents():
     return HRController.get_all_employee_documents()
+
+@hr_bp.route('/employee-documents/stats', methods=['GET'])
+@roles_required('HR', 'Admin')
+def get_employee_document_stats():
+    return HRController.get_employee_document_stats()
