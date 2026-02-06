@@ -12,6 +12,7 @@ import CapabilityDevelopmentLead from '../CapabilityDevelopmentLead/CapabilityDe
 const MasterHR = () => {
     const [activeTab, setActiveTab] = useState('lob');
 
+
     const renderContent = () => {
         switch (activeTab) {
             case 'Lob':

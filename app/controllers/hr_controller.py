@@ -49,6 +49,20 @@ class HRController:
             }), 500
 
     @staticmethod
+    def get_employee_stats():
+        """Returns employee dashboard statistics."""
+        Logger.info("Get employee stats request received")
+        try:
+            stats = EmployeeService.get_employee_dashboard_stats()
+            return jsonify(stats), 200
+        except Exception as e:
+            Logger.error("Error fetching employee stats", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to retrieve employee stats'
+            }), 500
+
+    @staticmethod
     def upsert_employee():
         """Endpoint to create or update employee profiles."""
         Logger.info("Upsert employee request received")

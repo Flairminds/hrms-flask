@@ -94,6 +94,32 @@ class EmployeeService:
             return []
 
     @staticmethod
+    def get_employee_dashboard_stats():
+        """Aggregates employee dashboard statistics."""
+        try:
+            # Total Active Employees (Not Relieved or Absconding)
+            total_active = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding', 'Resigned'])).count()
+            
+            # Total Interns
+            total_interns = Employee.query.filter_by(employment_status='Intern').count()
+            
+            # Total Probation
+            total_probation = Employee.query.filter_by(employment_status='Probation').count()
+
+            return {
+                'total_active': total_active,
+                'total_interns': total_interns,
+                'total_probation': total_probation
+            }
+        except Exception as e:
+            Logger.error("Error fetching employee dashboard stats", error=str(e))
+            return {
+                'total_active': 0,
+                'total_interns': 0,
+                'total_probation': 0
+            }
+
+    @staticmethod
     def upsert_employee(data):
         """Creates or updates an employee record."""
         try:

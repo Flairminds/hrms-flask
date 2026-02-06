@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select } from 'antd';
-import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Select, Card, Statistic, Row, Col } from 'antd';
+import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
 import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
 import DownloadOptionsModal from '../../components/modal/downloadOptionsModal/DownloadOptionsModal';
 import EmployeeDataAccordion from '../../components/modal/employeeDataAccordian/EmployeeDataAccordion';
-import { getAllEmployeesList, getEmployeeDetails } from '../../services/api';
+import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../../services/api';
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
 import { EMPDetailsModal } from '../../components/modal/EMPDetailsModal/EMPDetailsModal';
 import { convertDate } from '../../util/helperFunctions';
@@ -16,6 +16,11 @@ const { Search } = Input;
 export const EmployeeData = () => {
   const [employeeData, setEmployeeData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [stats, setStats] = useState({
+    total_active: 0,
+    total_interns: 0,
+    total_probation: 0
+  });
   const [searchText, setSearchText] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
@@ -34,7 +39,17 @@ export const EmployeeData = () => {
 
   useEffect(() => {
     getEmployees();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await getEmployeeStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to fetch employee stats", err);
+    }
+  };
 
   const getEmployees = async () => {
     try {
@@ -163,6 +178,38 @@ export const EmployeeData = () => {
 
   return (
     <div className={styles.employeeData}>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={8}>
+          <Card>
+            <Statistic
+              title="Total Active Employees"
+              value={stats.total_active}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic
+              title="Interns"
+              value={stats.total_interns}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic
+              title="In Probation"
+              value={stats.total_probation}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#fa8c16' }}
+            />
+          </Card>
+        </Col>
+      </Row>
       <div className={styles.upperArea}>
         <Input
           className={styles.searchBar}

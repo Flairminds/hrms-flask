@@ -689,6 +689,10 @@ export const getEmployeeList = () => {
   return res
 }
 
+export const getEmployeeStats = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/get-employee-stats`);
+}
+
 export const getEmployeeListForEvaluators = (EvaluatorId) => {
   const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/GetAllEmployeesForEvaluators/${EvaluatorId}`)
   return res

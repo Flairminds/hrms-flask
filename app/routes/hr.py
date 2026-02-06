@@ -15,6 +15,11 @@ def get_all_employees():
 def get_potential_approvers():
     return HRController.get_potential_approvers()
 
+@hr_bp.route('/get-employee-stats', methods=['GET'])
+# @roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
+def get_employee_stats():
+    return HRController.get_employee_stats()
+
 @hr_bp.route('/upsert-employee', methods=['POST'])
 @roles_required(*ROLE_PERMISSIONS['hr']['upsert_employee'])
 def upsert_employee():
