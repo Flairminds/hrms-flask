@@ -175,6 +175,11 @@ class DocumentService:
         """Get all employees document status from Azure Blob Storage."""
         return BlobDocumentService.get_all_employees_docs_status()
 
+    @staticmethod
+    def get_all_employee_documents() -> List[Dict[str, Any]]:
+        """Get all documents from all employees for HR/Admin document repository."""
+        return BlobDocumentService.get_all_employee_documents()
+
     # ============= BLOB-SPECIFIC METHODS =============
 
     @staticmethod

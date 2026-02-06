@@ -1098,3 +1098,8 @@ export const manageAllocation = (allocationData) => {
 export const deleteAllocation = (projectId, employeeId) => {
   return axiosInstance.delete(`${API_BASE_URL}/project/projects/${projectId}/allocations/${employeeId}`);
 };
+
+// Get all employee documents for document repository (HR/Admin only)
+export const getAllEmployeeDocuments = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/employee-documents/all`);
+};

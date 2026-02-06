@@ -277,6 +277,80 @@ class BlobDocumentService:
             raise
 
     @staticmethod
+    def get_document_metadata(emp_id: str, doc_type: str) -> Dict[str, Any]:
+        """
+        Get document metadata without downloading file.
+        
+        Args:
+            emp_id: Employee ID
+            doc_type: Document type
+            
+        Returns:
+            Document metadata dictionary
+        """
+        try:
+            doc = EmployeeDocument.query.filter_by(emp_id=emp_id, doc_type=doc_type).first()
+            
+            if not doc:
+                raise FileNotFoundError(f"Document {doc_type} not found for employee {emp_id}")
+            
+            return doc.to_dict()
+        except FileNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            Logger.error("Database error fetching document metadata", error=str(e))
+            return None
+        except Exception as e:
+            Logger.error("Error fetching document metadata", error=str(e), emp_id=emp_id, doc_type=doc_type)
+            return None
+
+    @staticmethod
+    def get_all_employee_documents() -> List[Dict[str, Any]]:
+        """
+        Get all employee documents from all employees for HR/Admin document repository.
+        Returns list of documents with employee information.
+        """
+        Logger.info("Fetching all employee documents for document repository")
+        
+        try:
+            from ...models.hr import Employee
+            
+            # Join EmployeeDocument with Employee to get names
+            documents = db.session.query(
+                EmployeeDocument, Employee
+            ).join(
+                Employee, EmployeeDocument.emp_id == Employee.employee_id
+            ).order_by(
+                Employee.employee_id, EmployeeDocument.doc_type
+            ).all()
+            
+            doc_list = [
+                {
+                    'id': doc.id,
+                    'emp_id': doc.emp_id,
+                    'employee_name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                    'doc_type': doc.doc_type,
+                    'file_name': doc.file_name,
+                    'file_size': doc.file_size,
+                    'content_type': doc.content_type,
+                    'is_verified': doc.is_verified,
+                    'verified_at': doc.verified_at.isoformat() if doc.verified_at else None,
+                    'uploaded_at': doc.uploaded_at.isoformat() if doc.uploaded_at else None,
+                    'blob_name': doc.blob_name,
+                    'container_name': doc.container_name
+                }
+                for doc, emp in documents
+            ]
+            
+            Logger.info("All employee documents fetched", count=len(doc_list))
+            return doc_list
+            
+        except SQLAlchemyError as e:
+            Logger.error("Database error fetching all employee documents", error=str(e))
+            return []
+
+    @staticmethod
     def generate_document_view_url(
         emp_id: str,
         doc_type: str,

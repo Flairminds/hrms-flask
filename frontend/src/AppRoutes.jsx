@@ -72,7 +72,7 @@ function AppRoutes() {
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />
                 <Route path="MonthlyReport" element={<MonthlyReport />} />
                 {/* <Route path="SkillTracking" element={<SkillTracking />} /> */}
-                <Route path="AllDocumentRecords" element={<AllDocRecords />} />
+                <Route path="document-repo" element={<AllDocRecords />} />
                 <Route path="ScoreCards" element={<AllDocRecords />} />
                 <Route path="EmployeesSkillEvaluationList" element={<EmployeesSkillEvaluationList />} />
                 <Route path="goalSetting" element={<GoalSettingPage />} />

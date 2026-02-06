@@ -231,6 +231,10 @@ export const Sidebar = ({ isRole }) => {
             <ContactsOutlined className={stylesSidebar.iconsSidebar} />
             <span>Employee Management</span>
           </div>
+          <div className={`${stylesSidebar.divs} ${isActive('/document-repo') ? stylesSidebar.active : ''}`} onClick={() => navigate('/document-repo')}>
+            <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
+            <span>Documents</span>
+          </div>
           <div className={`${stylesSidebar.divs} ${isActive('/hardware-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/hardware-management')}>
             <LaptopOutlined className={stylesSidebar.iconsSidebar} />
             <span>Hardware Management</span>
@@ -263,10 +267,6 @@ export const Sidebar = ({ isRole }) => {
             <LineChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Skill Tracking</span>
           </div> */}
-          <div className={`${stylesSidebar.divs} ${isActive('/AllDocumentRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/AllDocumentRecords')}>
-            <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
-            <span>All Document Records</span>
-          </div>
 
           {/* <div className={`${stylesSidebar.divs} ${isActive('/system-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/system-management')}>
             <ToolOutlined className={stylesSidebar.iconsSidebar} />

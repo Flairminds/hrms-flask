@@ -490,3 +490,22 @@ class HRController:
                 'status': 'error',
                 'message': 'An unexpected error occurred while fetching skills.'
             }), 500
+
+    @staticmethod
+    def get_all_employee_documents():
+        """Get all employee documents for HR/Admin document repository."""
+        Logger.info("Get all employee documents request received")
+        
+        try:
+            from ..services.document_service import DocumentService
+            
+            documents = DocumentService.get_all_employee_documents()
+            Logger.info("All employee documents retrieved successfully", count=len(documents))
+            return jsonify(documents), 200
+            
+        except Exception as e:
+            Logger.error("Error fetching all employee documents", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to retrieve employee documents'
+            }), 500

@@ -1,238 +1,252 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import styleSkillTracking from "./AllDocRecords.module.css"
-import { Button, Input, message } from "antd";
-import { getDocuments, getEmpDocRecords } from "../../services/api";
+import { Table, Input, message, Button, Space, Tag } from "antd";
+import { EyeOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { getAllEmployeeDocuments, getDocuments } from "../../services/api";
 
 export const AllDocRecords = () => {
-  const [employeeDocs, setEmployeeDocs] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState({});
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
-    const getEmpRecords = async () => {
-      try {
-        const response = await getEmpDocRecords();
-        console.log("Employee Records Response:", response.data);
-        
-        setEmployeeDocs(response.data);
-        
-        // Fetch verification status for each employee
-        const statusPromises = response.data.map(emp => 
-          axios.get(`https://hrms-flask.azurewebsites.net/api/document-verification-status/${emp.emp_id}`)
-        );
-        
-        const statusResults = await Promise.all(statusPromises);
-        const statusMap = {};
-        statusResults.forEach(result => {
-          if (result.data && result.data.emp_id) {
-            statusMap[result.data.emp_id] = result.data.documents;
-          }
-        });
-        setVerificationStatus(statusMap);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        message.error("Failed to fetch employee records");
-      }
-    };
-    getEmpRecords();
+    fetchDocuments();
   }, []);
 
-  const handleVerification = async (empId, docType, isVerified) => {
+  const fetchDocuments = async () => {
+    setLoading(true);
     try {
-      const response = await axios.post('https://hrms-flask.azurewebsites.net/api/verify-document', {
-        emp_id: empId,
-        doc_type: docType,
-        is_verified: isVerified
-      });
-
-      if (response.status === 200) {
-        message.success(`Document ${isVerified ? 'accepted' : 'rejected'} successfully`);
-        
-        // Update verification status
-        setVerificationStatus(prev => {
-          const newStatus = { ...prev };
-          if (!newStatus[empId]) {
-            newStatus[empId] = {};
-          }
-          newStatus[empId] = {
-            ...newStatus[empId],
-            [docType]: isVerified
-          };
-          return newStatus;
-        });
-
-        // If rejected, update employeeDocs to remove the document and set verification status to false
-        if (!isVerified) {
-          setEmployeeDocs(prev => 
-            prev.map(emp => {
-              if (emp.emp_id === empId) {
-                return {
-                  ...emp,
-                  [docType]: false,
-                  [`${docType}_verified`]: false  // Set the verification status to false
-                };
-              }
-              return emp;
-            })
-          );
-        }
-      }
+      const response = await getAllEmployeeDocuments();
+      console.log("All Documents Response:", response.data);
+      // Ensure we always set an array
+      const documentData = Array.isArray(response.data) ? response.data : [];
+      setDocuments(documentData);
     } catch (error) {
-      console.error("Error updating verification status:", error);
-      message.error("Failed to update verification status");
+      console.error("Error fetching documents:", error);
+      message.error("Failed to fetch employee documents");
+      setDocuments([]); // Set empty array on error
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAction = async (empId, docType, action) => {
-    if (action === "view") {
-      try {
-        const response = await getDocuments(empId, docType);
-  
-        if (response.status !== 200) {
-          throw new Error(`Failed to fetch document: ${response.statusText}`);
-        }
-  
-        const blob = new Blob([response.data], { type: "application/pdf" });
-        const fileURL = window.URL.createObjectURL(blob);
-        window.open(fileURL, "_blank");
-  
-        setTimeout(() => URL.revokeObjectURL(fileURL), 5000);
-      } catch (error) {
-        console.error("Error fetching document:", error);
-  
-        if (error.response) {
-          if (error.response.status === 404) {
-            message.warning("Document not available");
-          } else {
-            message.error(`Error fetching document: ${error.response.statusText}`);
-          }
-        } else {
-          message.error("Network error or server is down");
-        }
+  const handlePreview = async (empId, docType) => {
+    try {
+      const response = await getDocuments(empId, docType);
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to fetch document: ${response.statusText}`);
       }
-    } else if (action === "download") {
-      try {
-        const response = await getDocuments(empId, docType);
-  
-        if (response.status !== 200) {
-          throw new Error(`Failed to download: ${response.statusText}`);
-        }
-  
-        const blob = new Blob([response.data], { type: "application/pdf" });
-        const fileURL = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = fileURL;
-        link.download = `${docType}_${empId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-  
-        setTimeout(() => URL.revokeObjectURL(fileURL), 1000);
-  
-        message.success("Download started");
-      } catch (error) {
-        console.error("Error downloading document:", error);
-  
-        if (error.response) {
-          if (error.response.status === 404) {
-            message.warning("Document not available");
-          } else {
-            message.error(`Error downloading document: ${error.response.statusText}`);
-          }
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      window.open(fileURL, "_blank");
+
+      setTimeout(() => URL.revokeObjectURL(fileURL), 5000);
+    } catch (error) {
+      console.error("Error previewing document:", error);
+
+      if (error.response) {
+        if (error.response.status === 404) {
+          message.warning("Document not available");
         } else {
-          message.error("Network error or server is down");
+          message.error("Error fetching document for preview");
         }
+      } else {
+        message.error("Network error or server is down");
       }
     }
   };
 
-  const filteredEmployees = employeeDocs?.filter((employee) =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ); 
+  const handleDownload = async (empId, docType, fileName) => {
+    try {
+      const response = await getDocuments(empId, docType);
 
-  const getVerificationStatus = (empId, docType) => {
-    return verificationStatus[empId]?.[docType] ?? null;
+      if (response.status !== 200) {
+        throw new Error(`Failed to download: ${response.statusText}`);
+      }
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = fileName || `${docType}_${empId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(fileURL), 1000);
+
+      message.success("Download started");
+    } catch (error) {
+      console.error("Error downloading document:", error);
+
+      if (error.response) {
+        if (error.response.status === 404) {
+          message.warning("Document not available");
+        } else {
+          message.error("Error downloading document");
+        }
+      } else {
+        message.error("Network error or server is down");
+      }
+    }
   };
+
+  const getVerificationStatusTag = (isVerified) => {
+    if (isVerified === true) {
+      return <Tag color="green">Verified</Tag>;
+    } else if (isVerified === false) {
+      return <Tag color="red">Rejected</Tag>;
+    } else {
+      return <Tag color="orange">Pending</Tag>;
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "N/A";
+    const kb = bytes / 1024;
+    const mb = kb / 1024;
+    if (mb >= 1) {
+      return `${mb.toFixed(2)} MB`;
+    }
+    return `${kb.toFixed(2)} KB`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const columns = [
+    {
+      title: 'Employee ID',
+      dataIndex: 'emp_id',
+      key: 'emp_id',
+      sorter: (a, b) => a.emp_id.localeCompare(b.emp_id),
+      filteredValue: searchText ? [searchText] : null,
+      onFilter: (value, record) =>
+        record.emp_id.toLowerCase().includes(value.toLowerCase()) ||
+        record.employee_name.toLowerCase().includes(value.toLowerCase()) ||
+        record.doc_type.toLowerCase().includes(value.toLowerCase()),
+    },
+    {
+      title: 'Employee Name',
+      dataIndex: 'employee_name',
+      key: 'employee_name',
+      sorter: (a, b) => a.employee_name.localeCompare(b.employee_name),
+    },
+    {
+      title: 'Document Type',
+      dataIndex: 'doc_type',
+      key: 'doc_type',
+      filters: [
+        { text: '10th', value: 'tenth' },
+        { text: '12th', value: 'twelve' },
+        { text: 'PAN', value: 'pan' },
+        { text: 'Aadhaar', value: 'adhar' },
+        { text: 'Graduation', value: 'grad' },
+        { text: 'Resume', value: 'resume' },
+      ],
+      onFilter: (value, record) => record.doc_type === value,
+      render: (text) => {
+        const labels = {
+          tenth: '10th',
+          twelve: '12th',
+          pan: 'PAN',
+          adhar: 'Aadhaar',
+          grad: 'Graduation',
+          resume: 'Resume'
+        };
+        return labels[text] || text;
+      }
+    },
+    {
+      title: 'File Name',
+      dataIndex: 'file_name',
+      key: 'file_name',
+      ellipsis: true,
+    },
+    {
+      title: 'File Size',
+      dataIndex: 'file_size',
+      key: 'file_size',
+      render: (size) => formatFileSize(size),
+      sorter: (a, b) => (a.file_size || 0) - (b.file_size || 0),
+    },
+    {
+      title: 'Uploaded Date',
+      dataIndex: 'uploaded_at',
+      key: 'uploaded_at',
+      render: (date) => formatDate(date),
+      sorter: (a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at),
+    },
+    {
+      title: 'Verification Status',
+      dataIndex: 'is_verified',
+      key: 'is_verified',
+      render: (isVerified) => getVerificationStatusTag(isVerified),
+      filters: [
+        { text: 'Verified', value: true },
+        { text: 'Rejected', value: false },
+        { text: 'Pending', value: null },
+      ],
+      onFilter: (value, record) => record.is_verified === value,
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => handlePreview(record.emp_id, record.doc_type)}
+          >
+            Preview
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            size="small"
+            onClick={() => handleDownload(record.emp_id, record.doc_type, record.file_name)}
+          >
+            Download
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div className={styleSkillTracking.main}>
-      <Input
-        placeholder="Search by Name..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className={styleSkillTracking.searchInput}
-        allowClear
-      />
-
-      <div className={styleSkillTracking.tableContainer}>
-        <table className={styleSkillTracking.table}>
-          <thead className={styleSkillTracking.stickyHeader}>
-            <tr className={styleSkillTracking.headRow}>
-              <th className={styleSkillTracking.th}>Employee ID</th>
-              <th className={styleSkillTracking.th}>Name</th>
-              <th className={styleSkillTracking.th}>10th</th>
-              <th className={styleSkillTracking.th}>12th</th>
-              <th className={styleSkillTracking.th}>PAN</th>
-              <th className={styleSkillTracking.th}>Aadhaar</th>
-              <th className={styleSkillTracking.th}>Graduation</th>
-              <th className={styleSkillTracking.th}>FM Resume</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEmployees.map((employee, index) => (
-              <tr key={index} className={styleSkillTracking.tr}>
-                <td className={styleSkillTracking.td}>{employee.emp_id}</td>
-                <td className={styleSkillTracking.td}>{employee.name}</td>
-                {["tenth", "twelve", "pan", "adhar", "grad","resume"].map((docType) => (
-                  <td key={docType} className={styleSkillTracking.td}>
-                    {employee[docType] ? (
-                      <div className={styleSkillTracking.documentActions}>
-                        <div className={styleSkillTracking.viewDownload}>
-                          <button 
-                            onClick={() => handleAction(employee.emp_id, docType, "view")} 
-                            className={styleSkillTracking.downloadBtn}
-                          >
-                            View
-                          </button>
-                          <button 
-                            onClick={() => handleAction(employee.emp_id, docType, "download")} 
-                            className={styleSkillTracking.downloadBtn}
-                          >
-                            Download
-                          </button>
-                        </div>
-                        {getVerificationStatus(employee.emp_id, docType) === true ? (
-                          <div className={styleSkillTracking.statusBadge}>
-                            Accepted
-                          </div>
-                        ) : (
-                          <div className={styleSkillTracking.verificationButtons}>
-                            <button 
-                              onClick={() => handleVerification(employee.emp_id, docType, true)}
-                              className={styleSkillTracking.acceptBtn}
-                            >
-                              Accept
-                            </button>
-                            <button 
-                              onClick={() => handleVerification(employee.emp_id, docType, false)}
-                              className={styleSkillTracking.rejectBtn}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span style={{ color: "orange", fontWeight: "bold" }}>Not Uploaded</span>
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div style={{ padding: '24px' }}>
+      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>Employee Document Repository</h2>
+        <Input
+          placeholder="Search by Employee ID, Name, or Document Type..."
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ width: '400px' }}
+          allowClear
+        />
       </div>
+
+      <Table
+        columns={columns}
+        dataSource={documents}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showTotal: (total) => `Total ${total} documents`,
+        }}
+        scroll={{ x: 1200 }}
+      />
     </div>
   );
 };
