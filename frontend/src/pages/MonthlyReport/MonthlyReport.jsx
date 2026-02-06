@@ -6,38 +6,10 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { CSVLink } from "react-csv";
 
-const generateColumns = (days) => {
-    const baseColumns = [
-        { title: 'Employee_Id', dataIndex: 'Employee_Id', key: 'Employee_Id' },
-        { title: 'Employee_Name', dataIndex: 'Employee_Name', key: 'Employee_Name' },
-        { title: 'TeamLeadCoordinator', dataIndex: 'TeamLeadCoordinator', key: 'TeamLeadCoordinator' },
-    ];
-
-    const dayColumns = [
-        'Date', 'EntryExempt', 'Dayslogs', 'ZymmrLoggedTime',
-        'Typeofleaveapproved', 'EntryinTime', 'DateofLeaveApplication',
-        'Leavestatus', 'WorkingDay', 'ApprovalDate', 'Approvedonsamedate',
-        'Status', 'Swappedholidaydate', 'Unpaidstatus'
-    ];
-
-    const allColumns = [...baseColumns];
-
-    for (let i = 1; i <= days; i++) {
-        dayColumns.forEach(column => {
-            allColumns.push({
-                title: `${column}${i}`,
-                dataIndex: `${column.replace(/ /g, '')}${i}`,
-                key: `${column.replace(/ /g, '')}${i}`
-            });
-        });
-    }
-
-    return allColumns;
-};
-
 const MonthlyReport = () => {
     const [reportData, setReportData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
+    const [leaveReportTableColumns, setLeaveReportTableColumns] = useState([]);
     const [year, setYear] = useState(new Date().getFullYear());
     const [month, setMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
     const [paginationConfig, setPaginationConfig] = useState({
@@ -56,8 +28,6 @@ const MonthlyReport = () => {
         "July", "August", "September", "October", "November", "December"
     ];
 
-    const columns = generateColumns(31);
-
     const fetchMonthlyReport = async (page = 1, pageSize = 5) => {
         setLoader(true);
         try {
@@ -70,6 +40,35 @@ const MonthlyReport = () => {
             // Ensure response.data is always an array
             const data = Array.isArray(response.data) ? response.data : [];
             setReportData(data);
+
+            const columns = [
+                {
+                    title: 'Employee_Id', dataIndex: 'Employee_Id', key: 'Employee_Id', filters: [...new Set(data.map(a => a.Employee_Id))].filter(Boolean).map(name => ({ text: name, value: name })),
+                    onFilter: (value, record) => record.Employee_Id === value,
+                },
+                { title: 'Employee_Name', dataIndex: 'Employee_Name', key: 'Employee_Name', filters: [...new Set(data.map(a => a.Employee_Name))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record.Employee_Name === value, },
+                { title: 'TeamLeadCoordinator', dataIndex: 'TeamLeadCoordinator', key: 'TeamLeadCoordinator' },
+                {
+                    title: 'Date', dataIndex: 'Date', key: 'Date',
+                    filters: [...new Set(data.map(a => a.Date))].filter(Boolean).map(name => ({ text: name, value: name })),
+                    onFilter: (value, record) => record.Date === value,
+                },
+                { title: 'EntryExempt', dataIndex: 'EntryExempt', key: 'EntryExempt' },
+                { title: 'Dayslogs', dataIndex: 'Dayslogs', key: 'Dayslogs' },
+                { title: 'ZymmrLoggedTime', dataIndex: 'ZymmrLoggedTime', key: 'ZymmrLoggedTime' },
+                { title: 'Typeofleaveapproved', dataIndex: 'Typeofleaveapproved', key: 'Typeofleaveapproved' },
+                { title: 'EntryinTime', dataIndex: 'EntryinTime', key: 'EntryinTime' },
+                { title: 'DateofLeaveApplication', dataIndex: 'DateofLeaveApplication', key: 'DateofLeaveApplication' },
+                { title: 'Leavestatus', dataIndex: 'Leavestatus', key: 'Leavestatus' },
+                { title: 'WorkingDay', dataIndex: 'WorkingDay', key: 'WorkingDay' },
+                { title: 'ApprovalDate', dataIndex: 'ApprovalDate', key: 'ApprovalDate' },
+                { title: 'Approvedonsamedate', dataIndex: 'Approvedonsamedate', key: 'Approvedonsamedate' },
+                { title: 'Status', dataIndex: 'Status', key: 'Status' },
+                { title: 'Swappedholidaydate', dataIndex: 'Swappedholidaydate', key: 'Swappedholidaydate' },
+                { title: 'Unpaidstatus', dataIndex: 'Unpaidstatus', key: 'Unpaidstatus', filters: [...new Set(data.map(a => a.Unpaidstatus))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record.Unpaidstatus === value, }
+            ];
+
+            setLeaveReportTableColumns(columns);
 
             setPaginationConfig((prevConfig) => ({
                 ...prevConfig,
@@ -115,62 +114,53 @@ const MonthlyReport = () => {
     const LeaveReportTab = () => (
         <>
             <div className={styles.selectDiv}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                    <div>
-                        <Space>
-                            <Select
-                                value={month}
-                                onChange={(value) => setMonth(value)}
-                                style={{ width: 120 }}
+                <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '15px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <Select
+                            value={month}
+                            onChange={(value) => setMonth(value)}
+                            style={{ width: 120 }}
+                        >
+                            {months.map((m, index) => (
+                                <Select.Option key={index} value={m}>{m}</Select.Option>
+                            ))}
+                        </Select>
+                        <Select
+                            value={year}
+                            onChange={(value) => setYear(value)}
+                            style={{ width: 100 }}
+                        >
+                            {years.map((y, index) => (
+                                <Select.Option key={index} value={y}>{y}</Select.Option>
+                            ))}
+                        </Select>
+                        <Button
+                            className={styles.loadBtn}
+                            onClick={() => fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize)}
+                            loading={loader}
+                        >
+                            Generate
+                        </Button>
+                        <Button className={styles.loadBtn}>
+                            <CSVLink
+                                data={filteredData}
+                                headers={leaveReportTableColumns.map(col => ({ label: col.title, key: col.dataIndex }))}
+                                filename={`leave_report_${month}_${year}.csv`}
+                                className={styles.downloadButton}
                             >
-                                {months.map((m, index) => (
-                                    <Select.Option key={index} value={m}>{m}</Select.Option>
-                                ))}
-                            </Select>
-                            <Select
-                                value={year}
-                                onChange={(value) => setYear(value)}
-                                style={{ width: 120 }}
-                            >
-                                {years.map((y, index) => (
-                                    <Select.Option key={index} value={y}>{y}</Select.Option>
-                                ))}
-                            </Select>
-                            <Button
-                                className={styles.loadBtn}
-                                onClick={() => fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize)}
-                                loading={loader}
-                            >
-                                Generate
-                            </Button>
-                            <Button className={styles.loadBtn}>
-                                <CSVLink
-                                    data={filteredData}
-                                    headers={columns.map(col => ({ label: col.title, key: col.dataIndex }))}
-                                    filename={`leave_report_${month}_${year}.csv`}
-                                    className={styles.downloadButton}
-                                >
-                                    Download
-                                </CSVLink>
-                            </Button>
-                        </Space>
-                    </div>
-                    <div className={styles.searchDiv}>
-                        <Input.Search
-                            placeholder="Search by employee name"
-                            onSearch={(value) => setSearchTerm(value)}
-                            style={{ width: 300 }}
-                        />
+                                Download
+                            </CSVLink>
+                        </Button>
                     </div>
                 </div>
             </div>
-            {filteredData.length > 0 ? (
+            {reportData.length > 0 ? (
                 <Table
                     dataSource={filteredData}
-                    columns={columns}
-                    pagination={paginationConfig}
-                    onChange={handleTableChange}
-                    rowKey="Employee_Id"
+                    columns={leaveReportTableColumns}
+                    // pagination={paginationConfig}
+                    // onChange={handleTableChange}
+                    rowKey={(record, index) => `${record.Employee_Id}-${index}`}
                     scroll={{ x: 'max-content' }}
                     className={styles.empTable}
                 />
@@ -182,7 +172,7 @@ const MonthlyReport = () => {
 
     // Placeholder for Door Entry Report
     const DoorEntryReportTab = () => (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div style={{ padding: '20px' }}>
             {/* <h3>Door Entry Report</h3> */}
             <p>This feature is coming soon...</p>
         </div>
@@ -199,7 +189,7 @@ const MonthlyReport = () => {
     // Placeholder for Attendance Report
     const AttendanceReportTab = () => (
         <div style={{ padding: '20px' }}>
-            <a href="https://hrms-monthly-report.streamlit.app/">Click here to go the Attendance Report application</a>
+            <a href="https://hrms-monthly-report.streamlit.app/" target="_blank" rel="noopener noreferrer">Click here to go the Attendance Report application</a>
         </div>
     );
 

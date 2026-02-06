@@ -59,7 +59,16 @@ class ReportService:
                 employee_row = {
                     'Employee_Id': emp.employee_id,
                     'Employee_Name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
-                    'TeamLeadCoordinator': team_lead_name
+                    'TeamLeadCoordinator': team_lead_name,
+                    'Date': '',
+                    'EntryExempt': '',
+                    'Typeofleaveapproved': '',
+                    'DateofLeaveApplication': '',
+                    'Leavestatus': '',
+                    'WorkingDay': '',
+                    'ApprovalDate': '',
+                    'Approvedonsamedate': '',
+                    'Unpaidstatus': ''
                 }
                 
                 # Get leave transactions for this employee in this month
@@ -109,49 +118,57 @@ class ReportService:
                         }
                         current_date += timedelta(days=1)
                 
-                # Add columns for each day of the month
-                current_date = start_date
-                for day in range(1, num_days + 1):
-                    day_str = str(day)
-                    date_str = current_date.strftime('%d-%m-%Y')
-                    weekday = current_date.strftime('%A')
-                    
-                    # Date columns
-                    employee_row[f'Date{day_str}'] = date_str
-                    
-                    # Entry exempt (weekday check)
-                    employee_row[f'EntryExempt{day_str}'] = 'entry time allowed' if weekday not in ['Saturday', 'Sunday'] else ''
-                    
-                    # Check if there's a leave for this date
-                    leave_info = leave_by_date.get(current_date.date())
-                    
-                    if leave_info:
-                        employee_row[f'Typeofleaveapproved{day_str}'] = leave_info['leave_type']
-                        employee_row[f'DateofLeaveApplication{day_str}'] = leave_info['application_date']
-                        employee_row[f'Leavestatus{day_str}'] = leave_info['leave_status']
-                        employee_row[f'WorkingDay{day_str}'] = 0.5 if leave_info['duration'] == 'Half Day' else 1
-                        employee_row[f'ApprovalDate{day_str}'] = leave_info['approved_date']
-                        employee_row[f'Approvedonsamedate{day_str}'] = leave_info['approved_same_date']
-                        employee_row[f'Unpaidstatus{day_str}'] = leave_info['unpaid_status']
-                    else:
-                        employee_row[f'Typeofleaveapproved{day_str}'] = ''
-                        employee_row[f'DateofLeaveApplication{day_str}'] = ''
-                        employee_row[f'Leavestatus{day_str}'] = ''
-                        employee_row[f'WorkingDay{day_str}'] = ''
-                        employee_row[f'ApprovalDate{day_str}'] = ''
-                        employee_row[f'Approvedonsamedate{day_str}'] = ''
-                        employee_row[f'Unpaidstatus{day_str}'] = ''
-                    
-                    # Placeholder columns for zy mmr data (to be populated from time tracking system)
-                    employee_row[f'Dayslogs{day_str}'] = ''
-                    employee_row[f'ZymmrLoggedTime{day_str}'] = ''
-                    employee_row[f'EntryinTime{day_str}'] = ''
-                    employee_row[f'Status{day_str}'] = ''
-                    employee_row[f'Swappedholidaydate{day_str}'] = ''
-                    
-                    current_date += timedelta(days=1)
-                
-                report_data.append(employee_row)
+                    # Add rows for each day of the month
+                    current_date = start_date
+                    for day in range(1, num_days + 1):
+                        # Create a copy of basic employee info for this daily row
+                        daily_row = {
+                            'Employee_Id': emp.employee_id,
+                            'Employee_Name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                            'TeamLeadCoordinator': team_lead_name,
+                        }
+                        
+                        day_str = str(day)
+                        date_str = current_date.strftime('%d-%m-%Y')
+                        weekday = current_date.strftime('%A')
+                        
+                        # Date columns
+                        daily_row['Date'] = date_str
+                        
+                        # Entry exempt (weekday check)
+                        daily_row['EntryExempt'] = 'entry time allowed' if weekday not in ['Saturday', 'Sunday'] else ''
+                        
+                        # Check if there's a leave for this date
+                        leave_info = leave_by_date.get(current_date.date())
+                        
+                        if leave_info:
+                            daily_row['Typeofleaveapproved'] = leave_info['leave_type']
+                            daily_row['DateofLeaveApplication'] = leave_info['application_date']
+                            daily_row['Leavestatus'] = leave_info['leave_status']
+                            daily_row['WorkingDay'] = 0.5 if leave_info['duration'] == 'Half Day' else 1
+                            daily_row['ApprovalDate'] = leave_info['approved_date']
+                            daily_row['Approvedonsamedate'] = leave_info['approved_same_date']
+                            daily_row['Unpaidstatus'] = leave_info['unpaid_status']
+                        else:
+                            daily_row['Typeofleaveapproved'] = ''
+                            daily_row['DateofLeaveApplication'] = ''
+                            daily_row['Leavestatus'] = ''
+                            daily_row['WorkingDay'] = ''
+                            daily_row['ApprovalDate'] = ''
+                            daily_row['Approvedonsamedate'] = ''
+                            daily_row['Unpaidstatus'] = ''
+                        
+                        # Placeholder columns for zy mmr data (to be populated from time tracking system)
+                        daily_row['Dayslogs'] = ''
+                        daily_row['ZymmrLoggedTime'] = ''
+                        daily_row['EntryinTime'] = ''
+                        daily_row['Status'] = ''
+                        daily_row['Swappedholidaydate'] = ''
+                        
+                        current_date += timedelta(days=1)
+                        
+                        # Append this day's row to the report data
+                        report_data.append(daily_row)
             
             # Sort by employee ID (numeric part)
             def get_emp_number(emp_row):
