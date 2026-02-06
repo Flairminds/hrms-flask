@@ -88,7 +88,7 @@ const MonthlyReport = () => {
     };
 
     useEffect(() => {
-        // fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize);
+        fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize);
     }, []);
 
     useEffect(() => {
