@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Table, Input, message, Button, Space, Tag } from "antd";
-import { EyeOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { getAllEmployeeDocuments, getDocuments } from "../../services/api";
+import { Table, Input, message, Button, Space, Tag, Popconfirm } from "antd";
+import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { getAllEmployeeDocuments, getDocuments, verifyDocument } from "../../services/api";
 
 export const AllDocRecords = () => {
   const [documents, setDocuments] = useState([]);
@@ -89,6 +89,25 @@ export const AllDocRecords = () => {
       } else {
         message.error("Network error or server is down");
       }
+    }
+  };
+
+  const handleVerify = async (empId, docType, currentStatus) => {
+    try {
+      // If already verified (true), we're unverifying (set to null)
+      // If not verified (null or false), we're verifying (set to true)
+      const newStatus = currentStatus === true ? null : true;
+
+      const response = await verifyDocument(empId, docType, newStatus);
+
+      if (response.status === 200) {
+        message.success(newStatus === true ? "Document verified successfully" : "Document verification removed");
+        // Refresh the documents list
+        fetchDocuments();
+      }
+    } catch (error) {
+      console.error("Error verifying document:", error);
+      message.error("Failed to update verification status");
     }
   };
 
@@ -216,6 +235,26 @@ export const AllDocRecords = () => {
           >
             Download
           </Button>
+          <Popconfirm
+            title={record.is_verified === true ? "Remove verification?" : "Verify this document?"}
+            description={record.is_verified === true ? "This will unverify the document." : "This will mark the document as verified."}
+            onConfirm={() => handleVerify(record.emp_id, record.doc_type, record.is_verified)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type={record.is_verified === true ? "default" : "primary"}
+              icon={<CheckCircleOutlined />}
+              size="small"
+              style={{
+                backgroundColor: record.is_verified === true ? "#52c41a" : undefined,
+                borderColor: record.is_verified === true ? "#52c41a" : undefined,
+                color: record.is_verified === true ? "#fff" : undefined
+              }}
+            >
+              {record.is_verified === true ? "Verified" : "Verify"}
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

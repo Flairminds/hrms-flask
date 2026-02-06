@@ -9,7 +9,7 @@ This module provides HTTP request handlers for:
 
 from typing import Tuple
 from io import BytesIO
-from flask import jsonify, request, send_file, Response
+from flask import request, jsonify, send_file, g, Response
 
 from ..services.document_service import DocumentService
 from ..utils.logger import Logger
@@ -660,11 +660,15 @@ class DocumentController:
                         doc_type=doc_type,
                         is_verified=is_verified)
             
-            DocumentService.verify_document(emp_id, doc_type, is_verified)
+            # Get verified_by from current user session
+            verified_by = getattr(g, 'user', {}).get('employee_id', None) if hasattr(g, 'user') else None
+            
+            DocumentService.verify_document(emp_id, doc_type, is_verified, verified_by)
             
             Logger.info("Document verification updated", 
                        employee_id=emp_id,
                        doc_type=doc_type,
+                       verified_by=verified_by,
                        status="verified" if is_verified else "rejected")
             
             return jsonify({

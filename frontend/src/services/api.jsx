@@ -590,6 +590,16 @@ export const getEmpDocRecords = () => {
   return axiosInstance.get(`${API_BASE_URL}/documents/all-employees`);
 };
 
+// Verify employee document (HR/Admin only)
+export const verifyDocument = (empId, docType, isVerified) => {
+  return axiosInstance.post(`${API_BASE_URL}/documents/verify-document`, {
+    emp_id: empId,
+    doc_type: docType,
+    is_verified: isVerified
+  });
+};
+
+
 // Uploads a document for an employee - uses API_BASE_URL
 export const uploadDocument = (employeeId, docType, file) => {
   const formData = new FormData();

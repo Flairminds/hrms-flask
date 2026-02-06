@@ -59,9 +59,9 @@ class DocumentService:
         return BlobDocumentService.delete_document_from_blob(emp_id, doc_type)
 
     @staticmethod
-    def verify_document(emp_id: str, doc_type: str, is_verified: bool) -> bool:
+    def verify_document(emp_id: str, doc_type: str, is_verified: bool, verified_by: str = None) -> bool:
         """Verify document in Azure Blob Storage."""
-        return BlobDocumentService.verify_document_blob(emp_id, doc_type, is_verified)
+        return BlobDocumentService.verify_document_blob(emp_id, doc_type, is_verified, verified_by)
 
     @staticmethod
     def get_document_status(emp_id: str) -> Dict[str, Any]:
