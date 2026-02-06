@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
-import { getProjects, deleteProject } from '../../services/api';
+import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag, Row, Col, Statistic, Progress } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ProjectOutlined, TeamOutlined, RiseOutlined } from '@ant-design/icons';
+import { getProjects, deleteProject, getProjectStats } from '../../services/api';
 import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import moment from 'moment';
@@ -9,6 +9,13 @@ import moment from 'moment';
 const Projects = () => {
     const { user } = useAuth();
     const [projects, setProjects] = useState([]);
+    const [stats, setStats] = useState({
+        active_projects: 0,
+        prospective_projects: 0,
+        total_allocation: 0,
+        billable_allocation: 0,
+        total_employees: 0
+    });
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -18,7 +25,17 @@ const Projects = () => {
 
     useEffect(() => {
         fetchProjects();
+        fetchStats();
     }, []);
+
+    const fetchStats = async () => {
+        try {
+            const res = await getProjectStats();
+            setStats(res.data);
+        } catch (err) {
+            console.error("Failed to load stats", err);
+        }
+    };
 
     const fetchProjects = async () => {
         setLoading(true);
@@ -141,14 +158,81 @@ const Projects = () => {
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h2>Projects</h2>
-                {isHRorAdmin && (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                        Add Project
-                    </Button>
-                )}
-            </div>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={8} md={5}>
+                    <Card bordered={false}>
+                        <Statistic
+                            title="Active Projects"
+                            value={stats.active_projects}
+                            prefix={<ProjectOutlined />}
+                            valueStyle={{ color: '#3f8600' }}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8} md={5}>
+                    <Card bordered={false}>
+                        <Statistic
+                            title="Prospective Projects"
+                            value={stats.prospective_projects}
+                            prefix={<RiseOutlined />}
+                            valueStyle={{ color: '#1890ff' }}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={24} md={10}>
+                    <Card bordered={false}>
+                        <Row gutter={16}>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Allocation"
+                                    value={stats.total_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_employees}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                            </Col>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Billable"
+                                    value={stats.billable_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_allocation}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                />
+                            </Col>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Billable (total)"
+                                    value={stats.billable_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_employees}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                />
+                            </Col>
+                        </Row>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={24} md={4}>
+                    {isHRorAdmin && (
+                        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                            Add Project
+                        </Button>
+                    )}
+                </Col>
+            </Row>
 
             <Card>
                 <div style={{ marginBottom: 16 }}>

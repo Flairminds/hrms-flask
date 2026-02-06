@@ -1001,6 +1001,11 @@ export const getProjects = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/projects`);
 };
 
+// Get project statistics
+export const getProjectStats = () => {
+  return axiosInstance.get(`${API_BASE_URL}/project/projects/stats`);
+};
+
 // Get single project
 export const getProject = (projectId) => {
   return axiosInstance.get(`${API_BASE_URL}/project/projects/${projectId}`);

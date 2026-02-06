@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, DatePicker, Select, Tabs, Table, Popconfirm, message, Row, Col } from 'antd';
+import { Modal, Form, Input, Button, DatePicker, Select, Tabs, Table, Row, Col, Popconfirm, message, Tooltip, Checkbox } from 'antd';
 import { DeleteOutlined, EditOutlined, ProjectOutlined, CalendarOutlined, UserOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
 import { getEmployeeList, addProject, updateProject, getProjectAllocations, manageAllocation, deleteAllocation } from '../../../services/api'; // updated imports
 import moment from 'moment';
@@ -184,7 +184,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
 
     return (
         <Modal
-            title={isEditMode ? `Edit Project: ${project?.project_name}` : "Create New Project"}
+            title={isEditMode ? `Edit Project: ${project?.project_name} ` : "Create New Project"}
             visible={visible}
             onCancel={onClose}
             footer={null}
@@ -308,10 +308,10 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                             <Col xs={24} md={24}>
                                                 <div style={{ display: 'flex', gap: 20 }}>
                                                     <Form.Item name="is_billing" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                                        <input type="checkbox" style={{ marginRight: 8 }} /> Billing
+                                                        <Checkbox>Billing</Checkbox>
                                                     </Form.Item>
                                                     <Form.Item name="is_trainee" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                                        <input type="checkbox" style={{ marginRight: 8 }} /> Trainee
+                                                        <Checkbox>Trainee</Checkbox>
                                                     </Form.Item>
                                                 </div>
                                             </Col>

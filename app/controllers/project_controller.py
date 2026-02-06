@@ -14,6 +14,16 @@ class ProjectController:
             return jsonify({"error": "Failed to fetch projects"}), 500
 
     @staticmethod
+    def get_stats():
+        """Get project dashboard statistics."""
+        try:
+            stats = ProjectService.get_dashboard_stats()
+            return jsonify(stats), 200
+        except Exception as e:
+            Logger.error("Error in get_stats", error=str(e))
+            return jsonify({"error": "Failed to fetch stats"}), 500
+
+    @staticmethod
     def get_project(project_id):
         """Get a single project."""
         try:

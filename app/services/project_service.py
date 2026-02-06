@@ -145,6 +145,40 @@ class ProjectService:
             db.session.rollback()
             Logger.error("Error deleting allocation", project_id=project_id, employee_id=employee_id, error=str(e))
             raise
+    
+    @staticmethod
+    def get_dashboard_stats():
+        """Aggregates project dashboard statistics."""
+        try:
+            # Project Counts
+            active_projects = Project.query.filter_by(project_status='Active').count()
+            prospective_projects = Project.query.filter_by(project_status='Future Prospect').count()
+            
+            # Allocation Stats (converting percentage to FTE by dividing by 100)
+            allocations = ProjectAllocation.query.all()
+            total_allocation = sum(float(a.project_allocation) for a in allocations) / 100.0 if allocations else 0
+            # Assuming billable allocation logic: sum of allocation where is_billing is true
+            billable_allocation = sum(float(a.project_allocation) for a in allocations if a.is_billing) / 100.0 if allocations else 0
+            
+            # Total Employees (Capacity)
+            total_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).count()
+
+            return {
+                'active_projects': active_projects,
+                'prospective_projects': prospective_projects,
+                'total_allocation': total_allocation,
+                'billable_allocation': billable_allocation,
+                'total_employees': total_employees
+            }
+        except Exception as e:
+            Logger.error("Error fetching dashboard stats", error=str(e))
+            return {
+                'active_projects': 0,
+                'prospective_projects': 0,
+                'total_allocation': 0,
+                'billable_allocation': 0,
+                'total_employees': 0
+            }
 
     @staticmethod
     def manage_allocation(data):

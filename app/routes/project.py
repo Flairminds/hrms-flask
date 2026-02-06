@@ -9,6 +9,10 @@ project_bp = Blueprint('project', __name__)
 def get_projects():
     return ProjectController.get_projects()
 
+@project_bp.route('/projects/stats', methods=['GET'])
+def get_stats():
+    return ProjectController.get_stats()
+
 @project_bp.route('/projects/<int:project_id>', methods=['GET'])
 def get_project(project_id):
     return ProjectController.get_project(project_id)
