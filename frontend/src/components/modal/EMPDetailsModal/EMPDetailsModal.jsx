@@ -11,9 +11,7 @@ import {
   getDocuments,
   uploadDocument,
   getAllEmployeeSkills,
-  getMasterRoles,
-  getCompanyRoles,
-  getCompanyBands
+  getMasterRoles
 } from '../../../services/api';
 import { getCookie } from '../../../util/CookieSet';
 import { useAuth } from '../../../context/AuthContext';
@@ -396,27 +394,27 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
             {/* Tab 1: Personal & Employment */}
             <Tabs.TabPane tab={<span><UserOutlined /> Personal Info</span>} key="1">
               <Row gutter={24}>
-                <Col span={12}>
+                <Col span={8}>
                   <Form.Item name="firstName" label="First Name">
                     <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
-                  <Form.Item name="lastName" label="Last Name">
-                    <Input disabled={!isEditMode} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
+                <Col span={8}>
                   <Form.Item name="middleName" label="Middle Name">
                     <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col span={8}>
+                  <Form.Item name="lastName" label="Last Name">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
                   <Form.Item name="dateOfBirth" label="Date of Birth">
                     <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col span={8}>
                   <Form.Item name="gender" label="Gender">
                     <Select disabled={!isEditMode}>
                       <Option value="Male">Male</Option>
@@ -425,7 +423,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col span={8}>
                   <Form.Item name="bloodGroup" label="Blood Group">
                     <Input disabled={!isEditMode} />
                   </Form.Item>
@@ -438,76 +436,6 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                         <Option key={status} value={status}>{status}</Option>
                       ))}
                     </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="band" label="Band">
-                    <Select disabled={!isEditMode}>
-                      {bandsData.map((band) => (
-                        <Option key={band.designation_id} value={band.designation_id}>{band.designation_name}</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="MasterSubRole" label="Designation">
-                    <Select disabled={!isEditMode}>
-                      {roleData.map((role) => (
-                        <Option key={role.sub_role_id} value={role.sub_role_id}>{role.sub_role_name}</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="role_id" label="Role">
-                    <Select disabled={!isEditMode}>
-                      {masterRolesData.map((role) => (
-                        <Option key={role.role_id} value={role.role_id}>{role.role_name}</Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="dateOfJoining" label="Date of Joining">
-                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="highestQualification" label="Highest Qualification">
-                    <Input disabled={!isEditMode} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="qualificationYearMonth" label="Qualification Month & Year">
-                    <Input disabled={!isEditMode} placeholder="e.g. May 2020" />
-                  </Form.Item>
-                </Col>
-                {isEditMode && (
-                  <Col span={24}>
-                    <Form.Item name="password" label="Change Password" extra="Leave blank to keep current password">
-                      <Input.Password placeholder="Enter new password" />
-                    </Form.Item>
-                  </Col>
-                )}
-              </Row>
-            </Tabs.TabPane>
-
-            {/* Tab 2: Contact & Emergency */}
-            <Tabs.TabPane tab={<span><PhoneOutlined /> Contact</span>} key="2">
-              <Row gutter={24}>
-                <Col span={12}>
-                  <Form.Item name="contactNumber" label="Personal Contact Number">
-                    <Input disabled={!isEditMode} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="personalEmail" label="Personal Email">
-                    <Input disabled={!isEditMode} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="email" label="Official Email">
-                    <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -525,6 +453,76 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                         </Option>
                       ))}
                     </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="band" label="Band">
+                    <Select disabled={!isEditMode}>
+                      {bandsData.map((band) => (
+                        <Option key={band.designation_id} value={band.designation_id}>{band.designation_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="MasterSubRole" label="Designation">
+                    <Select disabled={!isEditMode}>
+                      {roleData.map((role) => (
+                        <Option key={role.sub_role_id} value={role.sub_role_id}>{role.sub_role_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="role_id" label="Role">
+                    <Select disabled={!isEditMode}>
+                      {masterRolesData.map((role) => (
+                        <Option key={role.role_id} value={role.role_id}>{role.role_name}</Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="dateOfJoining" label="Date of Joining">
+                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="highestQualification" label="Highest Qualification">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="qualificationYearMonth" label="Qualification Month & Year">
+                    <Input disabled={!isEditMode} placeholder="e.g. May 2020" />
+                  </Form.Item>
+                </Col>
+                {isEditMode && (
+                  <Col span={24}>
+                    <Form.Item name="password" label="Change Password" extra="Leave blank to keep current password">
+                      <Input.Password placeholder="Enter new password" />
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
+            </Tabs.TabPane>
+
+            {/* Tab 2: Contact & Emergency */}
+            <Tabs.TabPane tab={<span><PhoneOutlined /> Contact</span>} key="2">
+              <Row gutter={24}>
+                <Col span={8}>
+                  <Form.Item name="contactNumber" label="Personal Contact Number">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="personalEmail" label="Personal Email">
+                    <Input disabled={!isEditMode} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="email" label="Official Email">
+                    <Input disabled={!isEditMode} />
                   </Form.Item>
                 </Col>
                 <Divider orientation="left">Emergency Contact</Divider>

@@ -808,7 +808,8 @@ class EmployeeService:
             'dateOfResignation': 'date_of_resignation',
             'internshipEndDate': 'internship_end_date',
             'probationEndDate': 'probation_end_date',
-            'MasterSubRole': 'role_id'
+            'MasterSubRole': 'sub_role',
+            'role': 'role_id'
         }
         for camel, snake in key_mapping.items():
             if camel in employee_data and snake not in employee_data:
