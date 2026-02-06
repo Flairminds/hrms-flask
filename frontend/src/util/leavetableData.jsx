@@ -24,7 +24,7 @@ export const tableHeadersTM = [
   { key: 'duration', displayName: 'Duration' },
   { key: 'applicationDate', displayName: 'Application Date', dataFormat: 'date' },
   { key: 'leaveStatus', displayName: 'Leave Status' },
-  { key: "appliedLeaveCount", displayName: "No of Days" },
+  { key: "noOfDays", displayName: "No of Days" },
   // {key:'leaveStatus',displayName:'leaveStatus'},
   { key: 'comments', displayName: 'Description' },
   { key: 'approverName', displayName: 'Leave Approver' },
