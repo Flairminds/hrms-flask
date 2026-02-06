@@ -2,28 +2,28 @@
     border: 1px solid #8ec5fc;
     border-radius: 8px;
     overflow-y: auto;
-    width: 175vh;
+    /* width: 175vh; */
 }
 
 .empTable thead>tr>th {
     background-color: #8ec5fc !important;
 }
-.main{
-    width: 100%;
-    padding: 1rem 0 1rem 1rem;
+
+.main {
+    padding: 1rem;
     overflow-x: auto;
 }
-.selectDiv{
 
+.selectDiv {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    width: 100%;
     align-items: center;
     gap: 20px;
-    padding-bottom: 20px;
+    padding: 1rem 0;
 }
-.heading{
+
+.heading {
     color: #0F6CBD;
     display: flex;
     text-align: center;
@@ -31,21 +31,21 @@
     align-items: center;
 }
 
-.loadBtn{
+.loadBtn {
     padding: 8px;
-  background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
-  color: #fff !important;
-  border: 1.4px solid #b3c7ff !important;
-  border-radius: 5px;
-  cursor: pointer;
-  position: relative;
-  font-size: 15px;
-  font-weight: 500;
-  border: 1.4px solid transparent;
-  margin-left: 5px;
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: #fff !important;
+    border: 1.4px solid #b3c7ff !important;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1.4px solid transparent;
+    margin-left: 5px;
 }
 
-.searchDiv{
+.searchDiv {
     display: flex;
     justify-content: center;
     margin-right: 3.5rem;

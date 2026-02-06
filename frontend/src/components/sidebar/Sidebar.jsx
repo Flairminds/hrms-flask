@@ -247,10 +247,10 @@ export const Sidebar = ({ isRole }) => {
             <UserSwitchOutlined className={stylesSidebar.iconsSidebar} />
             <span>Update Leave Approver</span>
           </div> */}
-          <div className={`${stylesSidebar.divs} ${isActive('https://hrms-monthly-report.streamlit.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://hrms-monthly-report.streamlit.app/', '_blank')}>
+          {/* <div className={`${stylesSidebar.divs} ${isActive('https://hrms-monthly-report.streamlit.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://hrms-monthly-report.streamlit.app/', '_blank')}>
             <ClockCircleOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Attendance Data</span>
-          </div>
+          </div> */}
           <div className={`${stylesSidebar.divs} ${isActive('/monthly-report') ? stylesSidebar.active : ''}`} onClick={() => navigate('/monthly-report')}>
             <BarChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Report</span>

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Table, Select, Input, Space, Button } from "antd";
+import { Table, Select, Input, Space, Button, Tabs } from "antd";
 import { getMonthlyReport } from "../../services/api";
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { CSVLink } from "react-csv";  // Import CSVLink
+import { CSVLink } from "react-csv";
 
 const generateColumns = (days) => {
     const baseColumns = [
@@ -42,23 +42,21 @@ const MonthlyReport = () => {
     const [month, setMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
     const [paginationConfig, setPaginationConfig] = useState({
         current: 1,
-        pageSize: 5,
+        pageSize: 10,
         total: 0,
         showSizeChanger: true,
-        pageSizeOptions: ['5', '10', '20', '50'],
+        pageSizeOptions: ['10', '20', '50'],
     });
     const [searchTerm, setSearchTerm] = useState("");
     const [loader, setLoader] = useState(false);
 
-    const years = [2023, 2024, 2025];
+    const years = [2023, 2024, 2025, 2026];
     const months = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
 
     const columns = generateColumns(31);
-
-
 
     const fetchMonthlyReport = async (page = 1, pageSize = 5) => {
         setLoader(true);
@@ -89,9 +87,8 @@ const MonthlyReport = () => {
         }
     };
 
-
     useEffect(() => {
-        fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize);
+        // fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize);
     }, []);
 
     useEffect(() => {
@@ -114,51 +111,57 @@ const MonthlyReport = () => {
         });
     };
 
-    return (
-        <div className={styles.main}>
-            <h3 className={styles.heading}>Monthly Report</h3>
+    // Leave Report Tab Content
+    const LeaveReportTab = () => (
+        <>
             <div className={styles.selectDiv}>
-                <div>
-                    <Space>
-                        <Select
-                            value={month}
-                            onChange={(value) => setMonth(value)}
-                            style={{ width: 120 }}
-                        >
-                            {months.map((m, index) => (
-                                <Select.Option key={index} value={m}>{m}</Select.Option>
-                            ))}
-                        </Select>
-                        <Select
-                            value={year}
-                            onChange={(value) => setYear(value)}
-                            style={{ width: 120 }}
-                        >
-                            {years.map((y, index) => (
-                                <Select.Option key={index} value={y}>{y}</Select.Option>
-                            ))}
-                        </Select>
-                        <Button className={styles.loadBtn} onClick={() => fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize)} loading={loader}>
-                            Generate
-                        </Button>
-                    </Space>
-                </div>
-                <div className={styles.searchDiv}>
-                    <Input.Search
-                        placeholder="Search by employee name"
-                        onSearch={(value) => setSearchTerm(value)}
-                        style={{ width: 1000 }}
-                    />
-                    <Button className={styles.loadBtn}>
-                        <CSVLink
-                            data={filteredData}
-                            headers={columns.map(col => ({ label: col.title, key: col.dataIndex }))}
-                            filename={`monthly_report_${month}_${year}.csv`}
-                            className={styles.downloadButton}
-                        >
-                            Download
-                        </CSVLink>
-                    </Button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <div>
+                        <Space>
+                            <Select
+                                value={month}
+                                onChange={(value) => setMonth(value)}
+                                style={{ width: 120 }}
+                            >
+                                {months.map((m, index) => (
+                                    <Select.Option key={index} value={m}>{m}</Select.Option>
+                                ))}
+                            </Select>
+                            <Select
+                                value={year}
+                                onChange={(value) => setYear(value)}
+                                style={{ width: 120 }}
+                            >
+                                {years.map((y, index) => (
+                                    <Select.Option key={index} value={y}>{y}</Select.Option>
+                                ))}
+                            </Select>
+                            <Button
+                                className={styles.loadBtn}
+                                onClick={() => fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize)}
+                                loading={loader}
+                            >
+                                Generate
+                            </Button>
+                            <Button className={styles.loadBtn}>
+                                <CSVLink
+                                    data={filteredData}
+                                    headers={columns.map(col => ({ label: col.title, key: col.dataIndex }))}
+                                    filename={`leave_report_${month}_${year}.csv`}
+                                    className={styles.downloadButton}
+                                >
+                                    Download
+                                </CSVLink>
+                            </Button>
+                        </Space>
+                    </div>
+                    <div className={styles.searchDiv}>
+                        <Input.Search
+                            placeholder="Search by employee name"
+                            onSearch={(value) => setSearchTerm(value)}
+                            style={{ width: 300 }}
+                        />
+                    </div>
                 </div>
             </div>
             {filteredData.length > 0 ? (
@@ -172,8 +175,60 @@ const MonthlyReport = () => {
                     className={styles.empTable}
                 />
             ) : (
-                <p>Loading...</p>
+                <p>No data available. Click "Generate" to fetch the report.</p>
             )}
+        </>
+    );
+
+    // Placeholder for Door Entry Report
+    const DoorEntryReportTab = () => (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+            {/* <h3>Door Entry Report</h3> */}
+            <p>This feature is coming soon...</p>
+        </div>
+    );
+
+    // Placeholder for Zymmr Report
+    const ZymmrReportTab = () => (
+        <div style={{ padding: '20px' }}>
+            {/* <h3>Zymmr Report</h3> */}
+            <p>Not supported yet.</p>
+        </div>
+    );
+
+    // Placeholder for Attendance Report
+    const AttendanceReportTab = () => (
+        <div style={{ padding: '20px' }}>
+            <a href="https://hrms-monthly-report.streamlit.app/">Click here to go the Attendance Report application</a>
+        </div>
+    );
+
+    const tabItems = [
+        {
+            key: '1',
+            label: 'Leave Report',
+            children: <LeaveReportTab />,
+        },
+        {
+            key: '2',
+            label: 'Door Entry Report',
+            children: <DoorEntryReportTab />,
+        },
+        {
+            key: '3',
+            label: 'Zymmr Report',
+            children: <ZymmrReportTab />,
+        },
+        {
+            key: '4',
+            label: 'Attendance Report',
+            children: <AttendanceReportTab />,
+        },
+    ];
+
+    return (
+        <div className={styles.main}>
+            <Tabs defaultActiveKey="1" items={tabItems} />
             <ToastContainer />
         </div>
     );
