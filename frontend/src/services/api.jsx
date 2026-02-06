@@ -444,7 +444,7 @@ export const getProjectNameForHR = async () => {
 
 // Retrieves the monthly report for a given month and year.
 export const getMonthlyReport = (month, year) => {
-  const res = axiosInstance.get(`${API_BASE_URL}/HRFunctionality/monthly-report?month=${month}&year=${year}`)
+  const res = axiosInstance.get(`${API_BASE_URL}/hr/monthly-report?month=${month}&year=${year}`)
   return res;
 }
 

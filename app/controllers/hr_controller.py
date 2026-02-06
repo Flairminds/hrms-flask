@@ -208,6 +208,14 @@ class HRController:
                               month=month,
                               year=year)
                 return jsonify({"Message": "Month and Year are required"}), 400
+            
+            # Convert to integers
+            try:
+                month = int(month)
+                year = int(year)
+            except ValueError:
+                Logger.warning("Invalid month/year format", month=month, year=year)
+                return jsonify({"Message": "Month and Year must be valid numbers"}), 400
                 
             report = ReportService.get_monthly_report(month, year)
             

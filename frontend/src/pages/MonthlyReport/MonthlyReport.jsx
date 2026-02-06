@@ -58,29 +58,37 @@ const MonthlyReport = () => {
 
     const columns = generateColumns(31);
 
-    
+
 
     const fetchMonthlyReport = async (page = 1, pageSize = 5) => {
         setLoader(true);
         try {
-            const response = await getMonthlyReport(month, year, page, pageSize);
+            // Convert month name to number (1-12)
+            const monthNumber = months.indexOf(month) + 1;
+
+            const response = await getMonthlyReport(monthNumber, year);
             toast.success("Report Generated");
-    
-            setReportData(response.data);
+
+            // Ensure response.data is always an array
+            const data = Array.isArray(response.data) ? response.data : [];
+            setReportData(data);
+
             setPaginationConfig((prevConfig) => ({
                 ...prevConfig,
                 current: page,
                 pageSize,
-                total: response.totalCount,
+                total: data.length,
             }));
         } catch (error) {
             console.error("Error fetching the monthly report:", error);
             toast.error("Failed to generate report");
+            setReportData([]);
+            setFilteredData([]);
         } finally {
             setLoader(false);
         }
     };
-    
+
 
     useEffect(() => {
         fetchMonthlyReport(paginationConfig.current, paginationConfig.pageSize);
@@ -141,16 +149,16 @@ const MonthlyReport = () => {
                         onSearch={(value) => setSearchTerm(value)}
                         style={{ width: 1000 }}
                     />
-                    <Button  className={styles.loadBtn}>
+                    <Button className={styles.loadBtn}>
                         <CSVLink
-                            data={filteredData} 
-                            headers={columns.map(col => ({ label: col.title, key: col.dataIndex }))} 
-                            filename={`monthly_report_${month}_${year}.csv`} 
+                            data={filteredData}
+                            headers={columns.map(col => ({ label: col.title, key: col.dataIndex }))}
+                            filename={`monthly_report_${month}_${year}.csv`}
                             className={styles.downloadButton}
                         >
                             Download
                         </CSVLink>
-                    </Button> 
+                    </Button>
                 </div>
             </div>
             {filteredData.length > 0 ? (

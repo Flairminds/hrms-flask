@@ -70,17 +70,17 @@ function AppRoutes() {
                 {/* <Route path="Accessibility" element={<Accessibility />} /> */}
                 {/* <Route path="MasterHR" element={<MasterHR />} /> */}
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />
-                <Route path="MonthlyReport" element={<MonthlyReport />} />
+                <Route path="monthly-report" element={<MonthlyReport />} />
                 {/* <Route path="SkillTracking" element={<SkillTracking />} /> */}
                 <Route path="document-repo" element={<AllDocRecords />} />
                 <Route path="ScoreCards" element={<AllDocRecords />} />
                 <Route path="EmployeesSkillEvaluationList" element={<EmployeesSkillEvaluationList />} />
                 <Route path="goalSetting" element={<GoalSettingPage />} />
                 <Route path="RelievingLetter" element={<RelievingLetter />} />
-                <Route path="PCsPage" element={<PCsPage />} />
-                <Route path="Assignments" element={<AssignmentsPage />} />
-                <Route path="Maintenance" element={<MaintenancePage />} />
-                <Route path="system-management" element={<SystemManagementPage />} />
+                {/* <Route path="PCsPage" element={<PCsPage />} /> */}
+                {/* <Route path="Assignments" element={<AssignmentsPage />} /> */}
+                {/* <Route path="Maintenance" element={<MaintenancePage />} /> */}
+                {/* <Route path="system-management" element={<SystemManagementPage />} /> */}
                 <Route path="projects" element={<Projects />} />
                 <Route path="hardware-management" element={<HardwareManagement />} />
                 <Route path="*" element={<span>404 Not Found</span>} />

@@ -1,21 +1,175 @@
 from typing import List, Dict, Any
-from sqlalchemy import text
+from datetime import datetime, timedelta
+from calendar import monthrange
+from sqlalchemy import and_, or_
 from ... import db
 from ...utils.logger import Logger
+from ...models.hr import Employee
+from ...models.leave import LeaveTransaction, MasterLeaveTypes
+
 
 class ReportService:
     @staticmethod
     def get_monthly_report(month: int, year: int) -> List[Dict[str, Any]]:
         """
         Generates a monthly report for attendance/payroll.
-        Executes the 'GetMonthlyReport' stored procedure.
+        Converted from SQL stored procedure to Python implementation.
+        
+        Args:
+            month: Month number (1-12)
+            year: Year (e.g., 2026)
+            
+        Returns:
+            List of dictionaries containing monthly report data for each employee
         """
         try:
             Logger.info("Fetching monthly report", month=month, year=year)
-            query = text("EXEC GetMonthlyReport @Month = :month, @Year = :year")
-            result = db.session.execute(query, {'month': month, 'year': year})
-            # Stored procedure results are often complex - mapping to dict
-            return [dict(row._mapping) for row in result]
+            
+            # Convert month/year to dates
+            start_date = datetime(year, month, 1)
+            _, num_days = monthrange(year, month)
+            end_date = datetime(year, month, num_days)
+            
+            # Get all active employees with their team leads
+            employees_query = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.last_name,
+                Employee.team_lead_id
+            ).filter(
+                Employee.employment_status.in_(['Intern', 'Probation', 'Confirmed', 'Active', 'Resigned'])
+            ).all()
+            
+            # Build report data structure
+            report_data = []
+            
+            for emp in employees_query:
+                # Get team lead name if exists
+                team_lead_name = ""
+                if emp.team_lead_id:
+                    team_lead = db.session.query(
+                        Employee.first_name,
+                        Employee.last_name
+                    ).filter(Employee.employee_id == emp.team_lead_id).first()
+                    
+                    if team_lead:
+                        team_lead_name = f"{team_lead.first_name or ''} {team_lead.last_name or ''}".strip()
+                
+                # Initialize employee row
+                employee_row = {
+                    'Employee_Id': emp.employee_id,
+                    'Employee_Name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                    'TeamLeadCoordinator': team_lead_name
+                }
+                
+                # Get leave transactions for this employee in this month
+                leave_transactions = db.session.query(
+                    LeaveTransaction.leave_type_id,
+                    LeaveTransaction.application_date,
+                    LeaveTransaction.leave_status,
+                    LeaveTransaction.duration,
+                    LeaveTransaction.approved_date,
+                    LeaveTransaction.from_date,
+                    LeaveTransaction.to_date,
+                    MasterLeaveTypes.leave_name
+                ).join(
+                    MasterLeaveTypes,
+                    LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
+                ).filter(
+                    and_(
+                        LeaveTransaction.employee_id == emp.employee_id,
+                        LeaveTransaction.leave_status.notin_(['Cancel', 'Reject']),
+                        LeaveTransaction.applied_by.isnot(None),
+                        or_(
+                            and_(
+                                LeaveTransaction.from_date <= end_date,
+                                LeaveTransaction.to_date >= start_date
+                            )
+                        )
+                    )
+                ).all()
+                
+                # Create a mapping of date to leave info
+                leave_by_date = {}
+                for leave in leave_transactions:
+                    # Determine which days this leave covers
+                    leave_start = max(leave.from_date.date() if isinstance(leave.from_date, datetime) else leave.from_date, start_date.date())
+                    leave_end = min(leave.to_date.date() if isinstance(leave.to_date, datetime) else leave.to_date, end_date.date())
+                    
+                    current_date = leave_start
+                    while current_date <= leave_end:
+                        leave_by_date[current_date] = {
+                            'leave_type': leave.leave_name,
+                            'application_date': leave.application_date.strftime('%d-%m-%Y') if leave.application_date else '',
+                            'leave_status': 'Approve' if leave.leave_status == 'Approved' else ('Pending' if leave.leave_status == 'Partial Approved' else leave.leave_status),
+                            'duration': leave.duration,
+                            'approved_date': leave.approved_date.strftime('%d-%m-%Y') if leave.approved_date else '',
+                            'approved_same_date': 'Yes' if leave.approved_date and leave.application_date and leave.approved_date.date() == leave.application_date.date() else 'No',
+                            'unpaid_status': 'Unpaid' if leave.leave_type_id in [12, 13] else 'Paid'
+                        }
+                        current_date += timedelta(days=1)
+                
+                # Add columns for each day of the month
+                current_date = start_date
+                for day in range(1, num_days + 1):
+                    day_str = str(day)
+                    date_str = current_date.strftime('%d-%m-%Y')
+                    weekday = current_date.strftime('%A')
+                    
+                    # Date columns
+                    employee_row[f'Date{day_str}'] = date_str
+                    
+                    # Entry exempt (weekday check)
+                    employee_row[f'EntryExempt{day_str}'] = 'entry time allowed' if weekday not in ['Saturday', 'Sunday'] else ''
+                    
+                    # Check if there's a leave for this date
+                    leave_info = leave_by_date.get(current_date.date())
+                    
+                    if leave_info:
+                        employee_row[f'Typeofleaveapproved{day_str}'] = leave_info['leave_type']
+                        employee_row[f'DateofLeaveApplication{day_str}'] = leave_info['application_date']
+                        employee_row[f'Leavestatus{day_str}'] = leave_info['leave_status']
+                        employee_row[f'WorkingDay{day_str}'] = 0.5 if leave_info['duration'] == 'Half Day' else 1
+                        employee_row[f'ApprovalDate{day_str}'] = leave_info['approved_date']
+                        employee_row[f'Approvedonsamedate{day_str}'] = leave_info['approved_same_date']
+                        employee_row[f'Unpaidstatus{day_str}'] = leave_info['unpaid_status']
+                    else:
+                        employee_row[f'Typeofleaveapproved{day_str}'] = ''
+                        employee_row[f'DateofLeaveApplication{day_str}'] = ''
+                        employee_row[f'Leavestatus{day_str}'] = ''
+                        employee_row[f'WorkingDay{day_str}'] = ''
+                        employee_row[f'ApprovalDate{day_str}'] = ''
+                        employee_row[f'Approvedonsamedate{day_str}'] = ''
+                        employee_row[f'Unpaidstatus{day_str}'] = ''
+                    
+                    # Placeholder columns for zy mmr data (to be populated from time tracking system)
+                    employee_row[f'Dayslogs{day_str}'] = ''
+                    employee_row[f'ZymmrLoggedTime{day_str}'] = ''
+                    employee_row[f'EntryinTime{day_str}'] = ''
+                    employee_row[f'Status{day_str}'] = ''
+                    employee_row[f'Swappedholidaydate{day_str}'] = ''
+                    
+                    current_date += timedelta(days=1)
+                
+                report_data.append(employee_row)
+            
+            # Sort by employee ID (numeric part)
+            def get_emp_number(emp_row):
+                emp_id = emp_row['Employee_Id']
+                try:
+                    return int(emp_id.replace('EMP', ''))
+                except:
+                    return 0
+            
+            report_data.sort(key=get_emp_number)
+            
+            Logger.info("Monthly report generated successfully", 
+                       month=month, 
+                       year=year,
+                       employee_count=len(report_data))
+            
+            return report_data
+            
         except Exception as e:
             Logger.error("Error fetching monthly report", error=str(e))
-            return []
+            raise

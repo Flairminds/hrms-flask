@@ -251,7 +251,7 @@ export const Sidebar = ({ isRole }) => {
             <ClockCircleOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Attendance Data</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/MonthlyReport') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MonthlyReport')}>
+          <div className={`${stylesSidebar.divs} ${isActive('/monthly-report') ? stylesSidebar.active : ''}`} onClick={() => navigate('/monthly-report')}>
             <BarChartOutlined className={stylesSidebar.iconsSidebar} />
             <span>Monthly Report</span>
           </div>
