@@ -1,8 +1,19 @@
 // function to convert date to DD-Mmm-YYYY format in Indian Standard Time
 export const convertDate = (date) => {
-    // date format from api is dd-mm-yyyy
+    if (!date) return "";
     let d = new Date(date);
+    // Check if date string implies a timestamp (has time component)
+    const hasTime = typeof date === 'string' && (date.includes('T') || (date.includes(':') && date.length > 10));
+
     const options = { day: '2-digit', month: 'short', year: 'numeric' };
+
+    if (hasTime) {
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+        options.hour12 = true;
+        return d.toLocaleString('en-IN', options);
+    }
+
     return d.toLocaleDateString('en-IN', options);
 }
 

@@ -315,7 +315,7 @@ const ReportHistoryTab = () => {
             title: 'Generated At',
             dataIndex: 'generated_at',
             key: 'generated_at',
-            render: (text) => new Date(text).toLocaleString()
+            render: (text) => convertDate(text)
         },
         {
             title: 'Actions',
