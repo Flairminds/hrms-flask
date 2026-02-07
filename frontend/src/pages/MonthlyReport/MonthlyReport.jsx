@@ -308,12 +308,12 @@ const DoorEntryStats = () => {
                     <h3>{stats.total_active}</h3>
                     <div>Total Active Employees</div>
                 </Card.Grid>
-                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: '#f6ffed' }}>
-                    <h3 style={{ color: '#52c41a' }}>{stats.mapped_count}</h3>
+                <Card.Grid style={{ width: '33%', textAlign: 'center' }}>
+                    <h3>{stats.mapped_count}</h3>
                     <div>Mapped Employees</div>
                 </Card.Grid>
-                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: '#fff1f0' }}>
-                    <h3 style={{ color: '#f5222d' }}>{stats.unmapped_count}</h3>
+                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: stats.unmapped_count > 0 ? '#fff1f0' : '#f6ffed' }}>
+                    <h3 style={{ color: stats.unmapped_count > 0 ? '#f5222d' : '#52c41a' }}>{stats.unmapped_count}</h3>
                     <div>Unmapped Employees</div>
                 </Card.Grid>
             </div>
