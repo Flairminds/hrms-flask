@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Table, Select, Space, Button, Tabs, Modal, Upload, message, Card, Tag } from "antd";
-import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport, getDoorEntryMappingStats, saveDoorEntryMapping, deleteDoorEntryMapping } from "../../services/api";
+import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport, getDoorEntryMappingStats, saveDoorEntryMapping, deleteDoorEntryMapping, generateAttendanceReport } from "../../services/api";
 import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
@@ -739,12 +739,193 @@ const ZymmrReportTab = () => (
     </div>
 );
 
-// Placeholder for Attendance Report
-const AttendanceReportTab = () => (
-    <div style={{ padding: '20px' }}>
-        <a href="https://hrms-monthly-report.streamlit.app/" target="_blank" rel="noopener noreferrer">Click here to go the Attendance Report application</a>
-    </div>
-);
+const AttendanceReportTab = () => {
+    const [viewMode, setViewMode] = useState('list');
+    const [attendanceReports, setAttendanceReports] = useState([]);
+    const [leaveReports, setLeaveReports] = useState([]);
+    const [doorReports, setDoorReports] = useState([]);
+
+    const [selectedLeaveReport, setSelectedLeaveReport] = useState(null);
+    const [selectedDoorReport, setSelectedDoorReport] = useState(null);
+
+    const [loading, setLoading] = useState(false);
+    const [detailData, setDetailData] = useState([]);
+    const [detailColumns, setDetailColumns] = useState([]);
+
+    useEffect(() => {
+        if (viewMode === 'list') {
+            fetchLists();
+        }
+    }, [viewMode]);
+
+    const fetchLists = async () => {
+        setLoading(true);
+        try {
+            const [attRes, leaveRes, doorRes] = await Promise.all([
+                getReports('Monthly Attendance Report'),
+                getReports('Monthly Leave Report'),
+                getReports('Monthly Door Entry Report')
+            ]);
+
+            if (attRes.success) setAttendanceReports(attRes.data);
+            if (leaveRes.success) setLeaveReports(leaveRes.data);
+            if (doorRes.success) setDoorReports(doorRes.data);
+
+        } catch (error) {
+            toast.error("Failed to fetch reports");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGenerate = async () => {
+        if (!selectedLeaveReport || !selectedDoorReport) {
+            message.error("Please select both a Leave Report and a Door Entry Report");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await generateAttendanceReport(selectedLeaveReport, selectedDoorReport);
+            if (res.data.success) {
+                toast.success("Attendance Report Generated Successfully");
+                fetchLists();
+                setSelectedLeaveReport(null);
+                setSelectedDoorReport(null);
+            } else {
+                toast.error(res.data.message);
+            }
+        } catch (error) {
+            toast.error("Failed to generate report");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewReport = async (reportId) => {
+        setLoading(true);
+        setViewMode('detail');
+        setDetailData([]);
+
+        try {
+            const response = await getReportDetails(reportId);
+            if (response.success) {
+                const data = Array.isArray(response.data.data) ? response.data.data : [];
+                setDetailData(data);
+
+                // Dynamic columns
+                if (data.length > 0) {
+                    const keys = Object.keys(data[0]);
+                    const cols = keys.map(key => ({
+                        title: key,
+                        dataIndex: key,
+                        key: key,
+                        render: (text) => {
+                            if (typeof text === 'object' && text !== null) return JSON.stringify(text);
+                            return text;
+                        }
+                    }));
+                    setDetailColumns(cols);
+                }
+            } else {
+                toast.error("Failed to load report details");
+                setViewMode('list');
+            }
+        } catch (error) {
+            toast.error("Error fetching report details");
+            setViewMode('list');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const columns = [
+        { title: 'Report For', dataIndex: 'report_for', key: 'report_for' },
+        { title: 'Generated At', dataIndex: 'generated_at', key: 'generated_at', render: (text) => convertDate(text) },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Space>
+                    <Button icon={<EyeOutlined />} onClick={() => handleViewReport(record.id)}>View</Button>
+                    {record.has_file && (
+                        <Button icon={<DownloadOutlined />} onClick={() => {/* Download logic if needed */ }}>Download</Button>
+                    )}
+                    <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id, [fetchLists])}>Delete</Button>
+                </Space>
+            )
+        }
+    ];
+
+    if (viewMode === 'list') {
+        return (
+            <div style={{ marginTop: '20px' }}>
+                <Card title="Generate Attendance Report" style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 20, alignItems: 'end' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <label>Select Monthly Leave Report:</label>
+                            <Select
+                                style={{ width: 300 }}
+                                placeholder="Select Leave Report"
+                                value={selectedLeaveReport}
+                                onChange={setSelectedLeaveReport}
+                            >
+                                {leaveReports.map(r => (
+                                    <Select.Option key={r.id} value={r.id}>
+                                        {r.report_for} (Gen: {convertDate(r.generated_at)})
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <label>Select Door Entry Report:</label>
+                            <Select
+                                style={{ width: 300 }}
+                                placeholder="Select Door Entry Report"
+                                value={selectedDoorReport}
+                                onChange={setSelectedDoorReport}
+                            >
+                                {doorReports.map(r => (
+                                    <Select.Option key={r.id} value={r.id}>
+                                        {r.report_for} (Gen: {convertDate(r.generated_at)})
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </div>
+                        <Button type="primary" onClick={handleGenerate} loading={loading} disabled={!selectedLeaveReport || !selectedDoorReport}>
+                            Generate & Save
+                        </Button>
+                        <Button onClick={fetchLists} icon={<ReloadOutlined />}>Refresh</Button>
+                    </div>
+                </Card>
+
+                <Table
+                    columns={columns}
+                    dataSource={attendanceReports}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{ pageSize: 10 }}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
+                <Button onClick={() => setViewMode('list')}>← Back to List</Button>
+            </div>
+            <Table
+                dataSource={detailData}
+                columns={detailColumns}
+                rowKey={(record, index) => index}
+                scroll={{ x: 'max-content' }}
+                loading={loading}
+                pagination={{ pageSize: 20 }}
+            />
+        </div>
+    );
+};
 
 const MonthlyReport = () => {
     const tabItems = [

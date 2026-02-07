@@ -386,3 +386,152 @@ class ReportService:
             db.session.rollback()
             Logger.error("Error processing door entry report", error=str(e))
             raise
+    @staticmethod
+    def generate_attendance_report(leave_report_id: int, door_report_id: int, user_id: str) -> Dict[str, Any]:
+        """
+        Merges a Monthly Leave Report and a Monthly Door Entry Report to create a Monthly Attendance Report.
+        Uses DoorEntryNamesMapping to link Employee IDs to Door System Names.
+        """
+        from ...models.hr import Reports, DoorEntryNamesMapping
+        from ...utils.helper_functions import normalize_date_str
+
+        try:
+            # 1. Fetch Source Reports
+            leave_report = Reports.query.get(leave_report_id)
+            door_report = Reports.query.get(door_report_id)
+
+            if not leave_report or not door_report:
+                raise ValueError("One or more source reports not found")
+            
+            if leave_report.report_type != 'Monthly Leave Report':
+                raise ValueError(f"Invalid Leave Report Type: {leave_report.report_type}")
+            
+            if door_report.report_type != 'Monthly Door Entry Report':
+                raise ValueError(f"Invalid Door Entry Report Type: {door_report.report_type}")
+
+            # 2. Fetch Mappings
+            mappings = DoorEntryNamesMapping.query.all()
+            # Map: Employee_ID -> Door_System_Name
+            emp_to_door_map = {m.employee_id: m.door_system_name for m in mappings}
+
+            # 3. Index Door Report Data
+            # Structure: Key=(DoorName, DateString), Value=RowData
+            # Note: Door Report dates might be in various formats. We need to normalize.
+            door_data_map = {}
+            for row in door_report.data:
+                # Assuming 'Name' is the column for Door System Name in the Excel
+                # Need to verify column names. The previous implementation just flattened headers.
+                # Let's assume there is a 'Name' column and a 'Date' column.
+                
+                # We need to be careful about matching names. The mapping has 'door_system_name'.
+                # The Excel likely has 'Name' or similar.
+                # Let's try to find keys that look like Name and Date.
+                
+                # In standard door reports, typically "Name" and "Date" are columns.
+                door_name = row.get('Name') or row.get('Person Name') # Fallbacks
+                raw_date = row.get('Date')
+                
+                if door_name and raw_date:
+                    norm_date = normalize_date_str(raw_date) # Helper to ensure DD-MM-YYYY
+                    if norm_date:
+                        # Composite key: Name + Date
+                        # Also normalize name (strip)
+                        clean_name = str(door_name).strip()
+                        door_data_map[(clean_name, norm_date)] = row
+
+            # 4. Process Leave Report Data (Base for Attendance Report)
+            # We clone the data to avoid mutating original report if it was referenced (though we're saving new)
+            attendance_data = [row.copy() for row in leave_report.data]
+            
+            for row in attendance_data:
+                emp_id = row.get('Employee_Id')
+                date_str = row.get('Date') # Should be DD-MM-YYYY already from leave report
+                
+                if emp_id and date_str:
+                    # Find mapped door name
+                    mapped_name = emp_to_door_map.get(emp_id)
+                    
+                    if mapped_name:
+                        # Lookup in door data
+                        door_entry = door_data_map.get((mapped_name, date_str))
+                        
+                        if door_entry:
+                            # 5. Merge Data
+                            # Populate fields. 
+                            # 'EntryinTime' -> First IN?
+                            # 'ZymmrLoggedTime' -> Actual Hours?
+                            # 'Dayslogs' -> Maybe raw In/Out logs?
+                            
+                            # Let's see what columns usually exist in door reports.
+                            # Usually: "AM In", "AM Out", "PM In", "PM Out", "Actual Hours"
+                            
+                            # Flatten useful info into string for "Dayslogs" or similar?
+                            # user request: "combine data based on door_name_mapping"
+                            # Let's blindly add all columns from door_entry that aren't in row
+                            
+                            for k, v in door_entry.items():
+                                if k not in row and v is not None:
+                                    row[f"Door_{k}"] = v # Prefix to avoid collision? Or just merge?
+                                    # Actually, let's map specific common fields if possible for cleaner report
+                                    
+                            # Map specific standard fields if available
+                            # "EntryinTime" - earliest IN
+                            # Try 'AM In' or 'In'
+                            first_in = door_entry.get('AM In') or door_entry.get('In')
+                            last_out = door_entry.get('PM Out') or door_entry.get('Out')
+                            
+                            if first_in:
+                                row['EntryinTime'] = str(first_in)
+                            
+                            # "ZymmrLoggedTime" - we can put Actual Hours here if it's empty
+                            # though Zymmr usually implies a specific tool. key might be misleading.
+                            # Let's just create new columns for clarity: "Door_Actual_Hours", "Door_First_In", "Door_Last_Out"
+                            
+                            if 'Actual' in door_entry: # 'Actual' or 'Actual Hours'
+                                row['Door_Actual_Hours'] = door_entry.get('Actual')
+                            elif 'Work Time' in door_entry:
+                                row['Door_Actual_Hours'] = door_entry.get('Work Time')
+
+                            # Keep raw merged data as well?
+                            # Let's add all non-conflicting keys
+                            for k, v in door_entry.items():
+                                if k not in ['Name', 'Date'] and k not in row:
+                                    row[k] = v
+
+            # 5. Save New Report
+            ist = pytz.timezone('Asia/Kolkata')
+            generated_at_ist = datetime.now(ist)
+            
+            # Construct Report For string
+            # Likely same as Leave Report
+            report_for_str = leave_report.report_for
+
+            new_report = Reports(
+                report_type='Monthly Attendance Report',
+                report_frequency='Monthly',
+                report_for=report_for_str,
+                generated_by=user_id,
+                data=attendance_data,
+                generated_at=generated_at_ist,
+                reference_reports=[
+                    {'id': leave_report.id, 'type': leave_report.report_type},
+                    {'id': door_report.id, 'type': door_report.report_type}
+                ]
+            )
+            
+            db.session.add(new_report)
+            db.session.commit()
+            
+            Logger.info("Attendance report generated", report_id=new_report.id)
+            
+            return {
+                "id": new_report.id,
+                "report_type": new_report.report_type,
+                "report_for": new_report.report_for,
+                "generated_at": new_report.generated_at
+            }
+
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error generating attendance report", error=str(e))
+            raise

@@ -304,3 +304,34 @@ def delete_door_entry_mapping(employee_id):
         Logger.error("Error deleting door entry mapping", error=str(e))
         db.session.rollback()
         return jsonify({'success': False, 'message': "Failed to delete mapping", 'error': str(e)}), 500
+
+@reports_bp.route('/attendance-report/generate', methods=['POST'])
+@jwt_required()
+def generate_attendance_report():
+    """
+    Generate Monthly Attendance Report by merging Leave and Door Entry reports.
+    Body: { "leave_report_id": <id>, "door_report_id": <id> }
+    """
+    try:
+        data = request.get_json()
+        leave_report_id = data.get('leave_report_id')
+        door_report_id = data.get('door_report_id')
+        
+        if not leave_report_id or not door_report_id:
+            return jsonify({'success': False, 'message': "Leave Report ID and Door Report ID are required"}), 400
+            
+        current_user_id = get_jwt_identity()
+        
+        result = ReportService.generate_attendance_report(
+            leave_report_id=leave_report_id, 
+            door_report_id=door_report_id, 
+            user_id=current_user_id
+        )
+        
+        return jsonify({'success': True, 'data': result, 'message': 'Attendance Report generated successfully'}), 200
+        
+    except ValueError as ve:
+        return jsonify({'success': False, 'message': str(ve)}), 400
+    except Exception as e:
+        Logger.error("Error generating attendance report", error=str(e))
+        return jsonify({'success': False, 'message': "Failed to generate attendance report", 'error': str(e)}), 500

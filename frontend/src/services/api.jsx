@@ -463,6 +463,14 @@ export const deleteDoorEntryMapping = (employeeId) => {
   return axiosInstance.delete(`${API_BASE_URL}/reports/door-entry-mapping/${employeeId}`);
 };
 
+// Generates an attendance report by merging leave and door entry reports.
+export const generateAttendanceReport = (leaveReportId, doorReportId) => {
+  return axiosInstance.post(`${API_BASE_URL}/reports/attendance-report/generate`, {
+    leave_report_id: leaveReportId,
+    door_report_id: doorReportId
+  });
+};
+
 
 // Gets the list of all employee skills.
 export const getAllEmployeeSkills = () => {
