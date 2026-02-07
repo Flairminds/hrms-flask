@@ -711,3 +711,13 @@ class Reports(BaseModel):
     data = db.Column(db.JSON)
     blob_link = db.Column(db.String(500)) # Stores Azure Blob URL
     reference_reports = db.Column(db.JSON) # List of {id, name}
+    is_deleted = db.Column(db.Boolean, default=False)
+
+
+class DoorEntryNamesMapping(BaseModel):
+    __tablename__ = 'door_entry_names_mapping'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
+    door_system_name = db.Column(db.String(100))
+    door_system_id = db.Column(db.String(50))
+
