@@ -448,6 +448,22 @@ export const getMonthlyReport = (month, year) => {
   return res;
 }
 
+// Retrieves door entry mapping statistics.
+export const getDoorEntryMappingStats = () => {
+  return axiosInstance.get(`${API_BASE_URL}/reports/door-entry-stats`);
+};
+
+// Creates or updates a door entry mapping.
+export const saveDoorEntryMapping = (payload) => {
+  return axiosInstance.post(`${API_BASE_URL}/reports/door-entry-mapping`, payload);
+};
+
+// Deletes a door entry mapping.
+export const deleteDoorEntryMapping = (employeeId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/reports/door-entry-mapping/${employeeId}`);
+};
+
+
 // Gets the list of all employee skills.
 export const getAllEmployeeSkills = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/get-all-skills`);

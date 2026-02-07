@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..models.hr import Reports, Employee
+from ..models.hr import Reports, Employee, DoorEntryNamesMapping
 from ..services.hr.report_service import ReportService
 from ..services.azure_blob_service import AzureBlobService
 from .. import db
 from ..utils.logger import Logger
+from datetime import datetime
+
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -193,3 +195,112 @@ def upload_report():
     except Exception as e:
         Logger.error("Error uploading report", error=str(e))
         return jsonify({'success': False, 'message': "Failed to upload report", 'error': str(e)}), 500
+
+@reports_bp.route('/door-entry-stats', methods=['GET'])
+@jwt_required()
+def get_door_entry_stats():
+    """
+    Get statistics for door entry mapping vs active employees.
+    """
+    try:
+        # Get all active employees (LWD is None or >= Today) joined with mappings
+        # Left Outer Join to get even unmapped employees, but we can filter later or use Python logic if easier
+        # Given we want stats, let's query all active employees and join
+        
+        results = db.session.query(Employee, DoorEntryNamesMapping)\
+            .outerjoin(DoorEntryNamesMapping, Employee.employee_id == DoorEntryNamesMapping.employee_id)\
+            .filter(Employee.employment_status.notin_(['Relieved', 'Absconding']))\
+            .all()
+        
+        mapped_employees = []
+        unmapped_employees = []
+        
+        for emp, mapping in results:
+            emp_data = {
+                'employee_id': emp.employee_id,
+                'name': f"{emp.first_name} {emp.last_name}",
+                'email': emp.email,
+            }
+            
+            if mapping:
+                emp_data['door_system_name'] = mapping.door_system_name
+                emp_data['door_system_id'] = mapping.door_system_id
+                mapped_employees.append(emp_data)
+            else:
+                unmapped_employees.append(emp_data)
+                
+        stats = {
+            'total_active': len(results),
+            'mapped_count': len(mapped_employees),
+            'unmapped_count': len(unmapped_employees),
+            'mapped_employees': mapped_employees,
+            'unmapped_employees': unmapped_employees
+        }
+
+        return jsonify({'success': True, 'data': stats, 'message': 'Stats fetched successfully'}), 200
+    except Exception as e:
+        Logger.error("Error fetching door entry stats", error=str(e))
+        return jsonify({'success': False, 'message': "Failed to fetch stats", 'error': str(e)}), 500
+
+@reports_bp.route('/door-entry-mapping', methods=['POST'])
+@jwt_required()
+def save_door_entry_mapping():
+    """
+    Create or update a door entry mapping for an employee.
+    Body: { "employee_id": "...", "door_system_name": "...", "door_system_id": "..." }
+    """
+    try:
+        data = request.get_json()
+        employee_id = data.get('employee_id')
+        door_system_name = data.get('door_system_name')
+        door_system_id = data.get('door_system_id')
+        
+        if not employee_id:
+            return jsonify({'success': False, 'message': "Employee ID is required"}), 400
+            
+        mapping = DoorEntryNamesMapping.query.filter_by(employee_id=employee_id).first()
+        
+        if mapping:
+            # Update existing
+            mapping.door_system_name = door_system_name
+            mapping.door_system_id = door_system_id
+            message = "Mapping updated successfully"
+        else:
+            # Create new
+            mapping = DoorEntryNamesMapping(
+                employee_id=employee_id,
+                door_system_name=door_system_name,
+                door_system_id=door_system_id
+            )
+            db.session.add(mapping)
+            message = "Mapping created successfully"
+            
+        db.session.commit()
+        return jsonify({'success': True, 'message': message}), 200
+        
+    except Exception as e:
+        Logger.error("Error saving door entry mapping", error=str(e))
+        db.session.rollback()
+        return jsonify({'success': False, 'message': "Failed to save mapping", 'error': str(e)}), 500
+
+@reports_bp.route('/door-entry-mapping/<employee_id>', methods=['DELETE'])
+@jwt_required()
+def delete_door_entry_mapping(employee_id):
+    """
+    Delete a door entry mapping for an employee.
+    """
+    try:
+        mapping = DoorEntryNamesMapping.query.filter_by(employee_id=employee_id).first()
+        
+        if not mapping:
+            return jsonify({'success': False, 'message': "Mapping not found"}), 404
+            
+        db.session.delete(mapping)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': "Mapping deleted successfully"}), 200
+        
+    except Exception as e:
+        Logger.error("Error deleting door entry mapping", error=str(e))
+        db.session.rollback()
+        return jsonify({'success': False, 'message': "Failed to delete mapping", 'error': str(e)}), 500

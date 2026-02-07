@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Table, Select, Space, Button, Tabs, Modal, Upload, message } from "antd";
-import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport } from "../../services/api";
+import { Table, Select, Space, Button, Tabs, Modal, Upload, message, Card, Tag } from "antd";
+import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport, getDoorEntryMappingStats, saveDoorEntryMapping, deleteDoorEntryMapping } from "../../services/api";
 import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
@@ -267,6 +267,233 @@ const LeaveReportTab = () => {
     );
 };
 
+// Door Entry Stats Component
+const DoorEntryStats = () => {
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        setLoading(true);
+        try {
+            const response = await getDoorEntryMappingStats();
+            if (response.data.success) {
+                setStats(response.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch stats", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const columns = [
+        { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
+        { title: 'Name', dataIndex: 'name', key: 'name' },
+        { title: 'Email', dataIndex: 'email', key: 'email' },
+        { title: 'Door Name', dataIndex: 'door_system_name', key: 'door_system_name' },
+        { title: 'Door ID', dataIndex: 'door_system_id', key: 'door_system_id' },
+    ];
+
+    if (loading) return <div>Loading Stats...</div>;
+    if (!stats) return null;
+
+    return (
+        <Card title="Door Entry Name Mappings" style={{ margin: '2rem 0' }} extra={<Button onClick={fetchStats} icon={<ReloadOutlined />}>Refresh</Button>}>
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                <Card.Grid style={{ width: '33%', textAlign: 'center' }}>
+                    <h3>{stats.total_active}</h3>
+                    <div>Total Active Employees</div>
+                </Card.Grid>
+                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: '#f6ffed' }}>
+                    <h3 style={{ color: '#52c41a' }}>{stats.mapped_count}</h3>
+                    <div>Mapped Employees</div>
+                </Card.Grid>
+                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: '#fff1f0' }}>
+                    <h3 style={{ color: '#f5222d' }}>{stats.unmapped_count}</h3>
+                    <div>Unmapped Employees</div>
+                </Card.Grid>
+            </div>
+
+            <MappingList
+                mappedEmployees={stats.mapped_employees}
+                unmappedEmployees={stats.unmapped_employees}
+                onRefresh={fetchStats}
+            />
+        </Card >
+    );
+};
+
+// Sub-component for Mapping List and CRUD
+const MappingList = ({ mappedEmployees, unmappedEmployees, onRefresh }) => {
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [editingRecord, setEditingRecord] = useState(null);
+    const [formValues, setFormValues] = useState({ employee_id: '', door_system_name: '', door_system_id: '' });
+    const [loading, setLoading] = useState(false);
+
+    const handleEdit = (record) => {
+        setEditingRecord(record);
+        setFormValues({
+            employee_id: record.employee_id,
+            door_system_name: record.door_system_name || '',
+            door_system_id: record.door_system_id || ''
+        });
+        setIsModalVisible(true);
+    };
+
+    const handleAdd = (record) => { // Adding from unmapped list
+        setEditingRecord(null); // specific mode for adding from list? or just use edit mode with pre-filled ID
+        setFormValues({
+            employee_id: record.employee_id,
+            door_system_name: '',
+            door_system_id: ''
+        });
+        setIsModalVisible(true);
+    };
+
+    // Manual add button (not from list)
+    const handleManualAdd = () => {
+        setEditingRecord(null);
+        setFormValues({ employee_id: '', door_system_name: '', door_system_id: '' });
+        setIsModalVisible(true);
+    }
+
+    const handleDeleteMapping = (employeeId) => {
+        confirm({
+            title: 'Delete Mapping?',
+            content: `Are you sure you want to delete the mapping for ${employeeId}?`,
+            onOk: async () => {
+                try {
+                    const res = await deleteDoorEntryMapping(employeeId);
+                    if (res.data.success) {
+                        message.success("Mapping deleted");
+                        onRefresh();
+                    } else {
+                        message.error(res.data.message);
+                    }
+                } catch (e) {
+                    message.error("Failed to delete mapping");
+                }
+            }
+        });
+    };
+
+    const handleSave = async () => {
+        if (!formValues.employee_id || !formValues.door_system_name) {
+            message.error("Employee ID and Door System Name are required");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await saveDoorEntryMapping(formValues);
+            if (res.data.success) {
+                message.success("Mapping saved successfully");
+                setIsModalVisible(false);
+                onRefresh();
+            } else {
+                message.error(res.data.message);
+            }
+        } catch (error) {
+            message.error("Failed to save mapping");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const mappedColumns = [
+        { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
+        { title: 'Name', dataIndex: 'name', key: 'name' },
+        { title: 'Email', dataIndex: 'email', key: 'email' },
+        { title: 'Door Name', dataIndex: 'door_system_name', key: 'door_system_name' },
+        { title: 'Door ID', dataIndex: 'door_system_id', key: 'door_system_id' },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Space>
+                    <Button type="link" onClick={() => handleEdit(record)}>Edit</Button>
+                    <Button type="link" danger onClick={() => handleDeleteMapping(record.employee_id)}>Delete</Button>
+                </Space>
+            )
+        }
+    ];
+
+    const unmappedColumns = [
+        { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
+        { title: 'Name', dataIndex: 'name', key: 'name' },
+        { title: 'Email', dataIndex: 'email', key: 'email' },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Button type="link" onClick={() => handleAdd(record)}>Add Mapping</Button>
+            )
+        }
+    ];
+
+    return (
+        <>
+            <Tabs defaultActiveKey="1" items={[
+                {
+                    key: '1',
+                    label: `Unmapped Employees (${unmappedEmployees.length})`,
+                    children: <Table dataSource={unmappedEmployees} columns={unmappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                },
+                {
+                    key: '2',
+                    label: `Mapped Employees (${mappedEmployees.length})`,
+                    children: (
+                        <div>
+                            {/* <Button type="primary" onClick={handleManualAdd} style={{marginBottom: 10}}>Add New Mapping</Button> */}
+                            <Table dataSource={mappedEmployees} columns={mappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                        </div>
+                    )
+                }
+            ]} />
+
+            <Modal
+                title={editingRecord ? "Edit Mapping" : "Add Mapping"}
+                open={isModalVisible}
+                onOk={handleSave}
+                onCancel={() => setIsModalVisible(false)}
+                confirmLoading={loading}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label>Employee ID:
+                        <input
+                            type="text"
+                            value={formValues.employee_id}
+                            onChange={(e) => setFormValues({ ...formValues, employee_id: e.target.value })}
+                            disabled={!!formValues.employee_id && (editingRecord !== null || formValues.employee_id !== '')} // Disable if editing or if added from unmapped list (where we pre-fill). Actually, if we pre-fill, we might want to allow change? But usually mapping is for that specific person. Let's assume ID is fixed when clicking "Add Mapping" for a person.
+                            style={{ width: '100%', padding: '5px' }}
+                        />
+                    </label>
+                    <label>Door System Name:
+                        <input
+                            type="text"
+                            value={formValues.door_system_name}
+                            onChange={(e) => setFormValues({ ...formValues, door_system_name: e.target.value })}
+                            style={{ width: '100%', padding: '5px' }}
+                        />
+                    </label>
+                    <label>Door System ID:
+                        <input
+                            type="text"
+                            value={formValues.door_system_id}
+                            onChange={(e) => setFormValues({ ...formValues, door_system_id: e.target.value })}
+                            style={{ width: '100%', padding: '5px' }}
+                        />
+                    </label>
+                </div>
+            </Modal>
+        </>
+    );
+};
+
 // Door Entry Report Tab Content
 const DoorEntryReportTab = () => {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
@@ -479,6 +706,10 @@ const DoorEntryReportTab = () => {
                     loading={listLoading}
                     pagination={{ pageSize: 10 }}
                 />
+
+                <div style={{ marginBottom: '20px' }}>
+                    <DoorEntryStats />
+                </div>
             </div>
         );
     }
