@@ -819,6 +819,11 @@ export const getReportDetails = async (id) => {
   return response.data;
 };
 
+export const deleteReport = async (id) => {
+  const response = await axiosInstance.patch(`${API_BASE_URL}/reports/${id}/archive`);
+  return response.data;
+};
+
 // =======================================================================================================================
 
 // Get Assigned Capability Leads: Retrieves a list of all assigned capability leads

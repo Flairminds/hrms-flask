@@ -21,6 +21,9 @@ def get_reports():
         if report_type:
             query = query.filter_by(report_type=report_type)
             
+        # Filter out deleted reports
+        query = query.filter((Reports.is_deleted == False) | (Reports.is_deleted == None))
+            
         reports = query.order_by(Reports.generated_at.desc()).all()
         
         result = []
@@ -132,3 +135,22 @@ def get_report_detail(report_id):
     except Exception as e:
         Logger.error("Error fetching report details", error=str(e))
         return jsonify({'success': False, 'message': "Failed to fetch report details", 'error': str(e)}), 500
+
+@reports_bp.route('/<int:report_id>/archive', methods=['PATCH'])
+@jwt_required()
+def archive_report(report_id):
+    """
+    Soft delete a report by setting is_deleted=True.
+    """
+    try:
+        report = Reports.query.get(report_id)
+        if not report:
+            return jsonify({'success': False, 'message': "Report not found"}), 404
+            
+        report.is_deleted = True
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': "Report archived successfully"}), 200
+    except Exception as e:
+        Logger.error("Error archiving report", error=str(e))
+        return jsonify({'success': False, 'message': "Failed to archive report", 'error': str(e)}), 500

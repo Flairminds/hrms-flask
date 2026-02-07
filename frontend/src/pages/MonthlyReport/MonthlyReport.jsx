@@ -1,17 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Table, Select, Space, Button, Tabs } from "antd";
-import { getReports, getReportDetails, generateReport } from "../../services/api";
-import { ReloadOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Table, Select, Space, Button, Tabs, Modal } from "antd";
+import { getReports, getReportDetails, generateReport, deleteReport } from "../../services/api";
+import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { convertDate } from "../../util/helperFunctions";
+
+const { confirm } = Modal;
 
 const years = [2023, 2024, 2025, 2026];
 const months = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
 ];
+
+const handleDelete = (id, refreshCallbacks) => {
+    confirm({
+        title: 'Are you sure you want to delete this report?',
+        icon: <ExclamationCircleOutlined />,
+        content: 'This will remove the report from the list.',
+        onOk() {
+            return deleteReport(id)
+                .then(res => {
+                    if (res.success) {
+                        toast.success("Report deleted successfully");
+                        refreshCallbacks.forEach(cb => cb());
+                    } else {
+                        toast.error(res.message);
+                    }
+                })
+                .catch(() => {
+                    toast.error("Failed to delete report");
+                });
+        },
+        onCancel() { },
+    });
+};
 
 // Leave Report Tab Content
 const LeaveReportTab = () => {
@@ -171,6 +196,13 @@ const LeaveReportTab = () => {
                             Download
                         </Button>
                     )}
+                    <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDelete(record.id, [fetchReportList])}
+                    >
+                        Delete
+                    </Button>
                 </Space>
             ),
         },
@@ -341,6 +373,14 @@ const ReportHistoryTab = () => {
                             Download
                         </Button>
                     )}
+                    <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDelete(record.id, [fetchReports])}
+                    >
+                        Delete
+                    </Button>
                 </Space>
             ),
         },
