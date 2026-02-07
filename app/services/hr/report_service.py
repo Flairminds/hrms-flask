@@ -190,3 +190,85 @@ class ReportService:
         except Exception as e:
             Logger.error("Error fetching monthly report", error=str(e))
             raise
+
+    @staticmethod
+    def generate_monthly_leave_report(month: int, year: int, user_id: str, reference_reports: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generates monthly leave report, saves as CSV to Azure Blob, and creates DB record.
+        
+        Args:
+            month: Month number
+            year: Year
+            user_id: ID of employee generating the report
+            reference_reports: Optional list of reports used as reference
+            
+        Returns:
+            Created Report object as dictionary
+        """
+        import csv
+        import io
+        import json
+        from ...models.hr import Reports
+        from ...services.azure_blob_service import AzureBlobService
+        
+        try:
+            # 1. Fetch Report Data
+            report_data = ReportService.get_monthly_report(month, year)
+            
+            # 2. Generate CSV
+            output = io.StringIO()
+            if report_data:
+                keys = report_data[0].keys()
+                dict_writer = csv.DictWriter(output, fieldnames=keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(report_data)
+            else:
+                # Handle empty report case
+                output.write("No data found for this month.")
+                
+            csv_content = output.getvalue().encode('utf-8')
+            
+            # 3. Upload to Azure Blob Storage
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"monthly_leave_report_{year}_{month:02d}_{timestamp}.csv"
+            blob_path = f"reports/{year}/{month:02d}/{filename}"
+            
+            blob_url = ""
+            try:
+                # We interpret blob_link as the full URL or path. 
+                # The user requirement says "blob url will be only in case when a file is uploaded"
+                # So we try to upload if we have the service configured.
+                blob_url = AzureBlobService.upload_blob(
+                    blob_name=blob_path,
+                    file_data=csv_content,
+                    content_type='text/csv'
+                )
+            except Exception as e:
+                Logger.error("Failed to upload report to Azure", error=str(e))
+                pass
+
+            # 4. Save to Database
+            new_report = Reports(
+                report_type='Monthly Leave Report',
+                generated_by=user_id,
+                data=report_data,  # storing JSON data directly as requested
+                blob_link=blob_url,
+                reference_reports=reference_reports
+            )
+            
+            db.session.add(new_report)
+            db.session.commit()
+            
+            Logger.info("Report generated and saved", report_id=new_report.id)
+            
+            return {
+                "id": new_report.id,
+                "report_type": new_report.report_type,
+                "generated_at": new_report.generated_at,
+                "blob_link": new_report.blob_link
+            }
+            
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error generating monthly leave report", error=str(e))
+            raise

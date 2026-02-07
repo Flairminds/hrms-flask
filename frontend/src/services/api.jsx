@@ -798,6 +798,27 @@ export const deleteGoal = (goalId) => {
   });
 };
 
+// ============= REPORTS API FUNCTIONS =============
+
+export const getReports = async (reportType) => {
+  let url = `${API_BASE_URL}/reports/`;
+  if (reportType) {
+    url += `?report_type=${encodeURIComponent(reportType)}`;
+  }
+  const response = await axiosInstance.get(url);
+  return response.data;
+};
+
+export const generateReport = async (month, year, reportType) => {
+  const response = await axiosInstance.post(`${API_BASE_URL}/reports/generate`, { month, year, report_type: reportType });
+  return response.data;
+};
+
+export const getReportDetails = async (id) => {
+  const response = await axiosInstance.get(`${API_BASE_URL}/reports/${id}`);
+  return response.data;
+};
+
 // =======================================================================================================================
 
 // Get Assigned Capability Leads: Retrieves a list of all assigned capability leads

@@ -299,7 +299,7 @@ class EmployeeSkill(BaseModel):
 
 
 class Project(BaseModel):
-    __tablename__ = 'project'
+    __tablename__ = 'projects'
     project_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     project_name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
@@ -622,7 +622,7 @@ class ProjectAllocation(BaseModel):
     
     __table_args__ = (
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
-        db.ForeignKeyConstraint(['project_id'], ['project.project_id']),
+        db.ForeignKeyConstraint(['project_id'], ['projects.project_id']),
         {}
     )
 
@@ -698,3 +698,14 @@ class CapabilityDevelopmentLeadAssignment(BaseModel):
         db.ForeignKeyConstraint(['assigned_employee_id'], ['employee.employee_id'], onupdate='CASCADE'),
         {}
     )
+
+
+class Reports(BaseModel):
+    __tablename__ = 'reports'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    report_type = db.Column(db.String(100), nullable=False, default='Monthly Leave Report')
+    generated_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
+    generated_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    data = db.Column(db.JSON)
+    blob_link = db.Column(db.String(500)) # Stores Azure Blob URL
+    reference_reports = db.Column(db.JSON) # List of {id, name}

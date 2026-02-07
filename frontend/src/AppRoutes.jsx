@@ -32,6 +32,7 @@ import SystemManagementPage from './pages/systemManagement/SystemManagementPage.
 import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
 import Projects from './pages/Projects/Projects.jsx';
 import HardwareManagement from './pages/HardwareManagement/HardwareManagement.jsx';
+// box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
 function AppRoutes() {
     const { user, isAuthenticated } = useAuth();
