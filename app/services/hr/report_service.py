@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
+import pytz
 from calendar import monthrange
 from sqlalchemy import and_, or_
 from ... import db
@@ -252,6 +253,9 @@ class ReportService:
             month_name = date(year, month, 1).strftime('%B')
             report_for_str = f"{month_name} {year}"
             
+            ist = pytz.timezone('Asia/Kolkata')
+            generated_at_ist = datetime.now(ist)
+
             new_report = Reports(
                 report_type='Monthly Leave Report',
                 report_frequency='Monthly',
@@ -259,7 +263,8 @@ class ReportService:
                 generated_by=user_id,
                 data=report_data,  # storing JSON data directly as requested
                 blob_link=blob_url,
-                reference_reports=reference_reports
+                reference_reports=reference_reports,
+                generated_at=generated_at_ist
             )
             
             db.session.add(new_report)
@@ -277,6 +282,107 @@ class ReportService:
             }
             
         except Exception as e:
+            raise
+
+    @staticmethod
+    def process_door_entry_report(file, month: int, year: int, user_id: str) -> Dict[str, Any]:
+        """
+        Process uploaded Door Entry Report Excel file.
+        Extracts data from 'Exceptions' sheet (row 3 header) and saves both file and data.
+        """
+        import pandas as pd
+        import io
+        from datetime import date
+        from ...models.hr import Reports
+        from ...services.azure_blob_service import AzureBlobService
+
+        try:
+            # 1. Read Excel File
+            # Read 'Exceptions' sheet, header starts at row 2 (0-indexed) -> row 3 in Excel
+            # 1. Read Excel File
+            # Read 'Exceptional' sheet, headers are on row 3 and 4 (0-indexed 2 and 3)
+            # This handles the merged cells for AM/PM -> In/Out
+            try:
+                df = pd.read_excel(file, sheet_name='Exceptional', header=[2, 3])
+            except ValueError:
+                # Fallback
+                df = pd.read_excel(file, header=[2, 3])
+
+            # Flatten MultiIndex columns
+            # Example: ('AM', 'In') -> 'AM In', ('No.', 'Unnamed: 0_level_1') -> 'No.'
+            new_columns = []
+            for col in df.columns:
+                top, bottom = col
+                # If top level is Unnamed (rare if checking row 2), ignore it. 
+                # If bottom level is Unnamed (common for non-merged single columns), ignore it.
+                part1 = str(top) if not str(top).startswith('Unnamed') else ''
+                part2 = str(bottom) if not str(bottom).startswith('Unnamed') else ''
+                new_col = f"{part1} {part2}".strip()
+                new_columns.append(new_col)
+            
+            df.columns = new_columns
+            
+            # Robustly handle NaN/Inf
+            # Using object type ensures None is accepted
+            df = df.astype(object).where(pd.notnull(df), None)
+            
+            # Convert to list of dictionaries
+            report_data = df.to_dict(orient='records')
+            
+            # 2. Upload Original File to Azure Blob
+            # Reset file pointer to beginning before upload
+            file.seek(0)
+            file_content = file.read()
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            original_filename = file.filename if hasattr(file, 'filename') else 'door_entry_report.xlsx'
+            blob_path = f"reports/door_entry/{year}/{month:02d}/{timestamp}_{original_filename}"
+            
+            blob_url = ""
+            try:
+                blob_url = AzureBlobService.upload_blob(
+                    blob_path,
+                    file_content,
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+            except Exception as e:
+                Logger.error("Failed to upload door entry report to Azure", error=str(e))
+                # We continue even if upload fails, but maybe we should warn? 
+                # For now, we proceed as the data is extracted.
+
+            # 3. Save to Database
+            month_name = date(year, month, 1).strftime('%B')
+            report_for_str = f"{month_name} {year}"
+            
+            ist = pytz.timezone('Asia/Kolkata')
+            generated_at_ist = datetime.now(ist)
+            
+            new_report = Reports(
+                report_type='Monthly Door Entry Report',
+                report_frequency='Monthly',
+                report_for=report_for_str,
+                generated_by=user_id,
+                data=report_data,
+                blob_link=blob_url,
+                is_deleted=False,
+                generated_at=generated_at_ist
+            )
+            
+            db.session.add(new_report)
+            db.session.commit()
+            
+            Logger.info("Door entry report processed and saved", report_id=new_report.id)
+            
+            return {
+                "id": new_report.id,
+                "report_type": new_report.report_type,
+                "report_frequency": new_report.report_frequency,
+                "report_for": new_report.report_for,
+                "generated_at": new_report.generated_at,
+                "blob_link": new_report.blob_link
+            }
+
+        except Exception as e:
             db.session.rollback()
-            Logger.error("Error generating monthly leave report", error=str(e))
+            Logger.error("Error processing door entry report", error=str(e))
             raise

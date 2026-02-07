@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Table, Select, Space, Button, Tabs, Modal } from "antd";
-import { getReports, getReportDetails, generateReport, deleteReport } from "../../services/api";
-import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Table, Select, Space, Button, Tabs, Modal, Upload, message } from "antd";
+import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport } from "../../services/api";
+import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -267,12 +267,239 @@ const LeaveReportTab = () => {
     );
 };
 
-// Placeholder for Door Entry Report
-const DoorEntryReportTab = () => (
-    <div style={{ padding: '20px' }}>
-        <p>This feature is coming soon...</p>
-    </div>
-);
+// Door Entry Report Tab Content
+const DoorEntryReportTab = () => {
+    const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
+    const [reports, setReports] = useState([]);
+    const [detailData, setDetailData] = useState([]);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [listLoading, setListLoading] = useState(false);
+    const [detailColumns, setDetailColumns] = useState([]);
+    const [fileList, setFileList] = useState([]);
+    const [uploading, setUploading] = useState(false);
+
+    // Month/Year for Upload
+    const [genInMonth, setGenInMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
+    const [genInYear, setGenInYear] = useState(new Date().getFullYear());
+
+    useEffect(() => {
+        if (viewMode === 'list') {
+            fetchReportList();
+        }
+    }, [viewMode]);
+
+    const fetchReportList = async () => {
+        setListLoading(true);
+        try {
+            const response = await getReports('Monthly Door Entry Report');
+            if (response.success) {
+                setReports(response.data);
+            } else {
+                toast.error(response.message);
+            }
+        } catch (error) {
+            toast.error("Failed to fetch reports list");
+        } finally {
+            setListLoading(false);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (fileList.length === 0) {
+            message.error('Please select a file first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileList[0]);
+        formData.append('month', months.indexOf(genInMonth) + 1);
+        formData.append('year', genInYear);
+        formData.append('report_type', 'Monthly Door Entry Report');
+
+        setUploading(true);
+        try {
+            const response = await uploadDoorEntryReport(formData);
+            if (response.success) {
+                toast.success("Report Uploaded & Saved Successfully");
+                setFileList([]);
+                fetchReportList();
+            } else {
+                toast.error(response.message);
+            }
+        } catch (error) {
+            toast.error("Failed to upload report");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleViewReport = async (reportId) => {
+        setDetailLoading(true);
+        setViewMode('detail');
+        setDetailData([]);
+
+        try {
+            const response = await getReportDetails(reportId);
+            if (response.success) {
+                const data = Array.isArray(response.data.data) ? response.data.data : [];
+                setDetailData(data);
+
+                // Dynamic columns based on first row keys
+                if (data.length > 0) {
+                    const keys = Object.keys(data[0]);
+                    const cols = keys.map(key => ({
+                        title: key,
+                        dataIndex: key,
+                        key: key,
+                        filters: [...new Set(data.map(a => a[key]))].filter(Boolean).map(name => ({ text: name, value: name })),
+                        onFilter: (value, record) => record[key] === value,
+                    }));
+                    setDetailColumns(cols);
+                }
+            } else {
+                toast.error("Failed to load report details");
+                setViewMode('list');
+            }
+        } catch (error) {
+            toast.error("Error fetching report details");
+            setViewMode('list');
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const listColumns = [
+        {
+            title: 'Report Type',
+            dataIndex: 'report_type',
+            key: 'report_type',
+        },
+        {
+            title: 'Report For',
+            dataIndex: 'report_for',
+            key: 'report_for',
+        },
+        {
+            title: 'Report Frequency',
+            dataIndex: 'report_frequency',
+            key: 'report_frequency',
+        },
+        {
+            title: 'Generated At',
+            dataIndex: 'generated_at',
+            key: 'generated_at',
+            render: (text) => convertDate(text)
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Space size="middle">
+                    <Button icon={<EyeOutlined />} onClick={() => handleViewReport(record.id)}>View</Button>
+                    {record.has_file && (
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={async () => {
+                                try {
+                                    const response = await getReportDetails(record.id);
+                                    if (response.success && response.data.download_url) {
+                                        window.open(response.data.download_url, '_blank');
+                                    } else {
+                                        toast.error("Download link not available");
+                                    }
+                                } catch (e) {
+                                    toast.error("Error downloading file");
+                                }
+                            }}
+                        >
+                            Download
+                        </Button>
+                    )}
+                    <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDelete(record.id, [fetchReportList])}
+                    >
+                        Delete
+                    </Button>
+                </Space>
+            ),
+        },
+    ];
+
+    const uploadProps = {
+        onRemove: (file) => {
+            setFileList([]);
+        },
+        beforeUpload: (file) => {
+            setFileList([file]);
+            return false;
+        },
+        fileList,
+    };
+
+    if (viewMode === 'list') {
+        return (
+            <div style={{ marginTop: '20px' }}>
+                <div style={{ padding: '15px', background: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
+                            {months.map((m, index) => (
+                                <Select.Option key={index} value={m}>{m}</Select.Option>
+                            ))}
+                        </Select>
+                        <Select value={genInYear} onChange={setGenInYear} style={{ width: 100 }}>
+                            {years.map((y, index) => (
+                                <Select.Option key={index} value={y}>{y}</Select.Option>
+                            ))}
+                        </Select>
+
+                        <Upload {...uploadProps}>
+                            <Button icon={<UploadOutlined />}>Select File</Button>
+                        </Upload>
+
+                        <Button
+                            type="primary"
+                            onClick={handleUpload}
+                            loading={uploading}
+                            disabled={fileList.length === 0}
+                        >
+                            Upload & Save
+                        </Button>
+
+                        <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
+                    </div>
+                </div>
+                <p style={{ color: 'lightblue' }}>Data extracted from the Exceptional Sheet from the monthly door entry excel file</p>
+
+                <Table
+                    columns={listColumns}
+                    dataSource={reports}
+                    rowKey="id"
+                    loading={listLoading}
+                    pagination={{ pageSize: 10 }}
+                />
+            </div>
+        );
+    }
+
+    // Detail View
+    return (
+        <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+                <Button onClick={() => setViewMode('list')}>← Back to List</Button>
+            </div>
+            <Table
+                dataSource={detailData}
+                columns={detailColumns}
+                rowKey={(record, index) => index}
+                scroll={{ x: 'max-content' }}
+                className={styles.empTable}
+                loading={detailLoading}
+            />
+        </div>
+    );
+};
 
 // Placeholder for Zymmr Report
 const ZymmrReportTab = () => (

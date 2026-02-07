@@ -824,6 +824,15 @@ export const deleteReport = async (id) => {
   return response.data;
 };
 
+export const uploadDoorEntryReport = async (formData) => {
+  const response = await axiosInstance.post(`${API_BASE_URL}/reports/upload`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 // =======================================================================================================================
 
 // Get Assigned Capability Leads: Retrieves a list of all assigned capability leads

@@ -154,3 +154,42 @@ def archive_report(report_id):
     except Exception as e:
         Logger.error("Error archiving report", error=str(e))
         return jsonify({'success': False, 'message': "Failed to archive report", 'error': str(e)}), 500
+
+@reports_bp.route('/upload', methods=['POST'])
+@jwt_required()
+def upload_report():
+    """
+    Upload and process a report file (e.g., Door Entry Report).
+    Form Data: file, month, year, report_type
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': "No file part"}), 400
+            
+        file = request.files['file']
+        month = request.form.get('month')
+        year = request.form.get('year')
+        report_type = request.form.get('report_type', 'Monthly Door Entry Report')
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': "No selected file"}), 400
+            
+        if not month or not year:
+            return jsonify({'success': False, 'message': "Month and Year are required"}), 400
+
+        current_user_id = get_jwt_identity()
+
+        if report_type == 'Monthly Door Entry Report':
+            result = ReportService.process_door_entry_report(
+                file=file,
+                month=int(month),
+                year=int(year),
+                user_id=current_user_id
+            )
+            return jsonify({'success': True, 'data': result, 'message': 'Report uploaded and processed successfully'}), 200
+        else:
+             return jsonify({'success': False, 'message': f"Upload not supported for report type '{report_type}'"}), 400
+             
+    except Exception as e:
+        Logger.error("Error uploading report", error=str(e))
+        return jsonify({'success': False, 'message': "Failed to upload report", 'error': str(e)}), 500
