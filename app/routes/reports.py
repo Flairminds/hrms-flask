@@ -32,6 +32,8 @@ def get_reports():
             result.append({
                 'id': report.id,
                 'report_type': report.report_type,
+                'report_frequency': report.report_frequency,
+                'report_for': report.report_for,
                 'generated_by': report.generated_by,
                 'generated_by_name': generated_by_name,
                 'generated_at': report.generated_at,

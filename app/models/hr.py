@@ -704,6 +704,8 @@ class Reports(BaseModel):
     __tablename__ = 'reports'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     report_type = db.Column(db.String(100), nullable=False, default='Monthly Leave Report')
+    report_frequency = db.Column(db.String(50))
+    report_for = db.Column(db.String(100))
     generated_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     generated_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     data = db.Column(db.JSON)

@@ -248,8 +248,14 @@ class ReportService:
                 pass
 
             # 4. Save to Database
+            from datetime import date
+            month_name = date(year, month, 1).strftime('%B')
+            report_for_str = f"{month_name} {year}"
+            
             new_report = Reports(
                 report_type='Monthly Leave Report',
+                report_frequency='Monthly',
+                report_for=report_for_str,
                 generated_by=user_id,
                 data=report_data,  # storing JSON data directly as requested
                 blob_link=blob_url,
@@ -264,6 +270,8 @@ class ReportService:
             return {
                 "id": new_report.id,
                 "report_type": new_report.report_type,
+                "report_frequency": new_report.report_frequency,
+                "report_for": new_report.report_for,
                 "generated_at": new_report.generated_at,
                 "blob_link": new_report.blob_link
             }
