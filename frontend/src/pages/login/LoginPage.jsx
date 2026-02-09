@@ -3,9 +3,9 @@ import styles from './LoginPage.module.css';
 import FMLogonew from '../../assets/login/FMLogonew.png';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from 'antd';
+import { Button, Modal } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
 import { loginUser } from '../../services/api';
 
@@ -14,6 +14,19 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loader, setLoader] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleOk = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
 
   const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
@@ -123,7 +136,7 @@ export const LoginPage = () => {
               <div className={styles.inputGroup}>
                 <div className={styles.labelRow}>
                   <label htmlFor="password">Password</label>
-                  <Link to='/resetPassword' className={styles.forgotLink}>Forgot password?</Link>
+                  <span className={styles.forgotLink} onClick={showModal} style={{ cursor: 'pointer' }}>Forgot/Change Password?</span>
                 </div>
                 <div className={styles.inputWrapper}>
                   <LockOutlined className={styles.inputIcon} />
@@ -159,6 +172,9 @@ export const LoginPage = () => {
           </div>
         </div>
       </div>
+      <Modal title="Forgot/Change Password" open={isModalVisible} onOk={handleOk} onCancel={handleCancel} footer={null}>
+        <p>Contact HR to change your password</p>
+      </Modal>
     </div>
   );
 }
