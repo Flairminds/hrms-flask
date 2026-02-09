@@ -1,76 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import stylesSidebar from "./Sidebar.module.css";
 import {
   DashboardOutlined,
   UserOutlined,
-  CalendarOutlined,
   GiftOutlined,
   FileProtectOutlined,
-  TeamOutlined,
-  AuditOutlined,
-  TrophyOutlined,
+  CalendarOutlined,
+  ProjectOutlined,
   StarOutlined,
+  TeamOutlined,
+  TrophyOutlined,
   ContactsOutlined,
-  FolderOpenOutlined,
-  UserSwitchOutlined,
-  ClockCircleOutlined,
-  BarChartOutlined,
-  UnlockOutlined,
-  SettingOutlined,
-  LineChartOutlined,
   FileSyncOutlined,
-  ToolOutlined,
-  FileTextOutlined,
-  LogoutOutlined,
   LaptopOutlined,
-  ContainerOutlined,
-  ProjectOutlined
+  BarChartOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import FMLogo from '../../assets/login/FMLogonew.png';
-import axiosInstance, { getWarningCount } from '../../services/api';
 import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext';
-import { getAllEmployeeEvaluators, getPolicyAcknowledgment } from '../../services/api';
-
+import { getAllEmployeeEvaluators } from '../../services/api';
 
 export const Sidebar = ({ isRole }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const [activePath, setActivePath] = useState(location.pathname);
-  const [warningCount, setWarningCount] = useState(0);
-  const [areAllPoliciesAcknowledged, setAreAllPoliciesAcknowledged] = useState(false);
-  const [countPersonalInfo, setCountPersonalInfo] = useState(0);
   const [isEvaluator, setIsEvaluator] = useState(false);
-  const [openSystem, setOpenSystem] = useState(false);
-
 
   useEffect(() => {
-    const fetchPolicyStatus = async () => {
-      try {
-        const employeeId = Cookies.get('employeeId');
-        if (!employeeId) return;
+    setActivePath(location.pathname);
+  }, [location.pathname]);
 
-        const response = await getPolicyAcknowledgment(employeeId);
-        const data = response.data;
-
-        if (data) {
-          const allAcknowledged =
-            data.LeavePolicyAcknowledged &&
-            data.WorkFromHomePolicyAcknowledged &&
-            data.ExitPolicyAndProcessAcknowledged &&
-            data.SalaryAdvanceRecoveryPolicyAcknowledged &&
-            data.ProbationToConfirmationPolicyAcknowledged &&
-            data.SalaryAndAppraisalPolicyAcknowledged;
-
-          setAreAllPoliciesAcknowledged(allAcknowledged);
-        }
-      } catch (error) {
-        console.error('Error fetching policy status:', error);
-      }
-    };
-
+  useEffect(() => {
     const checkEvaluatorStatus = async () => {
       try {
         const employeeId = Cookies.get('employeeId');
@@ -87,193 +50,141 @@ export const Sidebar = ({ isRole }) => {
       }
     };
 
-    fetchPolicyStatus();
     checkEvaluatorStatus();
   }, []);
 
-  useEffect(() => {
-    const fetchWarningCount = async () => {
-      try {
-        const employeeId = Cookies.get('employeeId');
-        if (employeeId) {
-          // const response = await getWarningCount(employeeId);
-          // setWarningCount(response.data.warningCount);
-
-          // const responsePersonal = await axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/complete-employee-details/${employeeId}`);
-          // setCountPersonalInfo(responsePersonal.data.data.Addresses[0].counter);
-        }
-      } catch (error) {
-        console.error('Error fetching warning count:', error);
-      }
-    };
-
-    fetchWarningCount();
-  }, [countPersonalInfo]);
-
-  useEffect(() => {
-    setActivePath(location.pathname);
-  }, [location.pathname]);
-
   const handleLogout = () => {
-    // Clear all localStorage items
     localStorage.removeItem('loginEmail');
     localStorage.removeItem('loginPassword');
-
-    // Call AuthContext logout which clears cookies and user state
     logout();
-
-    // Navigate to login page
     navigate('/login');
   };
 
   const isActive = (path) => path === activePath;
 
-  // Show only company policy and logout if policy acknowledgment is pending and warning count is high
-  // if (warningCount > 3 && !areAllPoliciesAcknowledged) {
-  //   return (
-  //     <div className={stylesSidebar.main}>
-  //       <div
-  //         className={`${stylesSidebar.divs} ${isActive('/companyPolicy') ? stylesSidebar.active : ''}`}
-  //         onClick={() => navigate('/companyPolicy')}
-  //       >
-  //         <img src={policyIconIcon} className={stylesSidebar.iconsSidebar} alt="Company Policy" />
-  //         <span>Company Policy</span>
-  //       </div>
-  //       <div className={stylesSidebar.divs} onClick={handleLogout}>
-  //         <img src={logOutIcon} className={stylesSidebar.iconsSidebar} alt="Log Out" />
-  //         <span>Log Out</span>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  const menuItems = useMemo(() => [
+    {
+      key: 'dashboard',
+      label: 'Dashboard',
+      path: '/',
+      icon: DashboardOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR'],
+      infoClass: true
+    },
+    {
+      key: 'personal-info',
+      label: 'Personal Info',
+      path: '/personal-info',
+      icon: UserOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR'],
+      infoClass: true
+    },
+    {
+      key: 'holiday',
+      label: 'Holiday List',
+      path: '/holiday',
+      icon: GiftOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR']
+    },
+    {
+      key: 'company-policy',
+      label: 'Company Policy',
+      path: '/company-policy',
+      icon: FileProtectOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR']
+    },
+    {
+      key: 'leave',
+      label: 'Leave Management',
+      path: '/leave',
+      icon: CalendarOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR']
+    },
+    {
+      key: 'projects',
+      label: 'Projects',
+      path: '/projects',
+      icon: ProjectOutlined,
+      roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR']
+    },
+    {
+      key: 'skill-evaluation',
+      label: 'Skill Evaluation',
+      path: '/EmployeesSkillEvaluationList',
+      icon: StarOutlined,
+      show: isEvaluator
+    },
+    {
+      key: 'team-leave-management',
+      label: 'Team Leave Management',
+      path: '/team-leave-management',
+      icon: TeamOutlined,
+      roles: ['Lead', 'Manager', 'HR']
+    },
+    {
+      key: 'goal-setting',
+      label: 'Goal Setting',
+      path: '/goalSetting',
+      icon: TrophyOutlined,
+      roles: ['All'],
+      infoClass: true
+    },
+    {
+      key: 'employee-management',
+      label: 'Employee Management',
+      path: '/employee-management',
+      icon: ContactsOutlined,
+      roles: ['HR', 'Manager']
+    },
+    {
+      key: 'documents',
+      label: 'Documents',
+      path: '/document-repo',
+      icon: FileSyncOutlined,
+      roles: ['HR', 'Manager']
+    },
+    {
+      key: 'hardware-management',
+      label: 'Hardware Management',
+      path: '/hardware-management',
+      icon: LaptopOutlined,
+      roles: ['HR', 'Manager']
+    },
+    {
+      key: 'monthly-report',
+      label: 'Monthly Report',
+      path: '/monthly-report',
+      icon: BarChartOutlined,
+      roles: ['HR', 'Manager']
+    }
+  ], [isEvaluator]);
 
-  // Show only personalInfo and logout if personal info count is too high
-  if (countPersonalInfo > 3) {
-    return (
-      <div className={stylesSidebar.main}>
-        <div
-          className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`}
-          onClick={() => navigate('/personal-info')}
-        >
-          <UserOutlined className={stylesSidebar.iconsSidebar} />
-          <span className={stylesSidebar.info}>Personal Info</span>
-        </div>
-        <div className={stylesSidebar.divs} onClick={handleLogout}>
-          <LogoutOutlined className={stylesSidebar.iconsSidebar} />
-          <span>Log Out</span>
-        </div>
-      </div>
-    );
-  }
+  const filteredItems = menuItems.filter(item => {
+    if (typeof item.show === 'boolean') return item.show;
+    if (item.roles && item.roles.includes('All')) return true;
+    if (item.roles && isRole) return item.roles.includes(isRole);
+    return false;
+  });
 
-  // Default: Full Sidebar
   return (
     <div className={stylesSidebar.main}>
-      {/* Flairminds Logo */}
       <div className={stylesSidebar.logoContainer}>
         <img src={FMLogo} alt="Flairminds" className={stylesSidebar.logo} />
       </div>
 
-      {(isRole === "Employee" || isRole === "Lead" || isRole === "Intern" || isRole === 'Manager' || isRole === "HR") && (
-        <>
-          <div className={`${stylesSidebar.divs} ${isActive('/') ? stylesSidebar.active : ''}`} onClick={() => navigate('/')}>
-            <DashboardOutlined className={stylesSidebar.iconsSidebar} />
-            <span className={stylesSidebar.info}>Dashboard</span>
+      {filteredItems.map(item => {
+        const Icon = item.icon;
+        return (
+          <div
+            key={item.key}
+            className={`${stylesSidebar.divs} ${isActive(item.path) ? stylesSidebar.active : ''}`}
+            onClick={() => navigate(item.path)}
+          >
+            <Icon className={stylesSidebar.iconsSidebar} />
+            <span className={item.infoClass ? stylesSidebar.info : ''}>{item.label}</span>
           </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/personal-info') ? stylesSidebar.active : ''}`} onClick={() => navigate('/personal-info')}>
-            <UserOutlined className={stylesSidebar.iconsSidebar} />
-            <span className={stylesSidebar.info}>Personal Info</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/holiday') ? stylesSidebar.active : ''}`} onClick={() => navigate('/holiday')}>
-            <GiftOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Holiday List</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/company-policy') ? stylesSidebar.active : ''}`} onClick={() => navigate('/company-policy')}>
-            <FileProtectOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Company Policy</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/leave') ? stylesSidebar.active : ''}`} onClick={() => navigate('/leave')}>
-            <CalendarOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Leave Management</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/projects') ? stylesSidebar.active : ''}`} onClick={() => navigate('/projects')}>
-            <ProjectOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Projects</span>
-          </div>
-        </>
-      )}
-      {isEvaluator && (
-        <div className={`${stylesSidebar.divs} ${isActive('/EmployeesSkillEvaluationList') ? stylesSidebar.active : ''}`} onClick={() => navigate('/EmployeesSkillEvaluationList')}>
-          <StarOutlined className={stylesSidebar.iconsSidebar} />
-          <span>Skill Evaluation</span>
-        </div>
-      )}
-
-      {(isRole === "Lead" || isRole === "Manager" || isRole === "HR") && (
-        <div className={`${stylesSidebar.divs} ${isActive('/team-leave-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/team-leave-management')}>
-          <TeamOutlined className={stylesSidebar.iconsSidebar} />
-          <span>Team Leave Management</span>
-        </div>
-      )}
-
-      <div className={`${stylesSidebar.divs} ${isActive('/goalSetting') ? stylesSidebar.active : ''}`} onClick={() => navigate('/goalSetting')}>
-        <TrophyOutlined className={stylesSidebar.iconsSidebar} />
-        <span className={stylesSidebar.info}>Goal Setting</span>
-      </div>
-
-      {(isRole === "HR" || isRole === "Manager") && (
-        <>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/HRLeaveManagement') ? stylesSidebar.active : ''}`} onClick={() => navigate('/HRLeaveManagement')}>
-            <AuditOutlined className={stylesSidebar.iconsSidebar} />
-            <span>HR Leave Management</span>
-          </div> */}
-          <div className={`${stylesSidebar.divs} ${isActive('/employee-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/employee-management')}>
-            <ContactsOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Employee Management</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/document-repo') ? stylesSidebar.active : ''}`} onClick={() => navigate('/document-repo')}>
-            <FileSyncOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Documents</span>
-          </div>
-          <div className={`${stylesSidebar.divs} ${isActive('/hardware-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/hardware-management')}>
-            <LaptopOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Hardware Management</span>
-          </div>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/allLeaveRecords') ? stylesSidebar.active : ''}`} onClick={() => navigate('/allLeaveRecords')}>
-            <FolderOpenOutlined className={stylesSidebar.iconsSidebar} />
-            <span>All Leave Records</span>
-          </div>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/updateLeaveApprover') ? stylesSidebar.active : ''}`} onClick={() => navigate('/updateLeaveApprover')}>
-            <UserSwitchOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Update Leave Approver</span>
-          </div> */}
-          {/* <div className={`${stylesSidebar.divs} ${isActive('https://hrms-monthly-report.streamlit.app/') ? stylesSidebar.active : ''}`} onClick={() => window.open('https://hrms-monthly-report.streamlit.app/', '_blank')}>
-            <ClockCircleOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Monthly Attendance Data</span>
-          </div> */}
-          <div className={`${stylesSidebar.divs} ${isActive('/monthly-report') ? stylesSidebar.active : ''}`} onClick={() => navigate('/monthly-report')}>
-            <BarChartOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Monthly Report</span>
-          </div>
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/Accessibility') ? stylesSidebar.active : ''}`} onClick={() => navigate('/Accessibility')}>
-            <UnlockOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Accessibility</span>
-          </div> */}
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/MasterHR') ? stylesSidebar.active : ''}`} onClick={() => navigate('/MasterHR')}>
-            <SettingOutlined className={stylesSidebar.iconsSidebar} />
-            <span>MasterHR</span>
-          </div> */}
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/SkillTracking') ? stylesSidebar.active : ''}`} onClick={() => navigate('/SkillTracking')}>
-            <LineChartOutlined className={stylesSidebar.iconsSidebar} />
-            <span>Skill Tracking</span>
-          </div> */}
-
-          {/* <div className={`${stylesSidebar.divs} ${isActive('/system-management') ? stylesSidebar.active : ''}`} onClick={() => navigate('/system-management')}>
-            <ToolOutlined className={stylesSidebar.iconsSidebar} />
-            <span className={stylesSidebar.info}>System Management</span>
-          </div> */}
-        </>
-      )}
+        );
+      })}
 
       <div className={stylesSidebar.divs} onClick={handleLogout}>
         <LogoutOutlined className={stylesSidebar.iconsSidebar} />
