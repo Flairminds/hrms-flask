@@ -2,6 +2,7 @@ import OTP from 'antd/es/input/OTP';
 import axios from 'axios';
 import moment from "moment";
 import { getCookie } from '../util/CookieSet';
+import { toast } from 'react-toastify';
 
 // Use environment variable for API base URL
 // In development: http://localhost:5000/api (via proxy)
@@ -38,7 +39,8 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid, redirect to login
-      window.location.href = '/login';
+      toast.error("Unauthorized");
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   }

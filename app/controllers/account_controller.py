@@ -99,7 +99,7 @@ class AccountController:
             
             if not user:
                 Logger.warning("Login failed - invalid credentials", username=username)
-                return jsonify({"message": "Invalid Username or Password"}), 401
+                return jsonify({"message": "Invalid Username or Password"}), 400
             
             # Check employment status
             if user.employment_status in ["Relieved", "Absconding"]:
@@ -109,7 +109,7 @@ class AccountController:
                               status=user.employment_status)
                 return jsonify({
                     "message": f"Access denied. Employee status: {user.employment_status}"
-                }), 401
+                }), 400
             
             # Generate JWT token with role claim
             access_token = create_access_token(
@@ -424,7 +424,7 @@ class AccountController:
                 return jsonify({
                     "status": "error",
                     "message": "Invalid token"
-                }), 401
+                }), 400
             
             Logger.debug("Fetching current user details", employee_id=employee_id)
             

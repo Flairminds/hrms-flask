@@ -174,14 +174,6 @@ class LeaveTransactionService:
                     else: # Half Day
                         if current_time > time(11, 59):
                              raise ValueError("For current date, Half Day WFH must be applied before 11:59 AM.")
-                
-                # Monday Validation
-                # Check if any date in range is Monday (weekday 0)
-                curr_d = from_date_only
-                while curr_d <= to_date_only:
-                    if curr_d.weekday() == 0:
-                        raise ValueError("Work From Home cannot be applied for Monday.")
-                    curr_d += timedelta(days=1)
 
                 if app_date_only > from_date_only:
                     raise ValueError("You cannot apply for Work From Home as the application date is after the from date.")

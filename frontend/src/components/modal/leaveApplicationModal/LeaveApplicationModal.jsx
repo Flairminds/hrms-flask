@@ -459,7 +459,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
 
     // Work From Home: cannot apply for Monday and must be today or future
     if (type === 'Work From Home') {
-      return current.day() === 1 || current.isBefore(today, 'day');
+      return current.isBefore(today, 'day');
     }
 
     return false;

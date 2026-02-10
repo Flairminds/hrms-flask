@@ -18,7 +18,6 @@ const LEAVE_CONDITIONS = {
         "Time log will be verified by approver before approval."
     ],
     "Work From Home": [
-        "Cannot apply for Monday.",
         "Maximum 5 consecutive days allowed.",
         "For current date: Full Day must be applied before 9:30 AM, Half Day before 11:59 AM.",
         "More than 1 day WFH in a week requires 1 week advance notice and 2nd level approval.",
