@@ -196,12 +196,17 @@ class ProjectService:
                     ProjectAllocation.project_allocation,
                     ProjectAllocation.employee_role,
                     ProjectAllocation.is_billing,
-                    Project.project_name
+                    Project.project_name,
+                    (Employee.first_name + ' ' + Employee.last_name).label('lead_name'),
                 ).join(
                     Project, ProjectAllocation.project_id == Project.project_id
+                ).outerjoin(
+                    Employee, Project.lead_by == Employee.employee_id
                 ).filter(
                     ProjectAllocation.employee_id == emp.employee_id
                 ).all()
+
+                print(allocations)
                 
                 # Calculate totals
                 total_allocation = sum(alloc.project_allocation for alloc in allocations)
@@ -214,10 +219,11 @@ class ProjectService:
                         'project_name': alloc.project_name,
                         'role': alloc.employee_role,
                         'allocation': float(alloc.project_allocation),
-                        'is_billing': alloc.is_billing
+                        'is_billing': alloc.is_billing,
+                        'lead_name': alloc.lead_name
                     } for alloc in allocations
                 ]
-                
+
                 result.append({
                     'employee_id': emp.employee_id,
                     'employee_name': ' '.join(emp.employee_name.split()),
@@ -230,6 +236,64 @@ class ProjectService:
             return result
         except Exception as e:
             Logger.error("Error fetching employee allocations", error=str(e))
+            return []
+
+    @staticmethod
+    def get_my_projects_team(employee_id):
+        """Retrieves projects for a specific employee with all team members."""
+        try:
+            # Get projects the employee is allocated to
+            my_projects = db.session.query(
+                Project.project_id,
+                Project.project_name,
+                Project.client,
+                (Employee.first_name + ' ' + Employee.last_name).label('lead_name'),
+                ProjectAllocation.employee_role.label('my_role'),
+                ProjectAllocation.project_allocation.label('my_allocation')
+            ).join(
+                ProjectAllocation, Project.project_id == ProjectAllocation.project_id
+            ).outerjoin(
+                Employee, Project.lead_by == Employee.employee_id
+            ).filter(
+                ProjectAllocation.employee_id == employee_id
+            ).all()
+            
+            result = []
+            for proj in my_projects:
+                # Get all team members for this project
+                team_members = db.session.query(
+                    ProjectAllocation.employee_id,
+                    func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('employee_name'),
+                    Employee.email,
+                    ProjectAllocation.employee_role,
+                    ProjectAllocation.project_allocation
+                ).join(
+                    Employee, ProjectAllocation.employee_id == Employee.employee_id
+                ).filter(
+                    ProjectAllocation.project_id == proj.project_id
+                ).all()
+
+                result.append({
+                    'project_id': proj.project_id,
+                    'project_name': proj.project_name,
+                    'client': proj.client,
+                    'my_role': proj.my_role,
+                    'my_allocation': float(proj.my_allocation),
+                    'lead_name': proj.lead_name,
+                    'team_members': [
+                        {
+                            'employee_id': tm.employee_id,
+                            'employee_name': ' '.join(tm.employee_name.split()),
+                            'email': tm.email,
+                            'role': tm.employee_role,
+                            'allocation': float(tm.project_allocation)
+                        } for tm in team_members
+                    ]
+                })
+            
+            return result
+        except Exception as e:
+            Logger.error("Error fetching my projects team", employee_id=employee_id, error=str(e))
             return []
 
     @staticmethod

@@ -5,6 +5,7 @@ import { getProjects, deleteProject, getProjectStats } from '../../services/api'
 import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import EmployeeAllocations from './EmployeeAllocations.jsx';
+import MyProjectsTeam from './MyProjectsTeam.jsx';
 
 const Projects = () => {
     const { user } = useAuth();
@@ -295,6 +296,9 @@ const Projects = () => {
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Employee Allocations" key="2">
                     <EmployeeAllocations />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="My Projects & Team" key="3">
+                    <MyProjectsTeam />
                 </Tabs.TabPane>
             </Tabs>
         </div>

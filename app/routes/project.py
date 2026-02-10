@@ -1,4 +1,5 @@
 from flask import Blueprint
+from flask_jwt_extended import jwt_required
 from ..controllers.project_controller import ProjectController
 # from ..middlewares.auth_middleware import roles_required # Assuming middleware exists, but project uses global or decorator based.
 # Checking existing patterns, auth seems handled via configuration in `auth_config.py` coupled with a middleware that reads it.
@@ -44,3 +45,8 @@ def delete_allocation(project_id, employee_id):
 @project_bp.route('/employee-allocations', methods=['GET'])
 def get_employee_allocations():
     return ProjectController.get_employee_allocations()
+
+@project_bp.route('/my-projects-team', methods=['GET'])
+@jwt_required()
+def get_my_projects_team():
+    return ProjectController.get_my_projects_team()

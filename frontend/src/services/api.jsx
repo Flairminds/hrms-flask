@@ -1184,3 +1184,8 @@ export const getEmployeeDocumentStats = () => {
 export const getEmployeeAllocations = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/employee-allocations`);
 };
+
+// Get my projects with team members
+export const getMyProjectsTeam = () => {
+  return axiosInstance.get(`${API_BASE_URL}/project/my-projects-team`);
+};

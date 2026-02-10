@@ -55,6 +55,7 @@ const EmployeeAllocations = () => {
         const projectColumns = [
             { title: 'Project', dataIndex: 'project_name', key: 'project_name' },
             { title: 'Role', dataIndex: 'role', key: 'role' },
+            { title: 'Lead', dataIndex: 'lead_name', key: 'lead_name' },
             { title: 'Allocation %', dataIndex: 'allocation', key: 'allocation', render: (val) => `${val}%` },
             {
                 title: 'Billable',

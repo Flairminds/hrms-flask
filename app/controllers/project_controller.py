@@ -132,3 +132,18 @@ class ProjectController:
         except Exception as e:
             Logger.error("Error in get_employee_allocations", error=str(e))
             return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    def get_my_projects_team():
+        """Get current user's projects with team members."""
+        try:
+            from flask_jwt_extended import get_jwt_identity
+            employee_id = get_jwt_identity()
+            if not employee_id:
+                return jsonify({"error": "Unauthorized"}), 401
+            
+            projects = ProjectService.get_my_projects_team(employee_id)
+            return jsonify(projects), 200
+        except Exception as e:
+            Logger.error("Error in get_my_projects_team", error=str(e))
+            return jsonify({"error": str(e)}), 500
