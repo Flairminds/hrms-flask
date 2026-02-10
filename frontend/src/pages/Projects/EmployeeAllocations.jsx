@@ -27,7 +27,7 @@ const EmployeeAllocations = () => {
 
     const filteredData = employeeAllocations.filter(emp => {
         const matchesName = !employeeSearchText || emp.employee_name.toLowerCase().includes(employeeSearchText.toLowerCase());
-        const matchesAllocation = allocationFilter === null || emp.total_allocation < allocationFilter || emp.billable_allocation < allocationFilter;
+        const matchesAllocation = allocationFilter === null || emp.total_allocation < allocationFilter;
         return matchesName && matchesAllocation;
     });
 
@@ -65,8 +65,8 @@ const EmployeeAllocations = () => {
         ];
 
         return (
-            <div style={{ margin: 0 }}>
-                <h4>Project Allocations:</h4>
+            <div style={{ margin: '0 0 0 5rem' }}>
+                {/* <h4>Project Allocations:</h4> */}
                 <Table
                     columns={projectColumns}
                     dataSource={record.projects}
@@ -90,18 +90,12 @@ const EmployeeAllocations = () => {
                         onChange={e => setEmployeeSearchText(e.target.value)}
                         style={{ width: 300 }}
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>Show allocation {'<'}</span>
-                        <InputNumber
-                            min={0}
-                            max={1}
-                            step={0.1}
-                            value={allocationFilter}
-                            onChange={setAllocationFilter}
-                            placeholder="e.g., 0.5"
-                            style={{ width: 100 }}
-                        />
-                    </div>
+                    <Button
+                        type={allocationFilter === 0.5 ? 'primary' : 'default'}
+                        onClick={() => setAllocationFilter(allocationFilter === 0.5 ? null : 0.5)}
+                    >
+                        Show allocations less than 0.5
+                    </Button>
                 </div>
 
                 <Table
