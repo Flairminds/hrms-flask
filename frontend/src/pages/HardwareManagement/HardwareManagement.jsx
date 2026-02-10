@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Space } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import {
     getAllHardwareAssets,
     createHardwareAsset,
@@ -76,8 +76,8 @@ const HardwareManagement = () => {
         setEditingAsset(record);
         assetForm.setFieldsValue({
             ...record,
-            purchase_date: record.purchase_date ? moment(record.purchase_date) : null,
-            warranty_till: record.warranty_till ? moment(record.warranty_till) : null,
+            purchase_date: record.purchase_date ? dayjs(record.purchase_date) : null,
+            warranty_till: record.warranty_till ? dayjs(record.warranty_till) : null,
         });
         setAssetModalVisible(true);
     };
@@ -148,8 +148,8 @@ const HardwareManagement = () => {
         setEditingAssignment(record);
         assignmentForm.setFieldsValue({
             ...record,
-            assignment_date: record.assignment_date ? moment(record.assignment_date) : null,
-            return_date: record.return_date ? moment(record.return_date) : null,
+            assignment_date: record.assignment_date ? dayjs(record.assignment_date) : null,
+            return_date: record.return_date ? dayjs(record.return_date) : null,
         });
         setAssignmentModalVisible(true);
     };
@@ -212,7 +212,7 @@ const HardwareManagement = () => {
         setEditingMaintenance(record);
         maintenanceForm.setFieldsValue({
             ...record,
-            maintenance_date: record.maintenance_date ? moment(record.maintenance_date) : null,
+            maintenance_date: record.maintenance_date ? dayjs(record.maintenance_date) : null,
         });
         setMaintenanceModalVisible(true);
     };
@@ -453,10 +453,10 @@ const HardwareManagement = () => {
                             </Select>
                         </Form.Item>
                         <Form.Item name="purchase_date" label="Purchase Date">
-                            <DatePicker style={{ width: '100%' }} />
+                            <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
                         </Form.Item>
                         <Form.Item name="warranty_till" label="Warranty Till">
-                            <DatePicker style={{ width: '100%' }} />
+                            <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
                         </Form.Item>
                         <Form.Item name="notes" label="Notes">
                             <TextArea rows={3} />
@@ -504,7 +504,7 @@ const HardwareManagement = () => {
                             </Select>
                         </Form.Item>
                         <Form.Item name="assignment_date" label="Assignment Date">
-                            <DatePicker style={{ width: '100%' }} />
+                            <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
                         </Form.Item>
                         <Form.Item name="status" label="Status" initialValue="Active">
                             <Select>
@@ -523,7 +523,7 @@ const HardwareManagement = () => {
                         {editingAssignment && (
                             <>
                                 <Form.Item name="return_date" label="Return Date">
-                                    <DatePicker style={{ width: '100%' }} />
+                                    <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
                                 </Form.Item>
                                 <Form.Item name="returned_by" label="Returned By">
                                     <Select showSearch optionFilterProp="children">
@@ -570,7 +570,7 @@ const HardwareManagement = () => {
                             <TextArea rows={3} />
                         </Form.Item>
                         <Form.Item name="maintenance_date" label="Maintenance Date">
-                            <DatePicker style={{ width: '100%' }} />
+                            <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
                         </Form.Item>
                         <Form.Item name="status" label="Status" rules={[{ required: true }]}>
                             <Select>

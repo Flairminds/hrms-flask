@@ -275,6 +275,8 @@ class AssetService:
                 Logger.warning("Assignment not found", assignment_id=assignment_id)
                 return False
             
+            assignment.assignment_date = assignment_data.get('assignment_date', assignment.assignment_date)
+            assignment.assigned_by = assignment_data.get('assigned_by', assignment.assigned_by)
             assignment.return_date = assignment_data.get('return_date', assignment.return_date)
             assignment.returned_by = assignment_data.get('returned_by', assignment.returned_by)
             assignment.status = assignment_data.get('status', assignment.status)
