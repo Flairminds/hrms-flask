@@ -19,6 +19,7 @@ const Projects = () => {
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     const isHRorAdmin = user?.roleName === 'HR' || user?.roleName === 'Admin';
 
@@ -57,6 +58,13 @@ const Projects = () => {
 
     const handleEdit = (record) => {
         setEditingProject(record);
+        setIsReadOnly(false);
+        setIsModalVisible(true);
+    };
+
+    const handleView = (record) => {
+        setEditingProject(record);
+        setIsReadOnly(true);
         setIsModalVisible(true);
     };
 
@@ -73,6 +81,7 @@ const Projects = () => {
     const handleModalClose = () => {
         setIsModalVisible(false);
         setEditingProject(null);
+        setIsReadOnly(false);
     };
 
     const columns = [
@@ -126,28 +135,41 @@ const Projects = () => {
             dataIndex: 'description',
             ellipsis: true,
         },
-    ];
-
-    if (isHRorAdmin) {
-        columns.push({
+        {
+            title: 'Total Allocation',
+            dataIndex: 'total_allocation',
+            render: (total) => <>{total / 100 || 0}</>,
+            sorter: (a, b) => (a.total_allocation || 0) - (b.total_allocation || 0),
+        },
+        {
+            title: 'Billable Allocation',
+            dataIndex: 'billable_allocation',
+            render: (total) => <>{total / 100 || 0}</>,
+            sorter: (a, b) => (a.billable_allocation || 0) - (b.billable_allocation || 0),
+        },
+        {
             title: 'Actions',
             key: 'actions',
             render: (_, record) => (
-                <>
+                isHRorAdmin ? (
                     <Tooltip title="Edit Details & Allocation">
                         <Button
                             icon={<EditOutlined />}
                             onClick={() => handleEdit(record)}
-                            style={{ marginRight: 8 }}
                         >Edit</Button>
                     </Tooltip>
-                    {/* <Popconfirm title="Delete project?" onConfirm={() => handleDelete(record.project_id)}>
-                        <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm> */}
-                </>
+                ) : (
+                    <Tooltip title="View Details & Allocation">
+                        <Button
+                            onClick={() => handleView(record)}
+                        >View</Button>
+                    </Tooltip>
+                )
             )
-        });
-    }
+        },
+    ];
+
+
 
     const filteredProjects = projects.filter(p =>
         p.project_name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -189,6 +211,12 @@ const Projects = () => {
                                     precision={1}
                                     suffix={`/ ${stats.total_employees}`}
                                     prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
                                 />
                             </Col>
                             <Col span={8}>
@@ -257,6 +285,7 @@ const Projects = () => {
                 onClose={handleModalClose}
                 project={editingProject}
                 isEditMode={!!editingProject}
+                readOnly={isReadOnly}
                 refreshProjects={fetchProjects}
             />
         </div>

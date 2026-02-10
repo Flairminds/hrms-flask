@@ -8,9 +8,27 @@ class ProjectService:
     
     @staticmethod
     def get_all_projects():
-        """Retrieves all projects with lead information and details."""
+        """Retrieves all projects with lead information, details, and allocation aggregates."""
         try:
-            # Using ORM for cleaner queries
+            # Subquery to aggregate total allocation per project
+            total_alloc_subq = db.session.query(
+                ProjectAllocation.project_id,
+                func.sum(ProjectAllocation.project_allocation).label('total_allocation')
+            ).group_by(
+                ProjectAllocation.project_id
+            ).subquery()
+            
+            # Subquery to aggregate billable allocation per project
+            billable_alloc_subq = db.session.query(
+                ProjectAllocation.project_id,
+                func.sum(ProjectAllocation.project_allocation).label('billable_allocation')
+            ).filter(
+                ProjectAllocation.is_billing == True
+            ).group_by(
+                ProjectAllocation.project_id
+            ).subquery()
+            
+            # Main query with joins to get project details and aggregated allocations
             projects = db.session.query(
                 Project.project_id,
                 Project.project_name,
@@ -20,9 +38,15 @@ class ProjectService:
                 Project.end_date,
                 Project.project_status,
                 Project.lead_by,
-                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name')
+                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name'),
+                func.coalesce(total_alloc_subq.c.total_allocation, 0).label('total_allocation'),
+                func.coalesce(billable_alloc_subq.c.billable_allocation, 0).label('billable_allocation')
             ).outerjoin(
                 Employee, Project.lead_by == Employee.employee_id
+            ).outerjoin(
+                total_alloc_subq, Project.project_id == total_alloc_subq.c.project_id
+            ).outerjoin(
+                billable_alloc_subq, Project.project_id == billable_alloc_subq.c.project_id
             ).all()
             
             return [
@@ -35,7 +59,9 @@ class ProjectService:
                     'end_date': p.end_date.strftime('%Y-%m-%d') if p.end_date else None,
                     'project_status': p.project_status,
                     'lead_by': p.lead_by,
-                    'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else ''
+                    'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else '',
+                    'total_allocation': float(p.total_allocation),
+                    'billable_allocation': float(p.billable_allocation)
                 } for p in projects
             ]
         except Exception as e:

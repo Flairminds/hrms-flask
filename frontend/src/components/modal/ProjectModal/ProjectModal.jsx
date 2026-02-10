@@ -9,7 +9,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }) => {
+const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false, refreshProjects }) => {
     const [form] = Form.useForm();
     const [allocationForm] = Form.useForm();
     const [activeTab, setActiveTab] = useState("1");
@@ -70,6 +70,8 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
     };
 
     const handleProjectSubmit = async (values) => {
+        if (readOnly) return; // Prevent submission in read-only mode
+
         setLoading(true);
         const payload = {
             ...values,
@@ -184,7 +186,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
 
     return (
         <Modal
-            title={isEditMode ? `Edit Project: ${project?.project_name} ` : "Create New Project"}
+            title={readOnly ? `View Project: ${project?.project_name}` : (isEditMode ? `Edit Project: ${project?.project_name} ` : "Create New Project")}
             visible={visible}
             onCancel={onClose}
             footer={null}
@@ -200,18 +202,19 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                 <WidgetCard title="Basic Information" icon={<FileTextOutlined />} iconColor="#1890ff">
                                     <Row gutter={[16, 16]}>
                                         <Col xs={24} md={8}>
-                                            <Form.Item name="project_name" label="Project Name" rules={[{ required: true }]}>
-                                                <Input prefix={<ProjectOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Enter project name" />
+                                            <Form.Item name="project_name" label="Project Name" rules={[{ required: !readOnly }]}>
+                                                <Input disabled={readOnly} prefix={<ProjectOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Enter project name" />
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
-                                            <Form.Item name="client" label="Client" rules={[{ required: true, message: 'Client name is required' }]}>
-                                                <Input prefix={<UserOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Client name" />
+                                            <Form.Item name="client" label="Client" rules={[{ required: !readOnly, message: 'Client name is required' }]}>
+                                                <Input disabled={readOnly} prefix={<UserOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Client name" />
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
                                             <Form.Item name="lead_by" label="Lead By">
                                                 <Select
+                                                    disabled={readOnly}
                                                     showSearch
                                                     optionFilterProp="children"
                                                     placeholder="Select Project Lead"
@@ -222,7 +225,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                         </Col>
                                         <Col xs={24} md={8}>
                                             <Form.Item name="project_status" label="Status" initialValue="Active">
-                                                <Select>
+                                                <Select disabled={readOnly}>
                                                     <Option value="Active">Active</Option>
                                                     <Option value="Future Prospect">Future Prospect</Option>
                                                     <Option value="Closed">Closed</Option>
@@ -232,17 +235,17 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                         </Col>
                                         <Col xs={24} md={8}>
                                             <Form.Item name="description" label="Description">
-                                                <TextArea rows={2} placeholder="Brief description" />
+                                                <TextArea disabled={readOnly} rows={2} placeholder="Brief description" />
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
                                             <Form.Item name="start_date" label="Start Date">
-                                                <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
+                                                <DatePicker disabled={readOnly} format="YYYY-MM-DD" style={{ width: '100%' }} />
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
                                             <Form.Item name="end_date" label="End Date">
-                                                <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
+                                                <DatePicker disabled={readOnly} format="YYYY-MM-DD" style={{ width: '100%' }} />
                                             </Form.Item>
                                         </Col>
                                     </Row>
@@ -250,11 +253,13 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                             </Col>
                         </Row>
 
-                        <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <Button type="primary" htmlType="submit" loading={loading} icon={<EditOutlined />}>
-                                {isEditMode ? "Update Project" : "Create Project"}
-                            </Button>
-                        </div>
+                        {!readOnly && (
+                            <div style={{ marginTop: 20, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <Button type="primary" htmlType="submit" loading={loading} icon={<EditOutlined />}>
+                                    {isEditMode ? "Update Project" : "Create Project"}
+                                </Button>
+                            </div>
+                        )}
                     </Form>
                 </TabPane>
 
