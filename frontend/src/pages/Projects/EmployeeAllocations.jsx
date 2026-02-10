@@ -39,14 +39,14 @@ const EmployeeAllocations = () => {
             title: 'Total Allocation',
             dataIndex: 'total_allocation',
             key: 'total_allocation',
-            render: (val) => <b>{val.toFixed(2)}</b>,
+            render: (val) => <span style={{ color: val < 1 ? 'red' : 'inherit' }}>{val.toFixed(2)}</span>,
             sorter: (a, b) => a.total_allocation - b.total_allocation
         },
         {
             title: 'Billable Allocation',
             dataIndex: 'billable_allocation',
             key: 'billable_allocation',
-            render: (val) => <b>{val.toFixed(2)}</b>,
+            render: (val) => <span>{val.toFixed(2)}</span>,
             sorter: (a, b) => a.billable_allocation - b.billable_allocation
         }
     ];
