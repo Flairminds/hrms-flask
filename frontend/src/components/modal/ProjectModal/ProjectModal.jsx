@@ -266,74 +266,76 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                 {isEditMode && (
                     <TabPane tab={<span><TeamOutlined /> Allocations</span>} key="2">
                         <Row gutter={[16, 16]}>
-                            <Col span={24}>
-                                <WidgetCard title={editingAllocation ? "Edit Allocation" : "Add New Allocation"} icon={<UserOutlined />} iconColor="#fa8c16">
-                                    <Form form={allocationForm} layout="vertical" onFinish={handleAllocationSubmit}>
-                                        <Row gutter={[16, 16]}>
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="employee_id" label="Employee" rules={[{ required: true }]}>
-                                                    <Select showSearch optionFilterProp="children" disabled={!!editingAllocation} placeholder="Select Employee">
-                                                        {employees.map(e => <Option key={e.employeeId} value={e.employeeId}>{e.employeeName}</Option>)}
-                                                    </Select>
-                                                </Form.Item>
-                                            </Col>
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="employee_role" label="Role">
-                                                    <Input placeholder="e.g. Developer" />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="project_allocation" label="Allocation %" rules={[{ required: true }]}>
-                                                    <Input type="number" min={0} max={100} suffix="%" />
-                                                </Form.Item>
-                                            </Col>
-
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="start_date" label="Start Date" rules={[{ required: true }]}>
-                                                    <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="end_date" label="End Date">
-                                                    <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col xs={24} md={8}>
-                                                <Form.Item name="relevant_skills" label="Relevant Skills">
-                                                    <Input placeholder="e.g. React, Python" />
-                                                </Form.Item>
-                                            </Col>
-
-                                            <Col xs={24}>
-                                                <Form.Item name="comments" label="Comments">
-                                                    <TextArea rows={2} />
-                                                </Form.Item>
-                                            </Col>
-
-                                            <Col xs={24} md={24}>
-                                                <div style={{ display: 'flex', gap: 20 }}>
-                                                    <Form.Item name="is_billing" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                                        <Checkbox>Billing</Checkbox>
+                            {!readOnly && (
+                                <Col span={24}>
+                                    <WidgetCard title={editingAllocation ? "Edit Allocation" : "Add New Allocation"} icon={<UserOutlined />} iconColor="#fa8c16">
+                                        <Form form={allocationForm} layout="vertical" onFinish={handleAllocationSubmit}>
+                                            <Row gutter={[16, 16]}>
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="employee_id" label="Employee" rules={[{ required: true }]}>
+                                                        <Select showSearch optionFilterProp="children" disabled={!!editingAllocation} placeholder="Select Employee">
+                                                            {employees.map(e => <Option key={e.employeeId} value={e.employeeId}>{e.employeeName}</Option>)}
+                                                        </Select>
                                                     </Form.Item>
-                                                    <Form.Item name="is_trainee" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                                        <Checkbox>Trainee</Checkbox>
+                                                </Col>
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="employee_role" label="Role">
+                                                        <Input placeholder="e.g. Developer" />
                                                     </Form.Item>
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                        <div style={{ marginTop: 20, textAlign: 'right' }}>
-                                            <Button type="primary" htmlType="submit" icon={<EditOutlined />}>
-                                                {editingAllocation ? "Update Allocation" : "Add Allocation"}
-                                            </Button>
-                                        </div>
-                                    </Form>
-                                </WidgetCard>
-                            </Col>
+                                                </Col>
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="project_allocation" label="Allocation %" rules={[{ required: true }]}>
+                                                        <Input type="number" min={0} max={100} suffix="%" />
+                                                    </Form.Item>
+                                                </Col>
+
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="start_date" label="Start Date" rules={[{ required: true }]}>
+                                                        <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
+                                                    </Form.Item>
+                                                </Col>
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="end_date" label="End Date">
+                                                        <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
+                                                    </Form.Item>
+                                                </Col>
+                                                <Col xs={24} md={8}>
+                                                    <Form.Item name="relevant_skills" label="Relevant Skills">
+                                                        <Input placeholder="e.g. React, Python" />
+                                                    </Form.Item>
+                                                </Col>
+
+                                                <Col xs={24}>
+                                                    <Form.Item name="comments" label="Comments">
+                                                        <TextArea rows={2} />
+                                                    </Form.Item>
+                                                </Col>
+
+                                                <Col xs={24} md={24}>
+                                                    <div style={{ display: 'flex', gap: 20 }}>
+                                                        <Form.Item name="is_billing" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                                            <Checkbox>Billing</Checkbox>
+                                                        </Form.Item>
+                                                        <Form.Item name="is_trainee" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                                            <Checkbox>Trainee</Checkbox>
+                                                        </Form.Item>
+                                                    </div>
+                                                </Col>
+                                            </Row>
+                                            <div style={{ marginTop: 20, textAlign: 'right' }}>
+                                                <Button type="primary" htmlType="submit" icon={<EditOutlined />}>
+                                                    {editingAllocation ? "Update Allocation" : "Add Allocation"}
+                                                </Button>
+                                            </div>
+                                        </Form>
+                                    </WidgetCard>
+                                </Col>
+                            )}
 
                             <Col span={24}>
                                 <Table
                                     dataSource={allocations}
-                                    columns={allocationColumns}
+                                    columns={readOnly ? allocationColumns.filter(col => col.key !== 'actions') : allocationColumns}
                                     rowKey="employee_id"
                                     loading={allocationLoading}
                                     size="small"

@@ -102,7 +102,7 @@ export const Sidebar = ({ isRole }) => {
     },
     {
       key: 'projects',
-      label: 'Projects',
+      label: 'Projects & Allocation',
       path: '/projects',
       icon: ProjectOutlined,
       roles: ['Employee', 'Lead', 'Intern', 'Manager', 'HR']
