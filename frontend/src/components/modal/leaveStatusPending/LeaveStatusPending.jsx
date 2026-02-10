@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Input, Button, Modal, Descriptions } from 'antd';
 import styles from '../leaveStatusPending/LeaveStatusPending.module.css';
 import { ConfirmationChecklistModal } from '../ConfirmationChecklist/ConfirmationChecklist';
-import { getTeamLead, updateLeaveStatus } from '../../../services/api';
+import { getLeaveTransactionsByApprover, updateLeaveStatus } from '../../../services/api';
 import { toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
 import { convertDate, getWeekDay } from '../../../util/helperFunctions';
@@ -23,9 +23,9 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const fetchEmployeeData = async () => {
     if (employeeId) {
       try {
-        const response = await getTeamLead(employeeId, selectedRange);
-        if (response.data.leaveTransactions) {
-          setMyEmployeeData(response.data.leaveTransactions);
+        const response = await getLeaveTransactionsByApprover(employeeId, selectedRange);
+        if (response.data) {
+          setMyEmployeeData(response.data);
         } else {
           setMyEmployeeData([]);
         }
