@@ -26,7 +26,7 @@ from ...utils.logger import Logger
 class BlobDocumentService:
     """Service for blob-based employee document operations."""
 
-    VALID_UPLOAD_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume"]
+    VALID_UPLOAD_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume", "medical_certificate"]
 
     ALL_DOC_TYPES = ["tenth", "twelve", "pan", "adhar", "grad", "resume", "salary_slips", "relieving_letter"]
 

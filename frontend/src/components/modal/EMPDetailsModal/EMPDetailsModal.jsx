@@ -735,7 +735,8 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                   { key: "adhar", label: "Aadhar Card" },
                   { key: "pan", label: "Pan Card" },
                   { key: "grad", label: "Graduation Degree" },
-                  { key: "resume", label: "Resume" }
+                  { key: "resume", label: "Resume" },
+                  { key: "medical_certificate", label: "Medical Certificate" }
                 ].map(({ key, label }) => {
                   const doc = docStatus?.find((d) => d.doc_type === key);
                   return (

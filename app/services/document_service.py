@@ -113,7 +113,7 @@ class DocumentService:
             else:
                 return "Pending"
         
-        doc_types = ['tenth', 'twelve', 'pan', 'adhar', 'grad', 'resume']
+        doc_types = ['tenth', 'twelve', 'pan', 'adhar', 'grad', 'resume', 'medical_certificate']
         return {
             "emp_id": emp_id,
             "documents": {

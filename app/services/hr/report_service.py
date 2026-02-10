@@ -394,6 +394,9 @@ class ReportService:
         """
         from ...models.hr import Reports, DoorEntryNamesMapping
         from ...utils.helper_functions import normalize_date_str
+        import pandas as pd
+        import io
+        from ...services.azure_blob_service import AzureBlobService
 
         try:
             # 1. Fetch Source Reports
@@ -494,9 +497,40 @@ class ReportService:
 
                             # Keep raw merged data as well?
                             # Let's add all non-conflicting keys
-                            for k, v in door_entry.items():
                                 if k not in ['Name', 'Date'] and k not in row:
                                     row[k] = v
+
+            # 5. Generate Excel File & Upload
+            blob_url = ""
+            try:
+                # Convert to DataFrame
+                df = pd.DataFrame(attendance_data)
+                
+                # Create Excel in memory
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Attendance Report')
+                
+                excel_content = output.getvalue()
+                
+                # Upload to Azure Blob Storage
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                # Use year/month from report_for if possible, or current
+                # leave_report.report_for is "Month Year". 
+                # Let's use current year/month for folder structure or extract from report_for
+                
+                filename = f"attendance_report_{timestamp}.xlsx"
+                blob_path = f"reports/attendance/{datetime.now().year}/{datetime.now().month:02d}/{filename}"
+                
+                blob_url = AzureBlobService.upload_blob(
+                    blob_name=blob_path,
+                    file_data=excel_content,
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+            except Exception as e:
+                Logger.error("Failed to generate/upload attendance excel", error=str(e))
+                # Proceed without blob_link
+
 
             # 5. Save New Report
             ist = pytz.timezone('Asia/Kolkata')
@@ -513,6 +547,7 @@ class ReportService:
                 generated_by=user_id,
                 data=attendance_data,
                 generated_at=generated_at_ist,
+                blob_link=blob_url,
                 reference_reports=[
                     {'id': leave_report.id, 'type': leave_report.report_type},
                     {'id': door_report.id, 'type': door_report.report_type}
@@ -528,7 +563,9 @@ class ReportService:
                 "id": new_report.id,
                 "report_type": new_report.report_type,
                 "report_for": new_report.report_for,
-                "generated_at": new_report.generated_at
+                "generated_at": new_report.generated_at,
+                "blob_link": new_report.blob_link,
+                "download_url": blob_url
             }
 
         except Exception as e:

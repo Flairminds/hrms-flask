@@ -62,13 +62,11 @@ function AppRoutes() {
                 <Route path="personal-info" element={<PersonalInfo />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="company-policy" element={<PolicyPage />} />
-                <Route path="goalSeetingForm" element={<GoalSettingForm />} />
+                {/* <Route path="goalSeetingForm" element={<GoalSettingForm />} /> */}
                 <Route path="team-leave-management" element={<TeamLeaves />} />
                 {/* <Route path="HRLeaveManagement" element={<HRLeaveManagement />} /> */}
                 <Route path="employee-management" element={<EmployeeData />} />
                 {/* <Route path="allLeaveRecords" element={<AllLeavesRecords />} /> */}
-                {/* <Route path="updateLeaveApprover" element={<UpdateLeaveApprover />} /> */}
-                {/* <Route path="Accessibility" element={<Accessibility />} /> */}
                 {/* <Route path="MasterHR" element={<MasterHR />} /> */}
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />
                 <Route path="monthly-report" element={<MonthlyReport />} />
@@ -76,12 +74,8 @@ function AppRoutes() {
                 <Route path="document-repo" element={<AllDocRecords />} />
                 <Route path="ScoreCards" element={<AllDocRecords />} />
                 <Route path="EmployeesSkillEvaluationList" element={<EmployeesSkillEvaluationList />} />
-                <Route path="goalSetting" element={<GoalSettingPage />} />
+                <Route path="capability-development" element={<GoalSettingPage />} />
                 <Route path="RelievingLetter" element={<RelievingLetter />} />
-                {/* <Route path="PCsPage" element={<PCsPage />} /> */}
-                {/* <Route path="Assignments" element={<AssignmentsPage />} /> */}
-                {/* <Route path="Maintenance" element={<MaintenancePage />} /> */}
-                {/* <Route path="system-management" element={<SystemManagementPage />} /> */}
                 <Route path="projects" element={<Projects />} />
                 <Route path="hardware-management" element={<HardwareManagement />} />
                 <Route path="*" element={<span>404 Not Found</span>} />

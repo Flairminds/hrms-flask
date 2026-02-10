@@ -752,6 +752,47 @@ const AttendanceReportTab = () => {
     const [detailData, setDetailData] = useState([]);
     const [detailColumns, setDetailColumns] = useState([]);
 
+    // Define column order and display names
+    const columnOrder = [
+        'Employee_Id',
+        'Employee_Name',
+        'TeamLeadCoordinator',
+        'Date',
+        'WorkingDay',
+        'Status',
+        'EntryExempt',
+        'EntryinTime',
+        'Dayslogs',
+        'ZymmrLoggedTime',
+        'Typeofleaveapproved',
+        'Leavestatus',
+        'DateofLeaveApplication',
+        'ApprovalDate',
+        'Approvedonsamedate',
+        'Swappedholidaydate',
+        'Unpaidstatus'
+    ];
+
+    const columnDisplayNames = {
+        'Employee_Id': 'Employee ID',
+        'Employee_Name': 'Employee Name',
+        'TeamLeadCoordinator': 'Team Lead/Coordinator',
+        'Date': 'Date',
+        'WorkingDay': 'Working Day',
+        'Status': 'Status',
+        'EntryExempt': 'Entry Exempt',
+        'EntryinTime': 'Entry Time',
+        'Dayslogs': 'Days Logged',
+        'ZymmrLoggedTime': 'Zymmr Logged Time',
+        'Typeofleaveapproved': 'Type of Leave Approved',
+        'Leavestatus': 'Leave Status',
+        'DateofLeaveApplication': 'Date of Leave Application',
+        'ApprovalDate': 'Approval Date',
+        'Approvedonsamedate': 'Approved on Same Date',
+        'Swappedholidaydate': 'Swapped Holiday Date',
+        'Unpaidstatus': 'Unpaid Status'
+    };
+
     useEffect(() => {
         if (viewMode === 'list') {
             fetchLists();
@@ -813,11 +854,27 @@ const AttendanceReportTab = () => {
                 const data = Array.isArray(response.data.data) ? response.data.data : [];
                 setDetailData(data);
 
-                // Dynamic columns
+                // Dynamic columns with proper order and display names
                 if (data.length > 0) {
                     const keys = Object.keys(data[0]);
-                    const cols = keys.map(key => ({
-                        title: key,
+
+                    // Sort keys based on columnOrder
+                    const sortedKeys = [...keys].sort((a, b) => {
+                        const indexA = columnOrder.indexOf(a);
+                        const indexB = columnOrder.indexOf(b);
+
+                        // If both are in columnOrder, sort by their position
+                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                        // If only a is in columnOrder, it comes first
+                        if (indexA !== -1) return -1;
+                        // If only b is in columnOrder, it comes first
+                        if (indexB !== -1) return 1;
+                        // If neither is in columnOrder, maintain original order
+                        return 0;
+                    });
+
+                    const cols = sortedKeys.map(key => ({
+                        title: columnDisplayNames[key] || key,
                         dataIndex: key,
                         key: key,
                         render: (text) => {
@@ -839,6 +896,64 @@ const AttendanceReportTab = () => {
         }
     };
 
+
+    const downloadAttendanceReport = async (record) => {
+        setLoading(true);
+        try {
+            const response = await getReportDetails(record.id);
+            if (response.success) {
+                if (response.data.download_url) {
+                    window.open(response.data.download_url, '_blank');
+                } else if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+                    // Generate CSV client-side
+                    const data = response.data.data;
+                    const keys = Object.keys(data[0]);
+
+                    // Sort keys based on columnOrder for CSV
+                    const sortedKeys = [...keys].sort((a, b) => {
+                        const indexA = columnOrder.indexOf(a);
+                        const indexB = columnOrder.indexOf(b);
+                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                        if (indexA !== -1) return -1;
+                        if (indexB !== -1) return 1;
+                        return 0;
+                    });
+
+                    // Use display names for CSV headers
+                    const csvHeaders = sortedKeys.map(key => columnDisplayNames[key] || key);
+
+                    const csvContent = [
+                        csvHeaders.join(','), // Header row with display names
+                        ...data.map(row => sortedKeys.map(key => {
+                            const val = row[key] !== null && row[key] !== undefined ? row[key] : '';
+                            return `"${String(val).replace(/"/g, '""')}"`; // Escape quotes
+                        }).join(','))
+                    ].join('\n');
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `attendance_report_${record.report_for.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    toast.success("Report downloaded successfully");
+                } else {
+                    toast.error("No data available to download");
+                }
+            } else {
+                toast.error("Failed to fetch report details for download");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Error downloading report");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const columns = [
         { title: 'Report For', dataIndex: 'report_for', key: 'report_for' },
         { title: 'Generated At', dataIndex: 'generated_at', key: 'generated_at', render: (text) => convertDate(text) },
@@ -848,9 +963,7 @@ const AttendanceReportTab = () => {
             render: (_, record) => (
                 <Space>
                     <Button icon={<EyeOutlined />} onClick={() => handleViewReport(record.id)}>View</Button>
-                    {record.has_file && (
-                        <Button icon={<DownloadOutlined />} onClick={() => {/* Download logic if needed */ }}>Download</Button>
-                    )}
+                    <Button icon={<DownloadOutlined />} onClick={() => downloadAttendanceReport(record)}>Download</Button>
                     <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id, [fetchLists])}>Delete</Button>
                 </Space>
             )

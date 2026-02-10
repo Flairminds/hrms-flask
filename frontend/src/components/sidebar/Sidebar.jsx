@@ -122,9 +122,9 @@ export const Sidebar = ({ isRole }) => {
       roles: ['Lead', 'Manager', 'HR']
     },
     {
-      key: 'goal-setting',
-      label: 'Goal Setting',
-      path: '/goalSetting',
+      key: 'capability-development',
+      label: 'Capability Development',
+      path: '/capability-development',
       icon: TrophyOutlined,
       roles: ['All'],
       infoClass: true
