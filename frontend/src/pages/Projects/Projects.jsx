@@ -150,6 +150,12 @@ const Projects = () => {
             sorter: (a, b) => (a.billable_allocation || 0) - (b.billable_allocation || 0),
         },
         {
+            title: 'Contractual Allocation',
+            dataIndex: 'contractual_allocation',
+            render: (val) => <>{val || 0}</>,
+            sorter: (a, b) => (a.contractual_allocation || 0) - (b.contractual_allocation || 0),
+        },
+        {
             title: 'Actions',
             key: 'actions',
             render: (_, record) => (

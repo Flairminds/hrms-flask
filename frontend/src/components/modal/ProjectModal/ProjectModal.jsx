@@ -42,6 +42,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                     client: project.client,
                     project_status: project.project_status,
                     lead_by: project.lead_by,
+                    contractual_allocation: project.contractual_allocation || 0,
                     start_date: project.start_date ? dayjs(project.start_date) : null,
                     end_date: project.end_date ? dayjs(project.end_date) : null,
                 });
@@ -234,11 +235,6 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
-                                            <Form.Item name="description" label="Description">
-                                                <TextArea disabled={readOnly} rows={2} placeholder="Brief description" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col xs={24} md={8}>
                                             <Form.Item name="start_date" label="Start Date">
                                                 <DatePicker disabled={readOnly} format="YYYY-MM-DD" style={{ width: '100%' }} />
                                             </Form.Item>
@@ -246,6 +242,16 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                                         <Col xs={24} md={8}>
                                             <Form.Item name="end_date" label="End Date">
                                                 <DatePicker disabled={readOnly} format="YYYY-MM-DD" style={{ width: '100%' }} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col xs={24} md={8}>
+                                            <Form.Item name="description" label="Description">
+                                                <TextArea disabled={readOnly} rows={2} placeholder="Brief description" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col xs={24} md={8}>
+                                            <Form.Item name="contractual_allocation" label="Contractual Allocation">
+                                                <Input type="number" min={0} step={0.1} disabled={readOnly} placeholder="Enter contractual allocation" />
                                             </Form.Item>
                                         </Col>
                                     </Row>
@@ -346,7 +352,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                     </TabPane>
                 )}
             </Tabs>
-        </Modal>
+        </Modal >
     );
 };
 

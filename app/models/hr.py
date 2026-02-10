@@ -308,6 +308,7 @@ class Project(BaseModel):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date) # Optional
     project_status = db.Column(db.String(50), nullable=False, default='Active')
+    contractual_allocation = db.Column(db.Numeric(10, 2), default=0)
 
 class ProjectHistory(BaseModel):
     __tablename__ = 'project_history'

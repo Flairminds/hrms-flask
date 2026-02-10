@@ -38,6 +38,7 @@ class ProjectService:
                 Project.end_date,
                 Project.project_status,
                 Project.lead_by,
+                Project.contractual_allocation,
                 func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name'),
                 func.coalesce(total_alloc_subq.c.total_allocation, 0).label('total_allocation'),
                 func.coalesce(billable_alloc_subq.c.billable_allocation, 0).label('billable_allocation')
@@ -59,6 +60,7 @@ class ProjectService:
                     'end_date': p.end_date.strftime('%Y-%m-%d') if p.end_date else None,
                     'project_status': p.project_status,
                     'lead_by': p.lead_by,
+                    'contractual_allocation': float(p.contractual_allocation) if p.contractual_allocation else 0.0,
                     'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else '',
                     'total_allocation': float(p.total_allocation),
                     'billable_allocation': float(p.billable_allocation)
@@ -113,6 +115,7 @@ class ProjectService:
             project.client = data.get('client', project.client)
             project.project_status = data.get('project_status', project.project_status)
             project.lead_by = data.get('lead_by', project.lead_by)
+            project.contractual_allocation = data.get('contractual_allocation', project.contractual_allocation)
             
             if 'start_date' in data:
                 project.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data['start_date'] else None
