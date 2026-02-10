@@ -209,8 +209,6 @@ class ProjectService:
                     ProjectAllocation.employee_id == emp.employee_id
                 ).all()
 
-                print(allocations)
-                
                 # Calculate totals
                 total_allocation = sum(alloc.project_allocation for alloc in allocations)
                 billable_allocation = sum(alloc.project_allocation for alloc in allocations if alloc.is_billing)
