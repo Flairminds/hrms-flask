@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag, Row, Col, Statistic, Progress } from 'antd';
+import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag, Row, Col, Statistic, Progress, Tabs } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ProjectOutlined, TeamOutlined, RiseOutlined } from '@ant-design/icons';
 import { getProjects, deleteProject, getProjectStats } from '../../services/api';
 import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import EmployeeAllocations from './EmployeeAllocations.jsx';
 
 const Projects = () => {
     const { user } = useAuth();
@@ -179,115 +180,123 @@ const Projects = () => {
 
     return (
         <div style={{ padding: 20 }}>
+            {/* <h2 style={{ marginBottom: 24 }}>Projects & Allocation</h2> */}
+            <Tabs defaultActiveKey="1">
+                <Tabs.TabPane tab="Projects" key="1">
 
-            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={8} md={5}>
-                    <Card bordered={false}>
-                        <Statistic
-                            title="Active Projects"
-                            value={stats.active_projects}
-                            prefix={<ProjectOutlined />}
-                            valueStyle={{ color: '#3f8600' }}
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Active Projects"
+                                    value={stats.active_projects}
+                                    prefix={<ProjectOutlined />}
+                                    valueStyle={{ color: '#3f8600' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Prospective Projects"
+                                    value={stats.prospective_projects}
+                                    prefix={<RiseOutlined />}
+                                    valueStyle={{ color: '#1890ff' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={24} md={10}>
+                            <Card bordered={false}>
+                                <Row gutter={16}>
+                                    <Col span={8}>
+                                        <Statistic
+                                            title="Allocation"
+                                            value={stats.total_allocation}
+                                            precision={1}
+                                            suffix={`/ ${stats.total_employees}`}
+                                            prefix={<TeamOutlined />}
+                                        />
+                                        <Progress
+                                            percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
+                                            size="small"
+                                            status="active"
+                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                        />
+                                    </Col>
+                                    <Col span={8}>
+                                        <Statistic
+                                            title="Billable"
+                                            value={stats.billable_allocation}
+                                            precision={1}
+                                            suffix={`/ ${stats.total_allocation}`}
+                                            prefix={<TeamOutlined />}
+                                        />
+                                        <Progress
+                                            percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
+                                            size="small"
+                                            status="active"
+                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                        />
+                                    </Col>
+                                    <Col span={8}>
+                                        <Statistic
+                                            title="Billable (total)"
+                                            value={stats.billable_allocation}
+                                            precision={1}
+                                            suffix={`/ ${stats.total_employees}`}
+                                            prefix={<TeamOutlined />}
+                                        />
+                                        <Progress
+                                            percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
+                                            size="small"
+                                            status="active"
+                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                        />
+                                    </Col>
+                                </Row>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={24} md={4}>
+                            {isHRorAdmin && (
+                                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                                    Add Project
+                                </Button>
+                            )}
+                        </Col>
+                    </Row>
+
+                    <Card>
+                        <div style={{ marginBottom: 16 }}>
+                            <Input
+                                placeholder="Search projects by name, client or lead..."
+                                prefix={<SearchOutlined />}
+                                onChange={e => setSearchText(e.target.value)}
+                                style={{ width: 300 }}
+                            />
+                        </div>
+
+                        <Table
+                            columns={columns}
+                            dataSource={filteredProjects}
+                            rowKey="project_id"
+                            loading={loading}
+                            pagination={{ pageSize: 10 }}
                         />
                     </Card>
-                </Col>
-                <Col xs={24} sm={8} md={5}>
-                    <Card bordered={false}>
-                        <Statistic
-                            title="Prospective Projects"
-                            value={stats.prospective_projects}
-                            prefix={<RiseOutlined />}
-                            valueStyle={{ color: '#1890ff' }}
-                        />
-                    </Card>
-                </Col>
-                <Col xs={24} sm={24} md={10}>
-                    <Card bordered={false}>
-                        <Row gutter={16}>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Allocation"
-                                    value={stats.total_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_employees}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Billable"
-                                    value={stats.billable_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_allocation}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Billable (total)"
-                                    value={stats.billable_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_employees}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
-                <Col xs={24} sm={24} md={4}>
-                    {isHRorAdmin && (
-                        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                            Add Project
-                        </Button>
-                    )}
-                </Col>
-            </Row>
 
-            <Card>
-                <div style={{ marginBottom: 16 }}>
-                    <Input
-                        placeholder="Search projects by name, client or lead..."
-                        prefix={<SearchOutlined />}
-                        onChange={e => setSearchText(e.target.value)}
-                        style={{ width: 300 }}
+                    <ProjectModal
+                        visible={isModalVisible}
+                        onClose={handleModalClose}
+                        project={editingProject}
+                        isEditMode={!!editingProject}
+                        readOnly={isReadOnly}
+                        refreshProjects={fetchProjects}
                     />
-                </div>
-
-                <Table
-                    columns={columns}
-                    dataSource={filteredProjects}
-                    rowKey="project_id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                />
-            </Card>
-
-            <ProjectModal
-                visible={isModalVisible}
-                onClose={handleModalClose}
-                project={editingProject}
-                isEditMode={!!editingProject}
-                readOnly={isReadOnly}
-                refreshProjects={fetchProjects}
-            />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Employee Allocations" key="2">
+                    <EmployeeAllocations />
+                </Tabs.TabPane>
+            </Tabs>
         </div>
     );
 };

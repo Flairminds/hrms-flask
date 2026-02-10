@@ -174,6 +174,64 @@ class ProjectService:
             Logger.error("Error deleting allocation", project_id=project_id, employee_id=employee_id, error=str(e))
             raise
     
+    
+    @staticmethod
+    def get_employee_allocations():
+        """Retrieves all employees with their project allocations aggregated."""
+        try:
+            # Get all employees with their allocations
+            employees_data = db.session.query(
+                Employee.employee_id,
+                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('employee_name'),
+                Employee.email
+            ).filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding'])
+            ).all()
+            
+            result = []
+            for emp in employees_data:
+                # Get all allocations for this employee
+                allocations = db.session.query(
+                    ProjectAllocation.project_id,
+                    ProjectAllocation.project_allocation,
+                    ProjectAllocation.employee_role,
+                    ProjectAllocation.is_billing,
+                    Project.project_name
+                ).join(
+                    Project, ProjectAllocation.project_id == Project.project_id
+                ).filter(
+                    ProjectAllocation.employee_id == emp.employee_id
+                ).all()
+                
+                # Calculate totals
+                total_allocation = sum(alloc.project_allocation for alloc in allocations)
+                billable_allocation = sum(alloc.project_allocation for alloc in allocations if alloc.is_billing)
+                
+                # Format projects
+                projects = [
+                    {
+                        'project_id': alloc.project_id,
+                        'project_name': alloc.project_name,
+                        'role': alloc.employee_role,
+                        'allocation': float(alloc.project_allocation),
+                        'is_billing': alloc.is_billing
+                    } for alloc in allocations
+                ]
+                
+                result.append({
+                    'employee_id': emp.employee_id,
+                    'employee_name': ' '.join(emp.employee_name.split()),
+                    'email': emp.email,
+                    'total_allocation': float(total_allocation / 100) if total_allocation else 0.0,  # Convert to 0-1 scale
+                    'billable_allocation': float(billable_allocation / 100) if billable_allocation else 0.0,  # Convert to 0-1 scale
+                    'projects': projects
+                })
+            
+            return result
+        except Exception as e:
+            Logger.error("Error fetching employee allocations", error=str(e))
+            return []
+
     @staticmethod
     def get_dashboard_stats():
         """Aggregates project dashboard statistics."""

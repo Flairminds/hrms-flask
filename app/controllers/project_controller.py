@@ -122,3 +122,13 @@ class ProjectController:
         except Exception as e:
              Logger.error("Error in delete_allocation", error=str(e))
              return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    def get_employee_allocations():
+        """Get all employees with their project allocations."""
+        try:
+            allocations = ProjectService.get_employee_allocations()
+            return jsonify(allocations), 200
+        except Exception as e:
+            Logger.error("Error in get_employee_allocations", error=str(e))
+            return jsonify({"error": str(e)}), 500

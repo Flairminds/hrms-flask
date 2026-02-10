@@ -40,3 +40,7 @@ def manage_allocation():
 @project_bp.route('/projects/<int:project_id>/allocations/<string:employee_id>', methods=['DELETE'])
 def delete_allocation(project_id, employee_id):
     return ProjectController.delete_allocation(project_id, employee_id)
+
+@project_bp.route('/employee-allocations', methods=['GET'])
+def get_employee_allocations():
+    return ProjectController.get_employee_allocations()
