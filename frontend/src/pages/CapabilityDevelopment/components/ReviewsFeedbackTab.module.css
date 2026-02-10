@@ -1,0 +1,142 @@
+.container {
+    padding: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.headerLeft h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px 0;
+}
+
+.headerLeft p {
+    font-size: 13px;
+    color: #666;
+    margin: 0;
+}
+
+.giveButton {
+    padding: 10px 20px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.giveButton:hover {
+    background: #059669;
+}
+
+.viewToggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.toggleButton {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggleButton.active {
+    background: white;
+    color: #1a1a1a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.filterSelect {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.emptyIcon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.emptyState h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+}
+
+.emptyState p {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 24px 0;
+}
+
+.feedbackList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .viewToggle {
+        width: 100%;
+    }
+
+    .toggleButton {
+        flex: 1;
+    }
+
+    .filters {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filterSelect {
+        width: 100%;
+    }
+}

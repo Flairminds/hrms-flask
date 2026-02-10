@@ -32,6 +32,7 @@ import SystemManagementPage from './pages/systemManagement/SystemManagementPage.
 import UnauthorizedPage from './pages/UnauthorizedPage/UnauthorizedPage.jsx';
 import Projects from './pages/Projects/Projects.jsx';
 import HardwareManagement from './pages/HardwareManagement/HardwareManagement.jsx';
+import { CapabilityDevelopment } from './pages/CapabilityDevelopment/CapabilityDevelopment.jsx';
 // box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
 function AppRoutes() {
@@ -74,7 +75,7 @@ function AppRoutes() {
                 <Route path="document-repo" element={<AllDocRecords />} />
                 <Route path="ScoreCards" element={<AllDocRecords />} />
                 <Route path="EmployeesSkillEvaluationList" element={<EmployeesSkillEvaluationList />} />
-                <Route path="capability-development" element={<GoalSettingPage />} />
+                <Route path="capability-development" element={<CapabilityDevelopment />} />
                 <Route path="RelievingLetter" element={<RelievingLetter />} />
                 <Route path="projects" element={<Projects />} />
                 <Route path="hardware-management" element={<HardwareManagement />} />

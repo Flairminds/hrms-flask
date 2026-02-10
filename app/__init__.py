@@ -69,6 +69,11 @@ def create_app(config_name):
     from .routes.auth_routes import bp as auth_bp
     from .routes.hardware import hardware_bp
     from .routes.reports import reports_bp
+    
+    # Capability Development blueprints
+    from .routes.capability_dev_goals import capability_dev_goals_bp
+    from .routes.capability_dev_feedback import capability_dev_feedback_bp
+    from .routes.capability_dev_scorecard import capability_dev_scorecard_bp
 
     # Register health check blueprint at root level (no prefix)
     app.register_blueprint(health_bp)
@@ -92,6 +97,11 @@ def create_app(config_name):
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(hardware_bp, url_prefix='/api/hardware')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
+    
+    # Register Capability Development blueprints
+    app.register_blueprint(capability_dev_goals_bp, url_prefix='/api/capability-dev')
+    app.register_blueprint(capability_dev_feedback_bp, url_prefix='/api/capability-dev')
+    app.register_blueprint(capability_dev_scorecard_bp, url_prefix='/api/capability-dev')
 
     # Serve React App (if production build exists)
     if has_build:

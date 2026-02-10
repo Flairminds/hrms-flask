@@ -1,0 +1,111 @@
+.container {
+    padding: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.headerLeft h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px 0;
+}
+
+.headerLeft p {
+    font-size: 13px;
+    color: #666;
+    margin: 0;
+}
+
+.headerRight {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.filterSelect {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.createButton {
+    padding: 10px 20px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.createButton:hover {
+    background: #1d4ed8;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.emptyIcon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.emptyState h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+}
+
+.emptyState p {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 24px 0;
+}
+
+.goalsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .headerRight {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .filterSelect,
+    .createButton {
+        width: 100%;
+    }
+
+    .goalsGrid {
+        grid-template-columns: 1fr;
+    }
+}

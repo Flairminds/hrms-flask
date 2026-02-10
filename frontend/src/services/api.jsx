@@ -1189,3 +1189,90 @@ export const getEmployeeAllocations = () => {
 export const getMyProjectsTeam = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/my-projects-team`);
 };
+
+// ============= CAPABILITY DEVELOPMENT API FUNCTIONS =============
+
+// Goals
+export const getMyGoals = () => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/my-goals`);
+};
+
+export const getGoalsCreatedByMe = () => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals-created-by-me`);
+};
+
+export const createGoalEnhanced = (goalData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals`, goalData);
+};
+
+export const updateGoalProgress = (goalId, progressData) => {
+  return axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}/progress`, progressData);
+};
+
+export const updateGoalDetails = (goalId, goalData) => {
+  return axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}`, goalData);
+};
+
+export const getGoalComments = (goalId) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`);
+};
+
+export const addGoalComment = (goalId, commentData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`, commentData);
+};
+
+export const getGoalReviews = (goalId) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`);
+};
+
+export const addGoalReview = (goalId, reviewData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`, reviewData);
+};
+
+// Feedback
+export const submitFeedback = (feedbackData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/feedback`, feedbackData);
+};
+
+export const getReceivedFeedback = (params = {}) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/feedback/received`, { params });
+};
+
+export const getGivenFeedback = (params = {}) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/feedback/given`, { params });
+};
+
+export const getEmployeeFeedback = (employeeId) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/feedback/employee/${employeeId}`);
+};
+
+export const updateFeedback = (feedbackId, feedbackData) => {
+  return axiosInstance.put(`${API_BASE_URL}/capability-dev/feedback/${feedbackId}`, feedbackData);
+};
+
+export const deleteFeedback = (feedbackId) => {
+  return axiosInstance.delete(`${API_BASE_URL}/capability-dev/feedback/${feedbackId}`);
+};
+
+// Scorecard
+export const getMyMetrics = (periodType = 'monthly') => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/scorecard/my-metrics`, {
+    params: { periodType }
+  });
+};
+
+export const getMetricsHistory = (periodType = 'monthly', limit = 12) => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/scorecard/history`, {
+    params: { periodType, limit }
+  });
+};
+
+export const getEmployeeMetrics = (employeeId, periodType = 'monthly') => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/scorecard/employee/${employeeId}`, {
+    params: { periodType }
+  });
+};
+
+export const calculateMetrics = (metricsData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/scorecard/calculate`, metricsData);
+};
