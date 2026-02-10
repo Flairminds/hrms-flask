@@ -211,7 +211,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
           </div>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Leave Type</span>
-            <span className={styles.detailValue}>{employee.leaveTypeName}</span>
+            <span className={styles.detailValue}>{employee.leaveName}</span>
           </div>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Duration</span>
