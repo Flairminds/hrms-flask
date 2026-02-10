@@ -19,6 +19,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // ✅ Added
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { SKILL_CATEGORIES } from '../../../constants/skillCategories';
 
 const { Option } = Select;
 
@@ -583,9 +584,9 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                           <Col span={6}>
                             <Form.Item {...restField} name={[name, 'SkillCategory']} label="Category">
                               <Select placeholder="Select Category">
-                                <Option value="Primary">Primary</Option>
-                                <Option value="Secondary">Secondary</Option>
-                                <Option value="Cross Tech Skill">Cross Tech Skill</Option>
+                                {SKILL_CATEGORIES.map(category => (
+                                  <Option key={category} value={category}>{category}</Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>

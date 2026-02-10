@@ -17,6 +17,7 @@ import { getCookie } from '../../../util/CookieSet';
 import { useAuth } from '../../../context/AuthContext';
 import WidgetCard from '../../common/WidgetCard';
 import dayjs from 'dayjs';
+import { SKILL_CATEGORIES } from '../../../constants/skillCategories';
 import {
   UserOutlined,
   HomeOutlined,
@@ -240,9 +241,9 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         employee_id: personalEmployeeDetails.employeeId,
         dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
         dateOfJoining: values.dateOfJoining ? values.dateOfJoining.format('YYYY-MM-DD') : null,
-        addresses: [
+        addresses: values.addresses ? [
           {
-            address_type: values.addresses.residential_address_type,
+            address_type: values.addresses.residential_address_type || 'Residential',
             state: values.addresses.residential_state,
             city: values.addresses.residential_city,
             address1: values.addresses.residential_address1,
@@ -251,7 +252,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
             is_same_permanant: isSameAddress
           },
           ...(!isSameAddress ? [{
-            address_type: values.addresses.permanent_address_type,
+            address_type: values.addresses.permanent_address_type || 'Permanent',
             state: values.addresses.permanent_state,
             city: values.addresses.permanent_city,
             address1: values.addresses.permanent_address1,
@@ -259,7 +260,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
             zip_code: values.addresses.permanent_zipcode,
             is_same_permanant: false
           }] : [])
-        ],
+        ] : [],
         skills: values.skills?.map(s => ({
           skill_id: s.skillId,
           skill_level: s.skillLevel,
@@ -692,7 +693,11 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                             name={[name, 'skillCategory']}
                             label="Category"
                           >
-                            <Input disabled={!isEditMode} placeholder="Category" />
+                            <Select disabled={!isEditMode} placeholder="Select category">
+                              {SKILL_CATEGORIES.map(category => (
+                                <Option key={category} value={category}>{category}</Option>
+                              ))}
+                            </Select>
                           </Form.Item>
                         </Col>
                         <Col span={5}>

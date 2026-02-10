@@ -581,7 +581,7 @@ function PersonalInfoPage() {
                         <div>
                           <Text strong>{label}</Text>
                           {docStatus ? (
-                            <Tag color={docStatus.status === 'Accepted' ? 'success' : docStatus.status === 'Rejected' ? 'error' : 'warning'}>
+                            <Tag color={docStatus?.uploaded ? "green" : "red"}>
                               {docStatus?.uploaded ? "Uploaded" : 'Pending'}
                             </Tag>
                           ) : <Text type="secondary" style={{ fontSize: '12px' }}>Pending</Text>}

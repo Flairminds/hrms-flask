@@ -374,9 +374,11 @@ class EmployeeService:
                 # Delete existing and re-insert or update
                 EmployeeAddress.query.filter_by(employee_id=emp_id).delete()
                 for addr in addresses:
+                    # Default address_type to 'Residential' if not provided
+                    addr_type = addr.get('address_type') or 'Residential'
                     new_addr = EmployeeAddress(
                         employee_id=emp_id,
-                        address_type=addr.get('address_type'),
+                        address_type=addr_type,
                         state=addr.get('state'),
                         city=addr.get('city'),
                         address1=addr.get('address1'),
@@ -486,9 +488,11 @@ class EmployeeService:
             if addresses:
                 EmployeeAddress.query.filter_by(employee_id=employee_id).delete()
                 for addr in addresses:
+                    # Default address_type to 'Residential' if not provided
+                    addr_type = addr.get('address_type') or 'Residential'
                     new_addr = EmployeeAddress(
                         employee_id=employee_id,
-                        address_type=addr.get('address_type'),
+                        address_type=addr_type,
                         state=addr.get('state'),
                         city=addr.get('city'),
                         address1=addr.get('address1'),
