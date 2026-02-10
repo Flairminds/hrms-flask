@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Button, DatePicker, Select, Tabs, Table, Row, Col, Popconfirm, message, Tooltip, Checkbox } from 'antd';
 import { DeleteOutlined, EditOutlined, ProjectOutlined, CalendarOutlined, UserOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
 import { getEmployeeList, addProject, updateProject, getProjectAllocations, manageAllocation, deleteAllocation } from '../../../services/api'; // updated imports
-import moment from 'moment';
+import dayjs from 'dayjs';
 import WidgetCard from '../../common/WidgetCard';
 
 const { TextArea } = Input;
@@ -42,8 +42,8 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                     client: project.client,
                     project_status: project.project_status,
                     lead_by: project.lead_by,
-                    start_date: project.start_date ? moment(project.start_date) : null,
-                    end_date: project.end_date ? moment(project.end_date) : null,
+                    start_date: project.start_date ? dayjs(project.start_date) : null,
+                    end_date: project.end_date ? dayjs(project.end_date) : null,
                 });
                 fetchAllocations(project.project_id);
             } else {
@@ -133,8 +133,8 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
             is_trainee: record.is_trainee,
             comments: record.comments,
             relevant_skills: record.relevant_skills,
-            start_date: record.start_date ? moment(record.start_date) : null,
-            end_date: record.end_date ? moment(record.end_date) : null,
+            start_date: record.start_date ? dayjs(record.start_date) : null,
+            end_date: record.end_date ? dayjs(record.end_date) : null,
         });
     };
 
@@ -205,7 +205,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, refreshProjects }
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
-                                            <Form.Item name="client" label="Client">
+                                            <Form.Item name="client" label="Client" rules={[{ required: true, message: 'Client name is required' }]}>
                                                 <Input prefix={<UserOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Client name" />
                                             </Form.Item>
                                         </Col>

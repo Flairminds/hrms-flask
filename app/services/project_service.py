@@ -65,8 +65,10 @@ class ProjectService:
                 end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
             )
             db.session.add(new_project)
+            db.session.flush()  # Flush to generate the project_id before commit
+            project_id = new_project.project_id
             db.session.commit()
-            return new_project.project_id
+            return project_id
         except Exception as e:
             db.session.rollback()
             Logger.error("Error creating project", error=str(e))

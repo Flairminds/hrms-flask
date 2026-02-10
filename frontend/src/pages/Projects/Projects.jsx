@@ -4,7 +4,6 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ProjectOutl
 import { getProjects, deleteProject, getProjectStats } from '../../services/api';
 import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import moment from 'moment';
 
 const Projects = () => {
     const { user } = useAuth();
@@ -258,7 +257,7 @@ const Projects = () => {
                 onClose={handleModalClose}
                 project={editingProject}
                 isEditMode={!!editingProject}
-                onProjectSaved={fetchProjects}
+                refreshProjects={fetchProjects}
             />
         </div>
     );
