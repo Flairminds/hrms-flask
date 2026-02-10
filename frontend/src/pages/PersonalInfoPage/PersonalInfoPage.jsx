@@ -605,7 +605,9 @@ function PersonalInfoPage() {
                     {employeeData.skills.map((skill, index) => (
                       <Tag key={index} color="blue" style={{ borderRadius: '4px', padding: '4px 8px', whiteSpace: 'pre-wrap' }}>
                         <Text strong>{skill.skillName}</Text>
-                        <Text type="secondary" style={{ marginLeft: '4px', fontSize: '12px' }}>({skill.skillLevel})</Text>
+                        <Text type="secondary" style={{ marginLeft: '2px', fontSize: '12px' }}>({skill.skillLevel})</Text>
+                        {skill.skillCategory && <Text type="secondary" style={{ marginLeft: '2px', fontSize: '12px' }}>({skill.skillCategory})</Text>}
+                        <Text type="secondary" style={{ marginLeft: '2px', fontSize: '12px' }}>[{skill.selfEvaluation}/5]</Text>
                       </Tag>
                     ))}
                   </div>
