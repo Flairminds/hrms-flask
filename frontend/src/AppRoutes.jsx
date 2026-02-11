@@ -3,12 +3,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { LoginPage } from './pages/login/LoginPage.jsx';
-import { LeaveManagementPage } from "./pages/leaveMangament/LeaveMangament.jsx"
+import LeaveManagement from './pages/LeaveManagement/LeaveManagement.jsx';
 import { Dashboard } from './pages/dashboard/Dashboard.jsx';
 import { PageLayout } from './layout/pageLayout/PageLayout.jsx';
 import HolidayPage from './pages/holiday/HolidayPage.jsx';
 import { PolicyPage } from './pages/policy/Policypage.jsx';
-import { TeamLeaves } from './pages/teamLeaves/TeamLeaves.jsx';
 import PersonalInfo from './pages/PersonalInfoPage/PersonalInfoPage.jsx';
 import HRLeaveManagement from './pages/hrLevelMangement/HrLeaveManagement.jsx'
 import { GoalSettingForm } from './pages/goalSeetingForm/GoalSettingForm.jsx';
@@ -58,13 +57,12 @@ function AppRoutes() {
                 </ProtectedRoute>
             }>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="leave" element={<LeaveManagementPage />} />
+                <Route path="leave" element={<LeaveManagement />} />
                 <Route path="holiday" element={<HolidayPage />} />
                 <Route path="personal-info" element={<PersonalInfo />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="company-policy" element={<PolicyPage />} />
                 {/* <Route path="goalSeetingForm" element={<GoalSettingForm />} /> */}
-                <Route path="team-leave-management" element={<TeamLeaves />} />
                 {/* <Route path="HRLeaveManagement" element={<HRLeaveManagement />} /> */}
                 <Route path="employee-management" element={<EmployeeData />} />
                 {/* <Route path="allLeaveRecords" element={<AllLeavesRecords />} /> */}

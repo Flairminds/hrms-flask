@@ -115,13 +115,6 @@ export const Sidebar = ({ isRole }) => {
       show: isEvaluator
     },
     {
-      key: 'team-leave-management',
-      label: 'Team Leave Management',
-      path: '/team-leave-management',
-      icon: TeamOutlined,
-      roles: ['Lead', 'Manager', 'HR']
-    },
-    {
       key: 'capability-development',
       label: 'Capability Development',
       path: '/capability-development',

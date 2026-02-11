@@ -201,7 +201,7 @@ FRONTEND_ROUTE_PERMISSIONS = {
     # Common routes - accessible to all authenticated users
     "/": ["Admin", "HR", "Lead", "Employee"],
     "/dashboard": ["Admin", "HR", "Lead", "Employee"],
-    "/leave": ["Lead", "Employee"],
+    "/leave": ["Admin", "HR", "Lead", "Employee"],
     "/holiday": ["Admin", "HR", "Lead", "Employee"],
     "/personal-info": ["Admin", "HR", "Lead", "Employee"],
     "/company-policy": ["Admin", "HR", "Lead", "Employee"],
