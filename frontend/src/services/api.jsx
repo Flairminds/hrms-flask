@@ -587,6 +587,12 @@ export const getSkillsForAllEmp = () => {
   return res;
 }
 
+// Gets the master skills list
+export const getMasterSkills = () => {
+  return axiosInstance.get(`${API_BASE_URL}/review/master-skills`);
+};
+
+
 // Gets the documents of an employee.
 export const getDocuments = (employeeId, docType) => {
   return axiosInstance.get(`${API_BASE_URL}/documents/get-document/${employeeId}/${docType}`, {

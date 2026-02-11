@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Tag, message } from 'antd';
-import { SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Tag, message, Tooltip } from 'antd';
+import { SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { getCookie } from '../../../util/CookieSet';
 import styles from './MySkillsTab.module.css';
-import { getSkillsForEmp, addUpdateSkill } from '../../../services/api';
+import { getSkillsForEmp, addUpdateSkill, getMasterSkills } from '../../../services/api';
+import AddEditSkillModal from './AddEditSkillModal';
 
 const MySkillsTab = () => {
     const [skills, setSkills] = useState([]);
+    const [masterSkills, setMasterSkills] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchText, setSearchText] = useState('');
     const [editingSkill, setEditingSkill] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedSkill, setSelectedSkill] = useState(null);
 
     const employeeId = getCookie('employeeId');
 
     useEffect(() => {
         fetchSkills();
+        fetchMasterSkills();
     }, []);
 
     const fetchSkills = async () => {
@@ -33,6 +38,22 @@ const MySkillsTab = () => {
         }
     };
 
+    const fetchMasterSkills = async () => {
+        try {
+            const response = await getMasterSkills();
+            const skillsList = response.data || [];
+            // Transform to options format
+            const options = skillsList.map(skill => ({
+                value: skill.skill_id,
+                label: skill.skill_name
+            }));
+            setMasterSkills(options);
+        } catch (error) {
+            console.error('Error fetching master skills:', error);
+            message.error('Failed to load available skills');
+        }
+    };
+
     const handleUpdateSelfEvaluation = async (skillId) => {
         try {
             await addUpdateSkill({
@@ -47,6 +68,25 @@ const MySkillsTab = () => {
             console.error('Error updating evaluation:', error);
             message.error('Failed to update evaluation');
         }
+    };
+
+    const handleAddSkill = () => {
+        setSelectedSkill(null);
+        setModalVisible(true);
+    };
+
+    const handleEditSkill = (skill) => {
+        setSelectedSkill(skill);
+        setModalVisible(true);
+    };
+
+    const handleModalClose = () => {
+        setModalVisible(false);
+        setSelectedSkill(null);
+    };
+
+    const handleModalSuccess = () => {
+        fetchSkills();
     };
 
     const getLevelColor = (level) => {
@@ -143,6 +183,21 @@ const MySkillsTab = () => {
             ) : (
                 <span style={{ color: '#9ca3af' }}>-</span>
             )
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Tooltip title="Edit Skill Details">
+                    <Button
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => handleEditSkill(record)}
+                    >
+                        Edit Details
+                    </Button>
+                </Tooltip>
+            )
         }
     ];
 
@@ -160,13 +215,20 @@ const MySkillsTab = () => {
                 </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Input
                     placeholder="Search skills by name or category..."
                     prefix={<SearchOutlined />}
                     onChange={e => setSearchText(e.target.value)}
                     style={{ width: 400 }}
                 />
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleAddSkill}
+                >
+                    Add Skill
+                </Button>
             </div>
 
             <Table
@@ -176,6 +238,14 @@ const MySkillsTab = () => {
                 loading={loading}
                 pagination={{ pageSize: 10 }}
                 bordered
+            />
+
+            <AddEditSkillModal
+                visible={modalVisible}
+                onClose={handleModalClose}
+                skill={selectedSkill}
+                masterSkills={masterSkills}
+                onSuccess={handleModalSuccess}
             />
         </div>
     );
