@@ -544,35 +544,6 @@ function PersonalInfoPage() {
               </WidgetCard>
             </Col>
 
-            {/* Address Information */}
-            <Col xs={24} lg={12}>
-              <Space direction="vertical" size={24} style={{ width: '100%' }}>
-                <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a">
-                  {employeeData.addresses ? (
-                    <>
-                      <InfoRow label="Line 1" value={employeeData.addresses.residentialAddress1} />
-                      <InfoRow label="Line 2" value={employeeData.addresses.residentialAddress2} />
-                      <InfoRow label="City" value={employeeData.addresses.residentialCity} />
-                      <InfoRow label="State" value={employeeData.addresses.residentialState} />
-                      <InfoRow label="Zipcode" value={employeeData.addresses.residentialZipcode} />
-                    </>
-                  ) : <Text type="secondary">No address info available</Text>}
-                </WidgetCard>
-
-                <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14">
-                  {employeeData.addresses ? (
-                    <>
-                      <InfoRow label="Line 1" value={employeeData.addresses.permanentAddress1} />
-                      <InfoRow label="Line 2" value={employeeData.addresses.permanentAddress2} />
-                      <InfoRow label="City" value={employeeData.addresses.permanentCity} />
-                      <InfoRow label="State" value={employeeData.addresses.permanentState} />
-                      <InfoRow label="Zipcode" value={employeeData.addresses.permanentZipcode} />
-                    </>
-                  ) : <Text type="secondary">No address info available</Text>}
-                </WidgetCard>
-              </Space>
-            </Col>
-
             {/* Documents Section */}
             <Col xs={24} lg={12}>
               <WidgetCard title="Documents" icon={<FileTextOutlined />} iconColor="#eb2f96">
@@ -600,7 +571,41 @@ function PersonalInfoPage() {
               </WidgetCard>
             </Col>
 
-            {/* Skills Section */}
+            {/* Address Information */}
+            <Col xs={24} lg={8}>
+              <Space direction="vertical" size={24} style={{ width: '100%' }}>
+                <WidgetCard title="Residential Address" icon={<HomeOutlined />} iconColor="#52c41a">
+                  {employeeData.addresses ? (
+                    <>
+                      <InfoRow label="Line 1" value={employeeData.addresses.residentialAddress1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.residentialAddress2} />
+                      <InfoRow label="City" value={employeeData.addresses.residentialCity} />
+                      <InfoRow label="State" value={employeeData.addresses.residentialState} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.residentialZipcode} />
+                    </>
+                  ) : <Text type="secondary">No address info available</Text>}
+                </WidgetCard>
+              </Space>
+            </Col>
+
+            <Col xs={24} lg={8}>
+              <Space direction="vertical" size={24} style={{ width: '100%' }}>
+                <WidgetCard title="Permanent Address" icon={<HomeOutlined />} iconColor="#fadb14">
+                  {employeeData.addresses ? (
+                    <>
+                      <InfoRow label="Line 1" value={employeeData.addresses.permanentAddress1} />
+                      <InfoRow label="Line 2" value={employeeData.addresses.permanentAddress2} />
+                      <InfoRow label="City" value={employeeData.addresses.permanentCity} />
+                      <InfoRow label="State" value={employeeData.addresses.permanentState} />
+                      <InfoRow label="Zipcode" value={employeeData.addresses.permanentZipcode} />
+                    </>
+                  ) : <Text type="secondary">No address info available</Text>}
+                </WidgetCard>
+              </Space>
+            </Col>
+
+
+            {/* Skills Section
             <Col xs={24} lg={12}>
               <WidgetCard title="Skills" icon={<ToolOutlined />} iconColor="#722ed1">
                 {employeeData.skills && employeeData.skills.length > 0 ? (
@@ -616,10 +621,10 @@ function PersonalInfoPage() {
                   </div>
                 ) : <Text type="secondary">No skills listed</Text>}
               </WidgetCard>
-            </Col>
+            </Col> */}
 
             {/* Emergency Contact */}
-            <Col xs={24} lg={12}>
+            <Col xs={24} lg={8}>
               <WidgetCard title="Emergency Contact" icon={<ExclamationCircleOutlined />} iconColor="#ff4d4f">
                 <InfoRow label="Person" value={employeeData.emergencyContactPerson} />
                 <InfoRow label="Relation" value={employeeData.emergencyContactRelation} />

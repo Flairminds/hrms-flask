@@ -6,12 +6,12 @@ import {
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
-  addUpdateSkill,
+  // addUpdateSkill, // Moved to Capability Development
   editPersonalDetails,
-  getAllEmployeeSkills,
+  // getAllEmployeeSkills, // Moved to Capability Development
   getDocStatus,
   getDocStatusDetails,
-  getSkillsForEmp,
+  // getSkillsForEmp, // Moved to Capability Development
   uploadDocument,
   getDocuments  // ✅ Added
 } from '../../../services/api';
@@ -19,7 +19,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // ✅ Added
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { SKILL_CATEGORIES } from '../../../constants/skillCategories';
+// import { SKILL_CATEGORIES } from '../../../constants/skillCategories'; // Moved to Capability Development
 
 const { Option } = Select;
 
@@ -29,24 +29,24 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
   const employeeId = user?.employeeId;
 
   const [loader, setLoader] = useState(false);
-  const [availableSkills, setAvailableSkills] = useState([]);
+  // const [availableSkills, setAvailableSkills] = useState([]); // Moved to Capability Development
   const [docStatus, setDocStatus] = useState([]);
   const [isSameAddress, setIsSameAddress] = useState(false);
 
-  // Fetch available skills content
-  useEffect(() => {
-    const fetchAllAvailableSkills = async () => {
-      try {
-        const response = await getAllEmployeeSkills();
-        setAvailableSkills(response.data || []);
-      } catch (error) {
-        console.error('Error fetching skills:', error);
-      }
-    };
-    if (isEditModal) {
-      fetchAllAvailableSkills();
-    }
-  }, [isEditModal]);
+  // Fetch available skills content - MOVED TO CAPABILITY DEVELOPMENT
+  // useEffect(() => {
+  //   const fetchAllAvailableSkills = async () => {
+  //     try {
+  //       const response = await getAllEmployeeSkills();
+  //       setAvailableSkills(response.data || []);
+  //     } catch (error) {
+  //       console.error('Error fetching skills:', error);
+  //     }
+  //   };
+  //   if (isEditModal) {
+  //     fetchAllAvailableSkills();
+  //   }
+  // }, [isEditModal]);
 
   // Fetch Documents Status
   const fetchDocStatus = async () => {
@@ -65,22 +65,22 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     }
   }, [isEditModal]);
 
-  // Fetch User Skills & Populate Form
+  // Fetch User Skills & Populate Form - SKILLS MOVED TO CAPABILITY DEVELOPMENT
   useEffect(() => {
     if (!isEditModal || !employeeData) return;
 
     const loadData = async () => {
       try {
-        // Fetch User Skills
-        let userSkillsData = { skills: [], QualificationYearMonth: null, FullStackReady: false };
-        if (employeeId) {
-          try {
-            const skillRes = await getSkillsForEmp(employeeId);
-            userSkillsData = skillRes.data;
-          } catch (err) {
-            console.error("Error fetching user skills", err);
-          }
-        }
+        // Fetch User Skills - COMMENTED OUT, MOVED TO CAPABILITY DEVELOPMENT
+        // let userSkillsData = { skills: [], QualificationYearMonth: null, FullStackReady: false };
+        // if (employeeId) {
+        //   try {
+        //     const skillRes = await getSkillsForEmp(employeeId);
+        //     userSkillsData = skillRes.data;
+        //   } catch (err) {
+        //     console.error("Error fetching user skills", err);
+        //   }
+        // }
 
         const addresses = employeeData.addresses || {};
         setIsSameAddress(addresses.is_same_permanant || false);
@@ -106,8 +106,8 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
 
           // Qualification
           highest_qualification: employeeData.highestQualification || employeeData.highest_qualification,
-          QualificationYearMonth: userSkillsData.QualificationYearMonth ? dayjs(userSkillsData.QualificationYearMonth) : null,
-          FullStackReady: userSkillsData.FullStackReady,
+          // QualificationYearMonth: userSkillsData.QualificationYearMonth ? dayjs(userSkillsData.QualificationYearMonth) : null, // Moved to Capability Development
+          // FullStackReady: userSkillsData.FullStackReady, // Moved to Capability Development
 
           // Address
           addresses: {
@@ -128,15 +128,15 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
             permanent_zipcode: addresses.permanent_zipcode || addresses.permanentZipcode,
           },
 
-          // Skills
-          skills: userSkillsData.skills.map(s => ({
-            ...s,
-            isReadyDate: s.isReadyDate ? dayjs(s.isReadyDate) : null,
-            // Ensure boolean/number matching for Select/Checkbox
-            isReady: s.isReady === 1 || s.isReady === true,
-            SkillLevel: s.SkillLevel, // Proficiency: Beginner, Intermediate, Expert
-            SkillCategory: s.SkillCategory // Category: Primary, Secondary, Cross Tech
-          }))
+          // Skills - MOVED TO CAPABILITY DEVELOPMENT
+          // skills: userSkillsData.skills.map(s => ({
+          //   ...s,
+          //   isReadyDate: s.isReadyDate ? dayjs(s.isReadyDate) : null,
+          //   // Ensure boolean/number matching for Select/Checkbox
+          //   isReady: s.isReady === 1 || s.isReady === true,
+          //   SkillLevel: s.SkillLevel, // Proficiency: Beginner, Intermediate, Expert
+          //   SkillCategory: s.SkillCategory // Category: Primary, Secondary, Cross Tech
+          // }))
         };
 
         form.setFieldsValue(initialValues);
@@ -293,20 +293,20 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
         addresses: [addressPayload]
       };
 
-      // 2. Prepare Skills Payload
-      const skillsPayload = {
-        EmployeeId: employeeId,
-        QualificationYearMonth: values.QualificationYearMonth ? values.QualificationYearMonth.format("YYYY-MM-DD") : null,
-        FullStackReady: values.FullStackReady,
-        skills: (values.skills || []).map(s => ({
-          SkillId: s.SkillId,
-          SkillLevel: s.SkillLevel, // Proficiency
-          SkillCategory: s.SkillCategory, // Category
-          SelfEvaluation: s.SelfEvaluation,
-          isReady: s.isReady ? 1 : 0,
-          isReadyDate: s.isReady && s.isReadyDate ? s.isReadyDate.format("YYYY-MM-DD") : null
-        }))
-      };
+      // 2. Prepare Skills Payload - MOVED TO CAPABILITY DEVELOPMENT
+      // const skillsPayload = {
+      //   EmployeeId: employeeId,
+      //   QualificationYearMonth: values.QualificationYearMonth ? values.QualificationYearMonth.format("YYYY-MM-DD") : null,
+      //   FullStackReady: values.FullStackReady,
+      //   skills: (values.skills || []).map(s => ({
+      //     SkillId: s.SkillId,
+      //     SkillLevel: s.SkillLevel, // Proficiency
+      //     SkillCategory: s.SkillCategory, // Category
+      //     SelfEvaluation: s.SelfEvaluation,
+      //     isReady: s.isReady ? 1 : 0,
+      //     isReadyDate: s.isReady && s.isReadyDate ? s.isReadyDate.format("YYYY-MM-DD") : null
+      //   }))
+      // };
 
       // 3. API Calls
       // Update Personal
@@ -315,8 +315,8 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
         message.success("Personal details updated successfully");
       }
 
-      // Update Skills
-      await addUpdateSkill(skillsPayload);
+      // Update Skills - MOVED TO CAPABILITY DEVELOPMENT
+      // await addUpdateSkill(skillsPayload);
 
       // Refresh Data
       fetchEmployeeData();
@@ -332,15 +332,16 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
     }
   };
 
-  const getEvaluationMessage = (score) => {
-    const numScore = parseFloat(score);
-    if (numScore >= 0 && numScore < 2) return "Does not meet requirements";
-    if (numScore >= 2 && numScore < 3) return "Occasionally meets requirements";
-    if (numScore >= 3 && numScore < 4) return "Meets requirements / Average";
-    if (numScore >= 4 && numScore < 5) return "Above average";
-    if (numScore === 5) return "Exceeds expectations";
-    return "";
-  };
+  // MOVED TO CAPABILITY DEVELOPMENT
+  // const getEvaluationMessage = (score) => {
+  //   const numScore = parseFloat(score);
+  //   if (numScore >= 0 && numScore < 2) return "Does not meet requirements";
+  //   if (numScore >= 2 && numScore < 3) return "Occasionally meets requirements";
+  //   if (numScore >= 3 && numScore < 4) return "Meets requirements / Average";
+  //   if (numScore >= 4 && numScore < 5) return "Above average";
+  //   if (numScore === 5) return "Exceeds expectations";
+  //   return "";
+  // };
 
   return (
     <Modal
@@ -442,11 +443,12 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                   </Card>
                   <Card size="small" title="Qualification" style={{ marginBottom: 16 }}>
                     <Row gutter={16}>
-                      <Col span={8}>
+                      <Col span={24}>
                         <Form.Item name="highest_qualification" label="Highest Qualification">
                           <Input />
                         </Form.Item>
                       </Col>
+                      {/* Skills qualification fields moved to Capability Development module */}
                       <Col span={8}>
                         <Form.Item name="QualificationYearMonth" label="Year-Month">
                           <DatePicker picker="month" style={{ width: '100%' }} />
@@ -532,108 +534,109 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
               </>
             ),
           },
-          {
-            key: '3',
-            label: 'Skills',
-            children: (
-              <>
-                {/* <p>Total Skills: {userSkillsData.skills.length}</p> */}
-                <Form.List name="skills">
-                  {(fields, { add, remove }) => (
-                    <>
-                      {fields.map(({ key, name, ...restField }) => (
-                        // <Card key={key} size="small" style={{ marginBottom: 12 }}>
-                        <Row gutter={12}>
-                          <Col span={6}>
-                            <Form.Item shouldUpdate={(prevValues, currentValues) => prevValues.skills !== currentValues.skills} noStyle>
-                              {({ getFieldValue }) => {
-                                const allSkills = getFieldValue('skills') || [];
-                                const selectedSkillIds = allSkills
-                                  .map((skill, idx) => idx !== name ? skill?.SkillId : null)
-                                  .filter(id => id !== null && id !== undefined);
+          // SKILLS TAB - MOVED TO CAPABILITY DEVELOPMENT MODULE
+          // {
+          //   key: '3',
+          //   label: 'Skills',
+          //   children: (
+          //     <>
+          //       {/* <p>Total Skills: {userSkillsData.skills.length}</p> */}
+          //       <Form.List name="skills">
+          //         {(fields, { add, remove }) => (
+          //           <>
+          //             {fields.map(({ key, name, ...restField }) => (
+          //               // <Card key={key} size="small" style={{ marginBottom: 12 }}>
+          //               <Row gutter={12}>
+          //                 <Col span={6}>
+          //                   <Form.Item shouldUpdate={(prevValues, currentValues) => prevValues.skills !== currentValues.skills} noStyle>
+          //                     {({ getFieldValue }) => {
+          //                       const allSkills = getFieldValue('skills') || [];
+          //                       const selectedSkillIds = allSkills
+          //                         .map((skill, idx) => idx !== name ? skill?.SkillId : null)
+          //                         .filter(id => id !== null && id !== undefined);
 
-                                return (
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'SkillId']}
-                                    label={`#${key + 1} Skill`}
-                                    rules={[{ required: true }]}
-                                  >
-                                    <Select
-                                      showSearch
-                                      filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
-                                    >
-                                      {availableSkills
-                                        .filter(s => !selectedSkillIds.includes(s.skillId))
-                                        .map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
-                                    </Select>
-                                  </Form.Item>
-                                );
-                              }}
-                            </Form.Item>
-                          </Col>
-                          <Col span={6}>
-                            <Form.Item {...restField} name={[name, 'SkillLevel']} label="Proficiency">
-                              <Select placeholder="Select Proficiency">
-                                <Option value="Beginner">Beginner</Option>
-                                <Option value="Intermediate">Intermediate</Option>
-                                <Option value="Expert">Expert</Option>
-                              </Select>
-                            </Form.Item>
-                          </Col>
-                          <Col span={6}>
-                            <Form.Item {...restField} name={[name, 'SkillCategory']} label="Category">
-                              <Select placeholder="Select Category">
-                                {SKILL_CATEGORIES.map(category => (
-                                  <Option key={category} value={category}>{category}</Option>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                          </Col>
-                          <Col span={4}>
-                            <Form.Item shouldUpdate={(prev, curr) => prev.skills?.[name]?.SelfEvaluation !== curr.skills?.[name]?.SelfEvaluation}>
-                              {({ getFieldValue }) => {
-                                const score = getFieldValue(['skills', name, 'SelfEvaluation']);
-                                return (
-                                  <Form.Item {...restField} name={[name, 'SelfEvaluation']} label="Self Eval (1-5)" help={getEvaluationMessage(score)}>
-                                    <Input type="number" min="0" max="5" step="0.1" />
-                                  </Form.Item>
-                                );
-                              }}
-                            </Form.Item>
-                          </Col>
-                          <Col span={2}>
-                            <DeleteOutlined key="delete" onClick={() => remove(name)} style={{ color: 'red', marginTop: '36px' }} />
-                          </Col>
-                          {/* <Col span={12}>
-                              <Form.Item {...restField} name={[name, 'isReady']} valuePropName="checked" label="Ready for Project?">
-                                <Checkbox>Yes</Checkbox>
-                              </Form.Item>
-                              <Form.Item noStyle shouldUpdate={(prev, curr) => prev.skills?.[name]?.isReady !== curr.skills?.[name]?.isReady}>
-                                {({ getFieldValue }) => {
-                                  const isReady = getFieldValue(['skills', name, 'isReady']);
-                                  return isReady ? (
-                                    <Form.Item {...restField} name={[name, 'isReadyDate']} label="Since">
-                                      <DatePicker style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  ) : null;
-                                }}
-                              </Form.Item>
-                            </Col> */}
-                        </Row>
-                        // </Card>
-                      ))}
-                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        Add Skill
-                      </Button>
-                    </>
-                  )}
-                </Form.List>
-              </>
-            ),
-          },
-          {
-            key: '4',
+          //                       return (
+          //                         <Form.Item
+          //                           {...restField}
+          //                           name={[name, 'SkillId']}
+          //                           label={`#${key + 1} Skill`}
+          //                           rules={[{ required: true }]}
+          //                         >
+          //                           <Select
+          //                             showSearch
+          //                             filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+          //                           >
+          //                             {availableSkills
+          //                               .filter(s => !selectedSkillIds.includes(s.skillId))
+          //                               .map(s => <Option key={s.skillId} value={s.skillId}>{s.skillName}</Option>)}
+          //                           </Select>
+          //                         </Form.Item>
+          //                       );
+          //                     }}
+          //                   </Form.Item>
+          //                 </Col>
+          //                 <Col span={6}>
+          //                   <Form.Item {...restField} name={[name, 'SkillLevel']} label="Proficiency">
+          //                     <Select placeholder="Select Proficiency">
+          //                       <Option value="Beginner">Beginner</Option>
+          //                       <Option value="Intermediate">Intermediate</Option>
+          //                       <Option value="Expert">Expert</Option>
+          //                     </Select>
+          //                   </Form.Item>
+          //                 </Col>
+          //                 <Col span={6}>
+          //                   <Form.Item {...restField} name={[name, 'SkillCategory']} label="Category">
+          //                     <Select placeholder="Select Category">
+          //                       {SKILL_CATEGORIES.map(category => (
+          //                         <Option key={category} value={category}>{category}</Option>
+          //                       ))}
+          //                     </Select>
+          //                   </Form.Item>
+          //                 </Col>
+          //                 <Col span={4}>
+          //                   <Form.Item shouldUpdate={(prev, curr) => prev.skills?.[name]?.SelfEvaluation !== curr.skills?.[name]?.SelfEvaluation}>
+          //                     {({ getFieldValue }) => {
+          //                       const score = getFieldValue(['skills', name, 'SelfEvaluation']);
+          //                       return (
+          //                         <Form.Item {...restField} name={[name, 'SelfEvaluation']} label="Self Eval (1-5)" help={getEvaluationMessage(score)}>
+          //                           <Input type="number" min="0" max="5" step="0.1" />
+          //                         </Form.Item>
+          //                       );
+          //                     }}
+          //                   </Form.Item>
+          //                 </Col>
+          //                 <Col span={2}>
+          //                   <DeleteOutlined key="delete" onClick={() => remove(name)} style={{ color: 'red', marginTop: '36px' }} />
+          //                 </Col>
+          //                 {/* <Col span={12}>
+          //                     <Form.Item {...restField} name={[name, 'isReady']} valuePropName="checked" label="Ready for Project?">
+          //                       <Checkbox>Yes</Checkbox>
+          //                     </Form.Item>
+          //                     <Form.Item noStyle shouldUpdate={(prev, curr) => prev.skills?.[name]?.isReady !== curr.skills?.[name]?.isReady}>
+          //                       {({ getFieldValue }) => {
+          //                         const isReady = getFieldValue(['skills', name, 'isReady']);
+          //                         return isReady ? (
+          //                           <Form.Item {...restField} name={[name, 'isReadyDate']} label="Since">
+          //                             <DatePicker style={{ width: '100%' }} />
+          //                           </Form.Item>
+          //                         ) : null;
+          //                       }}
+          //                     </Form.Item>
+          //                   </Col> */}
+          //               </Row>
+          //               // </Card>
+          //             ))}
+          //             <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+          //               Add Skill
+          //             </Button>
+          //           </>
+          //         )}
+          //       </Form.List>
+          //     </>
+          //   ),
+          // },
+          { // Documents tab now becomes tab key '3' instead of '4'
+            key: '3', // Changed from '4' to '3' since Skills tab is removed
             label: 'Documents',
             children: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
