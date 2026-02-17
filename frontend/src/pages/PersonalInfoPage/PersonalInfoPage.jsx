@@ -473,7 +473,10 @@ function PersonalInfoPage() {
                 <Title level={3} style={{ margin: 0 }}>
                   {employeeData?.lastName ? `${employeeData?.firstName} ${employeeData?.lastName}` : employeeData?.firstName}
                 </Title>
+                <Tag color="green" style={{ marginTop: '4px' }}>{employeeData?.employmentStatus}</Tag>
                 <Tag color="blue" style={{ marginTop: '4px' }}>{user?.roleName}</Tag>
+                <Tag color="orange" style={{ marginTop: '4px' }}>{employeeData?.subRoleName}</Tag>
+                <Tag color="orange" style={{ marginTop: '4px' }}>{employeeData?.designationName}</Tag>
                 <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <Text type="secondary"><MailOutlined style={{ marginRight: '8px' }} />{employeeData?.email}</Text>
                   <Text type="secondary"><PhoneOutlined style={{ marginRight: '8px' }} />{employeeData?.contactNumber}</Text>

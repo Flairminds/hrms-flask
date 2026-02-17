@@ -1,5 +1,5 @@
 // function to convert date to DD-Mmm-YYYY format in Indian Standard Time
-export const convertDate = (date) => {
+export const convertDate = (date, showTime = false) => {
     if (!date) return "";
     let d = new Date(date);
     // Check if date string implies a timestamp (has time component)
@@ -13,7 +13,7 @@ export const convertDate = (date) => {
 
     const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' };
 
-    if (hasTime) {
+    if (hasTime && showTime) {
         options.hour = '2-digit';
         options.minute = '2-digit';
         options.hour12 = true;
