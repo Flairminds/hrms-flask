@@ -778,8 +778,6 @@ class EmailService:
                     <tr><th>Approver Comment</th><td>{details.get('description') or 'N/A'}</td></tr>
                 </table>
                 
-                {checklist_html}
-                
                 <div style="text-align: center;">
                     <a href="https://hrms.flairminds.com/login" class="button">View in HRMS</a>
                 </div>

@@ -205,10 +205,7 @@ class LeaveTransactionService:
                 ).scalar() or 0
                 
                 if wfh_in_week >= 1 or no_of_days > 1:
-                    if (from_date_only - app_date_only).days < 7:
-                        raise ValueError("More than 1 WFH in a week requires 1 week advance approval and 2nd level approval.")
-                    else:
-                        flag_for_second_approval = 1
+                    flag_for_second_approval = 1
 
             # 3. Customer Approved Comp-off Validation
             if leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF:
@@ -266,7 +263,7 @@ class LeaveTransactionService:
 
             # Generate sequence if needed or use autoincrement
             # For now, following leave_tran_id = autoincrement in model definition
-            is_second_approval = True if (flag_for_second_approval == 1 or leave_type_id == LeaveTypeID.CASUAL or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_WFH) else False
+            is_second_approval = True if (flag_for_second_approval == 1 or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_WFH or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF) else False
             
             new_leave = LeaveTransaction(
                 employee_id=emp_id.upper(),

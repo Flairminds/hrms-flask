@@ -103,7 +103,7 @@ class EmailConfig:
     FY_2025_START = '2025-04-01'
 
     # Secondary Approver for multi-level approval (e.g., Customer Approved WFH)
-    SECONDARY_LEAVE_APPROVER_EMAIL = 'john.doe@flairminds.com'
+    SECONDARY_LEAVE_APPROVER_EMAIL = 'ahiresh.gaikwad@flairminds.com'
     
     # Global CC list for leave notifications
-    LEAVE_NOTIFICATION_CC = ['']
+    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'gaurav.singh@flairminds.com']
