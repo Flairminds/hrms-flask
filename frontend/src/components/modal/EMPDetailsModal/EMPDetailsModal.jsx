@@ -4,20 +4,20 @@ import styles from "./EMPDetailsModal.module.css";
 import {
   getCompanyBands,
   getCompanyRoles,
-  getSkillsForEmp,
+  // getSkillsForEmp, // Moved to Capability Development
   getPotentialApprovers,
   updateEmployeeDetails,
   getDocStatus,
   getDocuments,
   uploadDocument,
-  getAllEmployeeSkills,
+  // getAllEmployeeSkills, // Moved to Capability Development
   getMasterRoles
 } from '../../../services/api';
 import { getCookie } from '../../../util/CookieSet';
 import { useAuth } from '../../../context/AuthContext';
 import WidgetCard from '../../common/WidgetCard';
 import dayjs from 'dayjs';
-import { SKILL_CATEGORIES } from '../../../constants/skillCategories';
+// import { SKILL_CATEGORIES } from '../../../constants/skillCategories'; // Moved to Capability Development
 import {
   UserOutlined,
   HomeOutlined,
@@ -49,7 +49,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const [potentialApprovers, setPotentialApprovers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [docStatus, setDocStatus] = useState([]);
-  const [availableSkills, setAvailableSkills] = useState([]);
+  // const [availableSkills, setAvailableSkills] = useState([]); // Moved to Capability Development
   const [isSameAddress, setIsSameAddress] = useState(false);
   const [medicalCertFile, setMedicalCertFile] = useState(null);
 
@@ -174,12 +174,13 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
           permanent_address2: addresses.permanentAddress2,
           permanent_zipcode: addresses.permanentZipcode,
         },
-        skills: personalEmployeeDetails.skills?.map(s => ({
-          skillId: s.skillId,
-          skillLevel: s.skillLevel,
-          skillCategory: s.skillCategory,
-          selfEvaluation: s.selfEvaluation
-        })) || []
+        // Skills - MOVED TO CAPABILITY DEVELOPMENT
+        // skills: personalEmployeeDetails.skills?.map(s => ({
+        //   skillId: s.skillId,
+        //   skillLevel: s.skillLevel,
+        //   skillCategory: s.skillCategory,
+        //   selfEvaluation: s.selfEvaluation
+        // })) || []
       });
 
       // Fetch documents status for this employee
@@ -200,20 +201,21 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
     }
   };
 
-  const fetchAllAvailableSkills = async () => {
-    try {
-      const response = await getAllEmployeeSkills();
-      setAvailableSkills(response.data || []);
-    } catch (error) {
-      console.error('Error fetching skills:', error);
-    }
-  };
+  // Fetch all available skills - MOVED TO CAPABILITY DEVELOPMENT
+  // const fetchAllAvailableSkills = async () => {
+  //   try {
+  //     const response = await getAllEmployeeSkills();
+  //     setAvailableSkills(response.data || []);
+  //   } catch (error) {
+  //     console.error('Error fetching skills:', error);
+  //   }
+  // };
 
-  useEffect(() => {
-    if (detailsModal) {
-      fetchAllAvailableSkills();
-    }
-  }, [detailsModal]);
+  // useEffect(() => {
+  //   if (detailsModal) {
+  //     fetchAllAvailableSkills();
+  //   }
+  // }, [detailsModal]);
 
   const handleCancel = () => {
     setIsEditMode(false);
@@ -261,12 +263,13 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
             is_same_permanant: false
           }] : [])
         ] : [],
-        skills: values.skills?.map(s => ({
-          skill_id: s.skillId,
-          skill_level: s.skillLevel,
-          skill_category: s.skillCategory,
-          self_evaluation: s.selfEvaluation
-        })) || [],
+        // Skills payload - MOVED TO CAPABILITY DEVELOPMENT
+        // skills: values.skills?.map(s => ({
+        //   skill_id: s.skillId,
+        //   skill_level: s.skillLevel,
+        //   skill_category: s.skillCategory,
+        //   self_evaluation: s.selfEvaluation
+        // })) || [],
         qualificationYearMonth: values.qualificationYearMonth
       };
 
@@ -651,8 +654,8 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
               </Card>
             </Tabs.TabPane>
 
-            {/* Tab 4: Skills */}
-            <Tabs.TabPane tab={<span><ToolOutlined /> Skills</span>} key="4">
+            {/* Tab 4: Skills - MOVED TO CAPABILITY DEVELOPMENT MODULE */}
+            {/* <Tabs.TabPane tab={<span><ToolOutlined /> Skills</span>} key="4">
               <Form.List name="skills">
                 {(fields, { add, remove }) => (
                   <>
@@ -729,10 +732,10 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                   </>
                 )}
               </Form.List>
-            </Tabs.TabPane>
+            </Tabs.TabPane> */}
 
-            {/* Tab 5: Documents */}
-            <Tabs.TabPane tab={<span><FileTextOutlined /> Documents</span>} key="5">
+            {/* Tab 5: Documents - Now becomes Tab 4 */}
+            <Tabs.TabPane tab={<span><FileTextOutlined /> Documents</span>} key="4">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
                   { key: "tenth", label: "10th Marksheet" },
