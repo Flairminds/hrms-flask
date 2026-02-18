@@ -657,9 +657,6 @@ class LeaveQueryService:
         Logger.info("Getting all leave transactions (HR/Admin)", year=year)
         
         try:
-            # Get financial year dates
-            start_date, end_date = LeaveUtils.get_financial_year_dates(year, month)
-
             # Helper for date formatting
             def format_date(date_obj):
                 if date_obj:
@@ -728,7 +725,7 @@ class LeaveQueryService:
             
             # Only filter by date range - no approver filter
             query = query.filter(
-                LeaveTransaction.from_date.between(start_date, end_date)
+                LeaveTransaction.from_date.between(date(year, 1, 1), date(year, 12, 31))
             ).order_by(
                 LeaveTransaction.from_date.desc()
             )
@@ -794,9 +791,6 @@ class LeaveQueryService:
                    approver_id=approver_id, year=year)
         
         try:
-            # Get financial year dates
-            start_date, end_date = LeaveUtils.get_financial_year_dates(year, month)
-
             # Get team lead full name for filter
             approver = db.session.query(
                 (Employee.first_name + ' ' + Employee.last_name).label('name'),
@@ -899,7 +893,7 @@ class LeaveQueryService:
             else:
                 # Standard team lead filter - only see own team's leaves
                 # (Unless existing code relied on implicit filtering? But explicit is safer)
-                query = query.filter(Employee.team_lead_id == approver_id)
+                query = query.filter(Employee.team_lead_id == approver_id, LeaveTransaction.from_date.between(date(year, 1, 1), date(year, 12, 31)))
 
             query = query.order_by(
                 LeaveTransaction.from_date.desc(),

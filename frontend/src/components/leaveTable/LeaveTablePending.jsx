@@ -29,16 +29,11 @@ export const LeaveTablePending = ({ isRole }) => {
   const [employeeNames, setEmployeeNames] = useState([]);
   const [selectedEmployeeName, setSelectedEmployeeName] = useState('');
 
-  const yearRanges = ["2022-2023", "2023-2024", "2024-2025", "2025-2026", "2026-2027"];
-  const [selectedRange, setSelectedRange] = useState("2025");
-
+  const yearRanges = Array.from({ length: new Date().getFullYear() - 2021 + 1 }, (_, i) => new Date().getFullYear() - i);
+  const [selectedRange, setSelectedRange] = useState(new Date().getFullYear());
 
   const handleChangeYear = (value) => {
-    // setSelectedRange(value);
-
-    // Extract the first year from the selected range
-    const firstYear = value.split("-")[0];
-    setSelectedRange(firstYear)
+    setSelectedRange(value)
   };
 
   useEffect(() => {

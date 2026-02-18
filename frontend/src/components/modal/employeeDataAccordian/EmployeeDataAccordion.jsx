@@ -34,7 +34,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
 
     // Employment status options
     const employmentStatusOptions = [
-        'Active',
         'Probation',
         'Confirmed',
         'Intern',

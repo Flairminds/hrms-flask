@@ -58,7 +58,6 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
 
   // Employment status options
   const employmentStatusOptions = [
-    'Active',
     'Probation',
     'Confirmed',
     'Intern',
