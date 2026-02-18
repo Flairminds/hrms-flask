@@ -76,7 +76,6 @@ class ReportService:
             ).filter(
                 and_(
                     LeaveTransaction.employee_id.in_(employee_ids),
-                    LeaveTransaction.leave_status.notin_([LeaveStatus.CANCELLED, LeaveStatus.REJECTED]),
                     LeaveTransaction.applied_by.isnot(None),
                     LeaveTransaction.from_date <= end_date,
                     LeaveTransaction.to_date >= start_date
@@ -112,7 +111,7 @@ class ReportService:
                             'duration': leave.duration,
                             'approved_date': leave.approved_date.strftime('%d-%m-%Y') if leave.approved_date else '',
                             'approved_same_date': 'Yes' if leave.approved_date and leave.application_date and leave.approved_date.date() == leave.application_date.date() else 'No',
-                            'unpaid_status': 'Unpaid' if leave.leave_name == LeaveTypeName.UNPAID_LEAVE or leave.leave_status in [LeaveStatus.PENDING, LeaveStatus.REJECTED, LeaveStatus.CANCELLED] else 'Paid'
+                            'unpaid_status': 'Unpaid' if leave.leave_name == LeaveTypeName.UNPAID_LEAVE else 'Paid'
                         }
                         current_date += timedelta(days=1)
                 

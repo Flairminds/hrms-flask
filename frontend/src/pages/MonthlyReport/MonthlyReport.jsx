@@ -573,17 +573,45 @@ const DoorEntryReportTab = () => {
                 const data = Array.isArray(response.data.data) ? response.data.data : [];
                 setDetailData(data);
 
-                // Dynamic columns based on first row keys
+                // Fixed ordered columns for door entry report
+                const doorEntryColumnOrder = [
+                    { key: 'No.', title: 'ID' },
+                    { key: 'Name', title: 'Name' },
+                    { key: 'Date', title: 'Date', render: (text) => convertDate(text) },
+                    // { key: 'Department', title: 'Department' },
+                    { key: 'AM In', title: 'AM In' },
+                    { key: 'AM Out', title: 'AM Out' },
+                    { key: 'PM In', title: 'PM In' },
+                    { key: 'PM Out', title: 'PM Out' },
+                    // { key: 'Late in (mm)', title: 'Late In (mm)' },
+                    // { key: 'Early Leave (mm)', title: 'Early Leave (mm)' },
+                    // { key: 'Total (mm)', title: 'Total (mm)' },
+                    // { key: 'Remark', title: 'Remark' },
+                ];
+
                 if (data.length > 0) {
-                    const keys = Object.keys(data[0]);
-                    const cols = keys.map(key => ({
-                        title: key,
-                        dataIndex: key,
-                        key: key,
-                        filters: [...new Set(data.map(a => a[key]))].filter(Boolean).map(name => ({ text: name, value: name })),
-                        onFilter: (value, record) => record[key] === value,
-                    }));
-                    setDetailColumns(cols);
+                    const dataKeys = new Set(Object.keys(data[0]));
+                    // Use fixed order for known columns, append any extra keys at the end
+                    const orderedCols = doorEntryColumnOrder
+                        .filter(col => dataKeys.has(col.key))
+                        .map(col => ({
+                            title: col.title,
+                            dataIndex: col.key,
+                            key: col.key,
+                            ...(col.render ? { render: col.render } : {}),
+                            filters: [...new Set(data.map(r => r[col.key]))].filter(Boolean).map(v => ({ text: v, value: v })),
+                            onFilter: (value, record) => record[col.key] === value,
+                        }));
+
+                    // Append any extra columns not in the fixed list
+                    // const knownKeys = new Set(doorEntryColumnOrder.map(c => c.key));
+                    // Object.keys(data[0]).forEach(k => {
+                    //     if (!knownKeys.has(k)) {
+                    //         orderedCols.push({ title: k, dataIndex: k, key: k });
+                    //     }
+                    // });
+
+                    setDetailColumns(orderedCols);
                 }
             } else {
                 toast.error("Failed to load report details");
