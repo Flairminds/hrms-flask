@@ -520,28 +520,6 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                     </Form.Item>
                   </Col>
                 )}
-                {isEditMode && (
-                  <Col span={24}>
-                    <Divider orientation="left">Document Upload</Divider>
-                    <Form.Item label="Medical Certificate">
-                      <Upload
-                        beforeUpload={(file) => {
-                          setMedicalCertFile(file);
-                          return false; // Prevent auto-upload
-                        }}
-                        onRemove={() => setMedicalCertFile(null)}
-                        maxCount={1}
-                      >
-                        <Button icon={<UploadOutlined />}>Select Medical Certificate</Button>
-                      </Upload>
-                      {medicalCertFile && (
-                        <Text type="secondary" style={{ display: 'block', marginTop: '8px' }}>
-                          Selected: {medicalCertFile.name}
-                        </Text>
-                      )}
-                    </Form.Item>
-                  </Col>
-                )}
               </Row>
             </Tabs.TabPane>
 
