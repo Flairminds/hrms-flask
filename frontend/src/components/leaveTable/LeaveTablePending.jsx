@@ -28,6 +28,17 @@ export const LeaveTablePending = ({ isRole }) => {
     setSelectedRange(value)
   };
 
+  const getStatusClass = (status) => {
+    switch (status) {
+      case LEAVE_STATUS.PENDING: return styles.pendingLeaveBox;
+      case LEAVE_STATUS.APPROVED: return styles.approvedLeaveBox;
+      case LEAVE_STATUS.CANCELLED: return styles.canceledLeaveBox;
+      case LEAVE_STATUS.REJECTED: return styles.rejectedLeaveBox;
+      case LEAVE_STATUS.PARTIAL_APPROVED: return styles.partialApprovedLeaveBox;
+      default: return '';
+    }
+  };
+
   useEffect(() => {
     const fetchEmployeeData = async () => {
       if (user.employeeId) {
@@ -177,20 +188,7 @@ export const LeaveTablePending = ({ isRole }) => {
               }}>
                 {tableHeadersTM.map((header, subIndex) => (
                   <td key={subIndex}>
-                    <div className={`${header.key === "leaveStatus"
-                      ? employee[header.key] === "Pending"
-                        ? styles.pendingLeave
-                        : employee[header.key] === "Approved"
-                          ? styles.approvedLeave
-                          : employee[header.key] === "Cancel"
-                            ? styles.canceledLeave
-                            : employee[header.key] === "Reject"
-                              ? styles.rejectedLeave
-                              : employee[header.key] === "Partial Approved"
-                                ? styles.partialApprovedLeave
-                                : ""
-                      : ""
-                      }`}>
+                    <div className={`${header.key === "leaveStatus" ? getStatusClass(employee[header.key]) : ""}`}>
                       {header.dataFormat === "date" ? convertDate(employee[header.key]) : employee[header.key]}
                     </div>
                   </td>

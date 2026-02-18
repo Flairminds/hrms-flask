@@ -228,7 +228,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
           </div>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Number of Days</span>
-            <span className={styles.detailValue}>{employee.appliedLeaveCount}</span>
+            <span className={styles.detailValue}>{employee.noOfDays}</span>
           </div>
 
           {showWorkingLateDetails && (

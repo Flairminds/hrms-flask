@@ -52,10 +52,8 @@
 
 .pendingLeave {
     /* font-weight: bold; */
-    font-weight: bold;
-    color: #EFA300;
     border-radius: 5px;
-    border: 2px solid #EFA300;
+    border: 1px solid #8c8c8c;
     padding: 5px;
 }
 
