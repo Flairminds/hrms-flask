@@ -169,7 +169,7 @@ const LeaveReportTab = () => {
             title: 'Generated At',
             dataIndex: 'generated_at',
             key: 'generated_at',
-            render: (text) => convertDate(text)
+            render: (text) => convertDate(text, true)
         },
         {
             title: 'Actions',
@@ -210,8 +210,8 @@ const LeaveReportTab = () => {
 
     if (viewMode === 'list') {
         return (
-            <div style={{ marginTop: '20px' }}>
-                <div style={{ padding: '15px', background: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
+            <div style={{ marginTop: '10px', background: 'white', padding: '15px', borderRadius: '8px' }}>
+                <div style={{ marginBottom: '20px' }}>
                     {/* <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ fontWeight: 'bold' }}>Generate New Report:</span>
                     </div> */}
@@ -238,13 +238,15 @@ const LeaveReportTab = () => {
                 </div>
 
                 {/* <h3>Monthly Leave Reports History</h3> */}
-                <Table
-                    columns={listColumns}
-                    dataSource={reports}
-                    rowKey="id"
-                    loading={listLoading}
-                    pagination={{ pageSize: 10 }}
-                />
+                <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                    <Table
+                        columns={listColumns}
+                        dataSource={reports}
+                        rowKey="id"
+                        loading={listLoading}
+                        pagination={{ pageSize: 10 }}
+                    />
+                </div>
             </div>
         );
     }
@@ -312,7 +314,7 @@ const DoorEntryStats = () => {
                     <h3>{stats.mapped_count}</h3>
                     <div>Mapped Employees</div>
                 </Card.Grid>
-                <Card.Grid style={{ width: '33%', textAlign: 'center', backgroundColor: stats.unmapped_count > 0 ? '#fff1f0' : '#f6ffed' }}>
+                <Card.Grid style={{ width: '33%', textAlign: 'center' }}>
                     <h3 style={{ color: stats.unmapped_count > 0 ? '#f5222d' : '#52c41a' }}>{stats.unmapped_count}</h3>
                     <div>Unmapped Employees</div>
                 </Card.Grid>
@@ -615,7 +617,7 @@ const DoorEntryReportTab = () => {
             title: 'Generated At',
             dataIndex: 'generated_at',
             key: 'generated_at',
-            render: (text) => convertDate(text)
+            render: (text) => convertDate(text, true)
         },
         {
             title: 'Actions',
@@ -667,8 +669,8 @@ const DoorEntryReportTab = () => {
 
     if (viewMode === 'list') {
         return (
-            <div style={{ marginTop: '20px' }}>
-                <div style={{ padding: '15px', background: '#f5f5f5', borderRadius: '8px', marginBottom: '20px' }}>
+            <div style={{ marginTop: '10px' }}>
+                <div style={{ background: '#f5f5f5', borderRadius: '8px', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
                             {months.map((m, index) => (
@@ -697,7 +699,7 @@ const DoorEntryReportTab = () => {
                         <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
                     </div>
                 </div>
-                <p style={{ color: 'lightblue' }}>Data extracted from the Exceptional Sheet from the monthly door entry excel file</p>
+                <p style={{ color: 'violet' }}>Data extracted from the 'Exceptional' Sheet from the monthly door entry excel file</p>
 
                 <Table
                     columns={listColumns}
@@ -956,7 +958,7 @@ const AttendanceReportTab = () => {
 
     const columns = [
         { title: 'Report For', dataIndex: 'report_for', key: 'report_for' },
-        { title: 'Generated At', dataIndex: 'generated_at', key: 'generated_at', render: (text) => convertDate(text) },
+        { title: 'Generated At', dataIndex: 'generated_at', key: 'generated_at', render: (text) => convertDate(text, true) },
         {
             title: 'Actions',
             key: 'actions',
