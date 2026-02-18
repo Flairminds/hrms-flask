@@ -220,7 +220,7 @@ class ReportService:
             # 3. Upload to Azure Blob Storage
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"monthly_leave_report_{year}_{month:02d}_{timestamp}.csv"
-            blob_path = f"reports/{year}/{month:02d}/{filename}"
+            blob_path = f"reports/monthly_reports/{filename}"
             
             blob_url = ""
             try:
@@ -324,7 +324,7 @@ class ReportService:
             
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             original_filename = file.filename if hasattr(file, 'filename') else 'door_entry_report.xlsx'
-            blob_path = f"reports/door_entry/{year}/{month:02d}/{timestamp}_{original_filename}"
+            blob_path = f"reports/door_entry_reports/{original_filename}_{timestamp}"
             
             blob_url = ""
             try:
@@ -508,7 +508,7 @@ class ReportService:
                 # Let's use current year/month for folder structure or extract from report_for
                 
                 filename = f"attendance_report_{timestamp}.xlsx"
-                blob_path = f"reports/attendance/{datetime.now().year}/{datetime.now().month:02d}/{filename}"
+                blob_path = f"reports/attendance_reports/{filename}"
                 
                 blob_url = AzureBlobService.upload_blob(
                     blob_name=blob_path,
