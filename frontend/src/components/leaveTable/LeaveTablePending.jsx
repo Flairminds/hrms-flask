@@ -126,7 +126,7 @@ export const LeaveTablePending = ({ isRole }) => {
   }
 
   return (
-    <div style={{ padding: "2.5rem 2rem 0 2rem" }} className={styles.main}>
+    <div style={{ padding: "0rem" }} className={styles.main}>
       <div className={styles.leaveDiv} style={{ display: 'flex', gap: '1rem' }}>
         <div style={{ display: "flex", width: "100%" }}>
           <h5 style={{ paddingTop: "10px", paddingRight: "5px" }} className={styles.heading}>Leave Status :</h5>

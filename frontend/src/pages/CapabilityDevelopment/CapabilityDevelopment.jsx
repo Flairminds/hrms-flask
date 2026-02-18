@@ -33,7 +33,7 @@ export const CapabilityDevelopment = () => {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1>Capability Development</h1>
+                <h2>Capability Development</h2>
                 <p>Track your skills, goals, feedback, and performance</p>
             </div>
 
@@ -44,7 +44,7 @@ export const CapabilityDevelopment = () => {
                         className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
                         onClick={() => setActiveTab(tab.id)}
                     >
-                        <span className={styles.tabIcon}>{tab.icon}</span>
+                        {/* <span className={styles.tabIcon}>{tab.icon}</span> */}
                         <span className={styles.tabLabel}>{tab.label}</span>
                     </button>
                 ))}
