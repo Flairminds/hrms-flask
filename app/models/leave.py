@@ -22,7 +22,7 @@ class LeaveTransaction(BaseModel):
     from_date = db.Column(db.DateTime)
     to_date = db.Column(db.DateTime)
     duration = db.Column(db.String(20))
-    no_of_days = db.Column(db.Integer)
+    no_of_days = db.Column(db.Numeric(5, 2))
     hand_over_comments = db.Column(db.Text)
     applied_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
     application_date = db.Column(db.DateTime)
