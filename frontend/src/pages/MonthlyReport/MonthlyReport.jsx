@@ -238,7 +238,7 @@ const LeaveReportTab = () => {
                 </div>
 
                 {/* <h3>Monthly Leave Reports History</h3> */}
-                <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #e8e8e8', borderRadius: '8px' }}>
                     <Table
                         columns={listColumns}
                         dataSource={reports}
@@ -304,7 +304,7 @@ const DoorEntryStats = () => {
     if (!stats) return null;
 
     return (
-        <Card title="Door Entry Name Mappings" style={{ margin: '2rem 0' }} extra={<Button onClick={fetchStats} icon={<ReloadOutlined />}>Refresh</Button>}>
+        <Card title="Door Entry Name Mappings" style={{ margin: '2rem 0', borderRadius: '8px' }} extra={<Button onClick={fetchStats} icon={<ReloadOutlined />}>Refresh</Button>}>
             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
                 <Card.Grid style={{ width: '33%', textAlign: 'center' }}>
                     <h3>{stats.total_active}</h3>
@@ -670,44 +670,47 @@ const DoorEntryReportTab = () => {
     if (viewMode === 'list') {
         return (
             <div style={{ marginTop: '10px' }}>
-                <div style={{ background: '#f5f5f5', borderRadius: '8px', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
-                            {months.map((m, index) => (
-                                <Select.Option key={index} value={m}>{m}</Select.Option>
-                            ))}
-                        </Select>
-                        <Select value={genInYear} onChange={setGenInYear} style={{ width: 100 }}>
-                            {years.map((y, index) => (
-                                <Select.Option key={index} value={y}>{y}</Select.Option>
-                            ))}
-                        </Select>
+                <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
+                    <div style={{ marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
+                                {months.map((m, index) => (
+                                    <Select.Option key={index} value={m}>{m}</Select.Option>
+                                ))}
+                            </Select>
+                            <Select value={genInYear} onChange={setGenInYear} style={{ width: 100 }}>
+                                {years.map((y, index) => (
+                                    <Select.Option key={index} value={y}>{y}</Select.Option>
+                                ))}
+                            </Select>
 
-                        <Upload {...uploadProps}>
-                            <Button icon={<UploadOutlined />}>Select File</Button>
-                        </Upload>
+                            <Upload {...uploadProps}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
 
-                        <Button
-                            type="primary"
-                            onClick={handleUpload}
-                            loading={uploading}
-                            disabled={fileList.length === 0}
-                        >
-                            Upload & Save
-                        </Button>
+                            <Button
+                                type="primary"
+                                onClick={handleUpload}
+                                loading={uploading}
+                                disabled={fileList.length === 0}
+                            >
+                                Upload & Save
+                            </Button>
 
-                        <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
+                            <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
+                        </div>
+                    </div>
+                    <p style={{ color: 'violet' }}>Data extracted from the 'Exceptional' Sheet from the monthly door entry excel file</p>
+                    <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #e8e8e8', borderRadius: '8px' }}>
+                        <Table
+                            columns={listColumns}
+                            dataSource={reports}
+                            rowKey="id"
+                            loading={listLoading}
+                            pagination={{ pageSize: 10 }}
+                        />
                     </div>
                 </div>
-                <p style={{ color: 'violet' }}>Data extracted from the 'Exceptional' Sheet from the monthly door entry excel file</p>
-
-                <Table
-                    columns={listColumns}
-                    dataSource={reports}
-                    rowKey="id"
-                    loading={listLoading}
-                    pagination={{ pageSize: 10 }}
-                />
 
                 <div style={{ marginBottom: '20px' }}>
                     <DoorEntryStats />
@@ -1014,13 +1017,15 @@ const AttendanceReportTab = () => {
                     </div>
                 </Card>
 
-                <Table
-                    columns={columns}
-                    dataSource={attendanceReports}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                />
+                <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #e8e8e8', borderRadius: '8px' }}>
+                    <Table
+                        columns={columns}
+                        dataSource={attendanceReports}
+                        rowKey="id"
+                        loading={loading}
+                        pagination={{ pageSize: 10 }}
+                    />
+                </div>
             </div>
         );
     }
