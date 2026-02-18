@@ -35,6 +35,7 @@ import {
   DeleteOutlined,
   PlusOutlined
 } from '@ant-design/icons';
+import { employmentStatusOptions } from '../../../util/helper';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -55,17 +56,6 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
 
   // Check if current user can edit (HR or Admin)
   const canEdit = user && (user.roleName === 'HR' || user.roleName === 'Admin');
-
-  // Employment status options
-  const employmentStatusOptions = [
-    'Probation',
-    'Confirmed',
-    'Intern',
-    'Resigned',
-    'Relieved',
-    'Absconding'
-  ];
-
 
   const getRoleData = async () => {
     try {

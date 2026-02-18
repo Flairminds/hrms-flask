@@ -77,7 +77,7 @@ class EmployeeService:
                 MasterRole, EmployeeRole.role_id == MasterRole.role_id
             ).filter(
                 MasterRole.role_name.in_(['Lead', 'HR', 'Admin']),
-                Employee.employment_status.notin_(['Resigned', 'Relieved', 'Absconding'])
+                Employee.employment_status.notin_(['Resigned', 'Relieved', 'Absconding', 'Leave Without Pay'])
             ).order_by(
                 Employee.first_name.asc()
             ).all()
@@ -98,7 +98,7 @@ class EmployeeService:
         """Aggregates employee dashboard statistics."""
         try:
             # Total Active Employees (Not Relieved or Absconding)
-            total_active = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding', 'Resigned'])).count()
+            total_active = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay'])).count()
             
             # Total Interns
             total_interns = Employee.query.filter_by(employment_status='Intern').count()
@@ -106,10 +106,14 @@ class EmployeeService:
             # Total Probation
             total_probation = Employee.query.filter_by(employment_status='Probation').count()
 
+            # Total Resigned
+            total_resigned = Employee.query.filter_by(employment_status='Resigned').count()
+
             return {
                 'total_active': total_active,
                 'total_interns': total_interns,
-                'total_probation': total_probation
+                'total_probation': total_probation,
+                'total_resigned': total_resigned
             }
         except Exception as e:
             Logger.error("Error fetching employee dashboard stats", error=str(e))

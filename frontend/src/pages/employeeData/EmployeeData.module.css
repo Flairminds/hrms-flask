@@ -37,11 +37,8 @@
 .statusProbation {
     display: inline-block;
     text-align: center;
-    line-height: 1.5;
-    font-size: 14px;
-    font-weight: bold;
     border-radius: 5px;
-    border: 2px solid;
+    border: 1px solid;
     padding: 5px;
 }
 
@@ -50,21 +47,9 @@
     border-color: violet;
 }
 
-.activeProbation {
-    color: white;
-    border: 1.4px solid violet !important;
-    background-color: violet;
-}
-
 .statusAbsconding {
-    color: #008D8D;
-    border-color: #008D8D;
-}
-
-.activeAbsconding {
-    color: white;
-    border: 1.4px solid#008D8D !important;
-    background-color: #008D8D;
+    color: red;
+    border-color: red;
 }
 
 .statusActive {
@@ -72,54 +57,24 @@
     border-color: rgb(65, 238, 65) !important;
 }
 
-.activeActive {
-    color: white;
-    border: 1.4px solid rgb(65, 238, 65) !important;
-    background-color: rgb(65, 238, 65) !important;
-}
-
 .statusConfirmed {
     color: green;
     border-color: green;
 }
 
-.activeConfirmed {
-    color: white;
-    border: 1.4px solid green !important;
-    background-color: green;
-}
-
 .statusIntern {
-    color: #1b7b7b;
-    border-color: #1b7b7b;
-}
-
-.activeIntern {
-    color: white;
-    border: 1.4px solid #1b7b7b !important;
-    background-color: #1b7b7b;
+    color: orange;
+    border-color: orange;
 }
 
 .statusResigned {
-    color: red;
-    border-color: red;
-}
-
-.activeResigned {
-    color: white;
-    border: 1.4px solid red !important;
-    background-color: red;
+    color: orange;
+    border-color: orange;
 }
 
 .statusRelieved {
-    color: #EFA300;
-    border-color: #EFA300;
-}
-
-.activeRelieved {
-    color: white;
-    border: 1.4px solid#EFA300 !important;
-    background-color: #EFA300;
+    color: red;
+    border-color: red;
 }
 
 .statusLWP {

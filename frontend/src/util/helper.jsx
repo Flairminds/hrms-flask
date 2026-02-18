@@ -1,6 +1,6 @@
 export const employeeData = [
     {
-        "AppliedBy" : "myName" ,
+        "AppliedBy": "myName",
         // "EmployeeId": "Vaishnavi Vaidya",
         "LeaveType": "Sick Leave",
         "Duration": "Full Day",
@@ -10,8 +10,8 @@ export const employeeData = [
         "ApplicationDate": "2024-06-01",
         "LeaveStatus": "Rejected",
         "ApprovedBy": "Ahiresh Gaikwad",
-        "comments" : "Change leave type to priviledge leave"
-       
+        "comments": "Change leave type to priviledge leave"
+
     },
     {
         "EmpName": "Amruta Kokane",
@@ -34,7 +34,7 @@ export const employeeData = [
         "ApplicationDate": "2024-06-20",
         "LeaveStatus": "Pending",
         "ApprovedBy": null,
-     
+
     },
     {
         "EmpName": "Mukesh Bhairewar",
@@ -48,49 +48,65 @@ export const employeeData = [
         "ApprovedBy": "Ahiresh Gaikwad"
     }
 ]
- 
+
 export const leaveTagData = [
-    {"WFM" : {
-        text: "Work from Home",
-        color: "yellow",
-        background: "pink",
-    }},
-    {"VCL" : {
-        text: "Visiting Client Location",
-        color: "green",
-        background: "pink",
-    }},
-    {"PL" : {
-        text: "Privilege Leave",
-        color: "blue",
-        background: "pink",
-    }},
-    {"CH" : {
-        text: "Customer Holiday",
-        color: "grey",
-        background: "pink",
-    }},
-    {"WLT" : {
-        text: "Working Late Today",
-        color: "brown",
-        background: "pink",
-    }},
-    {"Pending" : {
-        text: "Pending",
-        color: "brown",
-        background: "pink",
-    }},
-    {"Cancel" : {
-        text: "Canceled",
-        color: "brown",
-        background: "pink",
-    }},
-    {"Approve" : {
-        text: "Approved",
-        color: "brown",
-        background: "pink",
-    }},
- 
+    {
+        "WFM": {
+            text: "Work from Home",
+            color: "yellow",
+            background: "pink",
+        }
+    },
+    {
+        "VCL": {
+            text: "Visiting Client Location",
+            color: "green",
+            background: "pink",
+        }
+    },
+    {
+        "PL": {
+            text: "Privilege Leave",
+            color: "blue",
+            background: "pink",
+        }
+    },
+    {
+        "CH": {
+            text: "Customer Holiday",
+            color: "grey",
+            background: "pink",
+        }
+    },
+    {
+        "WLT": {
+            text: "Working Late Today",
+            color: "brown",
+            background: "pink",
+        }
+    },
+    {
+        "Pending": {
+            text: "Pending",
+            color: "brown",
+            background: "pink",
+        }
+    },
+    {
+        "Cancel": {
+            text: "Canceled",
+            color: "brown",
+            background: "pink",
+        }
+    },
+    {
+        "Approve": {
+            text: "Approved",
+            color: "brown",
+            background: "pink",
+        }
+    },
+
 ]
 // export const leaveTagData = [
 //     {
@@ -119,69 +135,69 @@ export const leaveTagData = [
 
 const employeeOptions = [
     {
-      value: '1',
-      label: 'Amruta Kokane',
+        value: '1',
+        label: 'Amruta Kokane',
     },
     {
-      value: '2',
-      label: 'Omkar Hirve',
+        value: '2',
+        label: 'Omkar Hirve',
     },
     {
-      value: '3',
-      label: 'Sneha Dixit',
+        value: '3',
+        label: 'Sneha Dixit',
     },
     {
-      value: '4',
-      label: 'Gautam Bafna',
+        value: '4',
+        label: 'Gautam Bafna',
     },
     {
-      value: '5',
-      label: 'Varad Chitnis',
+        value: '5',
+        label: 'Varad Chitnis',
     },
-  ];
-  
-  export default employeeOptions;
-  
+];
 
-  export const indianStates = [
-          "Andhra Pradesh",
-          "Arunachal Pradesh",
-          "Assam",
-          "Bihar",
-          "Chandigarh",
-          "Chhattisgarh",
-          "Dadra and Nagar Haveli and Daman and Diu",
-          "Delhi",
-          "Goa",
-          "Gujarat",
-          "Haryana",
-          "Himachal Pradesh",
-          "Jammu and Kashmir",
-          "Jharkhand",
-          "Karnataka",
-          "Kerala",
-          "Lakshadweep",
-          "Madhya Pradesh",
-          "Maharashtra",
-          "Manipur",
-          "Meghalaya",
-          "Mizoram",
-          "Nagaland",
-          "Odisha",
-          "Puducherry",
-          "Punjab",
-          "Rajasthan",
-          "Sikkim",
-          "Tamil Nadu",
-          "Telangana",
-          "Tripura",
-          "Uttar Pradesh",
-          "Uttarakhand",
-          "West Bengal"
-        ]      
+export default employeeOptions;
 
-   
-        
+
+export const indianStates = [
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chandigarh",
+    "Chhattisgarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jammu and Kashmir",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Lakshadweep",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Puducherry",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal"
+]
+
+
+
 // export const companyRoles =  [
 //     {
 //     "subRoleId": 1,
@@ -229,8 +245,8 @@ export const companyBands = [
     "Chief Executive Officer (CEO)"
 ];
 
-export const companyRoles  = [
-    "AA", "BB" , "CC" , "DD"
+export const companyRoles = [
+    "AA", "BB", "CC", "DD"
 ]
 
 // export const companyBands = [
@@ -299,3 +315,14 @@ export const companyRoles  = [
 //     "designationName": "new2"
 //     }
 //     ]
+
+
+export const employmentStatusOptions = [
+    'Probation',
+    'Confirmed',
+    'Intern',
+    'Resigned',
+    'Relieved',
+    'Absconding',
+    'Leave Without Pay'
+];

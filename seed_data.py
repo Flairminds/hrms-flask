@@ -210,11 +210,9 @@ def seed_master_skills():
         (159, N'Streamlit', N'Technical', N'Data Science & Analytics', true),
         (160, N'Maven', N'Technical', N'Mobile Development', true),
         (161, N'Test goal', N'Other', NULL, false),
-        (162, N'Evaluation of Pooja for her confirmation', N'Other', NULL, false),
-        (163, N'Confirm final approach to go with Grid layout to overcome limit rung issue', N'Other', NULL, false),
         (164, N'Advanced SQL', N'Other', NULL, false),
-        (165, N'Investment Banking Concepts - Asset Classes ,Major Data Providers & Feed Types', N'Other', NULL, false),
-        (166, N'IB Trade Life Cycle - Front Office,Regulatory Reporting (US,EU,MIS)', N'Other', NULL, false);
+        (165, N'Investment Banking Concepts - Asset Classes, Major Data Providers & Feed Types', N'Other', NULL, false),
+        (166, N'IB Trade Life Cycle - Front Office, Regulatory Reporting (US,EU,MIS)', N'Other', NULL, false);
     """)
     
     db.session.execute(skills_sql)
@@ -329,13 +327,13 @@ def seed_all():
     print("="*50 + "\n")
     
     try:
-        # seed_master_roles()
-        # seed_master_sub_roles()
-        # seed_master_skills()
-        # seed_master_designation()
-        # seed_holidays()
-        # seed_leave_types()
-        seed_hr_employee()
+        seed_master_roles()
+        seed_master_sub_roles()
+        seed_master_skills()
+        seed_master_designation()
+        seed_holidays()
+        seed_leave_types()
+        # seed_hr_employee()
         
         db.session.commit()
         

@@ -17,6 +17,7 @@ import 'react-phone-number-input/style.css';
 import { getAllEmployeeSkills, getBands1, getRoles1, getMasterRoles, insertEmployee, getPotentialApprovers } from '../../../services/api';
 import { toast } from 'react-toastify';
 import WidgetCard from '../../common/WidgetCard';
+import { employmentStatusOptions } from '../../../util/helper';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -31,16 +32,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
     const [skillEmp, setSkillEmp] = useState([]);
     const [potentialApprovers, setPotentialApprovers] = useState([]);
     const optionsSkill = useRef([]);
-
-    // Employment status options
-    const employmentStatusOptions = [
-        'Probation',
-        'Confirmed',
-        'Intern',
-        'Resigned',
-        'Relieved',
-        'Absconding'
-    ];
 
     const getEmployeeSkill = async () => {
         try {

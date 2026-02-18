@@ -109,11 +109,9 @@ export const EmployeeData = () => {
       case 'Confirmed': return styles.statusConfirmed;
       case 'Absconding': return styles.statusAbsconding;
       case 'Resigned': return styles.statusResigned;
-      case 'Active': return styles.statusActive;
       case 'Intern': return styles.statusIntern;
       case 'Probation': return styles.statusProbation;
-      case 'LWP': return styles.statusLWP;
-      case 'NonFM': return styles.statusNonFM;
+      case 'Leave Without Pay': return styles.statusLWP;
       default: return '';
     }
   };
@@ -179,7 +177,7 @@ export const EmployeeData = () => {
   return (
     <div className={styles.employeeData}>
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="Total Active Employees"
@@ -189,23 +187,33 @@ export const EmployeeData = () => {
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="Interns"
               value={stats.total_interns}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: 'orange' }}
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="In Probation"
               value={stats.total_probation}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              valueStyle={{ color: 'violet' }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Resigned"
+              value={stats.total_resigned}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: 'orange' }}
             />
           </Card>
         </Col>
@@ -219,19 +227,6 @@ export const EmployeeData = () => {
           prefix={<SearchOutlined />}
           style={{ width: '300px' }}
         />
-        {/* Status Filter Buttons (Optional - Table also has filters) */}
-        <Select
-          mode="multiple"
-          style={{ width: '300px' }}
-          placeholder="Filter by Status"
-          value={selectedStatuses}
-          onChange={handleStatusChange}
-          allowClear
-        >
-          {statusOptions.map(status => (
-            <Select.Option key={status} value={status}>{status}</Select.Option>
-          ))}
-        </Select>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
           <Button
