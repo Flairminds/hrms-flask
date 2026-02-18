@@ -65,6 +65,9 @@ export const AuthProvider = ({ children }) => {
 
                 // Fetch route permissions after successful authentication
                 await fetchRoutePermissions();
+            } else {
+                logout();
+                navigate('/login');
             }
         } catch (error) {
             console.error('Failed to fetch current user:', error);
