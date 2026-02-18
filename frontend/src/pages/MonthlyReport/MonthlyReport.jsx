@@ -1018,7 +1018,7 @@ const AttendanceReportTab = () => {
                             >
                                 {leaveReports.map(r => (
                                     <Select.Option key={r.id} value={r.id}>
-                                        {r.report_for} (Gen: {convertDate(r.generated_at)})
+                                        {r.report_for} ({convertDate(r.generated_at, true)})
                                     </Select.Option>
                                 ))}
                             </Select>
@@ -1033,7 +1033,7 @@ const AttendanceReportTab = () => {
                             >
                                 {doorReports.map(r => (
                                     <Select.Option key={r.id} value={r.id}>
-                                        {r.report_for} (Gen: {convertDate(r.generated_at)})
+                                        {r.report_for} ({convertDate(r.generated_at, true)})
                                     </Select.Option>
                                 ))}
                             </Select>
