@@ -795,8 +795,8 @@ const AttendanceReportTab = () => {
         'Status',
         'EntryExempt',
         'EntryinTime',
-        'Dayslogs',
-        'ZymmrLoggedTime',
+        // 'Dayslogs',
+        // 'ZymmrLoggedTime',
         'Typeofleaveapproved',
         'Leavestatus',
         'DateofLeaveApplication',
@@ -1069,7 +1069,7 @@ const AttendanceReportTab = () => {
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
                 loading={loading}
-                pagination={{ pageSize: 20 }}
+                pagination={{ pageSize: 10 }}
             />
         </div>
     );

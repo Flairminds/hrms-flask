@@ -400,93 +400,117 @@ class ReportService:
             if door_report.report_type != 'Monthly Door Entry Report':
                 raise ValueError(f"Invalid Door Entry Report Type: {door_report.report_type}")
 
-            # 2. Fetch Mappings
+            # 2. Fetch employee → door name mappings
             mappings = DoorEntryNamesMapping.query.all()
-            # Map: Employee_ID -> Door_System_Name
             emp_to_door_map = {m.employee_id: m.door_system_name for m in mappings}
 
-            # 3. Index Door Report Data
-            # Structure: Key=(DoorName, DateString), Value=RowData
-            # Note: Door Report dates might be in various formats. We need to normalize.
+            # Index door report data by (door_system_name, normalized_date)
             door_data_map = {}
-            for row in door_report.data:
-                # Assuming 'Name' is the column for Door System Name in the Excel
-                # Need to verify column names. The previous implementation just flattened headers.
-                # Let's assume there is a 'Name' column and a 'Date' column.
-                
-                # We need to be careful about matching names. The mapping has 'door_system_name'.
-                # The Excel likely has 'Name' or similar.
-                # Let's try to find keys that look like Name and Date.
-                
-                # In standard door reports, typically "Name" and "Date" are columns.
-                door_name = row.get('Name') or row.get('Person Name') # Fallbacks
-                raw_date = row.get('Date')
-                
+            for door_row in door_report.data:
+                door_name = door_row.get('Name') or door_row.get('Person Name')
+                raw_date = door_row.get('Date')
                 if door_name and raw_date:
-                    norm_date = normalize_date_str(raw_date) # Helper to ensure DD-MM-YYYY
+                    norm_date = normalize_date_str(raw_date)
                     if norm_date:
-                        # Composite key: Name + Date
-                        # Also normalize name (strip)
-                        clean_name = str(door_name).strip()
-                        door_data_map[(clean_name, norm_date)] = row
+                        door_data_map[(str(door_name).strip(), norm_date)] = door_row
 
-            # 4. Process Leave Report Data (Base for Attendance Report)
-            # We clone the data to avoid mutating original report if it was referenced (though we're saving new)
-            attendance_data = [row.copy() for row in leave_report.data]
-            
-            for row in attendance_data:
-                emp_id = row.get('Employee_Id')
-                date_str = row.get('Date') # Should be DD-MM-YYYY already from leave report
-                
-                if emp_id and date_str:
-                    # Find mapped door name
-                    mapped_name = emp_to_door_map.get(emp_id)
-                    
-                    if mapped_name:
-                        # Lookup in door data
-                        door_entry = door_data_map.get((mapped_name, date_str))
-                        
-                        if door_entry:
-                            # 5. Merge Data
-                            # Populate fields. 
-                            # 'EntryinTime' -> First IN?
-                            # 'ZymmrLoggedTime' -> Actual Hours?
-                            # 'Dayslogs' -> Maybe raw In/Out logs?
-                            
-                            # Let's see what columns usually exist in door reports.
-                            # Usually: "AM In", "AM Out", "PM In", "PM Out", "Actual Hours"
-                            
-                            # Flatten useful info into string for "Dayslogs" or similar?
-                            # user request: "combine data based on door_name_mapping"
-                            # Let's blindly add all columns from door_entry that aren't in row
-                            
-                            for k, v in door_entry.items():
-                                if k not in row and v is not None:
-                                    row[f"Door_{k}"] = v # Prefix to avoid collision? Or just merge?
-                                    # Actually, let's map specific common fields if possible for cleaner report
-                                    
-                            # Map specific standard fields if available
-                            # "EntryinTime" - earliest IN
-                            # Try 'AM In' or 'In'
-                            first_in = door_entry.get('AM In') or door_entry.get('In')
-                            last_out = door_entry.get('PM Out') or door_entry.get('Out')
-                            
-                            if first_in:
-                                row['EntryinTime'] = str(first_in)
-                            
-                            # "ZymmrLoggedTime" - we can put Actual Hours here if it's empty
-                            # though Zymmr usually implies a specific tool. key might be misleading.
-                            # Let's just create new columns for clarity: "Door_Actual_Hours", "Door_First_In", "Door_Last_Out"
-                            
-                            if 'Actual' in door_entry: # 'Actual' or 'Actual Hours'
-                                row['Door_Actual_Hours'] = door_entry.get('Actual')
-                            elif 'Work Time' in door_entry:
-                                row['Door_Actual_Hours'] = door_entry.get('Work Time')
+            # 3. Fetch holidays for the report month to exclude them from unpaid check
 
-                            # Keep raw merged data as well?
-                            # Let's add all non-conflicting keys
-                                if k not in ['Name', 'Date'] and k not in row:
-                                    row[k] = v
+            # leave_report.report_for is like "January 2025"
+            holiday_dates = set()
+            try:
+                from ...models.leave import Holiday
+                # Parse month/year from report_for string e.g. "January 2025"
+                report_month_dt = datetime.strptime(leave_report.report_for, '%B %Y')
+                report_month = report_month_dt.month
+                report_year = report_month_dt.year
+                holidays = Holiday.query.filter(
+                    db.extract('month', Holiday.holiday_date) == report_month,
+                    db.extract('year', Holiday.holiday_date) == report_year
+                ).all()
+                for h in holidays:
+                    hd = h.holiday_date
+                    if isinstance(hd, datetime):
+                        hd = hd.date()
+                    holiday_dates.add(hd)
+            except Exception as e:
+                Logger.warning("Could not fetch holidays for attendance report", error=str(e))
+
+            # 4. Process Leave Report Data row by row
+            attendance_data = []
+            for row in leave_report.data:
+                emp_id = row.get('Employee ID') or row.get('Employee_Id')
+                date_str = row.get('Date')  # DD-MM-YYYY
+                leave_status = row.get('Leave Status', '')
+
+                new_row = row.copy()
+
+                # Determine if this date is a weekend
+                is_weekend = False
+                row_date = None
+                if date_str:
+                    try:
+                        row_date = datetime.strptime(date_str, '%d-%m-%Y').date()
+                        is_weekend = row_date.weekday() >= 5  # 5=Saturday, 6=Sunday
+                    except ValueError:
+                        pass
+
+                is_holiday = row_date in holiday_dates if row_date else False
+
+                # --- Priority 1: Leave is approved (Approved / Partial Approved) ---
+                approved_statuses = [LeaveStatus.APPROVED]
+                if leave_status in approved_statuses:
+                    # Leave is covered — clear door entry fields, keep leave info
+                    new_row['Entry in Time'] = ''
+                    new_row['AM In'] = ''
+                    new_row['AM Out'] = ''
+                    new_row['PM In'] = ''
+                    new_row['PM Out'] = ''
+                    new_row['Remark'] = 'Approved Leave'
+                    attendance_data.append(new_row)
+                    continue
+
+                # --- Priority 2: Weekend or Holiday — not a working day ---
+                if is_weekend or is_holiday:
+                    new_row['Entry in Time'] = ''
+                    new_row['AM In'] = ''
+                    new_row['AM Out'] = ''
+                    new_row['PM In'] = ''
+                    new_row['PM Out'] = ''
+                    new_row['Remark'] = 'Holiday' if is_holiday else ''
+                    new_row['Unpaid Status'] = ''
+                    attendance_data.append(new_row)
+                    continue
+
+                # --- Priority 3: Check door entry record ---
+                mapped_name = emp_to_door_map.get(emp_id)
+                door_entry = None
+                if mapped_name and date_str:
+                    norm_date = normalize_date_str(date_str)
+                    if norm_date:
+                        door_entry = door_data_map.get((mapped_name.strip(), norm_date))
+
+                if door_entry:
+                    # Employee has a door entry — populate time fields
+                    new_row['AM In']        = door_entry.get('AM In', '')
+                    new_row['AM Out']       = door_entry.get('AM Out', '')
+                    new_row['PM In']        = door_entry.get('PM In', '')
+                    new_row['PM Out']       = door_entry.get('PM Out', '')
+                    new_row['Entry in Time'] = door_entry.get('AM In', '')
+                    new_row['Remark']       = 'Door Entry'
+                    new_row['Unpaid Status'] = new_row.get('Unpaid Status', '')  # keep existing (e.g. Unpaid Leave type)
+                    attendance_data.append(new_row)
+                    continue
+
+                # --- Priority 4: No leave, not weekend/holiday, no door entry → Unpaid ---
+                new_row['AM In']        = ''
+                new_row['AM Out']       = ''
+                new_row['PM In']        = ''
+                new_row['PM Out']       = ''
+                new_row['Entry in Time'] = ''
+                new_row['Unpaid Status'] = 'Unpaid'
+                new_row['Remark']       = 'No door entry & no approved leave'
+                attendance_data.append(new_row)
 
             # 5. Generate Excel File & Upload
             blob_url = ""
