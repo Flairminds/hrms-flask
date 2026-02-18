@@ -5,6 +5,7 @@ from calendar import monthrange
 from sqlalchemy import and_, or_
 from ... import db
 from ...utils.logger import Logger
+from ...utils.constants import LeaveTypeName, LeaveStatus
 from ...models.hr import Employee
 from ...models.leave import LeaveTransaction, MasterLeaveTypes
 
@@ -75,7 +76,7 @@ class ReportService:
             ).filter(
                 and_(
                     LeaveTransaction.employee_id.in_(employee_ids),
-                    LeaveTransaction.leave_status.notin_(['Cancel', 'Reject']),
+                    LeaveTransaction.leave_status.notin_([LeaveStatus.CANCELLED, LeaveStatus.REJECTED]),
                     LeaveTransaction.applied_by.isnot(None),
                     LeaveTransaction.from_date <= end_date,
                     LeaveTransaction.to_date >= start_date
@@ -107,11 +108,11 @@ class ReportService:
                         leave_by_date[current_date] = {
                             'leave_type': leave.leave_name,
                             'application_date': leave.application_date.strftime('%d-%m-%Y') if leave.application_date else '',
-                            'leave_status': 'Approve' if leave.leave_status == 'Approved' else ('Pending' if leave.leave_status == 'Partial Approved' else leave.leave_status),
+                            'leave_status': leave.leave_status,
                             'duration': leave.duration,
                             'approved_date': leave.approved_date.strftime('%d-%m-%Y') if leave.approved_date else '',
                             'approved_same_date': 'Yes' if leave.approved_date and leave.application_date and leave.approved_date.date() == leave.application_date.date() else 'No',
-                            'unpaid_status': 'Unpaid' if leave.leave_type_id in [12, 13] else 'Paid'
+                            'unpaid_status': 'Unpaid' if leave.leave_name == LeaveTypeName.UNPAID_LEAVE or leave.leave_status in [LeaveStatus.PENDING, LeaveStatus.REJECTED, LeaveStatus.CANCELLED] else 'Paid'
                         }
                         current_date += timedelta(days=1)
                 
@@ -119,48 +120,48 @@ class ReportService:
                 current_date = start_date
                 for day in range(1, num_days + 1):
                     daily_row = {
-                        'Employee_Id': emp.employee_id,
-                        'Employee_Name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
-                        'TeamLeadCoordinator': team_lead_name,
+                        'Employee ID': emp.employee_id,
+                        'Employee Name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                        'Leave Approver': team_lead_name,
                     }
                     
                     date_str = current_date.strftime('%d-%m-%Y')
                     weekday = current_date.strftime('%A')
                     
                     daily_row['Date'] = date_str
-                    daily_row['EntryExempt'] = 'entry time allowed' if weekday not in ['Saturday', 'Sunday'] else ''
+                    daily_row['Entry Exempt'] = 'entry time allowed' if weekday not in ['Saturday', 'Sunday'] else ''
                     
                     leave_info = leave_by_date.get(current_date.date())
                     
                     if leave_info:
-                        daily_row['Typeofleaveapproved'] = leave_info['leave_type']
-                        daily_row['DateofLeaveApplication'] = leave_info['application_date']
-                        daily_row['Leavestatus'] = leave_info['leave_status']
-                        daily_row['WorkingDay'] = 0.5 if leave_info['duration'] == 'Half Day' else 1
-                        daily_row['ApprovalDate'] = leave_info['approved_date']
-                        daily_row['Approvedonsamedate'] = leave_info['approved_same_date']
-                        daily_row['Unpaidstatus'] = leave_info['unpaid_status']
+                        daily_row['Type of Leave Approved'] = leave_info['leave_type']
+                        daily_row['Date of Leave Application'] = leave_info['application_date']
+                        daily_row['Leave Status'] = leave_info['leave_status']
+                        daily_row['Working Day'] = 0.5 if leave_info['duration'] == 'Half Day' else 1
+                        daily_row['Approval Date'] = leave_info['approved_date']
+                        daily_row['Approved on same date'] = leave_info['approved_same_date']
+                        daily_row['Unpaid Status'] = leave_info['unpaid_status']
                     else:
-                        daily_row['Typeofleaveapproved'] = ''
-                        daily_row['DateofLeaveApplication'] = ''
-                        daily_row['Leavestatus'] = ''
-                        daily_row['WorkingDay'] = ''
-                        daily_row['ApprovalDate'] = ''
-                        daily_row['Approvedonsamedate'] = ''
-                        daily_row['Unpaidstatus'] = ''
+                        daily_row['Type of Leave Approved'] = ''
+                        daily_row['Date of Leave Application'] = ''
+                        daily_row['Leave Status'] = ''
+                        daily_row['Working Day'] = ''
+                        daily_row['Approval Date'] = ''
+                        daily_row['Approved on same date'] = ''
+                        daily_row['Unpaid Status'] = ''
                     
-                    daily_row['Dayslogs'] = ''
-                    daily_row['ZymmrLoggedTime'] = ''
-                    daily_row['EntryinTime'] = ''
+                    daily_row['Days Logs'] = ''
+                    daily_row['Zymmr Logged Time'] = ''
+                    daily_row['Entry in Time'] = ''
                     daily_row['Status'] = ''
-                    daily_row['Swappedholidaydate'] = ''
+                    daily_row['Swapped holiday date'] = ''
                     
                     current_date += timedelta(days=1)
                     report_data.append(daily_row)
             
             # Sort by employee ID (numeric part)
             def get_emp_number(emp_row):
-                emp_id = emp_row['Employee_Id']
+                emp_id = emp_row['Employee ID']
                 try:
                     return int(emp_id.replace('EMP', ''))
                 except:

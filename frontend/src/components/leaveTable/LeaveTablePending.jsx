@@ -8,20 +8,12 @@ import { tableHeadersTM } from "../../util/leavetableData"
 import { getCookie } from "../../util/CookieSet";
 import { useAuth } from "../../context/AuthContext";
 import { convertDate } from "../../util/helperFunctions";
-
-const leaveStatusOptions = [
-  // ... (rest of imports and leaveStatusOptions)
-  { value: "Pending", label: "Pending" },
-  { value: "Approved", label: "Approved" },
-  { value: "Cancel", label: "Cancel" },
-  { value: "Reject", label: "Reject" },
-  { value: 'Partial Approved', label: 'Partial Approved' },
-];
+import { LEAVE_STATUS, leaveStatusOptions } from "../../util/helper";
 
 export const LeaveTablePending = ({ isRole }) => {
   const { user } = useAuth();
   const [isLeaveModalOpen, setLeaveModalOpen] = useState(false);
-  const [selectedLeaveStatus, setSelectedLeaveStatus] = useState(['Pending', 'Partial Approved']);
+  const [selectedLeaveStatus, setSelectedLeaveStatus] = useState([LEAVE_STATUS.PENDING, LEAVE_STATUS.PARTIAL_APPROVED]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [myEmployeeData, setMyEmployeeData] = useState([]);
   const [myEmployeeFilteredData, setMyEmployeeFilteredData] = useState([]);
@@ -177,7 +169,7 @@ export const LeaveTablePending = ({ isRole }) => {
           <tbody>
             {myEmployeeFilteredData.map((employee, index) => (
               <tr key={index} onClick={() => {
-                if ((employee['leaveStatus'] === "Pending") || (employee['leaveStatus'] === "Partial Approved")) {
+                if ([LEAVE_STATUS.PENDING, LEAVE_STATUS.PARTIAL_APPROVED].includes(employee['leaveStatus'])) {
                   handlePendingStatus(employee);
                 } else {
                   handleApprovedStatus(employee);

@@ -1007,7 +1007,7 @@ class EmployeeService:
             raise e
 
     @staticmethod
-    def cancel_leave(leave_tran_id: int, leave_status: str = 'Cancel') -> bool:
+    def cancel_leave(leave_tran_id: int, leave_status: str = LeaveStatus.CANCELLED) -> bool:
         """Cancels a leave transaction by updating its status."""
         try:
             leave = LeaveTransaction.query.get(leave_tran_id)

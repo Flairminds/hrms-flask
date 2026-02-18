@@ -6,6 +6,7 @@ import { tableHeaders } from '../../util/leavetableData';
 import { getCookie } from '../../util/CookieSet';
 import WidgetCard from '../common/WidgetCard';
 import { FilterOutlined } from '@ant-design/icons';
+import { LEAVE_STATUS, leaveStatusOptions } from "../../util/helper";
 
 const { Text } = Typography;
 
@@ -24,13 +25,6 @@ const leaveOptions = [
   { value: "Missed Door Entry", label: 'Missed Door Entry' },
 ];
 
-const leaveStatusOptions = [
-  { value: 'Approved', label: 'Approved' },
-  { value: 'Cancel', label: 'Cancel' },
-  { value: 'Reject', label: 'Reject' },
-  { value: 'Pending', label: 'Pending' },
-  { value: 'Partial Approved', label: 'Partial Approved' },
-];
 const { Option } = Select;
 export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leaveDates, holidayData,
   selectedLeave, setSelectedLeave, selectedStatus, setSelectedStatus,
@@ -41,8 +35,9 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
   const [leaveToCancel, setLeaveToCancel] = useState(null);
   const [selectedLeaveDetails, setSelectedLeaveDetails] = useState(null);
   const [loader, setLoader] = useState(false)
-  const yearRanges = ["2022-2023", "2023-2024", "2024-2025", "2025-2026"];
-  const [selectedRange, setSelectedRange] = useState("2025");
+
+  const yearRanges = Array.from({ length: new Date().getFullYear() - 2021 + 1 }, (_, i) => new Date().getFullYear() - i);
+  const [selectedRange, setSelectedRange] = useState(new Date().getFullYear());
 
 
   const handleChangeYear = (value) => {
@@ -161,7 +156,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
   // Create leaveDates object
   const generateLeaveDates = () => {
     return employeeData?.reduce((acc, leave) => {
-      if (leave.leaveStatus === "Cancel" || leave.leaveStatus === "Reject") {
+      if (leave.leaveStatus === LEAVE_STATUS.CANCELLED || leave.leaveStatus === LEAVE_STATUS.REJECTED) {
         return acc;
       }
 
@@ -207,11 +202,6 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
   const handleCancelLeave = async () => {
     if (!leaveToCancel) return;
 
-    const payload = {
-      leaveTranId: leaveToCancel,
-      leaveStatus: "Cancel"
-    };
-
     setLoader(true)
     try {
       const response = await cancelLeave(leaveToCancel);
@@ -219,7 +209,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
       if (response.status === 200) {
         leaveCardDetails()
         setEmployeeData(prevData => prevData.map(employee =>
-          employee.leaveTranId === leaveToCancel ? { ...employee, leaveStatus: "Cancel" } : employee
+          employee.leaveTranId === leaveToCancel ? { ...employee, leaveStatus: LEAVE_STATUS.CANCELLED } : employee
         ));
       } else {
         console.error('Failed to cancel leave: Unexpected status code', response.status);
@@ -258,18 +248,12 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'Pending':
-        return styles.pendingLeaveBox;
-      case 'Approved':
-        return styles.approvedLeaveBox;
-      case 'Cancel':
-        return styles.canceledLeaveBox;
-      case 'Reject':
-        return styles.rejectedLeaveBox;
-      case 'Partial Approved':
-        return styles.partialApprovedLeaveBox;
-      default:
-        return '';
+      case LEAVE_STATUS.PENDING: return styles.pendingLeaveBox;
+      case LEAVE_STATUS.APPROVED: return styles.approvedLeaveBox;
+      case LEAVE_STATUS.CANCELLED: return styles.canceledLeaveBox;
+      case LEAVE_STATUS.REJECTED: return styles.rejectedLeaveBox;
+      case LEAVE_STATUS.PARTIAL_APPROVED: return styles.partialApprovedLeaveBox;
+      default: return '';
     }
   };
 
@@ -345,20 +329,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                         {tableHeaders?.map((header, subIndex) => (
                           <td key={subIndex}>
                             <div
-                              className={`${header.key === "leaveStatus"
-                                ? employee[header.key] === "Pending"
-                                  ? styles.pendingLeave
-                                  : employee[header.key] === "Approved"
-                                    ? styles.approvedLeave
-                                    : employee[header.key] === "Cancel"
-                                      ? styles.canceledLeave
-                                      : employee[header.key] === "Reject"
-                                        ? styles.rejectedLeave
-                                        : employee[header.key] === "Partial Approved"
-                                          ? styles.partialApprovedLeave
-                                          : ""
-                                : ""
-                                }`}
+                              className={header.key === "leaveStatus" ? getStatusClass(employee[header.key]) : ""}
                             >
                               {employee[header.key]}
                             </div>
@@ -379,7 +350,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                               fromDate.setHours(0, 0, 0, 0);
 
                               const isTodayOrFuture = fromDate >= today;
-                              const isCancellable = employee.leaveStatus !== "Cancel" && employee.leaveStatus !== "Reject";
+                              const isCancellable = employee.leaveStatus !== LEAVE_STATUS.CANCELLED && employee.leaveStatus !== LEAVE_STATUS.REJECTED;
 
                               return isTodayOrFuture && isCancellable;
                             })()}

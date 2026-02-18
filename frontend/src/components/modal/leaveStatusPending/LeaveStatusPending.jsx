@@ -6,6 +6,7 @@ import { getLeaveTransactionsByApprover, updateLeaveStatus } from '../../../serv
 import { toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
 import { convertDate, getWeekDay } from '../../../util/helperFunctions';
+import { LEAVE_STATUS } from '../../../util/helper';
 
 export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee, onStatusChange, selectedRange, readOnly = false }) => {
   const [isConfirmationChecklistModalOpen, setIsConfirmationChecklistModalOpen] = useState(false);
@@ -88,7 +89,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     const tranId = employee.leaveTranId || employee.LeaveTranId || employee.leave_tran_id;
     const payload = {
       leaveTranId: tranId,
-      leaveStatus: "Approved",
+      leaveStatus: LEAVE_STATUS.APPROVED,
       approverComment: approverComments,
       isBillable: false,
       isCommunicatedToTeam: communicatedWithinTeam,
@@ -124,7 +125,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     const tranId = employee.leaveTranId || employee.LeaveTranId || employee.leave_tran_id;
     const payload = {
       leaveTranId: tranId,
-      leaveStatus: "Reject",
+      leaveStatus: LEAVE_STATUS.REJECTED,
       approverComment: approverComments,
       isBillable: false,
       isCommunicatedToTeam: communicatedWithinTeam,

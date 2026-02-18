@@ -3,6 +3,7 @@ import axios from 'axios';
 import moment from "moment";
 import { getCookie } from '../util/CookieSet';
 import { toast } from 'react-toastify';
+import { LEAVE_STATUS } from '../util/helper';
 
 // Use environment variable for API base URL
 // In development: http://localhost:5000/api (via proxy)
@@ -175,7 +176,7 @@ export const updateLeaveStatus = (payload) => {
 export const cancelLeave = (leaveTranId) => {
   return axiosInstance.patch(`${API_BASE_URL}/employees-details/cancel-leave`, {
     LeaveTranId: leaveTranId,
-    LeaveStatus: "Cancel"
+    LeaveStatus: LEAVE_STATUS.CANCELLED
   });
 };
 

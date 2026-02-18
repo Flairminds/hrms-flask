@@ -326,3 +326,19 @@ export const employmentStatusOptions = [
     'Absconding',
     'Leave Without Pay'
 ];
+
+export const leaveStatusOptions = [
+    { value: "Pending", label: "Pending" },
+    { value: "Approved", label: "Approved" },
+    { value: "Cancel", label: "Cancelled" },
+    { value: "Reject", label: "Rejected" },
+    { value: 'Partially Approved', label: 'Partially Approved' },
+];
+
+export const LEAVE_STATUS = {
+    PENDING: 'Pending',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    CANCELLED: 'Cancelled',
+    PARTIAL_APPROVED: 'Partially Approved'
+}

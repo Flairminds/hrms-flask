@@ -121,30 +121,30 @@ const LeaveReportTab = () => {
     const updateColumns = (data) => {
         const cols = [
             {
-                title: 'Employee_Id', dataIndex: 'Employee_Id', key: 'Employee_Id',
-                filters: [...new Set(data.map(a => a.Employee_Id))].filter(Boolean).map(name => ({ text: name, value: name })),
-                onFilter: (value, record) => record.Employee_Id === value,
+                title: 'Employee ID', dataIndex: 'Employee ID', key: 'Employee ID',
+                filters: [...new Set(data.map(a => a['Employee ID']))].filter(Boolean).map(name => ({ text: name, value: name })),
+                onFilter: (value, record) => record['Employee ID'] === value,
             },
-            { title: 'Employee_Name', dataIndex: 'Employee_Name', key: 'Employee_Name', filters: [...new Set(data.map(a => a.Employee_Name))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record.Employee_Name === value, },
-            { title: 'TeamLeadCoordinator', dataIndex: 'TeamLeadCoordinator', key: 'TeamLeadCoordinator' },
+            { title: 'Employee Name', dataIndex: 'Employee Name', key: 'Employee Name', filters: [...new Set(data.map(a => a['Employee Name']))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record['Employee Name'] === value, },
+            { title: 'Leave Approver', dataIndex: 'Leave Approver', key: 'Leave Approver' },
             {
                 title: 'Date', dataIndex: 'Date', key: 'Date',
                 filters: [...new Set(data.map(a => a.Date))].filter(Boolean).map(name => ({ text: name, value: name })),
                 onFilter: (value, record) => record.Date === value,
             },
-            { title: 'EntryExempt', dataIndex: 'EntryExempt', key: 'EntryExempt' },
-            { title: 'Dayslogs', dataIndex: 'Dayslogs', key: 'Dayslogs' },
-            { title: 'ZymmrLoggedTime', dataIndex: 'ZymmrLoggedTime', key: 'ZymmrLoggedTime' },
-            { title: 'Typeofleaveapproved', dataIndex: 'Typeofleaveapproved', key: 'Typeofleaveapproved' },
-            { title: 'EntryinTime', dataIndex: 'EntryinTime', key: 'EntryinTime' },
-            { title: 'DateofLeaveApplication', dataIndex: 'DateofLeaveApplication', key: 'DateofLeaveApplication' },
-            { title: 'Leavestatus', dataIndex: 'Leavestatus', key: 'Leavestatus' },
-            { title: 'WorkingDay', dataIndex: 'WorkingDay', key: 'WorkingDay' },
-            { title: 'ApprovalDate', dataIndex: 'ApprovalDate', key: 'ApprovalDate' },
-            { title: 'Approvedonsamedate', dataIndex: 'Approvedonsamedate', key: 'Approvedonsamedate' },
-            { title: 'Status', dataIndex: 'Status', key: 'Status' },
-            { title: 'Swappedholidaydate', dataIndex: 'Swappedholidaydate', key: 'Swappedholidaydate' },
-            { title: 'Unpaidstatus', dataIndex: 'Unpaidstatus', key: 'Unpaidstatus', filters: [...new Set(data.map(a => a.Unpaidstatus))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record.Unpaidstatus === value, }
+            // { title: 'Entry Exempt', dataIndex: 'Entry Exempt', key: 'Entry Exempt' },
+            // { title: 'Days Logs', dataIndex: 'Days Logs', key: 'Days Logs' },
+            // { title: 'Zymmr Logged Time', dataIndex: 'Zymmr Logged Time', key: 'Zymmr Logged Time' },
+            { title: 'Type of Leave', dataIndex: 'Type of Leave Approved', key: 'Type of Leave Approved' },
+            // { title: 'Entry in Time', dataIndex: 'Entry in Time', key: 'Entry in Time' },
+            { title: 'Date of Application', dataIndex: 'Date of Leave Application', key: 'Date of Leave Application' },
+            { title: 'Leave Status', dataIndex: 'Leave Status', key: 'Leave Status' },
+            // { title: 'Working Day', dataIndex: 'Working Day', key: 'Working Day' },
+            { title: 'Approval Date', dataIndex: 'Approval Date', key: 'Approval Date' },
+            // { title: 'Approved on same date', dataIndex: 'Approved on same date', key: 'Approved on same date' },
+            // { title: 'Status', dataIndex: 'Status', key: 'Status' },
+            // { title: 'Swapped holiday date', dataIndex: 'Swapped holiday date', key: 'Swapped holiday date' },
+            { title: 'Unpaid Status', dataIndex: 'Unpaid Status', key: 'Unpaid Status', filters: [...new Set(data.map(a => a['Unpaid Status']))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record['Unpaid Status'] === value, }
         ];
         setLeaveReportTableColumns(cols);
     };

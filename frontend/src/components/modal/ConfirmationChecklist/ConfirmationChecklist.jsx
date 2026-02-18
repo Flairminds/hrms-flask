@@ -4,6 +4,7 @@ import style from './ConfirmationChecklist.module.css';
 import { updateLeaveStatus } from '../../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
 import { getCookie } from '../../../util/CookieSet';
+import { LEAVE_STATUS } from '../../../util/helper';
 
 
 export const ConfirmationChecklistModal = ({
@@ -35,7 +36,7 @@ export const ConfirmationChecklistModal = ({
     const tranId = employee?.leaveTranId || employee?.LeaveTranId || employee?.leave_tran_id;
     const payload = {
       leaveTranId: tranId,
-      leaveStatus: "Approved",
+      leaveStatus: LEAVE_STATUS.APPROVED,
       approverComment: employee?.comments || "",
       isBillable: employee?.isBillable || false,
       isCommunicatedToTeam: communicatedWithinTeam,

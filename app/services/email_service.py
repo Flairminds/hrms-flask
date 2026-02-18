@@ -128,7 +128,7 @@ class EmailService:
             ).filter(
                 LeaveTransaction.from_date <= current_date_str,
                 LeaveTransaction.to_date >= current_date_str,
-                LeaveTransaction.leave_status != LeaveStatus.CANCEL
+                LeaveTransaction.leave_status != LeaveStatus.CANCELLED
             ).all()
             
             Logger.debug("Leaves retrieved for report", count=len(leaves))
@@ -270,7 +270,7 @@ class EmailService:
             ).filter(
                 LeaveTransaction.from_date <= current_date_str,
                 LeaveTransaction.to_date >= current_date_str,
-                LeaveTransaction.leave_status != LeaveStatus.CANCEL
+                LeaveTransaction.leave_status != LeaveStatus.CANCELLED
             ).all()
             
             # Calculate in-office employees
@@ -697,14 +697,10 @@ class EmailService:
         status_raw = details.get('leave_status')
         status_display = status_raw
         status_class = "status-approved"
-        if status_raw == 'Reject':
-            status_display = 'Rejected'
+        if status_raw == LeaveStatus.REJECTED:
             status_class = "status-rejected"
-        elif status_raw == 'Partial Approved':
-            status_display = 'Partially Approved'
+        elif status_raw == LeaveStatus.PARTIAL_APPROVED:
             status_class = "status-partial"
-        elif status_raw == 'Cancel':
-            status_display = 'Cancelled'
 
         # Checklist Logic
         checklist_items = []
@@ -751,7 +747,7 @@ class EmailService:
 
         # Supplemental Message for Partial Approval
         partial_msg = ""
-        if status_raw == 'Partial Approved':
+        if status_raw == LeaveStatus.PARTIAL_APPROVED:
             partial_msg = f"""
                 <div style="background-color: #fff7e6; border: 1px solid #ffd591; padding: 10px; margin: 15px 0; border-radius: 4px; color: #d46b08;">
                     <strong>Note:</strong> Second approval is required from <b>{details.get('second_approver_name')}</b>. Please await the final decision.

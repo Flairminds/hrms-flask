@@ -3,6 +3,7 @@ from .hr.employee_service import EmployeeService
 from .hr.role_service import RoleService
 from .hr.access_service import AccessService
 from .hr.report_service import ReportService
+from ..utils.constants import LeaveStatus
 
 class HRService:
     """
@@ -60,7 +61,7 @@ class HRService:
         return EmployeeService.insert_employee(employee_data)
 
     @staticmethod
-    def cancel_leave(leave_tran_id, leave_status='Cancel'):
+    def cancel_leave(leave_tran_id, leave_status=LeaveStatus.CANCELLED):
         return EmployeeService.cancel_leave(leave_tran_id, leave_status)
 
     # Role / Org related
