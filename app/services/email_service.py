@@ -599,6 +599,11 @@ class EmailService:
             approver_email = details.get('approver_mail_id')
             if approver_email:
                 cc_addresses.append(approver_email)
+
+            # Add Team Lead to CC
+            team_lead_email = details.get('team_lead_mail_id')
+            if team_lead_email:
+                cc_addresses.append(team_lead_email)
                 
             # Add configured CCs
             if hasattr(EmailConfig, 'LEAVE_NOTIFICATION_CC'):
@@ -747,9 +752,9 @@ class EmailService:
         # Supplemental Message for Partial Approval
         partial_msg = ""
         if status_raw == 'Partial Approved':
-            partial_msg = """
+            partial_msg = f"""
                 <div style="background-color: #fff7e6; border: 1px solid #ffd591; padding: 10px; margin: 15px 0; border-radius: 4px; color: #d46b08;">
-                    <strong>Note:</strong> Second approval is required. Please await the final decision.
+                    <strong>Note:</strong> Second approval is required from <b>{details.get('second_approver_name')}</b>. Please await the final decision.
                 </div>
             """
 

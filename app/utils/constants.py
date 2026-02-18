@@ -106,4 +106,4 @@ class EmailConfig:
     SECONDARY_LEAVE_APPROVER_EMAIL = 'ahiresh.gaikwad@flairminds.com'
     
     # Global CC list for leave notifications
-    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'gaurav.singh@flairminds.com']
+    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com']

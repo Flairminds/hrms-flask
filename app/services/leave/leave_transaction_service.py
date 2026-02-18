@@ -377,6 +377,7 @@ class LeaveTransactionService:
             leave_type_id = leave.leave_type_id
             is_for_second_approval = leave.is_for_second_approval
             current_status = leave.leave_status
+            changed_status = leave.leave_status
             
             if leave_type_id in (LeaveTypeID.COMP_OFF, LeaveTypeID.WORKING_LATE) or is_for_second_approval:
                 if current_status == LeaveStatus.PENDING:
@@ -389,11 +390,13 @@ class LeaveTransactionService:
                     # leave.have_customer_approval = have_customer_approval
                     leave.approved_by = approved_by_id
                     send_mail_flag = 2
+                    changed_status = LeaveStatus.PARTIAL_APPROVED if status == LeaveStatus.APPROVED else status
                 elif current_status == LeaveStatus.PARTIAL_APPROVED:
                     leave.leave_status = status
                     leave.second_approval_comment = approver_comment
                     leave.second_approval_date = datetime.now()
                     send_mail_flag = 1
+                    changed_status = status
                 else:
                     return "Leave Already Approved", 0
             else:
@@ -405,6 +408,7 @@ class LeaveTransactionService:
                 leave.is_customer_approval_required = is_customer_approval_required
                 leave.approved_by = approved_by_id
                 send_mail_flag = 1
+                changed_status = status
                 
             db.session.commit()
             
@@ -415,14 +419,18 @@ class LeaveTransactionService:
                     
                     # Fetch related data for email
                     employee = Employee.query.filter_by(employee_id=leave.employee_id).first()
+                    team_lead = Employee.query.filter_by(employee_id=employee.team_lead_id).first()
                     approver = Employee.query.filter_by(employee_id=approved_by_id).first()
+                    second_approver = None
+                    if leave.is_for_second_approval:
+                        second_approver = Employee.query.filter_by(email=EmailConfig.SECONDARY_LEAVE_APPROVER_EMAIL).first()
                     leave_type_obj = MasterLeaveTypes.query.get(leave.leave_type_id)
                     
                     if employee and approver and leave_type_obj:
                         details = {
                             'employee_name': f"{employee.first_name} {employee.last_name}",
                             'employee_email': employee.email,
-                            'leave_status': status,
+                            'leave_status': changed_status,
                             'leave_type': str(leave.leave_type_id),
                             'leave_type_name': leave_type_obj.leave_name,
                             'start_date': str(leave.from_date),
@@ -432,7 +440,9 @@ class LeaveTransactionService:
                             'approved_by': f"{approver.first_name} {approver.last_name}",
                             'approver_mail_id': approver.email,
                             'second_approver_mail_id': EmailConfig.SECONDARY_LEAVE_APPROVER_EMAIL,
+                            'second_approver_name': f"{second_approver.first_name} {second_approver.last_name}" if second_approver else "",
                             'is_second_approver': leave.is_for_second_approval,
+                            'team_lead_mail_id': team_lead.email if team_lead else None,
                             
                             # Checklist responses
                             'is_cust_informed': 'Yes' if is_customer_approval_required else 'No', # Mapping logic might be reversed? Variable name is "is_customer_approval_required" but checklist says "Informed customer?". 
