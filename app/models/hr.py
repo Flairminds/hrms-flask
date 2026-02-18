@@ -90,15 +90,17 @@ class EmployeeHistory(db.Model):
 # SQLAlchemy event listeners for automatic audit logging
 from sqlalchemy import event
 
-# Guard flag to prevent duplicate listener registration
-_listeners_registered = False
+# Guard flags to prevent duplicate listener registration (one per model group)
+_employee_listeners_registered = False
+_project_listeners_registered = False
+_allocation_listeners_registered = False
 
 def register_employee_history_listeners():
     """Register event listeners for Employee history tracking (only once)"""
-    global _listeners_registered
-    if _listeners_registered:
+    global _employee_listeners_registered
+    if _employee_listeners_registered:
         return
-    _listeners_registered = True
+    _employee_listeners_registered = True
     
     @event.listens_for(Employee, 'after_insert')
     def log_employee_insert(mapper, connection, target):
@@ -326,47 +328,32 @@ class ProjectHistory(BaseModel):
     modified_on = db.Column(db.DateTime, server_default=db.func.now())
 
 def register_project_history_listeners():
-     if not _listeners_registered:
-        from sqlalchemy import inspect
-        
-        def log_project_change(mapper, connection, target, action):
-             # Basic implementation that logs changes. 
-             # In a real app with Flask-Login, we'd get current_user here.
-             # For now, we'll try to get it if available, else system.
-             user_id = 'System'
-             # Note: Accessing flask global 'g' might fail if outside context
-             
-             history = ProjectHistory(
-                 project_id=target.project_id,
-                 project_name=target.project_name,
-                 description=target.description,
-                 client=target.client,
-                 lead_by=target.lead_by,
-                 start_date=target.start_date,
-                 end_date=target.end_date,
-                 project_status=target.project_status,
-                 action=action,
-                 modified_by=user_id
-             )
-             connection.execute(
-                 ProjectHistory.__table__.insert(),
-                 {
-                     'project_id': history.project_id,
-                     'project_name': history.project_name,
-                     'description': history.description,
-                     'client': history.client,
-                     'lead_by': history.lead_by,
-                     'start_date': history.start_date,
-                     'end_date': history.end_date,
-                     'project_status': history.project_status,
-                     'action': history.action,
-                     'modified_by': history.modified_by
-                 }
-             )
+    global _project_listeners_registered
+    if _project_listeners_registered:
+        return
+    _project_listeners_registered = True
 
-        event.listen(Project, 'after_insert', lambda m, c, t: log_project_change(m, c, t, 'INSERT'))
-        event.listen(Project, 'after_update', lambda m, c, t: log_project_change(m, c, t, 'UPDATE'))
-        event.listen(Project, 'after_delete', lambda m, c, t: log_project_change(m, c, t, 'DELETE'))
+    def log_project_change(mapper, connection, target, action):
+        user_id = 'System'
+        connection.execute(
+            ProjectHistory.__table__.insert(),
+            {
+                'project_id': target.project_id,
+                'project_name': target.project_name,
+                'description': target.description,
+                'client': target.client,
+                'lead_by': target.lead_by,
+                'start_date': target.start_date,
+                'end_date': target.end_date,
+                'project_status': target.project_status,
+                'action': action,
+                'modified_by': user_id
+            }
+        )
+
+    event.listen(Project, 'after_insert', lambda m, c, t: log_project_change(m, c, t, 'INSERT'))
+    event.listen(Project, 'after_update', lambda m, c, t: log_project_change(m, c, t, 'UPDATE'))
+    event.listen(Project, 'after_delete', lambda m, c, t: log_project_change(m, c, t, 'DELETE'))
 
 # Register immediately
 register_project_history_listeners()
@@ -646,33 +633,35 @@ class ProjectAllocationHistory(BaseModel):
     modified_on = db.Column(db.DateTime, server_default=db.func.now())
 
 def register_allocation_history_listeners():
-     if not _listeners_registered:
+    global _allocation_listeners_registered
+    if _allocation_listeners_registered:
+        return
+    _allocation_listeners_registered = True
 
-        def log_allocation_change(mapper, connection, target, action):
-             user_id = 'System'
-             
-             connection.execute(
-                 ProjectAllocationHistory.__table__.insert(),
-                 {
-                     'employee_id': target.employee_id,
-                     'project_id': target.project_id,
-                     'project_allocation': target.project_allocation,
-                     'project_billing': target.project_billing,
-                     'is_billing': target.is_billing,
-                     'employee_role': target.employee_role,
-                     'is_trainee': target.is_trainee,
-                     'comments': target.comments,
-                     'start_date': target.start_date,
-                     'end_date': target.end_date,
-                     'relevant_skills': target.relevant_skills,
-                     'action': action,
-                     'modified_by': user_id
-                 }
-             )
+    def log_allocation_change(mapper, connection, target, action):
+        user_id = 'System'
+        connection.execute(
+            ProjectAllocationHistory.__table__.insert(),
+            {
+                'employee_id': target.employee_id,
+                'project_id': target.project_id,
+                'project_allocation': target.project_allocation,
+                'project_billing': target.project_billing,
+                'is_billing': target.is_billing,
+                'employee_role': target.employee_role,
+                'is_trainee': target.is_trainee,
+                'comments': target.comments,
+                'start_date': target.start_date,
+                'end_date': target.end_date,
+                'relevant_skills': target.relevant_skills,
+                'action': action,
+                'modified_by': user_id
+            }
+        )
 
-        event.listen(ProjectAllocation, 'after_insert', lambda m, c, t: log_allocation_change(m, c, t, 'INSERT'))
-        event.listen(ProjectAllocation, 'after_update', lambda m, c, t: log_allocation_change(m, c, t, 'UPDATE'))
-        event.listen(ProjectAllocation, 'after_delete', lambda m, c, t: log_allocation_change(m, c, t, 'DELETE'))
+    event.listen(ProjectAllocation, 'after_insert', lambda m, c, t: log_allocation_change(m, c, t, 'INSERT'))
+    event.listen(ProjectAllocation, 'after_update', lambda m, c, t: log_allocation_change(m, c, t, 'UPDATE'))
+    event.listen(ProjectAllocation, 'after_delete', lambda m, c, t: log_allocation_change(m, c, t, 'DELETE'))
 
 # Register immediately
 register_allocation_history_listeners()
