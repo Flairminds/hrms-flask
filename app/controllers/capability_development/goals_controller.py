@@ -43,6 +43,17 @@ class GoalsController:
             Logger.error("Error in get_goals_created_by_me", error=str(e))
             return jsonify({"error": str(e)}), 500
 
+    @staticmethod
+    @jwt_required()
+    def get_team_goals():
+        """GET /api/capability-dev/goals/team-goals"""
+        try:
+            result = EnhancedGoalsService.get_team_goals()
+            return jsonify(result), 200
+        except Exception as e:
+            Logger.error("Error in get_team_goals", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
     # ──────────────────────────────────────────
     # Create
     # ──────────────────────────────────────────

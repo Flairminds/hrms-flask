@@ -34,6 +34,12 @@ def get_goals_created_by_me():
     return GoalsController.get_goals_created_by_me()
 
 
+@capability_dev_goals_new_bp.route("/team-goals", methods=["GET"])
+def get_team_goals():
+    """Get all goals for all active employees (HR/Manager view)."""
+    return GoalsController.get_team_goals()
+
+
 # ──────────────────────────────────────────
 # Goal detail operations
 # ──────────────────────────────────────────

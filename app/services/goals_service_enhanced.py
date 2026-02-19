@@ -493,3 +493,75 @@ class EnhancedGoalsService:
             "createdOn": goal.created_on.isoformat() if goal.created_on else None,
             "modifiedOn": goal.modified_on.isoformat() if goal.modified_on else None
         }
+
+    @staticmethod
+    def get_team_goals() -> Dict:
+        """
+        Return all goals for active employees (not Relieved/Absconding).
+
+        Uses a single join query for efficiency; builds a summary of
+        status counts to show a leaderboard-style breakdown.
+
+        Returns:
+            {
+                "goals": [...],          # flat list, all employees
+                "summary": {
+                    "total": int,
+                    "pending": int,
+                    "in_progress": int,
+                    "completed": int,
+                }
+            }
+        """
+        try:
+            # Single query: JOIN employee + goal + optional skill --
+            ForEmployee = db.aliased(Employee)
+            SetByEmployee = db.aliased(Employee)
+
+            rows = (
+                db.session.query(
+                    EmployeeGoalEnhanced,
+                    ForEmployee,
+                    SetByEmployee,
+                    MasterSkill,
+                )
+                .join(ForEmployee, EmployeeGoalEnhanced.for_employee_id == ForEmployee.employee_id)
+                .join(SetByEmployee, EmployeeGoalEnhanced.set_by_employee_id == SetByEmployee.employee_id)
+                .outerjoin(MasterSkill, EmployeeGoalEnhanced.skill_id == MasterSkill.skill_id)
+                .filter(ForEmployee.employment_status.notin_(['Relieved', 'Absconding']))
+                .order_by(ForEmployee.first_name, EmployeeGoalEnhanced.deadline.asc())
+                .all()
+            )
+
+            goals = []
+            summary = {"total": 0, "pending": 0, "in_progress": 0, "completed": 0}
+
+            for goal, for_emp, set_by_emp, skill in rows:
+                goals.append({
+                    "goalId": goal.goal_id,
+                    "forEmployeeId": goal.for_employee_id,
+                    "forEmployeeName": f"{for_emp.first_name} {for_emp.last_name}",
+                    "setByEmployeeId": goal.set_by_employee_id,
+                    "setByName": f"{set_by_emp.first_name} {set_by_emp.last_name}",
+                    "goalType": goal.goal_type,
+                    "skillId": goal.skill_id,
+                    "skillName": skill.skill_name if skill else None,
+                    "goalTitle": goal.goal_title or (skill.skill_name if skill else ""),
+                    "goalCategory": goal.goal_category,
+                    "status": goal.status,
+                    "progressPercentage": float(goal.progress_percentage) if goal.progress_percentage else 0,
+                    "deadline": goal.deadline.isoformat() if goal.deadline else None,
+                    "completionDate": goal.completion_date.isoformat() if goal.completion_date else None,
+                    "notes": goal.notes,
+                    "createdOn": goal.created_on.isoformat() if goal.created_on else None,
+                })
+                summary["total"] += 1
+                status_key = goal.status if goal.status in summary else "pending"
+                summary[status_key] = summary.get(status_key, 0) + 1
+
+            return {"goals": goals, "summary": summary}
+
+        except Exception as e:
+            Logger.error("Error getting team goals", error=str(e))
+            raise
+
