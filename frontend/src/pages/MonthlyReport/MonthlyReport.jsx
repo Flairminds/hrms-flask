@@ -789,45 +789,56 @@ const AttendanceReportTab = () => {
     const [detailData, setDetailData] = useState([]);
     const [detailColumns, setDetailColumns] = useState([]);
 
-    // Define column order and display names
+    // Ordered exactly as they should appear in the table (keys must match raw data field names)
     const columnOrder = [
-        'Employee_Id',
-        'Employee_Name',
-        'TeamLeadCoordinator',
+        'Employee ID',
+        'Employee Name',
+        'Leave Approver',
         'Date',
-        'WorkingDay',
-        'Status',
-        'EntryExempt',
-        'EntryinTime',
-        // 'Dayslogs',
-        // 'ZymmrLoggedTime',
-        'Typeofleaveapproved',
-        'Leavestatus',
-        'DateofLeaveApplication',
-        'ApprovalDate',
-        'Approvedonsamedate',
-        'Swappedholidaydate',
-        'Unpaidstatus'
+        // 'Working Day',
+        // 'Status',
+        // 'Entry Exempt',
+        'Entry in Time',
+        // 'AM In',
+        // 'AM Out',
+        // 'PM In',
+        // 'PM Out',
+        'Type of Leave Approved',
+        'Leave Status',
+        'Date of Leave Application',
+        'Approval Date',
+        // 'Approved on same date',
+        // 'Swapped holiday date',
+        'Unpaid Status',
+        'Remark',
+        // 'Days Logs',
+        // 'Zymmr Logged Time',
     ];
 
+    // Display names map — keys are the raw data field names
     const columnDisplayNames = {
-        'Employee_Id': 'Employee ID',
-        'Employee_Name': 'Employee Name',
-        'TeamLeadCoordinator': 'Team Lead/Coordinator',
+        'Employee ID': 'Employee ID',
+        'Employee Name': 'Employee Name',
+        'Leave Approver': 'Leave Approver',
         'Date': 'Date',
-        'WorkingDay': 'Working Day',
+        'Working Day': 'Working Day',
         'Status': 'Status',
-        'EntryExempt': 'Entry Exempt',
-        'EntryinTime': 'Entry Time',
-        'Dayslogs': 'Days Logged',
-        'ZymmrLoggedTime': 'Zymmr Logged Time',
-        'Typeofleaveapproved': 'Type of Leave Approved',
-        'Leavestatus': 'Leave Status',
-        'DateofLeaveApplication': 'Date of Leave Application',
-        'ApprovalDate': 'Approval Date',
-        'Approvedonsamedate': 'Approved on Same Date',
-        'Swappedholidaydate': 'Swapped Holiday Date',
-        'Unpaidstatus': 'Unpaid Status'
+        'Entry Exempt': 'Entry Exempt',
+        'Entry in Time': 'Entry in Time',
+        'AM In': 'AM In',
+        'AM Out': 'AM Out',
+        'PM In': 'PM In',
+        'PM Out': 'PM Out',
+        'Type of Leave Approved': 'Type of Leave',
+        'Leave Status': 'Leave Status',
+        'Date of Leave Application': 'Date of Leave Application',
+        'Approval Date': 'Approval Date',
+        'Approved on same date': 'Approved on Same Date',
+        'Swapped holiday date': 'Swapped Holiday Date',
+        'Unpaid Status': 'Unpaid Status',
+        'Remark': 'Remark',
+        'Days Logs': 'Days Logs',
+        'Zymmr Logged Time': 'Zymmr Logged Time',
     };
 
     useEffect(() => {
@@ -911,7 +922,9 @@ const AttendanceReportTab = () => {
                         return 0;
                     });
 
-                    const cols = sortedKeys.map(key => ({
+                    const toDisplayKeys = sortedKeys.filter(key => columnOrder.includes(key));
+
+                    const cols = toDisplayKeys.map(key => ({
                         title: columnDisplayNames[key] || key,
                         dataIndex: key,
                         key: key,

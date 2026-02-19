@@ -158,15 +158,11 @@ class ReportService:
                     current_date += timedelta(days=1)
                     report_data.append(daily_row)
             
-            # Sort by employee ID (numeric part)
-            def get_emp_number(emp_row):
-                emp_id = emp_row['Employee ID']
-                try:
-                    return int(emp_id.replace('EMP', ''))
-                except:
-                    return 0
-            
-            report_data.sort(key=get_emp_number)
+            # Sort by Employee Name (case-insensitive)
+            def get_emp_name(emp_row):
+                return emp_row['Employee Name'].lower()
+
+            report_data.sort(key=get_emp_name)
             
             Logger.info("Monthly report generated successfully", 
                        month=month, 
@@ -477,7 +473,7 @@ class ReportService:
                     new_row['AM Out'] = ''
                     new_row['PM In'] = ''
                     new_row['PM Out'] = ''
-                    new_row['Remark'] = 'Holiday' if is_holiday else ''
+                    new_row['Remark'] = 'Holiday' if is_holiday else 'Weekend'
                     new_row['Unpaid Status'] = ''
                     attendance_data.append(new_row)
                     continue
@@ -496,9 +492,18 @@ class ReportService:
                     new_row['AM Out']       = door_entry.get('AM Out', '')
                     new_row['PM In']        = door_entry.get('PM In', '')
                     new_row['PM Out']       = door_entry.get('PM Out', '')
-                    new_row['Entry in Time'] = door_entry.get('AM In', '')
+                    entry_time = None
+                    if door_entry.get('AM In', ''):
+                        entry_time = door_entry.get('AM In', '')
+                    elif door_entry.get('AM Out', ''):
+                        entry_time = door_entry.get('AM Out', '')
+                    elif door_entry.get('PM In', ''):
+                        entry_time = door_entry.get('PM In', '')
+                    elif door_entry.get('PM Out', ''):
+                        entry_time = door_entry.get('Pm Out', '')
+                    new_row['Entry in Time'] = entry_time
                     new_row['Remark']       = 'Door Entry'
-                    new_row['Unpaid Status'] = new_row.get('Unpaid Status', '')  # keep existing (e.g. Unpaid Leave type)
+                    new_row['Unpaid Status'] = 'Paid'  # keep existing (e.g. Unpaid Leave type)
                     attendance_data.append(new_row)
                     continue
 
@@ -509,7 +514,7 @@ class ReportService:
                 new_row['PM Out']       = ''
                 new_row['Entry in Time'] = ''
                 new_row['Unpaid Status'] = 'Unpaid'
-                new_row['Remark']       = 'No door entry & no approved leave'
+                new_row['Remark']       = 'No entry for this working day'
                 attendance_data.append(new_row)
 
             # 5. Generate Excel File & Upload
