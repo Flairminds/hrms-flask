@@ -578,22 +578,25 @@ export const addUpdateSkill = (payload) => {
   return axiosInstance.post(`${API_BASE_URL}/skills/add-update-skills`, payload);
 };
 
-// Gets the skills of an employee.
-export const getSkillsForEmp = (employeeId) => {
-  return axiosInstance.get(`${API_BASE_URL}/skills/employee-skills/${employeeId}`);
-}
+// [Capability Dev] Get skills for the currently logged-in employee
+export const getMySkillsCapDev = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/my-skills`);
 
-// Gets the skills of all employees.
-export const getSkillsForAllEmp = () => {
-  const res = axiosInstance.get(`https://hrms-flask.azurewebsites.net/api/employees`
-  );
-  return res;
-}
+// [Capability Dev] Add or update skills for the currently logged-in employee
+export const updateMySkillsCapDev = (skills) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/skills/my-skills`, { skills });
 
-// Gets the master skills list
-export const getMasterSkills = () => {
-  return axiosInstance.get(`${API_BASE_URL}/review/skills`);
-};
+// [Capability Dev] Get the master skills list
+export const getMasterSkills = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/master-skills`);
+
+// Legacy aliases (kept so other pages that import these still work unchanged)
+export const getSkillsForEmp = (employeeId) =>
+  axiosInstance.get(`${API_BASE_URL}/skills/employee-skills/${employeeId}`);
+
+export const getSkillsForAllEmp = () =>
+  axiosInstance.get(`${API_BASE_URL}/skills/employees`);
+
 
 
 // Gets the documents of an employee.
@@ -815,14 +818,7 @@ export const updateGoal = (goalId, payload) => {
   });
 };
 
-export const deleteGoal = (goalId) => {
-  return axiosInstance.delete(`${API_BASE_URL}/goals/${goalId}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-  });
-};
+
 
 // ============= REPORTS API FUNCTIONS =============
 
@@ -1192,43 +1188,38 @@ export const getMyProjectsTeam = () => {
 
 // ============= CAPABILITY DEVELOPMENT API FUNCTIONS =============
 
-// Goals
-export const getMyGoals = () => {
-  return axiosInstance.get(`${API_BASE_URL}/capability-dev/my-goals`);
-};
+// ── Goals ──────────────────────────────────────────────────────
 
-export const getGoalsCreatedByMe = () => {
-  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals-created-by-me`);
-};
+export const getMyGoals = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/my-goals`);
 
-export const createGoalForSelf = (goalData) => {
-  return axiosInstance.post(`${API_BASE_URL}/capability-dev/create-my-goals`, goalData);
-};
+export const getGoalsCreatedByMe = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/created-by-me`);
 
-export const updateGoalProgress = (goalId, progressData) => {
-  return axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}/progress`, progressData);
-};
+export const createGoalForSelf = (goalData) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/my-goals`, goalData);
 
-export const updateGoalDetails = (goalId, goalData) => {
-  return axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}`, goalData);
-};
+export const updateGoalDetails = (goalId, goalData) =>
+  axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}`, goalData);
 
+export const updateGoalProgress = (goalId, progressData) =>
+  axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}/progress`, progressData);
 
-export const getGoalComments = (goalId) => {
-  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`);
-};
+export const deleteGoal = (goalId) =>
+  axiosInstance.delete(`${API_BASE_URL}/capability-dev/goals/${goalId}`);
 
-export const addGoalComment = (goalId, commentData) => {
-  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`, commentData);
-};
+export const getGoalComments = (goalId) =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`);
 
-export const getGoalReviews = (goalId) => {
-  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`);
-};
+export const addGoalComment = (goalId, commentData) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`, commentData);
 
-export const addGoalReview = (goalId, reviewData) => {
-  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`, reviewData);
-};
+export const getGoalReviews = (goalId) =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`);
+
+export const addGoalReview = (goalId, reviewData) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/goals/${goalId}/reviews`, reviewData);
+
 
 // Feedback
 export const submitFeedback = (feedbackData) => {

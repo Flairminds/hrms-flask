@@ -3,7 +3,7 @@ import { Table, Input, Button, Tag, message, Tooltip } from 'antd';
 import { SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { getCookie } from '../../../util/CookieSet';
 import styles from './MySkillsTab.module.css';
-import { getSkillsForEmp, addUpdateSkill, getMasterSkills } from '../../../services/api';
+import { getMySkillsCapDev, getMasterSkills } from '../../../services/api';
 import AddEditSkillModal from './AddEditSkillModal';
 
 const MySkillsTab = () => {
@@ -26,8 +26,8 @@ const MySkillsTab = () => {
     const fetchSkills = async () => {
         try {
             setLoading(true);
-            const response = await getSkillsForEmp(employeeId);
-            const skillsData = response.data?.skills || response.data;
+            const response = await getMySkillsCapDev();
+            const skillsData = response.data?.skills || [];
             setSkills(Array.isArray(skillsData) ? skillsData : []);
         } catch (error) {
             console.error('Error fetching skills:', error);
@@ -44,12 +44,12 @@ const MySkillsTab = () => {
             const skillsList = response.data.data || [];
             // Transform to options format
             const options = skillsList.map(skill => ({
-                value: skill.SkillId,
-                label: skill.SkillName
+                value: skill.skillId,
+                label: skill.skillName
             }));
             setMasterSkills(options);
-        } catch (error) {
-            console.error('Error fetching master skills:', error);
+        } catch (err) {
+            console.error('Error fetching master skills:', err);
             message.error('Failed to load available skills');
         }
     };
@@ -102,69 +102,39 @@ const MySkillsTab = () => {
     const columns = [
         {
             title: 'Skill Name',
-            dataIndex: 'SkillName',
-            sorter: (a, b) => (a.SkillName || '').localeCompare(b.SkillName || ''),
+            dataIndex: 'skillName',
+            sorter: (a, b) => (a.skillName || '').localeCompare(b.skillName || ''),
             render: (text) => <b>{text}</b>
         },
         {
             title: 'Category',
-            dataIndex: 'SkillCategory',
-            filters: [...new Set(skills.map(s => s.SkillCategory).filter(Boolean))].map(c => ({ text: c, value: c })),
-            onFilter: (value, record) => record.SkillCategory === value,
+            dataIndex: 'skillCategory',
+            filters: [...new Set(skills.map(s => s.skillCategory).filter(Boolean))].map(c => ({ text: c, value: c })),
+            onFilter: (value, record) => record.skillCategory === value,
             render: (category) => category ? <Tag color="blue">{category}</Tag> : '-'
         },
         {
             title: 'Level',
-            dataIndex: 'SkillLevel',
+            dataIndex: 'skillLevel',
             filters: [
                 { text: 'Beginner', value: 'Beginner' },
                 { text: 'Intermediate', value: 'Intermediate' },
                 { text: 'Advanced', value: 'Advanced' },
                 { text: 'Expert', value: 'Expert' }
             ],
-            onFilter: (value, record) => record.SkillLevel === value,
-            sorter: (a, b) => (a.SkillLevel || '').localeCompare(b.SkillLevel || ''),
+            onFilter: (value, record) => record.skillLevel === value,
+            sorter: (a, b) => (a.skillLevel || '').localeCompare(b.skillLevel || ''),
             render: (level) => level ? <Tag color={getLevelColor(level)}>{level}</Tag> : '-'
         },
         {
             title: 'Self Evaluation',
-            dataIndex: 'SelfEvaluation',
-            sorter: (a, b) => (a.SelfEvaluation || 0) - (b.SelfEvaluation || 0),
-            render: (_, record, index) => {
-                if (editingSkill === index) {
-                    return (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <Input
-                                type="number"
-                                min={1}
-                                max={5}
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                style={{ width: '60px' }}
-                                autoFocus
-                            />
-                            <Button
-                                type="primary"
-                                size="small"
-                                icon={<SaveOutlined />}
-                                onClick={() => handleUpdateSelfEvaluation(record.SkillId)}
-                            />
-                            <Button
-                                size="small"
-                                icon={<CloseOutlined />}
-                                onClick={() => setEditingSkill(null)}
-                            />
-                        </div>
-                    );
-                }
-                return (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span>
-                            <span style={{ fontSize: 'larger' }}>{record.SelfEvaluation || 'N/A'}</span>/5
-                        </span>
-                    </div>
-                );
-            }
+            dataIndex: 'selfEvaluation',
+            sorter: (a, b) => (a.selfEvaluation || 0) - (b.selfEvaluation || 0),
+            render: (val) => (
+                <span>
+                    <span style={{ fontSize: 'larger' }}>{val || 'N/A'}</span>{val ? '/5' : ''}
+                </span>
+            )
         },
         {
             title: 'Eval by Others',
@@ -194,8 +164,8 @@ const MySkillsTab = () => {
     ];
 
     const filteredSkills = skills.filter(skill =>
-        skill.SkillName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        skill.SkillCategory?.toLowerCase().includes(searchText.toLowerCase())
+        skill.skillName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        skill.skillCategory?.toLowerCase().includes(searchText.toLowerCase())
     );
 
     return (

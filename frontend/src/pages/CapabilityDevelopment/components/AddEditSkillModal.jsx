@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, InputNumber, Button, message } from 'antd';
-import { addUpdateSkill } from '../../../services/api';
-import { getCookie } from '../../../util/CookieSet';
+import { updateMySkillsCapDev } from '../../../services/api';
 
 const { Option } = Select;
 
 const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    const employeeId = getCookie('employeeId');
 
     useEffect(() => {
         if (visible && skill) {
-            // Edit mode - populate form with existing skill data
             form.setFieldsValue({
-                skillId: skill.SkillId,
-                skillCategory: skill.SkillCategory,
-                selfEvaluation: skill.SelfEvaluation != null ? parseFloat(skill.SelfEvaluation) : undefined,
-                skillLevel: skill.SkillLevel,
+                skillId: skill.skillId,
+                skillCategory: skill.skillCategory,
+                selfEvaluation: skill.selfEvaluation != null ? parseFloat(skill.selfEvaluation) : undefined,
+                skillLevel: skill.skillLevel,
                 notes: skill.notes
             });
         } else if (visible) {
-            // Add mode - reset form
             form.resetFields();
         }
     }, [visible, skill, form]);
@@ -29,18 +25,14 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
     const handleSubmit = async (values) => {
         try {
             setLoading(true);
-            const payload = {
-                skills: [{
-                    employeeId,
-                    skillId: values.skillId,
-                    skillCategory: values.skillCategory,
-                    selfEvaluation: parseFloat(values.selfEvaluation),
-                    skillLevel: values.skillLevel,
-                    notes: values.notes
-                }]
-            };
-
-            await addUpdateSkill(payload);
+            const skills = [{
+                skillId: values.skillId,
+                skillCategory: values.skillCategory,
+                selfEvaluation: parseFloat(values.selfEvaluation),
+                skillLevel: values.skillLevel,
+                notes: values.notes
+            }];
+            await updateMySkillsCapDev(skills);
             message.success(skill ? 'Skill updated successfully' : 'Skill added successfully');
             form.resetFields();
             onSuccess();
