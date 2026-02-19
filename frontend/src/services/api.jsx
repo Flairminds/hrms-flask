@@ -797,15 +797,6 @@ export const getEmployeeListForEvaluators = (EvaluatorId) => {
   return res
 }
 
-export const createGoal = (payload) => {
-  return axiosInstance.post(`${API_BASE_URL}/goals`, payload, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-  });
-};
-
 export const getEmployeeGoals = (employeeId) => {
   return axiosInstance.get(`${API_BASE_URL}/goals/employee/${employeeId}`, {
     headers: {
@@ -1210,8 +1201,8 @@ export const getGoalsCreatedByMe = () => {
   return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals-created-by-me`);
 };
 
-export const createGoalEnhanced = (goalData) => {
-  return axiosInstance.post(`${API_BASE_URL}/capability-dev/goals`, goalData);
+export const createGoalForSelf = (goalData) => {
+  return axiosInstance.post(`${API_BASE_URL}/capability-dev/create-my-goals`, goalData);
 };
 
 export const updateGoalProgress = (goalId, progressData) => {
@@ -1221,6 +1212,7 @@ export const updateGoalProgress = (goalId, progressData) => {
 export const updateGoalDetails = (goalId, goalData) => {
   return axiosInstance.put(`${API_BASE_URL}/capability-dev/goals/${goalId}`, goalData);
 };
+
 
 export const getGoalComments = (goalId) => {
   return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/${goalId}/comments`);

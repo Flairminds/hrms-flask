@@ -23,6 +23,95 @@ class EnhancedGoalsService:
     """Service for enhanced employee goal management with peer interaction."""
 
     @staticmethod
+    def create_my_goal(payload: Dict, created_by_id: str) -> Dict:
+        """
+        Creates a new employee goal (skill or custom type).
+        
+        Args:
+            payload: Goal data including for_employee_id, goal_type, etc.
+            created_by_id: Employee ID of the goal creator
+            
+        Returns:
+            Dict with goal details and success message
+        """
+        try:
+            for_employee_id = created_by_id
+            goal_type = payload.get("goalType")  # 'skill' or 'other'
+            skill_id = payload.get("skillId")
+            goal_title = payload.get("goalTitle")
+            goal_description = payload.get("goalDescription", "")
+            goal_category = payload.get("goalCategory")
+            deadline = payload.get("deadline")
+            notes = payload.get("notes", "")
+
+            # Validation
+            if not for_employee_id or not goal_type or not deadline:
+                raise ValueError("Missing required fields: forEmployeeId, goalType, deadline")
+
+            if goal_type == "skill" and not skill_id:
+                raise ValueError("skillId is required for skill-type goals")
+            
+            if goal_type == "other" and not goal_title:
+                raise ValueError("goalTitle is required for other-type goals")
+
+            # Validate deadline
+            try:
+                deadline_dt = datetime.strptime(deadline, "%Y-%m-%d").date()
+                if deadline_dt <= datetime.now().date():
+                    raise ValueError("Deadline must be in the future")
+            except ValueError as e:
+                if "Deadline must be in the future" in str(e):
+                    raise
+                raise ValueError("Invalid date format, use YYYY-MM-DD")
+
+            # Validate employee exists
+            employee = Employee.query.filter_by(employee_id=for_employee_id).first()
+            if not employee:
+                raise ValueError(f"Employee {for_employee_id} not found")
+
+            # Validate skill if skill-type goal
+            if goal_type == "skill":
+                skill = MasterSkill.query.filter_by(skill_id=skill_id).first()
+                if not skill:
+                    raise ValueError(f"Skill {skill_id} not found")
+
+            # Create new goal
+            new_goal = EmployeeGoalEnhanced(
+                for_employee_id=for_employee_id,
+                set_by_employee_id=created_by_id,
+                goal_type=goal_type,
+                skill_id=skill_id if goal_type == "skill" else None,
+                goal_title=goal_title,
+                goal_description=goal_description,
+                goal_category=goal_category,
+                status="pending",
+                progress_percentage=0,
+                deadline=deadline_dt,
+                notes=notes
+            )
+            
+            db.session.add(new_goal)
+            db.session.commit()
+
+            return {
+                "goalId": new_goal.goal_id,
+                "forEmployeeId": for_employee_id,
+                "setByEmployeeId": created_by_id,
+                "goalType": goal_type,
+                "skillId": skill_id,
+                "goalTitle": goal_title,
+                "deadline": deadline,
+                "status": "pending",
+                "message": "Goal created successfully",
+                "statusCode": 201
+            }
+
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error creating goal", error=str(e))
+            raise
+
+    @staticmethod
     def create_goal(payload: Dict, created_by_id: str) -> Dict:
         """
         Creates a new employee goal (skill or custom type).

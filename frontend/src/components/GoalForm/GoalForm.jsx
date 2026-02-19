@@ -48,8 +48,8 @@
 //     try {
 //       setLoading(true);
 //       const response = await getEmployeeList();
-   
-      
+
+
 //       setEmployees(response.data);
 //     } catch (error) {
 //       message.error(error.response?.data?.message || 'Failed to fetch employees');
@@ -288,8 +288,8 @@ import { Radio, Select, Input, DatePicker, Button, Collapse, message } from 'ant
 import Cookies from 'js-cookie';
 import moment from 'moment';
 import styles from './GoalForm.module.css';
-import { getAllEmployeeSkills, getEmployeeListForEvaluators, createGoal } from '../../services/api';
-import  { getAllEmployeeEvaluators } from '../../services/api';
+import { getAllEmployeeSkills, getEmployeeListForEvaluators } from '../../services/api';
+import { getAllEmployeeEvaluators } from '../../services/api';
 
 const { Option } = Select;
 
@@ -312,19 +312,19 @@ const GoalForm = ({ onGoalCreated }) => {
     }
 
     const checkEvaluatorStatus = async () => {
-          try {
-            const employeeId = Cookies.get('employeeId');
-            if (!employeeId) return;
-    
-            const response = await getAllEmployeeEvaluators();
-            const evaluators = response.data;
-            const isUserEvaluator = evaluators.some(emp => emp.evaluatorIds.includes(employeeId));
-            setIsEvaluator(isUserEvaluator);
-          } catch (error) {
-            console.error('Error checking evaluator status:', error);
-          }
-        };
-    
+      try {
+        const employeeId = Cookies.get('employeeId');
+        if (!employeeId) return;
+
+        const response = await getAllEmployeeEvaluators();
+        const evaluators = response.data;
+        const isUserEvaluator = evaluators.some(emp => emp.evaluatorIds.includes(employeeId));
+        setIsEvaluator(isUserEvaluator);
+      } catch (error) {
+        console.error('Error checking evaluator status:', error);
+      }
+    };
+
 
     checkEvaluatorStatus();
 
@@ -344,7 +344,7 @@ const GoalForm = ({ onGoalCreated }) => {
       setLoading(true);
       const response = await getAllEmployeeSkills();
       setSkills(response.data);
-    }  finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -354,8 +354,8 @@ const GoalForm = ({ onGoalCreated }) => {
       const currentUserId = Cookies.get('employeeId');
       setLoading(true);
       const response = await getEmployeeListForEvaluators(currentUserId);
-   
-      
+
+
       setEmployees(response.data);
     } catch (error) {
       message.error(error.response?.data?.message || 'Failed to fetch employees');
@@ -415,7 +415,7 @@ const GoalForm = ({ onGoalCreated }) => {
         ...(goalType === 'others' && currentUserId && { setByEmployeeId: currentUserId }),
       };
       const activePanel = document.querySelector('.ant-collapse-item-active .ant-collapse-header[aria-expanded="true"]')?.textContent;
-      await createGoal(payload);
+      // await createGoal(payload);
       message.success('Goal saved successfully');
       resetForm();
       if (onGoalCreated) onGoalCreated();

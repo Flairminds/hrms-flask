@@ -38,6 +38,21 @@ class EnhancedGoalsController:
 
     @staticmethod
     @jwt_required()
+    def create_my_goals():
+        """Create a new goal for self"""
+        try:
+            employee_id = get_jwt_identity()
+            payload = request.get_json()
+            result = EnhancedGoalsService.create_my_goal(payload, employee_id)
+            return jsonify(result), result.get("statusCode", 201)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            Logger.error("Error in create_my_goals", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
     def create_goal():
         """Create a new goal (for self or others)."""
         try:

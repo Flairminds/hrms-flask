@@ -14,6 +14,11 @@ def get_my_goals():
     """Get goals assigned to me"""
     return EnhancedGoalsController.get_my_goals()
 
+@capability_dev_goals_bp.route("/create-my-goals", methods=["POST"])
+def create_my_goals():
+    """Create goals assigned to me"""
+    return EnhancedGoalsController.create_my_goals()
+
 @capability_dev_goals_bp.route("/goals-created-by-me", methods=["GET"])
 def get_goals_created_by_me():
     """Get goals I created for others"""
