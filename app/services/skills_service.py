@@ -189,7 +189,8 @@ class SkillsService:
                 EmployeeSkill.self_evaluation,
                 MasterSkill.skill_name,
                 EmployeeSkill.is_ready,
-                EmployeeSkill.is_ready_date
+                EmployeeSkill.is_ready_date,
+                EmployeeSkill.notes
             ).join(
                 MasterSkill,
                 EmployeeSkill.skill_id == MasterSkill.skill_id
@@ -217,6 +218,7 @@ class SkillsService:
                         "isReady": int(skill_row.is_ready) if skill_row.is_ready else 0,
                         "isReadyDate": skill_row.is_ready_date,
                         "SelfEvaluation": skill_row.self_evaluation,
+                        "notes": skill_row.notes
                     }
                 )
 

@@ -159,17 +159,9 @@ const MySkillsTab = () => {
                 }
                 return (
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, color: '#059669' }}>
-                            {record.SelfEvaluation || 'N/A'}/5
+                        <span>
+                            <span style={{ fontSize: 'larger' }}>{record.SelfEvaluation || 'N/A'}</span>/5
                         </span>
-                        <Button
-                            size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => {
-                                setEditingSkill(index);
-                                setEditValue(record.SelfEvaluation || 3);
-                            }}
-                        />
                     </div>
                 );
             }
@@ -185,7 +177,7 @@ const MySkillsTab = () => {
             )
         },
         {
-            title: 'Actions',
+            title: '',
             key: 'actions',
             render: (_, record) => (
                 <Tooltip title="Edit Skill Details">
@@ -194,7 +186,7 @@ const MySkillsTab = () => {
                         size="small"
                         onClick={() => handleEditSkill(record)}
                     >
-                        Edit Details
+                        Edit
                     </Button>
                 </Tooltip>
             )
@@ -210,7 +202,7 @@ const MySkillsTab = () => {
         <div className={styles.container}>
             <div className={styles.header}>
                 <div>
-                    <h2>My Skills</h2>
+                    {/* <h2>My Skills</h2> */}
                     <p>{skills.length} skills total</p>
                 </div>
             </div>

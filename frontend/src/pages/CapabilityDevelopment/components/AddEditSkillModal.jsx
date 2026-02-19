@@ -15,7 +15,8 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
             // Edit mode - populate form with existing skill data
             form.setFieldsValue({
                 skillId: skill.SkillId,
-                selfEvaluation: skill.SelfEvaluation,
+                skillCategory: skill.SkillCategory,
+                selfEvaluation: skill.SelfEvaluation != null ? parseFloat(skill.SelfEvaluation) : undefined,
                 skillLevel: skill.SkillLevel,
                 notes: skill.notes
             });
@@ -32,7 +33,8 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
                 skills: [{
                     employeeId,
                     skillId: values.skillId,
-                    selfEvaluation: values.selfEvaluation,
+                    skillCategory: values.skillCategory,
+                    selfEvaluation: parseFloat(values.selfEvaluation),
                     skillLevel: values.skillLevel,
                     notes: values.notes
                 }]
@@ -58,6 +60,7 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
             onCancel={onClose}
             footer={null}
             width={500}
+            style={{ top: 15 }}
         >
             <Form
                 form={form}
@@ -86,11 +89,28 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
                 </Form.Item>
 
                 <Form.Item
+                    name="skillCategory"
+                    label="Skill Category"
+                    rules={[{ required: true, message: 'Please select a skill category' }]}
+                >
+                    <Select placeholder="Select category">
+                        <Option value="Primary">Primary</Option>
+                        <Option value="Secondary">Secondary</Option>
+                        <Option value="Cross-Tech">Cross-Tech</Option>
+                    </Select>
+                </Form.Item>
+
+                <Form.Item
                     name="selfEvaluation"
                     label="Self Evaluation (1-5)"
                     rules={[
                         { required: true, message: 'Please rate your skill level' },
-                        { type: 'number', min: 1, max: 5, message: 'Must be between 1 and 5' }
+                        {
+                            validator: (_, value) =>
+                                value >= 1 && value <= 5
+                                    ? Promise.resolve()
+                                    : Promise.reject(new Error('Must be between 1 and 5'))
+                        }
                     ]}
                 >
                     <InputNumber
