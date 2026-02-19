@@ -165,23 +165,27 @@ export const Sidebar = ({ isRole }) => {
         <img src={FMLogo} alt="Flairminds" className={stylesSidebar.logo} />
       </div>
 
-      {filteredItems.map(item => {
-        const Icon = item.icon;
-        return (
-          <div
-            key={item.key}
-            className={`${stylesSidebar.divs} ${isActive(item.path) ? stylesSidebar.active : ''}`}
-            onClick={() => navigate(item.path)}
-          >
-            <Icon className={stylesSidebar.iconsSidebar} />
-            <span className={item.infoClass ? stylesSidebar.info : ''}>{item.label}</span>
-          </div>
-        );
-      })}
+      <div className={stylesSidebar.menuItems}>
+        {filteredItems.map(item => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.key}
+              className={`${stylesSidebar.divs} ${isActive(item.path) ? stylesSidebar.active : ''}`}
+              onClick={() => navigate(item.path)}
+            >
+              <Icon className={stylesSidebar.iconsSidebar} />
+              <span className={item.infoClass ? stylesSidebar.info : ''}>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
 
-      <div className={stylesSidebar.divs} onClick={handleLogout}>
-        <LogoutOutlined className={stylesSidebar.iconsSidebar} />
-        <span>Log Out</span>
+      <div style={{ padding: '0 0.5rem' }}>
+        <div className={stylesSidebar.divs} onClick={handleLogout}>
+          <LogoutOutlined className={stylesSidebar.iconsSidebar} />
+          <span>Log Out</span>
+        </div>
       </div>
     </div>
   );

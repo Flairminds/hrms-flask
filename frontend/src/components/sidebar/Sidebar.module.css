@@ -3,7 +3,7 @@
     height: 100%;
     background: #c6e0e7;
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
-    padding: 16px 8px;
+    /* padding: 16px 8px; */
     border-right: 1px solid #f0f0f0;
     overflow-y: auto;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -14,6 +14,8 @@
     display: flex;
     justify-content: center;
     margin-bottom: 1rem;
+    background: white;
+    padding: 0.5rem 0;
 }
 
 .logo {
@@ -24,6 +26,10 @@
 
 .logo:hover {
     transform: scale(1.05);
+}
+
+.menuItems {
+    padding: 0 1rem;
 }
 
 /* Responsive sidebar - adjust width for smaller screens */
