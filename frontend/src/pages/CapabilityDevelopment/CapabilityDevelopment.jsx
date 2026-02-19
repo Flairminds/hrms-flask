@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styles from './CapabilityDevelopment.module.css';
 import MySkillsTab from './components/MySkillsTab';
+import TeamSkillsTab from './components/TeamSkillsTab';
 import MyGoalsTab from './components/MyGoalsTab';
 import ReviewsFeedbackTab from './components/ReviewsFeedbackTab';
 import ScorecardTab from './components/ScorecardTab';
@@ -10,6 +11,7 @@ export const CapabilityDevelopment = () => {
 
     const tabs = [
         { id: 'skills', label: 'My Skills', icon: '🎯' },
+        { id: 'teamskills', label: 'Team Skills', icon: '👥' },
         { id: 'goals', label: 'My Goals', icon: '📋' },
         { id: 'feedback', label: 'Reviews & Feedback', icon: '💬' },
         { id: 'scorecard', label: 'Scorecard', icon: '📊' }
@@ -19,6 +21,8 @@ export const CapabilityDevelopment = () => {
         switch (activeTab) {
             case 'skills':
                 return <MySkillsTab />;
+            case 'teamskills':
+                return <TeamSkillsTab />;
             case 'goals':
                 return <MyGoalsTab />;
             case 'feedback':

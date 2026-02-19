@@ -590,6 +590,10 @@ export const updateMySkillsCapDev = (skills) =>
 export const getMasterSkills = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/master-skills`);
 
+// [Capability Dev] Get all active employees' skills + top-5 leaderboard
+export const getTeamSkills = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/team-skills`);
+
 // Legacy aliases (kept so other pages that import these still work unchanged)
 export const getSkillsForEmp = (employeeId) =>
   axiosInstance.get(`${API_BASE_URL}/skills/employee-skills/${employeeId}`);

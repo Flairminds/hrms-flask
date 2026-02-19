@@ -28,3 +28,9 @@ def update_my_skills():
 def get_master_skills():
     """Get the full list of master skills."""
     return SkillsController.get_master_skills()
+
+
+@capability_dev_skills_bp.route("/team-skills", methods=["GET"])
+def get_team_skills():
+    """Get all active employees' skills with leaderboard."""
+    return SkillsController.get_team_skills()

@@ -162,3 +162,97 @@ class SkillsService:
         except Exception as e:
             Logger.error("Error retrieving master skills", error=str(e))
             raise
+
+    @staticmethod
+    def get_team_skills() -> dict:
+        """
+        Return a flat list of all active employees' skills plus a
+        top-5 leaderboard scored by:  count * level_weight * avg_self_evaluation
+        where level_weight: Beginner=1, Intermediate=2, Expert=3 (unknown=1).
+        """
+        LEVEL_WEIGHT = {"Beginner": 1, "Intermediate": 2, "Expert": 3}
+
+        try:
+            rows = (
+                db.session.query(
+                    Employee.employee_id,
+                    Employee.first_name,
+                    Employee.last_name,
+                    Employee.employment_status,
+                    EmployeeSkill.skill_id,
+                    EmployeeSkill.skill_level,
+                    EmployeeSkill.skill_category,
+                    EmployeeSkill.self_evaluation,
+                    MasterSkill.skill_name,
+                )
+                .join(EmployeeSkill, Employee.employee_id == EmployeeSkill.employee_id)
+                .join(MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id)
+                .filter(Employee.employment_status.notin_(['Relieved', 'Absconding']))
+                .order_by(Employee.first_name, MasterSkill.skill_name)
+                .all()
+            )
+
+            skill_stats: dict = {}   # skill_id -> {name, count, total_weight, total_eval}
+            flat: list = []
+
+            for r in rows:
+                s_level = r.skill_level
+                s_category = r.skill_category
+                # backwards-compat
+                if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
+                    s_category = s_level
+                    s_level = None
+
+                flat.append({
+                    "employeeId": r.employee_id,
+                    "employeeName": f"{r.first_name} {r.last_name}".strip(),
+                    "skillId": r.skill_id,
+                    "skillName": r.skill_name,
+                    "skillCategory": s_category,
+                    "skillLevel": s_level,
+                    "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
+                })
+
+                # accumulate stats for leaderboard
+                if r.skill_id not in skill_stats:
+                    skill_stats[r.skill_id] = {
+                        "skillId": r.skill_id,
+                        "skillName": r.skill_name,
+                        "count": 0,
+                        "totalWeight": 0,
+                        "totalEval": 0,
+                        "evalCount": 0,
+                    }
+                stat = skill_stats[r.skill_id]
+                weight = LEVEL_WEIGHT.get(s_level, 1)
+                eval_val = float(r.self_evaluation) if r.self_evaluation else 0
+                stat["count"] += 1
+                stat["totalWeight"] += weight
+                stat["totalEval"] += eval_val
+                stat["evalCount"] += 1 if r.self_evaluation else 0
+
+            # compute score = count * avg_weight * avg_eval
+            leaderboard = []
+            for stat in skill_stats.values():
+                avg_weight = stat["totalWeight"] / stat["count"] if stat["count"] else 0
+                avg_eval = stat["totalEval"] / stat["evalCount"] if stat["evalCount"] else 1
+                score = round(stat["count"] * avg_weight * avg_eval, 2)
+                leaderboard.append({
+                    "skillId": stat["skillId"],
+                    "skillName": stat["skillName"],
+                    "employeeCount": stat["count"],
+                    "avgLevel": round(avg_weight, 2),
+                    "avgSelfEval": round(avg_eval, 2),
+                    "score": score,
+                })
+
+            top5 = sorted(leaderboard, key=lambda x: x["score"], reverse=True)[:5]
+
+            return {"skills": flat, "top5": top5}
+
+        except SQLAlchemyError as e:
+            Logger.error("DB error retrieving team skills", error=str(e))
+            raise
+        except Exception as e:
+            Logger.error("Error retrieving team skills", error=str(e))
+            raise

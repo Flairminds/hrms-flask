@@ -53,3 +53,14 @@ class SkillsController:
         except Exception as e:
             Logger.error("Error in get_master_skills", error=str(e))
             return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
+    def get_team_skills():
+        """GET /api/capability-dev/skills/team-skills"""
+        try:
+            result = SkillsService.get_team_skills()
+            return jsonify(result), 200
+        except Exception as e:
+            Logger.error("Error in get_team_skills", error=str(e))
+            return jsonify({"error": str(e)}), 500
