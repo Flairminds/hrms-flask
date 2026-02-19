@@ -436,22 +436,6 @@ class MasterRole(BaseModel):
         {}
     )
 
-
-class WorkCategories(BaseModel):
-    __tablename__ = 'work_categories'
-    category_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    category_name = db.Column(db.String(50), nullable=False, unique=True)
-
-
-class EmployeeAllocations(BaseModel):
-    __tablename__ = 'employee_allocations'
-    allocation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey('project_list.project_id'))
-    work_category_id = db.Column(db.Integer, db.ForeignKey('work_categories.category_id'))
-    allocation = db.Column(db.Numeric(3, 1))
-
-
 class EmployeeCredentials(BaseModel):
     __tablename__ = 'employee_credentials'
     employee_id = db.Column(db.String(20), primary_key=True)

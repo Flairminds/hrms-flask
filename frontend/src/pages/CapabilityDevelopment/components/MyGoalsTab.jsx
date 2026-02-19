@@ -59,19 +59,29 @@ const MyGoalsTab = () => {
         setSelectedGoal(null);
     };
 
+    const TYPE_LABEL = { skill: 'Skill Development', other: 'Other' };
+
     const columns = [
         {
             title: 'Goal Title',
-            dataIndex: 'title',
-            sorter: (a, b) => (a.title || '').localeCompare(b.title || ''),
-            render: (text) => <b>{text}</b>,
+            dataIndex: 'goalTitle',
+            sorter: (a, b) => (a.goalTitle || '').localeCompare(b.goalTitle || ''),
+            render: (text, record) => <b>{text || record.skillName || '-'}</b>,
         },
         {
             title: 'Type',
-            dataIndex: 'type',
-            filters: [...new Set(allGoals.map(g => g.type).filter(Boolean))].map(t => ({ text: t, value: t })),
-            onFilter: (value, record) => record.type === value,
-            render: (type) => type ? <Tag color="purple">{type}</Tag> : '-',
+            dataIndex: 'goalType',
+            filters: [
+                { text: 'Skill Development', value: 'skill' },
+                { text: 'Other', value: 'other' },
+            ],
+            onFilter: (value, record) => record.goalType === value,
+            render: (type) => type ? <Tag color="purple">{TYPE_LABEL[type] || type}</Tag> : '-',
+        },
+        {
+            title: 'Category',
+            dataIndex: 'goalCategory',
+            render: (cat) => cat || '-',
         },
         {
             title: 'Status',
@@ -91,8 +101,8 @@ const MyGoalsTab = () => {
         },
         {
             title: 'Progress',
-            dataIndex: 'progress',
-            sorter: (a, b) => (a.progress || 0) - (b.progress || 0),
+            dataIndex: 'progressPercentage',
+            sorter: (a, b) => (a.progressPercentage || 0) - (b.progressPercentage || 0),
             render: (progress) => (
                 <span>
                     <span style={{ fontSize: 'larger' }}>{progress ?? 0}</span>%
@@ -100,16 +110,16 @@ const MyGoalsTab = () => {
             ),
         },
         {
-            title: 'Due Date',
-            dataIndex: 'dueDate',
-            sorter: (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0),
+            title: 'Deadline',
+            dataIndex: 'deadline',
+            sorter: (a, b) => new Date(a.deadline || 0) - new Date(b.deadline || 0),
             render: (date) => date ? new Date(date).toLocaleDateString() : '-',
         },
         {
             title: '',
             key: 'actions',
             render: (_, record) => (
-                <Tooltip title="View / Edit">
+                <Tooltip title="View Details">
                     <Button
                         icon={<EyeOutlined />}
                         size="small"
@@ -123,8 +133,10 @@ const MyGoalsTab = () => {
     ];
 
     const filteredGoals = allGoals.filter(goal =>
-        goal.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-        goal.type?.toLowerCase().includes(searchText.toLowerCase())
+        goal.goalTitle?.toLowerCase().includes(searchText.toLowerCase()) ||
+        goal.skillName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        goal.goalType?.toLowerCase().includes(searchText.toLowerCase()) ||
+        goal.goalCategory?.toLowerCase().includes(searchText.toLowerCase())
     );
 
     return (

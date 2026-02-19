@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Modal, Form, Input, Select, InputNumber, DatePicker,
+    Modal, Form, Input, Select, DatePicker,
     Button, Tag, Descriptions, Popconfirm, message
 } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
     createGoalForSelf,
-    updateGoalDetails,
-    updateGoalProgress,
-    deleteGoal
+    deleteGoal,
+    getMasterSkills
 } from '../../../services/api';
 
 const { Option } = Select;
@@ -26,85 +25,84 @@ const STATUS_LABEL = {
     completed: 'Completed',
 };
 
+const GOAL_CATEGORIES = [
+    'Self-Training',
+    'Certification',
+    'Project Related Training',
+    'Other',
+];
+
 /**
- * Unified Goal Modal.
+ * Unified Goal Modal — Create & View/Delete only.
+ * Once a goal is created it cannot be edited.
  *
  * Props:
- *   visible     – boolean
- *   onClose     – () => void
- *   onSuccess   – () => void  (refresh table)
- *   goal        – goal object for view/edit, null for create
+ *   visible   – boolean
+ *   onClose   – () => void
+ *   onSuccess – () => void  (refresh table)
+ *   goal      – goal object (view mode) | null (create mode)
  */
 const CreateGoalModal = ({ visible, onClose, onSuccess, goal }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    // mode: 'view' | 'edit' | 'create'
-    const [mode, setMode] = useState('create');
+    const [masterSkills, setMasterSkills] = useState([]);
+    const [goalType, setGoalType] = useState(null);   // track for conditional skill field
 
-    // Determine mode whenever modal opens
+    const isCreate = !goal;
+
+    /* ── Fetch master skills once ── */
+    useEffect(() => {
+        getMasterSkills()
+            .then(res => {
+                const list = res.data?.data || [];
+                setMasterSkills(list.map(s => ({ value: s.SkillId, label: s.SkillName })));
+            })
+            .catch(() => message.error('Failed to load skills list'));
+    }, []);
+
+    /* ── Populate / reset form when modal opens ── */
     useEffect(() => {
         if (visible) {
             if (goal) {
-                setMode('view');
-                // Populate form for potential edit
-                form.setFieldsValue({
-                    goalType: goal.type || goal.goalType,
-                    goalTitle: goal.title || goal.goalTitle,
-                    goalDescription: goal.description || goal.goalDescription,
-                    goalCategory: goal.category || goal.goalCategory,
-                    deadline: goal.dueDate ? dayjs(goal.dueDate) : goal.deadline ? dayjs(goal.deadline) : null,
-                    status: goal.status,
-                    progress: goal.progress ?? goal.progressPercentage ?? 0,
-                });
+                setGoalType(goal.goalType || goal.type);
             } else {
-                setMode('create');
+                setGoalType(null);
                 form.resetFields();
             }
         }
     }, [visible, goal, form]);
 
     const handleClose = () => {
-        setMode('create');
         form.resetFields();
+        setGoalType(null);
         onClose();
     };
 
+    /* ── Create ── */
     const handleSubmit = async (values) => {
         setLoading(true);
         try {
             const payload = {
                 goalType: values.goalType,
                 goalTitle: values.goalTitle,
-                goalDescription: values.goalDescription,
-                goalCategory: values.goalCategory,
+                skillId: values.skillId || null,
+                goalDescription: values.goalDescription || '',
+                goalCategory: values.goalCategory || null,
                 deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null,
-                status: values.status,
-                progress: values.progress,
             };
-
-            if (mode === 'create') {
-                await createGoalForSelf(payload);
-                message.success('Goal created successfully');
-            } else if (mode === 'edit') {
-                await updateGoalDetails(goal.goalId, payload);
-                if (values.progress !== undefined) {
-                    await updateGoalProgress(goal.goalId, {
-                        progress: values.progress,
-                        notes: values.goalDescription
-                    });
-                }
-                message.success('Goal updated successfully');
-            }
+            await createGoalForSelf(payload);
+            message.success('Goal created successfully');
             onSuccess();
             handleClose();
         } catch (err) {
             console.error(err);
-            message.error(mode === 'create' ? 'Failed to create goal' : 'Failed to update goal');
+            message.error('Failed to create goal');
         } finally {
             setLoading(false);
         }
     };
 
+    /* ── Delete ── */
     const handleDelete = async () => {
         setLoading(true);
         try {
@@ -120,70 +118,89 @@ const CreateGoalModal = ({ visible, onClose, onSuccess, goal }) => {
         }
     };
 
-    /* ───────────── View mode ───────────── */
-    const renderViewContent = () => (
-        <>
-            <Descriptions bordered column={1} size="small">
-                <Descriptions.Item label="Type">
-                    <Tag color="purple">{goal?.type || goal?.goalType || '-'}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Category">
-                    {goal?.category || goal?.goalCategory || '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Status">
-                    <Tag color={STATUS_COLOR[goal?.status]}>
-                        {STATUS_LABEL[goal?.status] || goal?.status || '-'}
-                    </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Progress">
-                    {goal?.progress ?? goal?.progressPercentage ?? 0}%
-                </Descriptions.Item>
-                <Descriptions.Item label="Deadline">
-                    {goal?.dueDate
-                        ? new Date(goal.dueDate).toLocaleDateString()
-                        : goal?.deadline
-                            ? new Date(goal.deadline).toLocaleDateString()
-                            : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Description">
-                    {goal?.description || goal?.goalDescription || '-'}
-                </Descriptions.Item>
-            </Descriptions>
+    /* ─────────────────── VIEW mode ─────────────────── */
+    const renderViewContent = () => {
+        const deadline = goal?.dueDate || goal?.deadline;
 
-            <div style={{ marginTop: 18, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <Popconfirm
-                    title="Delete this goal?"
-                    description="This action cannot be undone."
-                    onConfirm={handleDelete}
-                    okText="Delete"
-                    okButtonProps={{ danger: true }}
-                    cancelText="Cancel"
-                >
-                    <Button danger icon={<DeleteOutlined />} loading={loading}>
-                        Delete
-                    </Button>
-                </Popconfirm>
-                <Button type="primary" icon={<EditOutlined />} onClick={() => setMode('edit')}>
-                    Edit
-                </Button>
-            </div>
-        </>
-    );
+        return (
+            <>
+                <Descriptions bordered column={1} size="small">
+                    <Descriptions.Item label="Type">
+                        <Tag color="purple">
+                            {(goal?.goalType || goal?.type) === 'skill' ? 'Skill Development' : 'Other'}
+                        </Tag>
+                    </Descriptions.Item>
 
-    /* ───────────── Create / Edit form ───────────── */
-    const renderForm = () => (
+                    <Descriptions.Item label="Title">
+                        {goal?.goalTitle || '-'}
+                    </Descriptions.Item>
+
+                    {(goal?.goalType || goal?.type) === 'skill' && goal?.skillName && (
+                        <Descriptions.Item label="Skill">
+                            {goal.skillName}
+                        </Descriptions.Item>
+                    )}
+
+                    <Descriptions.Item label="Category">
+                        {goal?.goalCategory || goal?.category || '-'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Status">
+                        <Tag color={STATUS_COLOR[goal?.status]}>
+                            {STATUS_LABEL[goal?.status] || goal?.status || '-'}
+                        </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Progress">
+                        {goal?.progress ?? goal?.progressPercentage ?? 0}%
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Deadline">
+                        {deadline ? new Date(deadline).toLocaleDateString() : '-'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Description">
+                        {goal?.description || goal?.goalDescription || '-'}
+                    </Descriptions.Item>
+                </Descriptions>
+
+                {/* <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Popconfirm
+                        title="Delete this goal?"
+                        description="This action cannot be undone."
+                        onConfirm={handleDelete}
+                        okText="Delete"
+                        okButtonProps={{ danger: true }}
+                        cancelText="Cancel"
+                    >
+                        <Button danger icon={<DeleteOutlined />} loading={loading}>
+                            Delete
+                        </Button>
+                    </Popconfirm>
+                </div> */}
+            </>
+        );
+    };
+
+    /* ─────────────────── CREATE form ─────────────────── */
+    const renderCreateForm = () => (
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            {/* Goal Type */}
             <Form.Item
                 name="goalType"
                 label="Goal Type"
-                rules={[{ required: true, message: 'Please select goal type' }]}
+                rules={[{ required: true, message: 'Please select a goal type' }]}
             >
-                <Select placeholder="Select type">
+                <Select
+                    placeholder="Select type"
+                    onChange={(val) => {
+                        setGoalType(val);
+                        // Clear the fields that depend on goal type
+                        form.setFieldsValue({ skillId: undefined, goalTitle: undefined });
+                    }}
+                >
                     <Option value="skill">Skill Development</Option>
                     <Option value="other">Other</Option>
                 </Select>
             </Form.Item>
 
+            {/* Title — always shown */}
             <Form.Item
                 name="goalTitle"
                 label="Title"
@@ -192,62 +209,68 @@ const CreateGoalModal = ({ visible, onClose, onSuccess, goal }) => {
                 <Input placeholder="Goal title" />
             </Form.Item>
 
-            <Form.Item name="goalCategory" label="Category">
-                <Input placeholder="e.g. Certification, Training" />
+            {/* Skill — only when type = skill */}
+            {goalType === 'skill' && (
+                <Form.Item
+                    name="skillId"
+                    label="Skill"
+                    rules={[{ required: true, message: 'Please select a skill' }]}
+                >
+                    <Select
+                        placeholder="Select a skill"
+                        showSearch
+                        filterOption={(input, option) =>
+                            option.children.toLowerCase().includes(input.toLowerCase())
+                        }
+                    >
+                        {masterSkills.map(s => (
+                            <Option key={s.value} value={s.value}>{s.label}</Option>
+                        ))}
+                    </Select>
+                </Form.Item>
+            )}
+
+            {/* Category dropdown */}
+            <Form.Item
+                name="goalCategory"
+                label="Category"
+                rules={[{ required: true, message: 'Please select a category' }]}
+            >
+                <Select placeholder="Select category">
+                    {GOAL_CATEGORIES.map(c => (
+                        <Option key={c} value={c}>{c}</Option>
+                    ))}
+                </Select>
             </Form.Item>
 
+            {/* Description */}
             <Form.Item name="goalDescription" label="Description">
                 <TextArea rows={3} placeholder="Describe the goal..." />
             </Form.Item>
 
+            {/* Deadline */}
             <Form.Item
                 name="deadline"
                 label="Deadline"
                 rules={[{ required: true, message: 'Please select a deadline' }]}
             >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker style={{ width: '100%' }} disabledDate={d => d && d < dayjs().startOf('day')} />
             </Form.Item>
-
-            {mode === 'edit' && (
-                <>
-                    <Form.Item name="status" label="Status">
-                        <Select>
-                            <Option value="pending">Pending</Option>
-                            <Option value="in_progress">In Progress</Option>
-                            <Option value="completed">Completed</Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="progress"
-                        label="Progress (%)"
-                        rules={[{
-                            validator: (_, v) => v >= 0 && v <= 100
-                                ? Promise.resolve()
-                                : Promise.reject(new Error('Must be 0–100'))
-                        }]}
-                    >
-                        <InputNumber min={0} max={100} style={{ width: '100%' }} />
-                    </Form.Item>
-                </>
-            )}
 
             <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <Button onClick={mode === 'edit' ? () => setMode('view') : handleClose}>
-                        Cancel
-                    </Button>
+                    <Button onClick={handleClose}>Cancel</Button>
                     <Button type="primary" htmlType="submit" loading={loading}>
-                        {mode === 'create' ? 'Create Goal' : 'Save Changes'}
+                        Create Goal
                     </Button>
                 </div>
             </Form.Item>
         </Form>
     );
 
-    const title = mode === 'create' ? 'Create New Goal'
-        : mode === 'edit' ? 'Edit Goal'
-            : (goal?.title || goal?.goalTitle || 'Goal Details');
+    const title = isCreate
+        ? 'Create New Goal'
+        : (goal?.skillName || goal?.title || goal?.goalTitle || 'Goal Details');
 
     return (
         <Modal
@@ -259,7 +282,7 @@ const CreateGoalModal = ({ visible, onClose, onSuccess, goal }) => {
             style={{ top: 15 }}
             destroyOnClose
         >
-            {mode === 'view' ? renderViewContent() : renderForm()}
+            {isCreate ? renderCreateForm() : renderViewContent()}
         </Modal>
     );
 };

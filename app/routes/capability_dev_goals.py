@@ -35,6 +35,11 @@ def update_goal(goal_id):
     """Update goal details"""
     return EnhancedGoalsController.update_goal(goal_id)
 
+@capability_dev_goals_bp.route("/goals/<int:goal_id>", methods=["DELETE"])
+def delete_goal(goal_id):
+    """Delete a goal"""
+    return EnhancedGoalsController.delete_goal(goal_id)
+
 @capability_dev_goals_bp.route("/goals/<int:goal_id>/progress", methods=["PUT"])
 def update_goal_progress(goal_id):
     """Update goal progress"""

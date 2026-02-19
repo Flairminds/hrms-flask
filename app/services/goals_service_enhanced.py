@@ -48,11 +48,11 @@ class EnhancedGoalsService:
             if not for_employee_id or not goal_type or not deadline:
                 raise ValueError("Missing required fields: forEmployeeId, goalType, deadline")
 
+            if not goal_title:
+                raise ValueError("goalTitle is required for all goals")
+
             if goal_type == "skill" and not skill_id:
                 raise ValueError("skillId is required for skill-type goals")
-            
-            if goal_type == "other" and not goal_title:
-                raise ValueError("goalTitle is required for other-type goals")
 
             # Validate deadline
             try:
@@ -320,6 +320,23 @@ class EnhancedGoalsService:
             raise
 
     @staticmethod
+    def delete_goal(goal_id: int) -> None:
+        """Delete a goal and its associated comments and reviews."""
+        try:
+            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            if not goal:
+                raise ValueError(f"Goal {goal_id} not found")
+
+            db.session.delete(goal)
+            db.session.commit()
+
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting goal", error=str(e), goal_id=goal_id)
+            raise
+
+
+    @staticmethod
     def add_goal_comment(goal_id: int, comment_text: str, commented_by_id: str) -> Dict:
         """Add a comment to a goal."""
         try:
@@ -463,7 +480,7 @@ class EnhancedGoalsService:
             "goalType": goal.goal_type,
             "skillId": goal.skill_id,
             "skillName": skill_name,
-            "goalTitle": goal.goalTitle,
+            "goalTitle": goal.goal_title,
             "goalDescription": goal.goal_description,
             "goalCategory": goal.goal_category,
             "status": goal.status,

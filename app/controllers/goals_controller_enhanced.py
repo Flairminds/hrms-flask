@@ -99,6 +99,19 @@ class EnhancedGoalsController:
 
     @staticmethod
     @jwt_required()
+    def delete_goal(goal_id):
+        """Delete a goal."""
+        try:
+            EnhancedGoalsService.delete_goal(goal_id)
+            return jsonify({"message": "Goal deleted successfully"}), 200
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            Logger.error("Error in delete_goal", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
     def add_goal_comment(goal_id):
         """Add comment to goal."""
         try:
