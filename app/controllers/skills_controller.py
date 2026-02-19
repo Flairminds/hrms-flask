@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import jsonify, request, g
 
 from ..services.skills_service import SkillsService
 
@@ -18,7 +18,8 @@ class SkillsController:
     def add_or_update_skills():
         try:
             data = request.get_json()
-            SkillsService.add_or_update_skills(data)
+            employee_id = g.employee_id
+            SkillsService.add_or_update_skills(data, employee_id)
             return jsonify({"message": "Skills added/updated successfully"}), 201
         except ValueError as ve:
             return jsonify({"error": str(ve)}), 400

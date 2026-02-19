@@ -38,7 +38,7 @@ def update_skill_score():
     return ReviewController.update_skill_score()
 
 
-@review_bp.route("/skills/employee", methods=["GET"])
-@roles_required(*ROLE_PERMISSIONS["hr"])
+@review_bp.route("/skills", methods=["GET"])
+@roles_required(*ROLE_PERMISSIONS["review"]['get_master_skills'])
 def get_skills():
     return ReviewController.get_master_skills()

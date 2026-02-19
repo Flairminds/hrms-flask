@@ -29,11 +29,13 @@ const AddEditSkillModal = ({ visible, onClose, skill, masterSkills, onSuccess })
         try {
             setLoading(true);
             const payload = {
-                employeeId,
-                skillId: values.skillId,
-                selfEvaluation: values.selfEvaluation,
-                skillLevel: values.skillLevel,
-                notes: values.notes
+                skills: [{
+                    employeeId,
+                    skillId: values.skillId,
+                    selfEvaluation: values.selfEvaluation,
+                    skillLevel: values.skillLevel,
+                    notes: values.notes
+                }]
             };
 
             await addUpdateSkill(payload);

@@ -592,7 +592,7 @@ export const getSkillsForAllEmp = () => {
 
 // Gets the master skills list
 export const getMasterSkills = () => {
-  return axiosInstance.get(`${API_BASE_URL}/review/master-skills`);
+  return axiosInstance.get(`${API_BASE_URL}/review/skills`);
 };
 
 

@@ -78,7 +78,7 @@ ROLE_PERMISSIONS = {
         "save_review": ["Admin", "HR"],
         "add_employee_skill": ["Admin", "HR"],
         "update_skill_score": ["Admin", "HR"],
-        "get_master_skills": ["Admin", "HR"]  # Master skills list
+        "get_master_skills": ["Admin", "HR", "Lead", "Employee"]  # Master skills list
     },
     
     # ===========================

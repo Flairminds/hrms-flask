@@ -41,11 +41,11 @@ const MySkillsTab = () => {
     const fetchMasterSkills = async () => {
         try {
             const response = await getMasterSkills();
-            const skillsList = response.data || [];
+            const skillsList = response.data.data || [];
             // Transform to options format
             const options = skillsList.map(skill => ({
-                value: skill.skill_id,
-                label: skill.skill_name
+                value: skill.SkillId,
+                label: skill.SkillName
             }));
             setMasterSkills(options);
         } catch (error) {

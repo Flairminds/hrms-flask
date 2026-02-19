@@ -291,6 +291,7 @@ class EmployeeSkill(BaseModel):
     self_evaluation = db.Column(db.Numeric(5, 2))
     score_by_lead = db.Column(db.Numeric(5, 2))
     full_stack_ready = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.String(512))
     
     __table_args__ = (
         db.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill'),

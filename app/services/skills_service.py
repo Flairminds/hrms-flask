@@ -57,7 +57,7 @@ class SkillsService:
             raise
 
     @staticmethod
-    def add_or_update_skills(payload: dict):
+    def add_or_update_skills(payload: dict, employee_id: str):
         """Add or update multiple skills for an employee using ORM."""
         Logger.info("Adding or updating employee skills")
         
@@ -65,24 +65,13 @@ class SkillsService:
             if not payload:
                 Logger.warning("Empty payload for add_or_update_skills")
                 raise ValueError("Request body is required")
-
-            employee_id = payload.get("EmployeeId")
+            
             skills = payload.get("skills", [])
-            qualification_year_month = payload.get("QualificationYearMonth")
-            full_stack_ready = payload.get("FullStackReady", 0)
 
             if not employee_id:
                 Logger.warning("Missing employee_id",
                              employee_id_present=bool(employee_id))
                 raise ValueError("EmployeeId is required")
-
-            if qualification_year_month:
-                try:
-                    datetime.strptime(qualification_year_month, "%Y-%m-%d")
-                except ValueError:
-                    Logger.warning("Invalid qualification date format",
-                                 qualification_year_month=qualification_year_month)
-                    raise ValueError("Invalid QualificationYearMonth format. Expected YYYY-MM.")
 
             # Get employee using ORM
             employee = Employee.query.filter_by(employee_id=employee_id).first()
@@ -90,42 +79,19 @@ class SkillsService:
                 Logger.warning("Employee not found", employee_id=employee_id)
                 raise ValueError(f"Employee {employee_id} not found")
 
-            # Update QualificationYearMonth on Employee using ORM
-            if qualification_year_month:
-                employee.qualification_year_month = qualification_year_month
-
-            # Update FullStackReady on Employee using ORM
-            employee.full_stack_ready = full_stack_ready
-
             # Upsert skills using ORM
             for skill in skills:
-                skill_id = skill.get("SkillId")
-                skill_level = skill.get("SkillLevel") # This is now Proficiency (Beginner, Intermediate, Expert)
-                skill_category = skill.get("SkillCategory") # This is now Category (Primary, Secondary, Cross Tech)
-                is_ready = skill.get("isReady", 0)
-                is_ready_date = skill.get("isReadyDate")
-                self_evaluation = skill.get("SelfEvaluation")
+                print(skill)
+                skill_id = skill.get("skillId")
+                skill_level = skill.get("skillLevel") # This is now Proficiency (Beginner, Intermediate, Expert)
+                skill_category = skill.get("skillCategory") # This is now Category (Primary, Secondary, Cross Tech)
+                self_evaluation = skill.get("selfEvaluation")
+                notes = skill.get("notes")
 
                 if not skill_id:
                     Logger.warning("Skill missing required fields",
                                  skill_id_present=bool(skill_id))
                     raise ValueError("Each skill must have SkillId")
-
-                if is_ready_date:
-                    try:
-                        if len(is_ready_date) == 10 and is_ready_date.count("-") == 2:
-                            datetime.strptime(is_ready_date, "%Y-%m-%d")
-                        else:
-                            is_ready_date = datetime.strptime(
-                                is_ready_date,
-                                "%a, %d %b %Y %H:%M:%S GMT",
-                            ).strftime("%Y-%m-%d")
-                    except ValueError:
-                        Logger.warning("Invalid date format for isReadyDate",
-                                     is_ready_date=is_ready_date)
-                        raise ValueError(f"Invalid date format: {is_ready_date}")
-                else:
-                    is_ready_date = datetime.utcnow().strftime("%Y-%m-%d")
 
                 # Check if the skill already exists using ORM
                 existing_emp_skill = EmployeeSkill.query.filter_by(
@@ -137,9 +103,8 @@ class SkillsService:
                     # Update existing using ORM
                     existing_emp_skill.skill_level = skill_level
                     existing_emp_skill.skill_category = skill_category
-                    existing_emp_skill.is_ready = is_ready
-                    existing_emp_skill.is_ready_date = is_ready_date
                     existing_emp_skill.self_evaluation = self_evaluation
+                    existing_emp_skill.notes = notes
                     Logger.debug("Updated existing skill",
                                employee_id=employee_id,
                                skill_id=skill_id)
@@ -150,9 +115,8 @@ class SkillsService:
                         skill_id=skill_id,
                         skill_level=skill_level,
                         skill_category=skill_category,
-                        is_ready=is_ready,
-                        is_ready_date=is_ready_date,
-                        self_evaluation=self_evaluation
+                        self_evaluation=self_evaluation,
+                        notes=notes
                     )
                     db.session.add(new_emp_skill)
                     Logger.debug("Added new skill",
@@ -171,13 +135,13 @@ class SkillsService:
             # 3. Find IDs that are in DB but NOT in payload
             ids_to_delete = current_db_skill_ids - payload_skill_ids
             
-            if ids_to_delete:
-                Logger.info("Deleting removed skills", employee_id=employee_id, count=len(ids_to_delete))
-                EmployeeSkill.query.filter(
-                    EmployeeSkill.employee_id == employee_id,
-                    EmployeeSkill.skill_id.in_(ids_to_delete)
-                ).delete(synchronize_session=False)
-            # --- DELETION LOGIC ENDS HERE ---
+            # if ids_to_delete:
+            #     Logger.info("Deleting removed skills", employee_id=employee_id, count=len(ids_to_delete))
+            #     EmployeeSkill.query.filter(
+            #         EmployeeSkill.employee_id == employee_id,
+            #         EmployeeSkill.skill_id.in_(ids_to_delete)
+            #     ).delete(synchronize_session=False)
+            # # --- DELETION LOGIC ENDS HERE ---
 
             db.session.commit()
             Logger.info("Employee skills updated successfully",
