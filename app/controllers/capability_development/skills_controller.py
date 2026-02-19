@@ -56,6 +56,20 @@ class SkillsController:
 
     @staticmethod
     @jwt_required()
+    def add_master_skill():
+        """POST /api/capability-dev/skills/master-skills"""
+        try:
+            payload = request.get_json() or {}
+            result = SkillsService.add_master_skill(payload)
+            return jsonify({"message": "Skill added successfully", "data": result}), 201
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            Logger.error("Error in add_master_skill", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
     def get_team_skills():
         """GET /api/capability-dev/skills/team-skills"""
         try:

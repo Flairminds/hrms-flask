@@ -590,6 +590,10 @@ export const updateMySkillsCapDev = (skills) =>
 export const getMasterSkills = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/master-skills`);
 
+// [Capability Dev] Add a new skill to master_skills table (HR/Admin)
+export const addMasterSkill = (payload) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/skills/master-skills`, payload);
+
 // [Capability Dev] Get all active employees' skills + top-5 leaderboard
 export const getTeamSkills = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/team-skills`);

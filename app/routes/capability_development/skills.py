@@ -30,6 +30,12 @@ def get_master_skills():
     return SkillsController.get_master_skills()
 
 
+@capability_dev_skills_bp.route("/master-skills", methods=["POST"])
+def add_master_skill():
+    """Add a new skill to the master skills table (HR/Admin)."""
+    return SkillsController.add_master_skill()
+
+
 @capability_dev_skills_bp.route("/team-skills", methods=["GET"])
 def get_team_skills():
     """Get all active employees' skills with leaderboard."""

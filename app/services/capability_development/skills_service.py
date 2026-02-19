@@ -156,12 +156,60 @@ class SkillsService:
         try:
             skills = MasterSkill.query.order_by(MasterSkill.skill_name).all()
             return [
-                {"skillId": s.skill_id, "skillName": s.skill_name}
+                {
+                    "skillId": s.skill_id,
+                    "skillName": s.skill_name,
+                    "skillType": s.skill_type,
+                    "skillCategory": s.skill_category,
+                    "isMasterSkill": bool(s.is_master_skill),
+                }
                 for s in skills
             ]
         except Exception as e:
             Logger.error("Error retrieving master skills", error=str(e))
             raise
+
+    @staticmethod
+    def add_master_skill(payload: dict) -> dict:
+        """
+        Add a new skill to master_skills table.
+        Raises ValueError if the skill_name already exists.
+        """
+        skill_name = (payload.get("skillName") or "").strip()
+        skill_type = (payload.get("skillType") or "Technical").strip()
+        skill_category = (payload.get("skillCategory") or "").strip() or None
+
+        if not skill_name:
+            raise ValueError("skillName is required")
+
+        existing = MasterSkill.query.filter(
+            db.func.lower(MasterSkill.skill_name) == skill_name.lower()
+        ).first()
+        if existing:
+            raise ValueError(f"Skill '{skill_name}' already exists")
+
+        try:
+            new_skill = MasterSkill(
+                skill_name=skill_name,
+                skill_type=skill_type,
+                skill_category=skill_category,
+                is_master_skill=True,
+            )
+            db.session.add(new_skill)
+            db.session.commit()
+            Logger.info("Master skill added", skill_name=skill_name)
+            return {
+                "skillId": new_skill.skill_id,
+                "skillName": new_skill.skill_name,
+                "skillType": new_skill.skill_type,
+                "skillCategory": new_skill.skill_category,
+                "isMasterSkill": True,
+            }
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error adding master skill", error=str(e))
+            raise
+
 
     @staticmethod
     def get_team_skills() -> dict:
