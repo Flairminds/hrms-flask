@@ -453,6 +453,18 @@ class ReportService:
 
                 is_holiday = row_date in holiday_dates if row_date else False
 
+                # --- Priority 2: Weekend or Holiday — not a working day ---
+                if is_weekend or is_holiday:
+                    new_row['Entry in Time'] = ''
+                    new_row['AM In'] = ''
+                    new_row['AM Out'] = ''
+                    new_row['PM In'] = ''
+                    new_row['PM Out'] = ''
+                    new_row['Remark'] = 'Holiday' if is_holiday else 'Weekend'
+                    new_row['Unpaid Status'] = ''
+                    attendance_data.append(new_row)
+                    continue
+                
                 # --- Priority 1: Leave is approved (Approved / Partial Approved) ---
                 approved_statuses = [LeaveStatus.APPROVED]
                 if leave_status in approved_statuses:
@@ -463,18 +475,6 @@ class ReportService:
                     new_row['PM In'] = ''
                     new_row['PM Out'] = ''
                     new_row['Remark'] = 'Approved Leave'
-                    attendance_data.append(new_row)
-                    continue
-
-                # --- Priority 2: Weekend or Holiday — not a working day ---
-                if is_weekend or is_holiday:
-                    new_row['Entry in Time'] = ''
-                    new_row['AM In'] = ''
-                    new_row['AM Out'] = ''
-                    new_row['PM In'] = ''
-                    new_row['PM Out'] = ''
-                    new_row['Remark'] = 'Holiday' if is_holiday else 'Weekend'
-                    new_row['Unpaid Status'] = ''
                     attendance_data.append(new_row)
                     continue
 

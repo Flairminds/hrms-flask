@@ -788,6 +788,72 @@ const AttendanceReportTab = () => {
     const [loading, setLoading] = useState(false);
     const [detailData, setDetailData] = useState([]);
     const [detailColumns, setDetailColumns] = useState([]);
+    const [summaryVisible, setSummaryVisible] = useState(false);
+
+    // Compute per-employee summary from detailData
+    const getSummaryData = () => {
+        const empMap = {};
+        detailData.forEach(row => {
+            const name = row['Employee Name'] || 'Unknown';
+            const empId = row['Employee ID'] || 'Unknown';
+            if (!empMap[empId]) {
+                empMap[empId] = {
+                    key: name,
+                    employeeId: empId,
+                    employeeName: name,
+                    totalDays: 0,
+                    workingDays: 0,
+                    weekends: 0,
+                    holidays: 0,
+                    workedDays: 0,
+                    paidLeaves: 0,
+                    unpaidLeaves: 0,
+                };
+            }
+            const s = empMap[empId];
+            const remark = (row['Remark'] || '').trim();
+            const unpaid = (row['Unpaid Status'] || '').trim();
+            s.totalDays++;
+            if (remark === 'Weekend') {
+                s.weekends++;
+            } else if (remark === 'Holiday') {
+                s.holidays++;
+            } else {
+                // It's a working day
+                s.workingDays++;
+                if (remark === 'Door Entry') {
+                    s.workedDays++;
+                } else if (remark === 'Approved Leave') {
+                    s.paidLeaves++;
+                } else if (unpaid === 'Unpaid') {
+                    s.unpaidLeaves++;
+                }
+            }
+        });
+        return Object.values(empMap).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+    };
+
+    const summaryColumns = [
+        { title: 'Employee ID', dataIndex: 'employeeId', key: 'employeeId', fixed: 'left', width: 100 },
+        { title: 'Employee Name', dataIndex: 'employeeName', key: 'employeeName', fixed: 'left', width: 160 },
+        { title: 'Total Days', dataIndex: 'totalDays', key: 'totalDays', align: 'center' },
+        { title: 'Working Days', dataIndex: 'workingDays', key: 'workingDays', align: 'center' },
+        { title: 'Weekends', dataIndex: 'weekends', key: 'weekends', align: 'center' },
+        { title: 'Holidays', dataIndex: 'holidays', key: 'holidays', align: 'center' },
+        {
+            title: 'Worked Days', dataIndex: 'workedDays', key: 'workedDays', align: 'center',
+            render: v => <Tag color="green">{v}</Tag>
+        },
+        {
+            title: 'Paid Leaves', dataIndex: 'paidLeaves', key: 'paidLeaves', align: 'center',
+            render: v => <Tag color="blue">{v}</Tag>
+        },
+        {
+            title: 'Unpaid Leaves', dataIndex: 'unpaidLeaves', key: 'unpaidLeaves', align: 'center',
+            render: v => v > 0 ? <Tag color="red">{v}</Tag> : <Tag color="default">{v}</Tag>
+        },
+    ];
+
 
     // Ordered exactly as they should appear in the table (keys must match raw data field names)
     const columnOrder = [
@@ -925,7 +991,7 @@ const AttendanceReportTab = () => {
                     const toDisplayKeys = sortedKeys.filter(key => columnOrder.includes(key));
 
                     // Keys that should have dropdown filters
-                    const filterableKeys = new Set(['Employee Name', 'Date', 'Unpaid Status', 'Remark']);
+                    const filterableKeys = new Set(['Employee ID', 'Employee Name', 'Date', 'Unpaid Status', 'Remark']);
 
                     const cols = toDisplayKeys.map(key => {
                         const col = {
@@ -933,7 +999,7 @@ const AttendanceReportTab = () => {
                             dataIndex: key,
                             key: key,
                             render: (text) => {
-                                if (key === 'Date') return convertDate(text);
+                                // if (key === 'Date') return convertDate(text);
                                 if (typeof text === 'object' && text !== null) return JSON.stringify(text);
                                 return text ?? '';
                             }
@@ -1109,8 +1175,15 @@ const AttendanceReportTab = () => {
 
     return (
         <div style={{ marginTop: '10px' }}>
-            <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
+                <Button
+                    type="default"
+                    onClick={() => setSummaryVisible(true)}
+                    disabled={detailData.length === 0}
+                >
+                    View Summary
+                </Button>
             </div>
             <Table
                 dataSource={detailData}
@@ -1120,6 +1193,49 @@ const AttendanceReportTab = () => {
                 loading={loading}
                 pagination={{ pageSize: 10 }}
             />
+
+            {/* Per-employee Summary Modal */}
+            <Modal
+                title="Attendance Summary"
+                open={summaryVisible}
+                onCancel={() => setSummaryVisible(false)}
+                footer={<></>}
+                width={1000}
+                style={{ top: 10 }}
+            >
+                <p>Total Employees: {getSummaryData().length}</p>
+                <Table
+                    dataSource={getSummaryData()}
+                    columns={summaryColumns}
+                    rowKey="employeeName"
+                    pagination={{ pageSize: 10 }}
+                    scroll={{ x: 'max-content' }}
+                    size="small"
+                // summary={(data) => {
+                //     const totals = data.reduce((acc, row) => ({
+                //         totalDays: acc.totalDays + row.totalDays,
+                //         workingDays: acc.workingDays + row.workingDays,
+                //         weekends: acc.weekends + row.weekends,
+                //         holidays: acc.holidays + row.holidays,
+                //         workedDays: acc.workedDays + row.workedDays,
+                //         paidLeaves: acc.paidLeaves + row.paidLeaves,
+                //         unpaidLeaves: acc.unpaidLeaves + row.unpaidLeaves,
+                //     }), { totalDays: 0, workingDays: 0, weekends: 0, holidays: 0, workedDays: 0, paidLeaves: 0, unpaidLeaves: 0 });
+                //     return (
+                //         <Table.Summary.Row style={{ fontWeight: 700, background: '#fafafa' }}>
+                //             <Table.Summary.Cell index={0}>Total</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={1} align="center">{totals.totalDays}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={2} align="center">{totals.workingDays}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={3} align="center">{totals.weekends}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={4} align="center">{totals.holidays}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={5} align="center">{totals.workedDays}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={6} align="center">{totals.paidLeaves}</Table.Summary.Cell>
+                //             <Table.Summary.Cell index={7} align="center">{totals.unpaidLeaves}</Table.Summary.Cell>
+                //         </Table.Summary.Row>
+                //     );
+                // }}
+                />
+            </Modal>
         </div>
     );
 };
