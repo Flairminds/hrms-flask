@@ -924,15 +924,30 @@ const AttendanceReportTab = () => {
 
                     const toDisplayKeys = sortedKeys.filter(key => columnOrder.includes(key));
 
-                    const cols = toDisplayKeys.map(key => ({
-                        title: columnDisplayNames[key] || key,
-                        dataIndex: key,
-                        key: key,
-                        render: (text) => {
-                            if (typeof text === 'object' && text !== null) return JSON.stringify(text);
-                            return text;
+                    // Keys that should have dropdown filters
+                    const filterableKeys = new Set(['Employee Name', 'Date', 'Unpaid Status', 'Remark']);
+
+                    const cols = toDisplayKeys.map(key => {
+                        const col = {
+                            title: columnDisplayNames[key] || key,
+                            dataIndex: key,
+                            key: key,
+                            render: (text) => {
+                                if (key === 'Date') return convertDate(text);
+                                if (typeof text === 'object' && text !== null) return JSON.stringify(text);
+                                return text ?? '';
+                            }
+                        };
+
+                        if (filterableKeys.has(key)) {
+                            const uniqueVals = [...new Set(data.map(r => r[key]).filter(v => v !== null && v !== undefined && v !== ''))];
+                            col.filters = uniqueVals.map(v => ({ text: String(v), value: String(v) }));
+                            col.onFilter = (value, record) => String(record[key] ?? '') === value;
+                            col.filterSearch = uniqueVals.length > 8;  // show search box if many options
                         }
-                    }));
+
+                        return col;
+                    });
                     setDetailColumns(cols);
                 }
             } else {
@@ -1024,7 +1039,7 @@ const AttendanceReportTab = () => {
 
     if (viewMode === 'list') {
         return (
-            <div style={{ marginTop: '20px' }}>
+            <div style={{ marginTop: '10px' }}>
                 <Card title="Generate Attendance Report" style={{ marginBottom: 20 }}>
                     <div style={{ display: 'flex', gap: 20, alignItems: 'end', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -1093,7 +1108,7 @@ const AttendanceReportTab = () => {
     }
 
     return (
-        <div style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '10px' }}>
             <div style={{ marginBottom: '15px' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
             </div>
