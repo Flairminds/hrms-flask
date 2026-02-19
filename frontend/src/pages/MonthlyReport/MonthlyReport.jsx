@@ -6,6 +6,7 @@ import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { convertDate } from "../../util/helperFunctions";
+import { LEAVE_STATUS } from "../../util/helper";
 
 const { confirm } = Modal;
 
@@ -807,6 +808,7 @@ const AttendanceReportTab = () => {
                     holidays: 0,
                     workedDays: 0,
                     paidLeaves: 0,
+                    unapprovedLeaves: 0,
                     unpaidLeaves: 0,
                 };
             }
@@ -827,6 +829,9 @@ const AttendanceReportTab = () => {
                     s.paidLeaves++;
                 } else if (unpaid === 'Unpaid') {
                     s.unpaidLeaves++;
+                    if ([LEAVE_STATUS.PENDING, LEAVE_STATUS.PARTIAL_APPROVED].includes(row['Leave Status'])) {
+                        s.unapprovedLeaves++;
+                    }
                 }
             }
         });
@@ -847,6 +852,10 @@ const AttendanceReportTab = () => {
         {
             title: 'Paid Leaves', dataIndex: 'paidLeaves', key: 'paidLeaves', align: 'center',
             render: v => <Tag color="blue">{v}</Tag>
+        },
+        {
+            title: 'Unapproved Leaves', dataIndex: 'unapprovedLeaves', key: 'unapprovedLeaves', align: 'center',
+            render: v => v > 0 ? <Tag color="red">{v}</Tag> : <Tag color="default">{v}</Tag>
         },
         {
             title: 'Unpaid Leaves', dataIndex: 'unpaidLeaves', key: 'unpaidLeaves', align: 'center',
