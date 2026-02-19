@@ -310,12 +310,14 @@ def delete_door_entry_mapping(employee_id):
 def generate_attendance_report():
     """
     Generate Monthly Attendance Report by merging Leave and Door Entry reports.
-    Body: { "leave_report_id": <id>, "door_report_id": <id> }
+    Body: { "leave_report_id": <id>, "door_report_id": <id>, "month": MM, "year": YYYY }
     """
     try:
         data = request.get_json()
         leave_report_id = data.get('leave_report_id')
         door_report_id = data.get('door_report_id')
+        month = data.get('month')   # Optional: user-selected month
+        year = data.get('year')     # Optional: user-selected year
         
         if not leave_report_id or not door_report_id:
             return jsonify({'success': False, 'message': "Leave Report ID and Door Report ID are required"}), 400
@@ -325,7 +327,9 @@ def generate_attendance_report():
         result = ReportService.generate_attendance_report(
             leave_report_id=leave_report_id, 
             door_report_id=door_report_id, 
-            user_id=current_user_id
+            user_id=current_user_id,
+            month=int(month) if month else None,
+            year=int(year) if year else None
         )
         
         return jsonify({'success': True, 'data': result, 'message': 'Attendance Report generated successfully'}), 200

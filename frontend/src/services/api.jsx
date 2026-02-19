@@ -467,10 +467,12 @@ export const deleteDoorEntryMapping = (employeeId) => {
 };
 
 // Generates an attendance report by merging leave and door entry reports.
-export const generateAttendanceReport = (leaveReportId, doorReportId) => {
+export const generateAttendanceReport = (leaveReportId, doorReportId, month, year) => {
   return axiosInstance.post(`${API_BASE_URL}/reports/attendance-report/generate`, {
     leave_report_id: leaveReportId,
-    door_report_id: doorReportId
+    door_report_id: doorReportId,
+    month: month,
+    year: year
   });
 };
 

@@ -375,7 +375,7 @@ class ReportService:
             Logger.error("Error processing door entry report", error=str(e))
             raise
     @staticmethod
-    def generate_attendance_report(leave_report_id: int, door_report_id: int, user_id: str) -> Dict[str, Any]:
+    def generate_attendance_report(leave_report_id: int, door_report_id: int, user_id: str, month: int = None, year: int = None) -> Dict[str, Any]:
         """
         Merges a Monthly Leave Report and a Monthly Door Entry Report to create a Monthly Attendance Report.
         Uses DoorEntryNamesMapping to link Employee IDs to Door System Names.
@@ -548,9 +548,12 @@ class ReportService:
             ist = pytz.timezone('Asia/Kolkata')
             generated_at_ist = datetime.now(ist)
             
-            # Construct Report For string
-            # Likely same as Leave Report
-            report_for_str = leave_report.report_for
+            # Construct Report For string — use user-selected month/year if provided
+            if month and year:
+                from calendar import month_name
+                report_for_str = f"{month_name[month]} {year}"
+            else:
+                report_for_str = leave_report.report_for
 
             new_report = Reports(
                 report_type='Monthly Attendance Report',

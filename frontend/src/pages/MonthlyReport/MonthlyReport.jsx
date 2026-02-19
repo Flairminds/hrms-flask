@@ -781,6 +781,10 @@ const AttendanceReportTab = () => {
     const [selectedLeaveReport, setSelectedLeaveReport] = useState(null);
     const [selectedDoorReport, setSelectedDoorReport] = useState(null);
 
+    // Month/Year for report generation
+    const [genInMonth, setGenInMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
+    const [genInYear, setGenInYear] = useState(new Date().getFullYear());
+
     const [loading, setLoading] = useState(false);
     const [detailData, setDetailData] = useState([]);
     const [detailColumns, setDetailColumns] = useState([]);
@@ -858,9 +862,10 @@ const AttendanceReportTab = () => {
             return;
         }
 
+        const monthIndex = months.indexOf(genInMonth) + 1;
         setLoading(true);
         try {
-            const res = await generateAttendanceReport(selectedLeaveReport, selectedDoorReport);
+            const res = await generateAttendanceReport(selectedLeaveReport, selectedDoorReport, monthIndex, genInYear);
             if (res.data.success) {
                 toast.success("Attendance Report Generated Successfully");
                 fetchLists();
@@ -988,6 +993,7 @@ const AttendanceReportTab = () => {
     };
 
     const columns = [
+        { title: 'Report Type', dataIndex: 'report_type', key: 'report_type' },
         { title: 'Report For', dataIndex: 'report_for', key: 'report_for' },
         { title: 'Generated At', dataIndex: 'generated_at', key: 'generated_at', render: (text) => convertDate(text, true) },
         {
@@ -1007,7 +1013,22 @@ const AttendanceReportTab = () => {
         return (
             <div style={{ marginTop: '20px' }}>
                 <Card title="Generate Attendance Report" style={{ marginBottom: 20 }}>
-                    <div style={{ display: 'flex', gap: 20, alignItems: 'end' }}>
+                    <div style={{ display: 'flex', gap: 20, alignItems: 'end', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <label>Report Month:</label>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 130 }}>
+                                    {months.map((m, index) => (
+                                        <Select.Option key={index} value={m}>{m}</Select.Option>
+                                    ))}
+                                </Select>
+                                <Select value={genInYear} onChange={setGenInYear} style={{ width: 90 }}>
+                                    {years.map((y, index) => (
+                                        <Select.Option key={index} value={y}>{y}</Select.Option>
+                                    ))}
+                                </Select>
+                            </div>
+                        </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                             <label>Select Monthly Leave Report:</label>
                             <Select
