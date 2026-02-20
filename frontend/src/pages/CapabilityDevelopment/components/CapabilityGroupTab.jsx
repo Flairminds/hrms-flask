@@ -176,12 +176,15 @@ const CapabilityGroupTab = () => {
     const groupColumns = [
         {
             title: 'Group Name', dataIndex: 'group_name', key: 'group_name',
+            width: 200,
             sorter: (a, b) => a.group_name.localeCompare(b.group_name),
             render: name => <Text strong>{name}</Text>
         },
         {
             title: 'Description', dataIndex: 'description', key: 'description',
-            render: d => d || <Text type="secondary">—</Text>
+            render: d => d
+                ? <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{d}</span>
+                : <Text type="secondary">—</Text>
         },
         {
             title: 'Status', dataIndex: 'is_active', key: 'is_active',
@@ -302,7 +305,7 @@ const CapabilityGroupTab = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                         <div>
-                            <Title level={5} style={{ margin: 0 }}>Master List</Title>
+                            {/* <Title level={5} style={{ margin: 0 }}>Master List</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{groups.length} groups</Text>
                         </div>
                         {isAdminOrHR && (
@@ -331,7 +334,7 @@ const CapabilityGroupTab = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                         <div>
-                            <Title level={5} style={{ margin: 0 }}>Current Assignments</Title>
+                            {/* <Title level={5} style={{ margin: 0 }}>Current Assignments</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{assignments.length} employees assigned</Text>
                         </div>
                         {isAdminOrHR && (
@@ -363,7 +366,7 @@ const CapabilityGroupTab = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                         <div>
-                            <Title level={5} style={{ margin: 0 }}>History</Title>
+                            {/* <Title level={5} style={{ margin: 0 }}>History</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{history.length} records</Text>
                         </div>
                         <Select
