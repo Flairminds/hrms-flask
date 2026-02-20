@@ -163,12 +163,14 @@ class LeaveTransactionService:
                 is_lateral = lateral_info.lateral_hire if lateral_info else False
                 
                 if not is_lateral and employee and employee.date_of_joining:
-                    # General 12-month restriction
-                    if (datetime.now().date() - employee.date_of_joining).days < 360:
+                    # General 12-month restriction — use IST to be consistent with application_date
+                    ist_today = (datetime.utcnow() + timedelta(minutes=330)).date()
+                    if (ist_today - employee.date_of_joining).days < 360:
                         raise ValueError("Before Twelve Months of Joining, you cannot apply for Work From Home.")
 
-                # Time Validations for Current Date
-                current_time = datetime.now().time()
+                # Time Validations for Current Date — always in IST (UTC+5:30)
+                ist_now = datetime.utcnow() + timedelta(minutes=330)
+                current_time = ist_now.time()
                 if app_date_only == from_date_only:
                     if no_of_days >= 1.0: # Full Day
                         if current_time > time(9, 30):
