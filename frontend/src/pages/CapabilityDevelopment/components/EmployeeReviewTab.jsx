@@ -13,6 +13,7 @@ import {
     getAllEmployees
 } from '../../../services/api';
 import dayjs from 'dayjs';
+import ReviewSummaryModal from './ReviewSummaryModal';
 
 const { Text, Title, Link } = Typography;
 const { Option } = Select;
@@ -29,6 +30,7 @@ const EmployeeReviewTab = () => {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
+    const [summaryModalOpen, setSummaryModalOpen] = useState(false);
     const [editingReview, setEditingReview] = useState(null);
     const [form] = Form.useForm();
     const [employees, setEmployees] = useState([]);
@@ -256,9 +258,14 @@ const EmployeeReviewTab = () => {
                     />
                 </Space>
                 {canManage && (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                        Add Review
-                    </Button>
+                    <Space>
+                        <Button onClick={() => setSummaryModalOpen(true)}>
+                            Review Summary
+                        </Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+                            Add Review
+                        </Button>
+                    </Space>
                 )}
             </div>
 
@@ -268,6 +275,13 @@ const EmployeeReviewTab = () => {
                 rowKey="review_id"
                 loading={loading}
                 pagination={{ pageSize: 10 }}
+            />
+
+            <ReviewSummaryModal
+                visible={summaryModalOpen}
+                onClose={() => setSummaryModalOpen(false)}
+                employees={employees}
+                reviews={reviews}
             />
 
             <Modal
