@@ -331,6 +331,8 @@ const EmployeeReviewTab = () => {
                             <Option value="Pending">Pending</Option>
                             <Option value="Reviewed">Reviewed</Option>
                             <Option value="Extended">Extended</Option>
+                            <Option value="Scheduled">Scheduled</Option>
+                            <Option value="Cancelled">Cancelled</Option>
                         </Select>
                     </Form.Item>
 
