@@ -127,11 +127,24 @@ export const getLeaveDetails = (employeeId, year) => {
 };
 
 
-// 6.Get Holid  ay details- Retrieves the list of company holidays.
+// 6.Get Holiday details- Retrieves the list of company holidays.
 export const holidayListData = () => {
   const res = axiosInstance.get(`${API_BASE_URL}/leave/get-holidays`)
   return res;
 }
+
+// Holiday Management APIs (HR/Admin only)
+export const getAllHolidays = () =>
+  axiosInstance.get(`${API_BASE_URL}/leave/get-all-holidays`);
+
+export const addHoliday = (payload) =>
+  axiosInstance.post(`${API_BASE_URL}/leave/add-holiday`, payload);
+
+export const updateHoliday = (holidayId, payload) =>
+  axiosInstance.put(`${API_BASE_URL}/leave/update-holiday/${holidayId}`, payload);
+
+export const deleteHoliday = (holidayId) =>
+  axiosInstance.delete(`${API_BASE_URL}/leave/delete-holiday/${holidayId}`);
 
 // 7.GetTeamLead :  Gets the team lead for a specific employee and year.
 export const getTeamLead = (employeeId, year) => {

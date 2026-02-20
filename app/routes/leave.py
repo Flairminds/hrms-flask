@@ -50,3 +50,25 @@ def get_leave_transactions_by_approver():
 def get_people_on_leave():
     return LeaveController.get_people_on_leave()
 
+
+# ---- Holiday Management (HR/Admin only) ----
+
+@leave_bp.route('/get-all-holidays', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['manage_holidays'])
+def get_all_holidays():
+    return LeaveController.get_all_holidays()
+
+@leave_bp.route('/add-holiday', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['leave']['manage_holidays'])
+def add_holiday():
+    return LeaveController.add_holiday()
+
+@leave_bp.route('/update-holiday/<int:holiday_id>', methods=['PUT'])
+@roles_required(*ROLE_PERMISSIONS['leave']['manage_holidays'])
+def update_holiday(holiday_id):
+    return LeaveController.update_holiday(holiday_id)
+
+@leave_bp.route('/delete-holiday/<int:holiday_id>', methods=['DELETE'])
+@roles_required(*ROLE_PERMISSIONS['leave']['manage_holidays'])
+def delete_holiday(holiday_id):
+    return LeaveController.delete_holiday(holiday_id)

@@ -52,3 +52,52 @@ class LeaveConfigService:
             db.session.rollback()
             Logger.error("Error inserting holiday", holiday_name=holiday_name, error=str(e))
             return False
+
+    @staticmethod
+    def get_all_holidays() -> List[Dict[str, Any]]:
+        """
+        Retrieves all non-deleted holidays (for HR management view).
+        """
+        try:
+            holidays = Holiday.query.filter(
+                Holiday.is_deleted == False
+            ).order_by(Holiday.holiday_date.desc()).all()
+            return holidays
+        except Exception as e:
+            Logger.error("Error retrieving all holidays", error=str(e))
+            raise e
+
+    @staticmethod
+    def update_holiday(holiday_id: int, holiday_date: datetime, holiday_name: str) -> bool:
+        """
+        Updates an existing holiday's date and name.
+        """
+        try:
+            holiday = Holiday.query.filter_by(holiday_id=holiday_id, is_deleted=False).first()
+            if not holiday:
+                return False
+            holiday.holiday_date = holiday_date
+            holiday.holiday_name = holiday_name
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating holiday", holiday_id=holiday_id, error=str(e))
+            return False
+
+    @staticmethod
+    def delete_holiday(holiday_id: int) -> bool:
+        """
+        Soft-deletes a holiday by setting is_deleted = True.
+        """
+        try:
+            holiday = Holiday.query.filter_by(holiday_id=holiday_id, is_deleted=False).first()
+            if not holiday:
+                return False
+            holiday.is_deleted = True
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting holiday", holiday_id=holiday_id, error=str(e))
+            return False

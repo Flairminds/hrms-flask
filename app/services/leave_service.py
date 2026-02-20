@@ -79,6 +79,18 @@ class LeaveService:
         return LeaveConfigService.insert_holiday(holiday_date, holiday_name)
 
     @staticmethod
+    def get_all_holidays():
+        return LeaveConfigService.get_all_holidays()
+
+    @staticmethod
+    def update_holiday(holiday_id: int, holiday_date: date, holiday_name: str) -> bool:
+        return LeaveConfigService.update_holiday(holiday_id, holiday_date, holiday_name)
+
+    @staticmethod
+    def delete_holiday(holiday_id: int) -> bool:
+        return LeaveConfigService.delete_holiday(holiday_id)
+
+    @staticmethod
     def get_employee_roles(employee_id: str) -> List[Dict[str, str]]:
         return LeaveQueryService.get_employee_roles(employee_id)
 

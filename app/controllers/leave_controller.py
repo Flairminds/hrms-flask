@@ -218,6 +218,82 @@ class LeaveController:
             }), 500
 
     @staticmethod
+    def get_all_holidays():
+        """Returns full list of all non-deleted holidays for HR management."""
+        Logger.info("Get all holidays (manage) request received")
+        try:
+            holidays = LeaveService.get_all_holidays()
+            return jsonify([{
+                "holiday_id": h.holiday_id,
+                "holiday_date": str(h.holiday_date),
+                "holiday_name": h.holiday_name
+            } for h in holidays]), 200
+        except Exception as e:
+            Logger.error("Unexpected error fetching all holidays", error=str(e))
+            return jsonify({"Message": "An error occurred while fetching holidays."}), 500
+
+    @staticmethod
+    def add_holiday():
+        """Adds a new holiday. HR/Admin only."""
+        Logger.info("Add holiday request received")
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"Message": "Request body must be JSON"}), 400
+            holiday_date_str = data.get('holiday_date')
+            holiday_name = data.get('holiday_name', '').strip()
+            if not holiday_date_str or not holiday_name:
+                return jsonify({"Message": "holiday_date and holiday_name are required"}), 400
+            from datetime import datetime
+            holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
+            success = LeaveService.insert_holiday(holiday_date, holiday_name)
+            if success:
+                return jsonify({"Message": "Holiday added successfully"}), 201
+            return jsonify({"Message": "Failed to add holiday"}), 500
+        except ValueError as ve:
+            return jsonify({"Message": f"Invalid date format: {str(ve)}"}), 400
+        except Exception as e:
+            Logger.error("Unexpected error adding holiday", error=str(e))
+            return jsonify({"Message": "An error occurred while adding the holiday."}), 500
+
+    @staticmethod
+    def update_holiday(holiday_id):
+        """Updates an existing holiday. HR/Admin only."""
+        Logger.info("Update holiday request received", holiday_id=holiday_id)
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"Message": "Request body must be JSON"}), 400
+            holiday_date_str = data.get('holiday_date')
+            holiday_name = data.get('holiday_name', '').strip()
+            if not holiday_date_str or not holiday_name:
+                return jsonify({"Message": "holiday_date and holiday_name are required"}), 400
+            from datetime import datetime
+            holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
+            success = LeaveService.update_holiday(int(holiday_id), holiday_date, holiday_name)
+            if success:
+                return jsonify({"Message": "Holiday updated successfully"}), 200
+            return jsonify({"Message": "Holiday not found or already deleted"}), 404
+        except ValueError as ve:
+            return jsonify({"Message": f"Invalid data: {str(ve)}"}), 400
+        except Exception as e:
+            Logger.error("Unexpected error updating holiday", holiday_id=holiday_id, error=str(e))
+            return jsonify({"Message": "An error occurred while updating the holiday."}), 500
+
+    @staticmethod
+    def delete_holiday(holiday_id):
+        """Soft-deletes a holiday. HR/Admin only."""
+        Logger.info("Delete holiday request received", holiday_id=holiday_id)
+        try:
+            success = LeaveService.delete_holiday(int(holiday_id))
+            if success:
+                return jsonify({"Message": "Holiday deleted successfully"}), 200
+            return jsonify({"Message": "Holiday not found or already deleted"}), 404
+        except Exception as e:
+            Logger.error("Unexpected error deleting holiday", holiday_id=holiday_id, error=str(e))
+            return jsonify({"Message": "An error occurred while deleting the holiday."}), 500
+
+    @staticmethod
     def send_leave_email_report():
         """Trigger an immediate daily leave email report."""
         from ..services.email_service import process_leave_email

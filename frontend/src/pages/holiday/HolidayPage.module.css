@@ -76,3 +76,12 @@
 .headingText {
   font-size: 16px;
 }
+
+.restrictedRow {
+  background-color: #fffbe6;
+  opacity: 0.85;
+}
+
+.restrictedRow:hover>td {
+  background-color: #fff7cc !important;
+}

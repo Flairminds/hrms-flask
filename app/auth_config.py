@@ -56,7 +56,8 @@ ROLE_PERMISSIONS = {
         "get_leave_cards": ["Admin", "HR", "Lead", "Employee"],
         "get_leave_transactions_by_approver": ["Admin", "HR", "Lead"],
         "leave_records_mail": ["Admin", "HR", "Lead"],  # Email reports
-        "people_on_leave": ["Admin", "HR", "Lead", "Employee"]  # Dashboard widget
+        "people_on_leave": ["Admin", "HR", "Lead", "Employee"],  # Dashboard widget
+        "manage_holidays": ["Admin", "HR"]  # Add/Edit/Delete holidays
     },
     
     # ===========================
