@@ -732,6 +732,19 @@ class LeaveQueryService:
             results = query.all()
             Logger.info(f"Retrieved {len(results)} leave transactions")
 
+            # ── CompOffTransaction: 1-to-many, must be fetched separately ──
+            leave_tran_ids = [row.leave_tran_id for row in results]
+            comp_off_map = {}
+            if leave_tran_ids:
+                co_details = db.session.query(CompOffTransaction).filter(
+                    CompOffTransaction.leave_tran_id.in_(leave_tran_ids)
+                ).all()
+                for co in co_details:
+                    comp_off_map.setdefault(co.leave_tran_id, []).append({
+                        'compOffDate': co.comp_off_date.strftime('%Y-%m-%d') if co.comp_off_date else '',
+                        'numberOfHours': co.duration or ''
+                    })
+
             # Format results
             formatted_results = []
             for row in results:
@@ -763,6 +776,7 @@ class LeaveQueryService:
                     'compOffDate': row.comp_off_date,
                     'compOffTime': str(row.comp_off_time) if row.comp_off_time else '',
                     'workedDate': row.worked_date,
+                    'compOffTransactions': comp_off_map.get(row.leave_tran_id, []),
                     'approverName': row.approver_name or 'N/A'
                 })
 

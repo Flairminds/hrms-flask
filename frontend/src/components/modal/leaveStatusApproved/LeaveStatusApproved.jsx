@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Modal, Descriptions, Input } from 'antd';
 import styles from './LeaveStatusApproved.module.css';
+import { convertDate, getWeekDay } from '../../../util/helperFunctions';
 
 export const LeaveStatusApproved = ({ isLeaveApprovalModalOpen, setIsLeaveApprovalModalOpen, employee }) => {
 
@@ -42,8 +43,8 @@ export const LeaveStatusApproved = ({ isLeaveApprovalModalOpen, setIsLeaveApprov
               employee.leaveStatus === 'Pending' ? styles.pendingLeave :
                 employee.leaveStatus === 'Approved' ? styles.approvedLeave :
                   employee.leaveStatus === 'Reject' ? styles.rejectLeave :
-                  employee.leaveStatus === 'Partial Approved' ? styles.partialApprovedLeave :
-                    ''
+                    employee.leaveStatus === 'Partial Approved' ? styles.partialApprovedLeave :
+                      ''
             }
             style={{ cursor: 'default' }}
           >
@@ -68,6 +69,31 @@ export const LeaveStatusApproved = ({ isLeaveApprovalModalOpen, setIsLeaveApprov
         )}
         <Descriptions.Item label="Approved By" labelStyle={{ fontWeight: 'bold' }}>{employee.approvedBy}</Descriptions.Item>
       </Descriptions>
+
+      {employee.leaveTypeName === 'Customer Approved Comp-off' &&
+        employee.compOffTransactions?.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Comp Off Details</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e8e8e8' }}>
+              <thead>
+                <tr style={{ background: '#fafafa' }}>
+                  <th style={{ padding: '8px 16px', border: '1px solid #e8e8e8', textAlign: 'left' }}>Comp Off Date</th>
+                  <th style={{ padding: '8px 16px', border: '1px solid #e8e8e8', textAlign: 'left' }}>Hours</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employee.compOffTransactions.map((t, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '8px 16px', border: '1px solid #e8e8e8' }}>
+                      {convertDate(t.compOffDate)} ({getWeekDay(t.compOffDate)})
+                    </td>
+                    <td style={{ padding: '8px 16px', border: '1px solid #e8e8e8' }}>{t.numberOfHours}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
     </Modal>
   );
 };

@@ -60,27 +60,30 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
     "Visiting Client Location",
     "Customer Holiday",
     "Working Late Today"
-  ].includes(employee.leaveTypeName);
+  ].includes(employee.leaveTypeName || employee.leaveName);
+
+  // Normalize leave type name — approver endpoint uses `leaveTypeName`, HR uses `leaveName`
+  const leaveTypeName = employee.leaveTypeName || employee.leaveName || '';
 
   // Update allChecked logic to include any new checkboxes
   const allChecked = informedCustomer && communicatedWithinTeam && handedOverResponsibilities;
-  const customerApprovedChecked = employee.leaveTypeName === 'Customer Approved Comp-off' && informedCustomer;
-  const workFromHomeChecked = employee.leaveTypeName === 'Work From Home' && informedCustomer;
-  const customerApprovedWFHChecked = employee.leaveTypeName === 'Customer Approved Work From Home' && informedCustomer;
+  const customerApprovedChecked = leaveTypeName === 'Customer Approved Comp-off' && informedCustomer;
+  const workFromHomeChecked = leaveTypeName === 'Work From Home' && informedCustomer;
+  const customerApprovedWFHChecked = leaveTypeName === 'Customer Approved Work From Home' && informedCustomer;
 
   const enableApproveButton = shouldShowCheckboxes
-    ? (employee.leaveTypeName === 'Customer Approved Comp-off'
+    ? (leaveTypeName === 'Customer Approved Comp-off'
       ? customerApprovedChecked
-      : employee.leaveTypeName === 'Work From Home'
+      : leaveTypeName === 'Work From Home'
         ? true
-        : employee.leaveTypeName === 'Customer Approved Work From Home'
+        : leaveTypeName === 'Customer Approved Work From Home'
           ? customerApprovedWFHChecked
           : allChecked)
     : true;
 
-  const showWorkingLateDetails = employee.leaveTypeName === "Working Late Today";
-  const showCustomerHolidayDetails = employee.leaveTypeName === "Customer Holiday";
-  const showCompOffDetails = employee.leaveTypeName === "Customer Approved Comp-off";
+  const showWorkingLateDetails = leaveTypeName === "Working Late Today";
+  const showCustomerHolidayDetails = leaveTypeName === "Customer Holiday";
+  const showCompOffDetails = leaveTypeName === "Customer Approved Comp-off";
 
   const handleApprove = async () => {
     setIsButtonDisabled(true);
