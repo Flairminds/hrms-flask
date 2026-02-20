@@ -242,12 +242,10 @@ class EmailService:
         
         try:
             # Get all active employees (excluding specific statuses and IDs)
-            excluded_ids = EmailConfig.EXCLUDED_EMPLOYEE_IDS
             all_employees = Employee.query.filter(
                 Employee.employment_status.in_([
                     'Confirmed', 'Probation', 'Trainee', 'Intern', 'Active', 'Resigned'
-                ]),
-                ~Employee.employee_id.in_(excluded_ids)
+                ])
             ).all()
             
             Logger.debug("Active employees retrieved", count=len(all_employees))
@@ -588,10 +586,6 @@ class EmailService:
         try:
             # Determine recipients
             to_address = details.get('employee_email')
-            
-            # Special case overrides
-            if to_address in EmailConfig.SPECIAL_CASE_REDIRECTS:
-                to_address = EmailConfig.SPECIAL_CASE_REDIRECTS[to_address]
             
             cc_addresses = []
             

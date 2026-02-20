@@ -87,21 +87,6 @@ class EmailConfig:
     # Default team lead for new employees
     DEFAULT_TEAM_LEAD_EMAIL = 'hr@flairminds.com'
     
-    # Special case email redirects for specific employees
-    # Maps original email -> redirect email
-    SPECIAL_CASE_REDIRECTS = {
-        "swapnil.katarnavare@flairminds.com": "shrinivas.sarmane@flairminds.com",
-        "ganesh.phutane@flairminds.com": "shrinivas.sarmane@flairminds.com"
-    }
-    
-    # Employee IDs to exclude from attendance reports
-    EXCLUDED_EMPLOYEE_IDS = ['EMP101', 'EMP54', 'EMP46', 'EMP47', 'EMP330']
-    
-    # Specific logic helpers for LeaveService
-    FY_2024_START = '2024-04-01'
-    FY_2024_END = '2025-03-31'
-    FY_2025_START = '2025-04-01'
-
     # Secondary Approver for multi-level approval (e.g., Customer Approved WFH)
     SECONDARY_LEAVE_APPROVER_EMAIL = 'ahiresh.gaikwad@flairminds.com'
     
