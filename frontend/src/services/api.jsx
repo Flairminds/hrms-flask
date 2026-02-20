@@ -1310,3 +1310,37 @@ export const deleteEmployeeReview = (reviewId) =>
 
 export const getAllEmployees = () =>
   axiosInstance.get(`${API_BASE_URL}/hr/get-all-employees`);
+
+// ── Capability Groups ──────────────────────────────────────────────
+// Master groups — HR/Admin only
+export const getCapabilityGroups = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/capability-groups/`);
+
+export const createCapabilityGroup = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/capability-groups/`, data);
+
+export const updateCapabilityGroup = (groupId, data) =>
+  axiosInstance.put(`${API_BASE_URL}/capability-dev/capability-groups/${groupId}`, data);
+
+export const deleteCapabilityGroup = (groupId) =>
+  axiosInstance.delete(`${API_BASE_URL}/capability-dev/capability-groups/${groupId}`);
+
+// Assignments — HR/Admin only
+export const getCapabilityGroupAssignments = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/capability-groups/assignments`);
+
+export const assignCapabilityGroup = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/capability-groups/assignments`, data);
+
+export const removeCapabilityGroupAssignment = (employeeId) =>
+  axiosInstance.delete(`${API_BASE_URL}/capability-dev/capability-groups/assignments/${employeeId}`);
+
+// My group — all authenticated roles
+export const getMyCapabilityGroup = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/capability-groups/my-group`);
+
+// History — HR/Admin only
+export const getCapabilityGroupHistory = (employeeId) => {
+  const params = employeeId ? { employee_id: employeeId } : {};
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/capability-groups/history`, { params });
+};

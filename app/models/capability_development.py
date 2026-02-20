@@ -181,3 +181,42 @@ class EmployeeReview(BaseModel):
         {}
     )
 
+
+class MasterCapabilityGroup(BaseModel):
+    """Master list of capability groups (e.g. Frontend Engineer, AI/ML Specialist)"""
+    __tablename__ = 'master_capability_group'
+
+    group_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    group_name = db.Column(db.String(150), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+
+class EmployeeCapabilityGroup(BaseModel):
+    """Current capability group assignment for each employee (one active row per employee)"""
+    __tablename__ = 'employee_capability_group'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, unique=True, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('master_capability_group.group_id'), nullable=False)
+    assigned_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
+    assigned_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    notes = db.Column(db.Text)
+
+
+class EmployeeCapabilityGroupHistory(BaseModel):
+    """History of all capability group assignments per employee"""
+    __tablename__ = 'employee_capability_group_history'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('master_capability_group.group_id'), nullable=False)
+    assigned_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
+    assigned_on = db.Column(db.DateTime, nullable=False)
+    removed_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    notes = db.Column(db.Text)
+
+    __table_args__ = (
+        db.Index('ix_emp_cap_group_history_emp_date', 'employee_id', 'removed_on'),
+        {}
+    )
