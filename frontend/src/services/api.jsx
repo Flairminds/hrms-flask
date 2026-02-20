@@ -1293,3 +1293,8 @@ export const getEmployeeMetrics = (employeeId, periodType = 'monthly') => {
 export const calculateMetrics = (metricsData) => {
   return axiosInstance.post(`${API_BASE_URL}/capability-dev/scorecard/calculate`, metricsData);
 };
+
+// Get goal coverage (HR/Manager)
+export const getGoalsCoverage = () => {
+  return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/goals-coverage`);
+};

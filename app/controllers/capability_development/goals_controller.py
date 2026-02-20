@@ -190,3 +190,18 @@ class GoalsController:
         except Exception as e:
             Logger.error("Error in add_goal_review", error=str(e))
             return jsonify({"error": str(e)}), 500
+
+    # ──────────────────────────────────────────
+    # Coverage
+    # ──────────────────────────────────────────
+
+    @staticmethod
+    @jwt_required()
+    def get_goals_coverage():
+        """GET /api/capability-dev/goals/goals-coverage"""
+        try:
+            result = EnhancedGoalsService.get_goals_coverage()
+            return jsonify(result), 200
+        except Exception as e:
+            Logger.error("Error in get_goals_coverage", error=str(e))
+            return jsonify({"error": str(e)}), 500

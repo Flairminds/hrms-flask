@@ -6,7 +6,7 @@ Supports creating goals for self/others, tracking progress, comments, and review
 
 from datetime import datetime
 from typing import Dict, List, Optional
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from flask_jwt_extended import get_jwt_identity
 
 from .. import db
@@ -563,5 +563,62 @@ class EnhancedGoalsService:
 
         except Exception as e:
             Logger.error("Error getting team goals", error=str(e))
+            raise
+
+    @staticmethod
+    def get_goals_coverage() -> List[Dict]:
+        """
+        Retrieves goal coverage for all active employees.
+        
+        Returns list of:
+        {
+            "employeeId": str,
+            "employeeName": str, 
+            "farthestGoalDate": str (ISO date) | None,
+            "status": "Active" | "Expired" | "No Goal"
+        }
+        """
+        try:
+            # 1. Get all active employees
+            active_employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding'])
+            ).order_by(Employee.first_name).all()
+
+            # 2. Get latest goal deadline for each employee
+            # Subquery to find max deadline per employee
+            latest_goals = db.session.query(
+                EmployeeGoalEnhanced.for_employee_id,
+                func.max(EmployeeGoalEnhanced.deadline).label('max_deadline')
+            ).group_by(EmployeeGoalEnhanced.for_employee_id).all()
+            
+            # Map employee_id -> max_deadline
+            coverage_map = {row.for_employee_id: row.max_deadline for row in latest_goals}
+            
+            results = []
+            today = datetime.now().date()
+
+            for emp in active_employees:
+                max_date = coverage_map.get(emp.employee_id)
+                
+                status = "No Goal"
+                if max_date:
+                    if max_date >= today:
+                        status = "Active"
+                    else:
+                        status = "Expired"
+                
+                results.append({
+                    "employeeId": emp.employee_id,
+                    "employeeName": f"{emp.first_name} {emp.last_name}",
+                    "farthestGoalDate": max_date.isoformat() if max_date else None,
+                    "status": status
+                })
+            
+            # Sort: No Goal/Expired first (action items), then Active
+            results.sort(key=lambda x: (0 if x['status'] in ['No Goal', 'Expired'] else 1, x['employeeName']))
+            return results
+
+        except Exception as e:
+            Logger.error("Error getting goals coverage", error=str(e))
             raise
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Input, Tag, Spin, Typography, Space, Progress, Avatar, Tooltip,
+    Button, Modal
 } from 'antd';
-import { SearchOutlined, UserOutlined } from '@ant-design/icons';
-import { getTeamGoals } from '../../../services/api';
+import { SearchOutlined, UserOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { getTeamGoals, getGoalsCoverage } from '../../../services/api';
 
 const { Text, Title } = Typography;
 
@@ -21,11 +22,116 @@ const STATUS_LABEL = {
     cancelled: 'Cancelled',
 };
 
+// ── Goal Coverage Modal Component ──────────────────────────────────────
+const GoalCoverageModal = ({ open, onClose }) => {
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState('');
+
+    useEffect(() => {
+        if (open) {
+            fetchCoverage();
+        }
+    }, [open]);
+
+    const fetchCoverage = async () => {
+        setLoading(true);
+        try {
+            const res = await getGoalsCoverage();
+            setData(res.data || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredData = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(item =>
+            item.employeeName.toLowerCase().includes(q)
+        );
+    }, [data, search]);
+
+    const columns = [
+        {
+            title: 'Employee',
+            dataIndex: 'employeeName',
+            key: 'employeeName',
+            render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
+        },
+        {
+            title: 'Goal Set Till',
+            dataIndex: 'farthestGoalDate',
+            key: 'farthestGoalDate',
+            render: (date) => date ? new Date(date).toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            }) : <Text type="secondary">No Goal Set</Text>,
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status) => {
+                let color = 'default';
+                if (status === 'Active') color = 'success';
+                if (status === 'Expired') color = 'error';
+                if (status === 'No Goal') color = 'error';
+                return <Tag color={color}>{status}</Tag>;
+            }
+        }
+    ];
+
+    return (
+        <Modal
+            title={<Space><SafetyCertificateOutlined /> Goal Coverage Summary</Space>}
+            open={open}
+            onCancel={onClose}
+            footer={[<></>]}
+            width={900}
+            style={{ top: 15 }}
+        >
+            <div style={{ marginBottom: 16 }}>
+                <Text type="secondary">
+                    Review which employees have active goals. Employees with no goals or only past goals are highlighted.
+                </Text>
+            </div>
+            <Input
+                placeholder="Search employee..."
+                prefix={<SearchOutlined style={{ color: '#ccc' }} />}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ marginBottom: 12 }}
+                allowClear
+            />
+            <Table
+                dataSource={filteredData}
+                columns={columns}
+                rowKey="employeeId"
+                loading={loading}
+                pagination={{ pageSize: 8 }}
+                size="small"
+            />
+            {/* Inline CSS for row highlight */}
+            <style jsx>{`
+                .bg-red-50 {
+                    background-color: #fff1f0 !important;
+                }
+                .bg-red-50:hover > td {
+                    background-color: #ffccc7 !important;
+                }
+            `}</style>
+        </Modal>
+    );
+};
+
 const TeamGoalsTab = () => {
     const [goals, setGoals] = useState([]);
     const [summary, setSummary] = useState({ total: 0, pending: 0, in_progress: 0, completed: 0 });
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [coverageModalOpen, setCoverageModalOpen] = useState(false);
 
     // ── fetch ──────────────────────────────────────────────────────────
     const fetchGoals = async () => {
@@ -182,14 +288,22 @@ const TeamGoalsTab = () => {
                         {filtered.length} of {goals.length} goals
                     </Text>
                 </div>
-                <Input
-                    prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
-                    placeholder="Search employee, goal or category…"
-                    allowClear
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    style={{ width: 260 }}
-                />
+                <Space>
+                    <Button
+                        // icon={<SafetyCertificateOutlined />}
+                        onClick={() => setCoverageModalOpen(true)}
+                    >
+                        Goals Summary
+                    </Button>
+                    <Input
+                        prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
+                        placeholder="Search employee, goal or category…"
+                        allowClear
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{ width: 260 }}
+                    />
+                </Space>
             </div>
 
             {/* ── Table ─────────────────────────────────────────────── */}
@@ -205,6 +319,12 @@ const TeamGoalsTab = () => {
                     locale={{ emptyText: loading ? ' ' : 'No team goals found' }}
                 />
             </Spin>
+
+            {/* ── Coverage Modal ────────────────────────────────────── */}
+            <GoalCoverageModal
+                open={coverageModalOpen}
+                onClose={() => setCoverageModalOpen(false)}
+            />
         </div>
     );
 };

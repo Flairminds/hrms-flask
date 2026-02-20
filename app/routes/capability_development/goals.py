@@ -92,3 +92,13 @@ def get_goal_reviews(goal_id):
 def add_goal_review(goal_id):
     """Add a review to a goal."""
     return GoalsController.add_goal_review(goal_id)
+
+
+# ──────────────────────────────────────────
+# Coverage
+# ──────────────────────────────────────────
+
+@capability_dev_goals_new_bp.route("/goals-coverage", methods=["GET"])
+def get_goals_coverage():
+    """Get goal coverage for all active employees (HR/Manager view)."""
+    return GoalsController.get_goals_coverage()
