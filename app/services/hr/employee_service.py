@@ -28,6 +28,7 @@ class EmployeeService:
                 Employee.employment_status,
                 Employee.date_of_joining,
                 Employee.team_lead_id,
+                Employee.email,
                 MasterRole.role_name
             ).join(
                 EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
@@ -53,7 +54,8 @@ class EmployeeService:
                     "employmentStatus": e.employment_status,
                     "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
                     "leaveApprover": get_approver_name(e.team_lead_id),
-                    "teamLeadName": get_approver_name(e.team_lead_id)
+                    "teamLeadName": get_approver_name(e.team_lead_id),
+                    "email": e.email
                 } for e in employees
             ]
         except Exception as e:

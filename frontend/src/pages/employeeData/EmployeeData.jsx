@@ -24,6 +24,7 @@ export const EmployeeData = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
+  const [roleOptions, setRoleOptions] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAccordionVisible, setIsAccordionVisible] = useState(false);
   const [paginationConfig, setPaginationConfig] = useState({
@@ -61,7 +62,9 @@ export const EmployeeData = () => {
 
       // Extract unique statuses from data
       const uniqueStatuses = [...new Set(response.data.map(item => item.employmentStatus))].filter(Boolean);
+      const uniqueRoles = [...new Set(response.data.map(item => item.roleName))].filter(Boolean);
       setStatusOptions(uniqueStatuses);
+      setRoleOptions(uniqueRoles);
     } catch (error) {
       console.error("Failed to fetch employees", error);
     }
@@ -139,29 +142,36 @@ export const EmployeeData = () => {
       render: (text) => <span className={getStatusClassName(text)}>{text}</span>,
     },
     {
+      title: 'Role',
+      dataIndex: 'roleName',
+      key: 'roleName',
+      filters: roleOptions.map(role => ({ text: role, value: role })),
+      onFilter: (value, record) => record.roleName === value,
+      render: (text) => <span>{text}</span>,
+    },
+    {
       title: 'Leave Approver',
       dataIndex: 'leaveApprover',
       key: 'leaveApprover',
       sorter: (a, b) => (a.leaveApprover || "").localeCompare(b.leaveApprover || ""),
     },
     {
-      title: 'Team Lead',
-      dataIndex: 'teamLeadName',
-      key: 'teamLeadName',
-      sorter: (a, b) => (a.teamLeadName || "").localeCompare(b.teamLeadName || ""),
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email'
     },
-    {
-      title: 'Joining Date',
-      dataIndex: 'joiningDate',
-      key: 'joiningDate',
-      defaultSortOrder: 'descend',
-      sorter: (a, b) => {
-        if (!a.joiningDate) return -1;
-        if (!b.joiningDate) return 1;
-        return new Date(a.joiningDate) - new Date(b.joiningDate);
-      },
-      render: (text) => text ? convertDate(text) : '-',
-    },
+    // {
+    //   title: 'Joining Date',
+    //   dataIndex: 'joiningDate',
+    //   key: 'joiningDate',
+    //   defaultSortOrder: 'descend',
+    //   sorter: (a, b) => {
+    //     if (!a.joiningDate) return -1;
+    //     if (!b.joiningDate) return 1;
+    //     return new Date(a.joiningDate) - new Date(b.joiningDate);
+    //   },
+    //   render: (text) => text ? convertDate(text) : '-',
+    // },
     {
       title: 'Action',
       key: 'action',
