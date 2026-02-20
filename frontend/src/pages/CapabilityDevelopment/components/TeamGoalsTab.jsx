@@ -164,11 +164,10 @@ const TeamGoalsTab = () => {
     // ── stat card helper ───────────────────────────────────────────────
     const StatCard = ({ label, count, color }) => (
         <div style={{
-            background: '#fff', border: `1px solid ${color}22`,
-            borderLeft: `4px solid ${color}`, borderRadius: 8,
+            background: '#fff', border: `1px solid ${color}22`, borderRadius: 8,
             padding: '12px 20px', minWidth: 120, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
         }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color }}>{count}</div>
+            <div style={{ fontSize: 16, fontWeight: 400, color }}>{count}</div>
             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{label}</div>
         </div>
     );
