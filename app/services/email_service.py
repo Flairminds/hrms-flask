@@ -922,7 +922,7 @@ class EmailService:
 
         body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
 
-        subject = f"Action Required: {len(interns) + len(probationers)} Employee(s) with Period End Date Alert — {today.strftime('%d %b %Y')}"
+        subject = f"Action Required: {len(interns) + len(probationers)} Employee(s) with Period End Date Alert - {today.strftime('%d %b %Y')}"
 
         try:
             msg = MIMEMultipart()
