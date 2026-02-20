@@ -45,6 +45,16 @@ def register_jobs(app):
                     Logger.info("Period end date alert skipped – no qualifying employees")
             except Exception as e:
                 Logger.error("Error in period end date alert job", error=str(e))
+
+    @scheduler.task('cron', id='daily_review_alert', hour=9, minute=0, timezone='Asia/Kolkata')
+    def daily_review_alert():
+        """Sends daily digest of employee review statuses requiring attention."""
+        with app.app_context():
+            Logger.info("Running daily review alert job")
+            try:
+                EmailService.send_review_status_alert()
+            except Exception as e:
+                Logger.error("Error in daily review alert job", error=str(e))
             
     @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0, timezone='Asia/Kolkata')
     def monthly_leave_allocation():

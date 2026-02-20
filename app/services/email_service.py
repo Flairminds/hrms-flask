@@ -11,6 +11,7 @@ All email operations use SMTP with configured credentials.
 """
 
 import smtplib
+import collections
 from typing import Dict, Any, List, Optional
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -952,6 +953,206 @@ class EmailService:
             Logger.critical("Unexpected error sending period end alert", error=str(e))
             return False
 
+
+
+    # ==================================================================
+    # REVIEW STATUS ALERTS
+    # ==================================================================
+
+    @staticmethod
+    def send_review_status_alert() -> bool:
+        """
+        Analyzes active employees and their review schedules to alert HR about:
+        - Missing Reviews: Joined > 1 month ago with no review records.
+        - No Future Schedules: No 'Pending' or 'Scheduled' reviews in the future.
+        - Upcoming Reviews: Reviews scheduled within the next 7 days.
+
+        Returns:
+            True if email sent successfully, False if no issues found or on failure.
+        """
+        from ..models.capability_development import EmployeeReview
+        
+        Logger.info("Running review status alert check")
+
+        # IST today
+        today_datetime = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        today = today_datetime.date()
+        one_month_ago = today - timedelta(days=30)
+        next_week = today + timedelta(days=7)
+
+        try:
+            # Get all active employees
+            active_employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding'])
+            ).all()
+
+            if not active_employees:
+                Logger.info("No active employees found for review check")
+                return False
+
+            # Optimization: Fetch all reviews for these employees in one query
+            active_emp_ids = [emp.employee_id for emp in active_employees]
+            all_reviews = EmployeeReview.query.filter(
+                EmployeeReview.employee_id.in_(active_emp_ids)
+            ).all()
+
+            # Group reviews by employee_id
+            reviews_by_emp = collections.defaultdict(list)
+            for r in all_reviews:
+                reviews_by_emp[r.employee_id].append(r)
+
+            alerts = []
+
+            for emp in active_employees:
+                # Use grouped reviews from memory
+                reviews = reviews_by_emp.get(emp.employee_id, [])
+                
+                completed_reviews = [r for r in reviews if r.status == 'Reviewed']
+                
+                # Check for future schedules
+                future_reviews = [r for r in reviews if r.status in ['Pending', 'Scheduled'] and r.review_date >= today]
+                
+                # Check for upcoming in 7 days
+                upcoming_soon = [r for r in future_reviews if r.review_date <= next_week]
+                
+                reason = None
+                urgency = "Normal"
+                
+                # 1. Missing Reviews (Joined > 1 month ago, no completed reviews)
+                if not completed_reviews and emp.date_of_joining and emp.date_of_joining <= one_month_ago:
+                    reason = "Review Pending (Joined > 1 month ago)"
+                    urgency = "High"
+                
+                # 2. No Future Review Scheduled
+                elif not future_reviews:
+                    reason = "No review scheduled"
+                    urgency = "Medium"
+                
+                # 3. Upcoming in next 7 days
+                elif upcoming_soon:
+                    # Sort upcoming by date
+                    soonest = sorted(upcoming_soon, key=lambda x: x.review_date)[0]
+                    reason = f"Upcoming review on {soonest.review_date.strftime('%d-%b-%Y')}"
+                    urgency = "Normal"
+
+                if reason:
+                    alerts.append({
+                        'id': emp.employee_id,
+                        'name': f"{emp.first_name} {emp.last_name}".strip(),
+                        'joining_date': emp.date_of_joining.strftime('%d-%b-%Y') if emp.date_of_joining else 'N/A',
+                        'last_review': max([r.reviewed_date for r in reviews if r.reviewed_date], default=None),
+                        'reason': reason,
+                        'urgency': urgency
+                    })
+
+            if not alerts:
+                Logger.info("No review status alerts found")
+                return False
+
+            Logger.info("Review status alerts identified", alert_count=len(alerts))
+
+        except SQLAlchemyError as e:
+            Logger.error("DB error during review alert check", error=str(e))
+            return False
+
+        # Get email configuration
+        from_address = current_app.config.get('MAIL_USERNAME')
+        from_password = current_app.config.get('MAIL_PASSWORD')
+        recipients = list(EmailConfig.REVIEW_ALERT_CC)
+
+        if not recipients:
+            Logger.warning("No recipients configured for review alert CC")
+            return False
+
+        if not from_address or not from_password:
+            Logger.error("SMTP credentials not configured for review alert")
+            return False
+
+        # Build HTML Rows
+        rows_html = ""
+        for alert in alerts:
+            row_color = "#ffffff"
+            urgency_style = "color:#333;"
+            
+            if alert['urgency'] == "High":
+                row_color = "#fff0f0"
+                urgency_style = "color:#dc3545;font-weight:bold;"
+            elif alert['urgency'] == "Medium":
+                row_color = "#fff8e6"
+                urgency_style = "color:#e67e00;font-weight:bold;"
+            elif alert['urgency'] == "Normal":
+                urgency_style = "color:#28a745;font-weight:bold;"
+
+            last_review_str = alert['last_review'].strftime('%d-%b-%Y') if alert['last_review'] else 'Never'
+            
+            rows_html += f"""
+                <tr style="background-color:{row_color};">
+                    <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{alert['id']}</td>
+                    <td width="20%" style="padding:8px;border-bottom:1px solid #eee;">{alert['name']}</td>
+                    <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{alert['joining_date']}</td>
+                    <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{last_review_str}</td>
+                    <td width="35%" style="padding:8px;border-bottom:1px solid #eee;{urgency_style}">{alert['reason']}</td>
+                </tr>
+            """
+
+        styles = EmailService._get_common_styles()
+        header = EmailService._get_email_header("Employee Review Status Digest")
+        footer = EmailService._get_email_footer()
+
+        body_content = f"""
+            <div class="content">
+                <p>Dear HR Team,</p>
+                <p>Please find the daily digest of employee review statuses that require attention or are upcoming.</p>
+
+                <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background-color:#f8f9fa;">
+                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">ID</th>
+                            <th width="20%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Name</th>
+                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Joined</th>
+                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Last Review</th>
+                            <th width="35%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Alert / Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                </table>
+
+                <div style="text-align:center;margin-top:25px;">
+                    <a href="https://hrms.flairminds.com/login" class="button">Go to Review Dashboard</a>
+                </div>
+            </div>
+        """
+
+        body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+        subject = f"HR Alert: Employee Review Status Digest - {today.strftime('%d %b %Y')}"
+
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = f"HRMS <{from_address}>"
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'html'))
+
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587)
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+            server.sendmail(from_address, recipients, msg.as_string())
+            server.quit()
+
+            Logger.info("Review status alert email sent", recipients=len(recipients), alert_count=len(alerts))
+            return True
+
+        except smtplib.SMTPException as e:
+            Logger.error("SMTP error sending review status alert", error=str(e))
+            return False
+        except Exception as e:
+            Logger.critical("Unexpected error sending review status alert", error=str(e))
+            return False
 
 # ==================================================================
 # LEGACY FUNCTIONS (Backward Compatibility)
