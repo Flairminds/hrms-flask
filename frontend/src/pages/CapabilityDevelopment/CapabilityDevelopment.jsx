@@ -20,9 +20,9 @@ export const CapabilityDevelopment = () => {
         { id: 'skillsmaster', label: 'Skills Master', allowedRoles: ['admin', 'hr'] },
         { id: 'goals', label: 'My Goals', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'teamgoals', label: 'Team Goals', allowedRoles: ['admin', 'hr', 'lead'] },
-        { id: 'feedback', label: 'Reviews & Feedback', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
+        // { id: 'feedback', label: 'Reviews & Feedback', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'employee_review', label: 'Employee Review', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
-        { id: 'scorecard', label: 'Scorecard', allowedRoles: ['admin', 'hr', 'lead', 'employee'] }
+        // { id: 'scorecard', label: 'Scorecard', allowedRoles: ['admin', 'hr', 'lead', 'employee'] }
     ];
 
     const renderTabContent = () => {

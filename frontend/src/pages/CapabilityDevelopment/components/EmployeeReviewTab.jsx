@@ -149,6 +149,9 @@ const EmployeeReviewTab = () => {
             title: 'Employee',
             dataIndex: 'employee_id',
             key: 'employee_id',
+            filters: employees.map(e => ({ text: e.employeeName, value: e.employeeId })),
+            onFilter: (value, record) => record.employee_id === value,
+            filterSearch: true,
             render: (id) => {
                 const emp = employees.find(e => e.employeeId === id);
                 return emp ?
@@ -160,6 +163,11 @@ const EmployeeReviewTab = () => {
             title: 'Employee Status',
             dataIndex: 'employee_id',
             key: 'employment_status',
+            filters: [...new Set(employees.map(e => e.employmentStatus).filter(Boolean))].map(s => ({ text: s, value: s })),
+            onFilter: (value, record) => {
+                const emp = employees.find(e => e.employeeId === record.employee_id);
+                return emp?.employmentStatus === value;
+            },
             render: (id) => {
                 const emp = employees.find(e => e.employeeId === id);
                 return emp ?
