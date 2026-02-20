@@ -4,20 +4,20 @@ import FMLogonew from '../../assets/login/FMLogonew.png';
 import { Button } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { resetPassword, sendOTP } from '../../services/api'; 
+import { resetPassword } from '../../services/api';
 import axios from 'axios';
 
 export const ResetPassword = () => {
 
     const [resetFormData, setResetFormData] = useState({
-        email:"",
-        otp:"",   
-        password:'',
-        retype_password:'',
+        email: "",
+        otp: "",
+        password: '',
+        retype_password: '',
     });
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
-    const [otpSent, setOtpSent] = useState(false); 
+    const [otpSent, setOtpSent] = useState(false);
     const [isOtpValid, setIsOtpValid] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -43,7 +43,7 @@ export const ResetPassword = () => {
             toast.error(e.response?.data?.message || "Failed to send OTP");
         }
     };
-       // Verify OTP API
+    // Verify OTP API
     const verifyOTP = async (username, otp) => {
         try {
             const res = await axios.post(
@@ -64,18 +64,18 @@ export const ResetPassword = () => {
         if (resetFormData.password !== resetFormData.retype_password) newErrors.retype_password = "Passwords do not match";
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) return;
-        try{
+        try {
             const res = await resetPassword(
                 resetFormData.email,
                 resetFormData.otp,
                 resetFormData.password
             );
-            if(res.status == 200){
+            if (res.status == 200) {
                 setResetFormData({
-                    email:"",
-                    otp:"",
-                    password:'',
-                    retype_password:'',
+                    email: "",
+                    otp: "",
+                    password: '',
+                    retype_password: '',
                 });
                 toast.success("Password Changed Successfully");
                 setTimeout(() => navigate("/"), 1000);
@@ -117,7 +117,7 @@ export const ResetPassword = () => {
                             )}
                         </div>
                         <div className={styles.otpLink}>
-                            <span onClick={handleSendOTP}className={styles.linkText}>
+                            <span onClick={handleSendOTP} className={styles.linkText}>
                                 {otpSent ? "Resend OTP" : "Send OTP"}
                             </span>
                             <br /><br />
@@ -131,7 +131,7 @@ export const ResetPassword = () => {
                                 placeholder="Enter OTP"
                                 onChange={async (e) => {
                                     const value = e.target.value;
-                                     // Allow only digits
+                                    // Allow only digits
                                     if (!/^\d*$/.test(value)) return;
                                     handleChange("otp", value);
                                     // Automatically verify OTP when 6 digits entered
@@ -179,7 +179,7 @@ export const ResetPassword = () => {
 
                         <div className={styles.inputContainer}>
                             <input
-                              type={showPassword ? "text" : "password"}
+                                type={showPassword ? "text" : "password"}
                                 id="retype_password"
                                 value={resetFormData.retype_password}
                                 placeholder="Confirm password"
@@ -192,7 +192,7 @@ export const ResetPassword = () => {
                                 <div className={styles.passMatchError}>{errors.retype_password}</div>
                             )}
                         </div>
-                             <div className={styles.inputContainer}>
+                        <div className={styles.inputContainer}>
                             <input
                                 type="checkbox"
                                 id="showPassword"
@@ -201,13 +201,13 @@ export const ResetPassword = () => {
                                 disabled={!isOtpValid} // optional: enable only after OTP verified
                             />{" "}
                             Show Password
-                        </div>   
+                        </div>
                         <Button type="primary" onClick={handleSubmit} className={styles.resetButton}>
                             Reset Password
                         </Button>
 
                     </div>
-                    
+
                 </div>
             </div>
             <ToastContainer />

@@ -453,3 +453,63 @@ class AccountController:
                 "status": "error",
                 "message": "An error occurred while fetching user details"
             }), 500
+
+    @staticmethod
+    @jwt_required()
+    def change_password() -> Tuple[Response, int]:
+        """
+        Changes the authenticated user's password.
+        
+        Requires a valid JWT token. User must provide current password for verification.
+        
+        Request Body (JSON):
+            {
+                "currentPassword": "old_password",
+                "newPassword": "new_password"
+            }
+            
+        Returns:
+            Success (200): {"message": "Password changed successfully"}
+            Error (400): Invalid input or incorrect current password
+            Error (500): Server error
+        """
+        Logger.info("Password change request received")
+        
+        try:
+            # Get employee ID from JWT token
+            employee_id = get_jwt_identity()
+            if not employee_id:
+                return jsonify({"message": "Invalid token"}), 401
+                
+            data = request.get_json()
+            if not data:
+                return jsonify({"message": "Request body must be JSON"}), 400
+            
+            current_password = data.get('currentPassword')
+            new_password = data.get('newPassword')
+            
+            if not current_password or not new_password:
+                return jsonify({"message": "Current and new passwords are required"}), 400
+                
+            # Call service to change password
+            AccountService.change_password(employee_id, current_password, new_password)
+            
+            Logger.info("Password changed successfully via API", employee_id=employee_id)
+            return jsonify({"message": "Password changed successfully"}), 200
+            
+        except ValueError as ve:
+            Logger.warning("Password change validation error", error=str(ve))
+            return jsonify({"message": str(ve)}), 400
+            
+        except LookupError as le:
+            Logger.warning("Password change failed - user not found", error=str(le))
+            return jsonify({"message": "User not found"}), 404
+            
+        except Exception as e:
+            Logger.error("Unexpected error changing password", 
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({
+                "message": "An error occurred while changing password. Please try again."
+            }), 500
+

@@ -13,8 +13,10 @@ import {
   getDocStatusDetails,
   // getSkillsForEmp, // Moved to Capability Development
   uploadDocument,
-  getDocuments  // ✅ Added
+  getDocuments,  // ✅ Added
+  changePassword // ✅ Added
 } from '../../../services/api';
+
 import { useAuth } from '../../../context/AuthContext';
 import { EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // ✅ Added
 import { ToastContainer, toast } from 'react-toastify';
@@ -32,6 +34,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
   // const [availableSkills, setAvailableSkills] = useState([]); // Moved to Capability Development
   const [docStatus, setDocStatus] = useState([]);
   const [isSameAddress, setIsSameAddress] = useState(false);
+  const [activeTab, setActiveTab] = useState('1'); // Track active tab
 
   // Fetch available skills content - MOVED TO CAPABILITY DEVELOPMENT
   // useEffect(() => {
@@ -343,6 +346,38 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
   //   return "";
   // };
 
+  const onChangePasswordHandler = async () => {
+    try {
+      const values = await form.validateFields(['currentPassword', 'newPassword', 'confirmPassword']);
+
+      if (values.newPassword !== values.confirmPassword) {
+        message.error("Passwords do not match");
+        return;
+      }
+
+      setLoader(true);
+      const res = await changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword
+      });
+
+      if (res.status === 200) {
+        message.success("Password changed successfully");
+        form.setFieldsValue({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
+    } catch (error) {
+      console.error("Error changing password:", error);
+      // Handle validation errors from form validation specially
+      if (error.errorFields) {
+        // This is a form validation error, do nothing as UI shows it
+        return;
+      }
+      message.error(error.response?.data?.message || "Failed to change password");
+    } finally {
+      setLoader(false);
+    }
+  };
+
   return (
     <Modal
       title="Edit Personal Details"
@@ -351,9 +386,15 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
       width={800}
       footer={[
         <Button key="cancel" onClick={handleCancel}>Cancel</Button>,
-        <Button key="submit" type="primary" loading={loader} onClick={() => form.submit()}>
-          Update All
-        </Button>
+        activeTab === '4' ? (
+          <Button key="submit-password" type="primary" loading={loader} onClick={onChangePasswordHandler}>
+            Update Password
+          </Button>
+        ) : (
+          <Button key="submit" type="primary" loading={loader} onClick={() => form.submit()}>
+            Update All
+          </Button>
+        )
       ]}
       style={{ top: 20 }}
     >
@@ -363,7 +404,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
         onFinish={onFinish}
         initialValues={{ addresses: { is_same_permanant: false } }}
       >
-        <Tabs defaultActiveKey="1" items={[
+        <Tabs defaultActiveKey="1" activeKey={activeTab} onChange={setActiveTab} items={[
           {
             key: '1',
             label: 'Personal Info',
@@ -672,6 +713,59 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                 })}
               </div>
             ),
+          },
+          {
+            key: '4',
+            label: 'Security',
+            children: (
+              <Card size="small" title="Change Password" style={{ marginBottom: 16 }}>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      name="currentPassword"
+                      label="Current Password"
+                      rules={[
+                        { required: true, message: 'Please enter current password' }
+                      ]}
+                    >
+                      <Input.Password placeholder="Enter current password" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      name="newPassword"
+                      label="New Password"
+                      rules={[
+                        { required: true, message: 'Please enter new password' },
+                        { min: 8, message: 'Password must be at least 8 characters' }
+                      ]}
+                    >
+                      <Input.Password placeholder="Enter new password" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      name="confirmPassword"
+                      label="Confirm New Password"
+                      dependencies={['newPassword']}
+                      rules={[
+                        { required: true, message: 'Please confirm your password' },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (!value || getFieldValue('newPassword') === value) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(new Error('The two passwords that you entered do not match!'));
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input.Password placeholder="Confirm new password" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Card>
+            )
           }
         ]} />
       </Form>

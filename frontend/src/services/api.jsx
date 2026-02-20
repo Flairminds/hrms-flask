@@ -523,27 +523,23 @@ export const getEmployeeRoles = (employeeId) => {
 };
 
 // Resets a user's password.
-export const resetPassword = (email, OTP, password) => {
-  const formData = {
-    "username": email,
-    "otp": OTP,
-    "newPassword": password
-  }
-  console.log("formData", formData);
-  const res = axiosInstance.post(`${API_BASE_URL}/Account/ResetPassword`, formData);
-  return res;
-}
-export const sendOTP = (username) => {
-  return axiosInstance.post(`${API_BASE_URL}/Account/SendOtp`, { username });
-};
-export const VerifyOtp = (otp) => {
-  return axiosInstance.post(`${API_BASE_URL}/Account/VerifyOtp`, { otp });
-};
-export const ResetPassword = (newPassword) => {
-  return axiosInstance.post(`${API_BASE_URL}/Account/ResetPassword`, {
-    newPassword
+export const login = (credentials) => axiosInstance.post(`${API_BASE_URL}/account/login`, credentials);
+export const sendOtp = (username) => axiosInstance.post(`${API_BASE_URL}/account/send-otp`, { Username: username });
+export const verifyOtp = (username, otp) => axiosInstance.post(`${API_BASE_URL}/account/verify-otp`, { Username: username, OTP: otp });
+export const sendOTP = sendOtp; // Alias for compatibility
+export const getCurrentUser = () => axiosInstance.get(`${API_BASE_URL}/account/me`);
+
+// Resets a user's password.
+export const resetPassword = (username, otp, newPassword) => {
+  return axiosInstance.post(`${API_BASE_URL}/account/reset-password`, {
+    Username: username,
+    NewPassword: newPassword,
+    OTP: otp
   });
 };
+
+export const changePassword = (data) => axiosInstance.post(`${API_BASE_URL}/account/change-password`, data);
+
 
 // Retrieves salary data for a given month and year.
 export const viewSalaryData = (month, year) => {

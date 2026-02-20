@@ -25,3 +25,7 @@ def reset_password():
 @account_bp.route('/me', methods=['GET'])
 def get_current_user():
     return AccountController.get_current_user()
+
+@account_bp.route('/change-password', methods=['POST'])
+def change_password():
+    return AccountController.change_password()

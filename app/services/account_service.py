@@ -459,6 +459,74 @@ class AccountService:
             return False
 
     @staticmethod
+    def change_password(employee_id: str, current_password: str, new_password: str) -> bool:
+        """
+        Changes employee password after verifying current password.
+        
+        Args:
+            employee_id: ID of the employee changing password
+            current_password: The current password for verification
+            new_password: The new password to set
+            
+        Returns:
+            True if password changed successfully
+            
+        Raises:
+            ValueError: If inputs are invalid or current password correct
+            LookupError: If employee not found
+        """
+        if not employee_id or not current_password or not new_password:
+            raise ValueError("All password fields are required")
+            
+        # 1. Validate password strength
+        if len(new_password) < 8:
+            raise ValueError("New password must be at least 8 characters long")
+            
+        if current_password == new_password:
+            raise ValueError("New password cannot be the same as current password")
+            
+        try:
+            # 2. Get employee credentials
+            credentials = EmployeeCredentials.query.filter_by(employee_id=employee_id).first()
+            if not credentials:
+                raise LookupError("Employee credentials not found")
+                
+            # 3. Verify current password
+            if not check_password_hash(credentials.password_hash, current_password):
+                # Security: Log failure but return generic message to user? 
+                # Actually for change-password specific feedback is usually okay if authenticated
+                Logger.warning("Password change failed - incorrect current password", 
+                             employee_id=employee_id)
+                raise ValueError("Incorrect current password")
+                
+            # 4. Hash and update new password
+            credentials.password_hash = generate_password_hash(
+                new_password,
+                method='pbkdf2:sha256',
+                salt_length=16
+            )
+            
+            # 5. Clear any existing OTPs
+            deleted_otps = OTPRequest.query.filter_by(username=employee_id).delete()
+            # Also try to clear by email if possible
+            emp = Employee.query.filter_by(employee_id=employee_id).first()
+            if emp and emp.email:
+                OTPRequest.query.filter_by(username=emp.email).delete()
+            
+            db.session.commit()
+            Logger.info("Password changed successfully", employee_id=employee_id)
+            return True
+            
+        except (ValueError, LookupError):
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error changing password", 
+                        employee_id=employee_id, 
+                        error=str(e))
+            raise Exception("An unexpected error occurred while changing password")
+
+    @staticmethod
     def generate_otp(length: int = OTP_LENGTH) -> str:
         """
         Generates a cryptographically secure random numeric OTP.
