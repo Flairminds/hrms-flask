@@ -55,7 +55,7 @@ const CreateGoalModal = ({ visible, onClose, onSuccess, goal }) => {
         getMasterSkills()
             .then(res => {
                 const list = res.data?.data || [];
-                setMasterSkills(list.map(s => ({ value: s.SkillId, label: s.SkillName })));
+                setMasterSkills(list.map(s => ({ value: s.skillId, label: s.skillName })));
             })
             .catch(() => message.error('Failed to load skills list'));
     }, []);

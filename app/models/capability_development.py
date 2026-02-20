@@ -5,7 +5,7 @@ from .base import BaseModel
 
 class EmployeeGoal(BaseModel):
     """Enhanced employee goal model supporting skill and custom goals"""
-    __tablename__ = 'employee_goal_enhanced'
+    __tablename__ = 'employee_goal'
     
     goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     for_employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, index=True)
@@ -30,33 +30,33 @@ class EmployeeGoal(BaseModel):
     modified_on = db.Column(db.DateTime, onupdate=db.func.now())
     
     __table_args__ = (
-        db.Index('ix_employee_goal_enhanced_status_deadline', 'for_employee_id', 'status', 'deadline'),
+        db.Index('ix_employee_goal_status_deadline', 'for_employee_id', 'status', 'deadline'),
         {}
     )
 
 
-class GoalComment(BaseModel):
+class EmployeeGoalComment(BaseModel):
     """Comments on employee goals"""
-    __tablename__ = 'goal_comment'
+    __tablename__ = 'employee_goal_comment'
     
     comment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal_enhanced.goal_id', ondelete='CASCADE'), nullable=False, index=True)
+    goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal.goal_id', ondelete='CASCADE'), nullable=False, index=True)
     commented_by_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     comment_text = db.Column(db.Text, nullable=False)
     comment_date = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     
     __table_args__ = (
-        db.Index('ix_goal_comment_goal_date', 'goal_id', 'comment_date'),
+        db.Index('ix_employee_goal_comment_goal_date', 'goal_id', 'comment_date'),
         {}
     )
 
 
-class GoalReview(BaseModel):
+class EmployeeGoalReview(BaseModel):
     """Reviews/ratings for completed goals"""
-    __tablename__ = 'goal_review'
+    __tablename__ = 'employee_goal_review'
     
     review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal_enhanced.goal_id', ondelete='CASCADE'), nullable=False, index=True)
+    goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal.goal_id', ondelete='CASCADE'), nullable=False, index=True)
     reviewed_by_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     rating = db.Column(db.Numeric(3, 2))  # 1-5 scale
     review_text = db.Column(db.Text)
@@ -74,7 +74,7 @@ class EmployeeFeedback(BaseModel):
     # Categorization
     feedback_category = db.Column(db.String(50), nullable=False)  # skill, performance, behavior, goal, general
     related_skill_id = db.Column(db.Integer, db.ForeignKey('master_skills.skill_id'), nullable=True)
-    related_goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal_enhanced.goal_id'), nullable=True)
+    related_goal_id = db.Column(db.Integer, db.ForeignKey('employee_goal.goal_id', ondelete='CASCADE'), nullable=True)
     
     # Content
     rating = db.Column(db.Numeric(3, 2))  # 1-5 scale, nullable

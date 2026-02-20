@@ -13,8 +13,8 @@ from .. import db
 from ..models.hr import Employee, MasterSkill
 from ..models.capability_development import (
     EmployeeGoal,
-    GoalComment,
-    GoalReview
+    EmployeeGoalComment,
+    EmployeeGoalReview
 )
 from ..utils.logger import Logger
 
@@ -344,7 +344,7 @@ class EnhancedGoalsService:
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
-            comment = GoalComment(
+            comment = EmployeeGoalComment(
                 goal_id=goal_id,
                 commented_by_id=commented_by_id,
                 comment_text=comment_text
@@ -371,8 +371,8 @@ class EnhancedGoalsService:
     def get_goal_comments(goal_id: int) -> List[Dict]:
         """Get all comments for a goal."""
         try:
-            comments = GoalComment.query.filter_by(goal_id=goal_id).order_by(
-                GoalComment.comment_date.desc()
+            comments = EmployeeGoalComment.query.filter_by(goal_id=goal_id).order_by(
+                EmployeeGoalComment.comment_date.desc()
             ).all()
 
             result = []
@@ -403,7 +403,7 @@ class EnhancedGoalsService:
             if not 1 <= rating <= 5:
                 raise ValueError("Rating must be between 1 and 5")
 
-            review = GoalReview(
+            review = EmployeeGoalReview(
                 goal_id=goal_id,
                 reviewed_by_id=reviewed_by_id,
                 rating=rating,
@@ -432,8 +432,8 @@ class EnhancedGoalsService:
     def get_goal_reviews(goal_id: int) -> List[Dict]:
         """Get all reviews for a goal."""
         try:
-            reviews = GoalReview.query.filter_by(goal_id=goal_id).order_by(
-                GoalReview.review_date.desc()
+            reviews = EmployeeGoalReview.query.filter_by(goal_id=goal_id).order_by(
+                EmployeeGoalReview.review_date.desc()
             ).all()
 
             result = []
@@ -468,8 +468,8 @@ class EnhancedGoalsService:
             skill_name = skill.skill_name if skill else None
 
         # Get counts
-        comments_count = GoalComment.query.filter_by(goal_id=goal.goal_id).count()
-        reviews_count = GoalReview.query.filter_by(goal_id=goal.goal_id).count()
+        comments_count = EmployeeGoalComment.query.filter_by(goal_id=goal.goal_id).count()
+        reviews_count = EmployeeGoalReview.query.filter_by(goal_id=goal.goal_id).count()
 
         return {
             "goalId": goal.goal_id,
