@@ -213,7 +213,7 @@ export const LeaveTablePending = ({ isRole }) => {
           employee={selectedEmployee}
           onStatusChange={handleStatusChange}
           selectedRange={selectedRange}
-          readOnly={selectedEmployee.leaveStatus === 'Pending' || selectedEmployee.leaveStatus === 'Partial Approved' ? false : true}
+          readOnly={selectedEmployee.leaveStatus === LEAVE_STATUS.PENDING || selectedEmployee.leaveStatus === LEAVE_STATUS.PARTIAL_APPROVED ? false : true}
         />
       )}
     </div>
