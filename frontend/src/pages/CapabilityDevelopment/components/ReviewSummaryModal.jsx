@@ -97,7 +97,7 @@ const ReviewSummaryModal = ({ visible, onClose, employees, reviews }) => {
 
 
             // 5. Next Review Scheduled (Pending)
-            const pendingReviews = empReviews.filter(r => r.status === 'Pending' && r.review_date);
+            const pendingReviews = empReviews.filter(r => (r.status === 'Pending' || r.status === 'Scheduled') && r.review_date);
             let scheduledPending = '-';
             if (pendingReviews.length > 0) {
                 pendingReviews.sort((a, b) => dayjs(a.review_date).diff(dayjs(b.review_date)));
