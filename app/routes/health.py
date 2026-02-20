@@ -8,6 +8,7 @@ from flask import Blueprint, jsonify
 from sqlalchemy import text
 from .. import db
 from ..utils.logger import Logger
+from ..services.email_service import EmailService
 
 health_bp = Blueprint('health', __name__)
 

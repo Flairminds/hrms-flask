@@ -1,6 +1,6 @@
 from datetime import datetime
 from flask_apscheduler import APScheduler
-from .email_service import process_leave_email, process_office_attendance_email
+from .email_service import process_leave_email, process_office_attendance_email, EmailService
 from ..utils.logger import Logger
 from .. import db
 from ..models.hr import Employee
@@ -12,7 +12,7 @@ scheduler = APScheduler()
 def register_jobs(app):
     """Registers standard HRMS scheduled jobs."""
     
-    @scheduler.task('cron', id='send_daily_leave_report', hour=9, minute=0)
+    @scheduler.task('cron', id='send_daily_leave_report', hour=9, minute=0, timezone='Asia/Kolkata')
     def daily_leave_report():
         with app.app_context():
             Logger.info("Running scheduled leave report job")
@@ -22,7 +22,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in scheduled leave report job", error=str(e))
 
-    @scheduler.task('cron', id='send_daily_attendance_report', hour=8, minute=0)
+    @scheduler.task('cron', id='send_daily_attendance_report', hour=8, minute=0, timezone='Asia/Kolkata')
     def daily_attendance_report():
         with app.app_context():
             Logger.info("Running scheduled attendance report job")
@@ -31,8 +31,22 @@ def register_jobs(app):
                 Logger.info("Daily attendance report sent successfully")
             except Exception as e:
                 Logger.error("Error in scheduled attendance report job", error=str(e))
+
+    @scheduler.task('cron', id='period_end_date_alert', hour=9, minute=0, timezone='Asia/Kolkata')
+    def daily_period_end_alert():
+        """Sends daily alert for interns/probationers with end date in next 5 days or past."""
+        with app.app_context():
+            Logger.info("Running period end date alert job")
+            try:
+                result = EmailService.send_period_end_alert()
+                if result:
+                    Logger.info("Period end date alert sent successfully")
+                else:
+                    Logger.info("Period end date alert skipped – no qualifying employees")
+            except Exception as e:
+                Logger.error("Error in period end date alert job", error=str(e))
             
-    @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0)
+    @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0, timezone='Asia/Kolkata')
     def monthly_leave_allocation():
         """Automatically allocates leaves on the 1st of every month."""
         with app.app_context():
@@ -83,7 +97,7 @@ def register_jobs(app):
                 db.session.rollback()
                 Logger.error("Error in monthly leave allocation job", error=str(e))
 
-    @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5)
+    @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
     def monthly_leave_deduction():
         """Automatically deducts monthly WFH leaves on the 1st of every month."""
         with app.app_context():

@@ -782,6 +782,177 @@ class EmailService:
         return f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
 
 
+    # ==================================================================
+    # PERIOD END DATE ALERTS (Intern & Probation)
+    # ==================================================================
+
+    @staticmethod
+    def send_period_end_alert() -> bool:
+        """
+        Sends an alert email listing Interns/Probationers whose period end
+        date is within the next 5 days (inclusive) or already past.
+
+        Args:
+            recipients: Override list of email addresses. Defaults to
+                        REPORT_TO_ADDRESSES from app config.
+
+        Returns:
+            True if email sent successfully, False if no employees qualify
+            or on send failure.
+
+        Note:
+            - Uses IST-based today (UTC+5:30) for consistency.
+            - Employees with NULL end dates are skipped.
+            - Past-due rows are highlighted in red; upcoming rows in orange.
+        """
+        Logger.info("Running period end date alert check")
+
+        # IST today
+        today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).date()
+        cutoff = today + timedelta(days=5)
+
+        try:
+            # Fetch Interns with internship_end_date <= cutoff
+            interns = Employee.query.filter(
+                Employee.employment_status == 'Intern',
+                Employee.internship_end_date.isnot(None),
+                Employee.internship_end_date <= cutoff
+            ).all()
+
+            # Fetch Probationers with probation_end_date <= cutoff
+            probationers = Employee.query.filter(
+                Employee.employment_status == 'Probation',
+                Employee.probation_end_date.isnot(None),
+                Employee.probation_end_date <= cutoff
+            ).all()
+
+            if not interns and not probationers:
+                Logger.info("No employees with upcoming/overdue period end dates found")
+                return False
+
+            Logger.info("Period end date alert candidates",
+                       interns=len(interns),
+                       probationers=len(probationers))
+
+        except SQLAlchemyError as e:
+            Logger.error("DB error fetching period end candidates", error=str(e))
+            return False
+
+        # Get recipients
+        from_address = current_app.config.get('MAIL_USERNAME')
+        from_password = current_app.config.get('MAIL_PASSWORD')
+
+        if not from_address or not from_password:
+            Logger.error("SMTP credentials not configured")
+            return False
+        
+        recipients = list(EmailConfig.REVIEW_ALERT_CC)
+
+        if not recipients:
+            Logger.warning("No recipients configured for period end alert")
+            return False
+
+        # Build HTML rows
+        def _row(emp, end_date, status_label):
+            days_left = (end_date - today).days
+            if days_left < 0:
+                row_color = "#fff0f0"  # past — red tint
+                urgency = f'<span style="color:#dc3545;font-weight:bold;">{abs(days_left)} day(s) overdue</span>'
+            elif days_left == 0:
+                row_color = "#fff0f0"
+                urgency = '<span style="color:#dc3545;font-weight:bold;">Today</span>'
+            else:
+                row_color = "#fff8e6"  # upcoming — orange tint
+                urgency = f'<span style="color:#e67e00;font-weight:bold;">In {days_left} day(s)</span>'
+
+            full_name = f"{emp.first_name} {emp.middle_name or ''} {emp.last_name}".replace("  ", " ").strip()
+            end_str = end_date.strftime('%d-%b-%Y')
+            return (
+                f'<tr style="background-color:{row_color};">'
+                f'<td width="15%" style="padding:8px;">{emp.employee_id}</td>'
+                f'<td width="25%" style="padding:8px;">{full_name}</td>'
+                f'<td width="15%" style="padding:8px;">{status_label}</td>'
+                f'<td width="20%" style="padding:8px;">{end_str}</td>'
+                f'<td width="25%" style="padding:8px;">{urgency}</td>'
+                f'</tr>'
+            )
+
+        rows_html = ""
+        for emp in interns:
+            rows_html += _row(emp, emp.internship_end_date, "Intern")
+        for emp in probationers:
+            rows_html += _row(emp, emp.probation_end_date, "Probation")
+
+        styles = EmailService._get_common_styles()
+        header = EmailService._get_email_header("Internship/Probation Period End Date Alert")
+        footer = EmailService._get_email_footer()
+
+        body_content = f"""
+            <div class="content">
+                <p>Dear HR Team,</p>
+                <p>
+                    The following employees have their <strong>Internship / Probation end date</strong>
+                    within the next <strong>5 days</strong> or it has <strong>already passed</strong>.
+                    Please take the necessary action (confirmation, extension, or separation).
+                </p>
+
+                <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background-color:#f1f3f5;">
+                            <th width="15%" style="padding:8px;text-align:left;">Employee ID</th>
+                            <th width="25%" style="padding:8px;text-align:left;">Name</th>
+                            <th width="15%" style="padding:8px;text-align:left;">Status</th>
+                            <th width="20%" style="padding:8px;text-align:left;">End Date</th>
+                            <th width="25%" style="padding:8px;text-align:left;">Urgency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                </table>
+
+                <p style="font-size:13px;color:#666;">
+                    Please log in to HRMS to update the employee's employment status accordingly.
+                </p>
+                <div style="text-align:center;">
+                    <a href="https://hrms.flairminds.com/login" class="button">Open HRMS</a>
+                </div>
+            </div>
+        """
+
+        body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+
+        subject = f"Action Required: {len(interns) + len(probationers)} Employee(s) with Period End Date Alert — {today.strftime('%d %b %Y')}"
+
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = f"HRMS <{from_address}>"
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'html'))
+
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587)
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+            server.sendmail(from_address, recipients, msg.as_string())
+            server.quit()
+
+            Logger.info("Period end alert email sent",
+                       recipients=len(recipients),
+                       total_employees=len(interns) + len(probationers))
+            return True
+
+        except smtplib.SMTPException as e:
+            Logger.error("SMTP error sending period end alert", error=str(e))
+            return False
+        except Exception as e:
+            Logger.critical("Unexpected error sending period end alert", error=str(e))
+            return False
+
+
 # ==================================================================
 # LEGACY FUNCTIONS (Backward Compatibility)
 # ==================================================================
