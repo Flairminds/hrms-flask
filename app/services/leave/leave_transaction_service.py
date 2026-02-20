@@ -141,7 +141,9 @@ class LeaveTransactionService:
 
             # 4. WFH Validations
             if leave_type_id == LeaveTypeID.WFH:
-                if no_of_days >= 5:
+                if no_of_days > 5:
+                    raise ValueError("WFH leave cannot be applied for more than 5 days at a time.")
+                if no_of_days == 5:
                     six_months_ago = from_date - timedelta(days=180)
                     last_wfh = db.session.query(func.max(LeaveTransaction.to_date)).filter(
                         LeaveTransaction.employee_id == emp_id,
