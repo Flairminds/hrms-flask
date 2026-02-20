@@ -43,7 +43,7 @@ def create_app(config_name):
     from .services.scheduler_service import scheduler, register_jobs
     scheduler.init_app(app)
     register_jobs(app)
-    scheduler.start()
+    # scheduler.start()
     
     from flask_jwt_extended import JWTManager
 
