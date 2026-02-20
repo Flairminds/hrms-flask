@@ -7,6 +7,7 @@ import MyGoalsTab from './components/MyGoalsTab';
 import TeamGoalsTab from './components/TeamGoalsTab';
 import ReviewsFeedbackTab from './components/ReviewsFeedbackTab';
 import ScorecardTab from './components/ScorecardTab';
+import EmployeeReviewTab from './components/EmployeeReviewTab';
 import { useAuth } from '../../context/AuthContext';
 
 export const CapabilityDevelopment = () => {
@@ -20,6 +21,7 @@ export const CapabilityDevelopment = () => {
         { id: 'goals', label: 'My Goals', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'teamgoals', label: 'Team Goals', allowedRoles: ['admin', 'hr', 'lead'] },
         { id: 'feedback', label: 'Reviews & Feedback', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
+        { id: 'employee_review', label: 'Employee Review', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'scorecard', label: 'Scorecard', allowedRoles: ['admin', 'hr', 'lead', 'employee'] }
     ];
 
@@ -39,6 +41,8 @@ export const CapabilityDevelopment = () => {
                 return <ReviewsFeedbackTab />;
             case 'scorecard':
                 return <ScorecardTab />;
+            case 'employee_review':
+                return <EmployeeReviewTab />;
             default:
                 return <MySkillsTab />;
         }

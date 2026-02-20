@@ -150,3 +150,34 @@ class SkillProgressLog(BaseModel):
         db.Index('ix_skill_progress_log_skill_date', 'employee_skill_id', 'update_date'),
         {}
     )
+
+
+class EmployeeReview(BaseModel):
+    """Employee review records for HR/Admin"""
+    __tablename__ = 'employee_review'
+    
+    review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, index=True)
+    
+    # Review Schedule
+    review_date = db.Column(db.Date, nullable=False) # Scheduled date
+    reviewed_date = db.Column(db.Date) # Actual reviewed date
+    
+    # Content
+    review_comment = db.Column(db.Text)
+    other_comments = db.Column(db.Text)
+    file_link = db.Column(db.Text) # External link for review documents
+    
+    # Status
+    status = db.Column(db.String(50), default='Pending', nullable=False)
+    
+    # Metadata
+    created_by = db.Column(db.String(20), db.ForeignKey('employee.employee_id'))
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+    
+    __table_args__ = (
+        db.Index('ix_employee_review_date', 'employee_id', 'review_date'),
+        {}
+    )
+

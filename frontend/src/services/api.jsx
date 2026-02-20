@@ -1294,3 +1294,19 @@ export const calculateMetrics = (metricsData) => {
 export const getGoalsCoverage = () => {
   return axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/goals-coverage`);
 };
+
+// ── Employee Review ────────────────────────────────────────────────
+export const getEmployeeReviews = (employeeId) =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/employee-review/`, { params: { employee_id: employeeId } });
+
+export const createEmployeeReview = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/employee-review/`, data);
+
+export const updateEmployeeReview = (reviewId, data) =>
+  axiosInstance.put(`${API_BASE_URL}/capability-dev/employee-review/${reviewId}`, data);
+
+export const deleteEmployeeReview = (reviewId) =>
+  axiosInstance.delete(`${API_BASE_URL}/capability-dev/employee-review/${reviewId}`);
+
+export const getAllEmployees = () =>
+  axiosInstance.get(`${API_BASE_URL}/hr/get-all-employees`);

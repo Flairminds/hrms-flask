@@ -74,6 +74,7 @@ def create_app(config_name):
     from .routes.capability_dev_scorecard import capability_dev_scorecard_bp
     from .routes.capability_development.skills import capability_dev_skills_bp
     from .routes.capability_development.goals import capability_dev_goals_bp
+    from .routes.capability_development.employee_review import employee_review_bp
 
     # Register health check blueprint at root level (no prefix)
     app.register_blueprint(health_bp)
@@ -102,6 +103,7 @@ def create_app(config_name):
     app.register_blueprint(capability_dev_scorecard_bp, url_prefix='/api/capability-dev')
     app.register_blueprint(capability_dev_skills_bp, url_prefix='/api/capability-dev/skills')
     app.register_blueprint(capability_dev_goals_bp, url_prefix='/api/capability-dev/goals')
+    app.register_blueprint(employee_review_bp, url_prefix='/api/capability-dev/employee-review')
 
     # Serve React App (if production build exists)
     if has_build:
