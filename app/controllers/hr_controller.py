@@ -138,7 +138,9 @@ class HRController:
                 'designation_id': data.get('band'),
                 'sub_role_id': data.get('MasterSubRole'),
                 'addresses': data.get('addresses', []),
-                'skills': data.get('skills', [])
+                'skills': data.get('skills', []),
+                'internship_end_date': data.get('internship_end_date'),
+                'probation_end_date': data.get('probation_end_date'),
             }
             
             result = EmployeeService.update_employee_details(update_data)
