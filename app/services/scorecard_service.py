@@ -12,7 +12,7 @@ from decimal import Decimal
 from .. import db
 from ..models.hr import Employee, EmployeeSkill
 from ..models.capability_development import (
-    EmployeeGoalEnhanced,
+    EmployeeGoal,
     EmployeeFeedback,
     EmployeePerformanceMetrics
 )
@@ -53,20 +53,20 @@ class ScorecardService:
             ) if all([skill_score, goal_rate, feedback_score]) else None
 
             # Get supporting counts
-            goals_set = EmployeeGoalEnhanced.query.filter(
+            goals_set = EmployeeGoal.query.filter(
                 and_(
-                    EmployeeGoalEnhanced.for_employee_id == employee_id,
-                    EmployeeGoalEnhanced.created_on >= period_start,
-                    EmployeeGoalEnhanced.created_on <= period_end
+                    EmployeeGoal.for_employee_id == employee_id,
+                    EmployeeGoal.created_on >= period_start,
+                    EmployeeGoal.created_on <= period_end
                 )
             ).count()
 
-            goals_completed = EmployeeGoalEnhanced.query.filter(
+            goals_completed = EmployeeGoal.query.filter(
                 and_(
-                    EmployeeGoalEnhanced.for_employee_id == employee_id,
-                    EmployeeGoalEnhanced.status == 'completed',
-                    EmployeeGoalEnhanced.completion_date >= period_start,
-                    EmployeeGoalEnhanced.completion_date <= period_end
+                    EmployeeGoal.for_employee_id == employee_id,
+                    EmployeeGoal.status == 'completed',
+                    EmployeeGoal.completion_date >= period_start,
+                    EmployeeGoal.completion_date <= period_end
                 )
             ).count()
 
@@ -167,24 +167,24 @@ class ScorecardService:
                                        period_end: date) -> Optional[Decimal]:
         """Calculate percentage of goals completed on time in period."""
         try:
-            total_goals = EmployeeGoalEnhanced.query.filter(
+            total_goals = EmployeeGoal.query.filter(
                 and_(
-                    EmployeeGoalEnhanced.for_employee_id == employee_id,
-                    EmployeeGoalEnhanced.deadline >= period_start,
-                    EmployeeGoalEnhanced.deadline <= period_end
+                    EmployeeGoal.for_employee_id == employee_id,
+                    EmployeeGoal.deadline >= period_start,
+                    EmployeeGoal.deadline <= period_end
                 )
             ).count()
 
             if total_goals == 0:
                 return Decimal(0)
 
-            completed_on_time = EmployeeGoalEnhanced.query.filter(
+            completed_on_time = EmployeeGoal.query.filter(
                 and_(
-                    EmployeeGoalEnhanced.for_employee_id == employee_id,
-                    EmployeeGoalEnhanced.status == 'completed',
-                    EmployeeGoalEnhanced.deadline >= period_start,
-                    EmployeeGoalEnhanced.deadline <= period_end,
-                    EmployeeGoalEnhanced.completion_date <= EmployeeGoalEnhanced.deadline
+                    EmployeeGoal.for_employee_id == employee_id,
+                    EmployeeGoal.status == 'completed',
+                    EmployeeGoal.deadline >= period_start,
+                    EmployeeGoal.deadline <= period_end,
+                    EmployeeGoal.completion_date <= EmployeeGoal.deadline
                 )
             ).count()
 

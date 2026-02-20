@@ -57,7 +57,6 @@ def create_app(config_name):
     from .routes.profile import profile_bp
     from .routes.feedback import feedback_bp
     from .routes.skills import skills_bp
-    from .routes.goals import goals_bp
     from .routes.review import review_bp
     from .routes.documents import documents_bp
     from .routes.capability import capability_bp
@@ -71,11 +70,10 @@ def create_app(config_name):
     from .routes.reports import reports_bp
     
     # Capability Development blueprints
-    from .routes.capability_dev_goals import capability_dev_goals_bp
     from .routes.capability_dev_feedback import capability_dev_feedback_bp
     from .routes.capability_dev_scorecard import capability_dev_scorecard_bp
     from .routes.capability_development.skills import capability_dev_skills_bp
-    from .routes.capability_development.goals import capability_dev_goals_new_bp
+    from .routes.capability_development.goals import capability_dev_goals_bp
 
     # Register health check blueprint at root level (no prefix)
     app.register_blueprint(health_bp)
@@ -88,7 +86,6 @@ def create_app(config_name):
     app.register_blueprint(profile_bp, url_prefix='/api/employees-details')
     app.register_blueprint(feedback_bp, url_prefix='/api/lead-functionality')
     app.register_blueprint(skills_bp, url_prefix='/api/skills')
-    app.register_blueprint(goals_bp, url_prefix='/api/goals')
     app.register_blueprint(review_bp, url_prefix='/api/review')
     app.register_blueprint(capability_bp, url_prefix='/api/capability')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
@@ -101,11 +98,10 @@ def create_app(config_name):
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     
     # Register Capability Development blueprints
-    app.register_blueprint(capability_dev_goals_bp, url_prefix='/api/capability-dev')        # legacy
     app.register_blueprint(capability_dev_feedback_bp, url_prefix='/api/capability-dev')
     app.register_blueprint(capability_dev_scorecard_bp, url_prefix='/api/capability-dev')
     app.register_blueprint(capability_dev_skills_bp, url_prefix='/api/capability-dev/skills')
-    app.register_blueprint(capability_dev_goals_new_bp, url_prefix='/api/capability-dev/goals')
+    app.register_blueprint(capability_dev_goals_bp, url_prefix='/api/capability-dev/goals')
 
     # Serve React App (if production build exists)
     if has_build:

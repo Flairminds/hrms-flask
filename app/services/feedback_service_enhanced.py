@@ -10,7 +10,7 @@ from sqlalchemy import or_, and_
 
 from .. import db
 from ..models.hr import Employee, MasterSkill
-from ..models.capability_development import EmployeeFeedback, EmployeeGoalEnhanced
+from ..models.capability_development import EmployeeFeedback, EmployeeGoal
 from ..utils.logger import Logger
 
 
@@ -61,7 +61,7 @@ class FeedbackService:
                     raise ValueError(f"Skill {related_skill_id} not found")
 
             if related_goal_id:
-                goal = EmployeeGoalEnhanced.query.filter_by(goal_id=related_goal_id).first()
+                goal = EmployeeGoal.query.filter_by(goal_id=related_goal_id).first()
                 if not goal:
                     raise ValueError(f"Goal {related_goal_id} not found")
 
@@ -268,7 +268,7 @@ class FeedbackService:
 
         goal_title = None
         if feedback.related_goal_id:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=feedback.related_goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=feedback.related_goal_id).first()
             goal_title = goal.goal_title if goal else None
 
         return {

@@ -3,7 +3,7 @@ from datetime import datetime
 from .base import BaseModel
 
 
-class EmployeeGoalEnhanced(BaseModel):
+class EmployeeGoal(BaseModel):
     """Enhanced employee goal model supporting skill and custom goals"""
     __tablename__ = 'employee_goal_enhanced'
     

@@ -466,17 +466,6 @@ class EmployeeEvaluators(BaseModel):
     assigned_on = db.Column(db.DateTime, server_default=db.func.now())
 
 
-class EmployeeGoal(BaseModel):
-    __tablename__ = 'employee_goal'
-    goal_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    skill_id = db.Column(db.Integer, db.ForeignKey('master_skills.skill_id'), nullable=False)
-    target_date = db.Column(db.DateTime, nullable=False)
-    set_by_employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
-    created_on = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
-    modified_on = db.Column(db.DateTime)
-
-
 class EmployeePolicyAcknowledgementStatus(BaseModel):
     __tablename__ = 'employee_policy_acknowledgement_status'
     employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), primary_key=True)

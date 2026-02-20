@@ -12,7 +12,7 @@ from flask_jwt_extended import get_jwt_identity
 from .. import db
 from ..models.hr import Employee, MasterSkill
 from ..models.capability_development import (
-    EmployeeGoalEnhanced,
+    EmployeeGoal,
     GoalComment,
     GoalReview
 )
@@ -76,7 +76,7 @@ class EnhancedGoalsService:
                     raise ValueError(f"Skill {skill_id} not found")
 
             # Create new goal
-            new_goal = EmployeeGoalEnhanced(
+            new_goal = EmployeeGoal(
                 for_employee_id=for_employee_id,
                 set_by_employee_id=created_by_id,
                 goal_type=goal_type,
@@ -165,7 +165,7 @@ class EnhancedGoalsService:
                     raise ValueError(f"Skill {skill_id} not found")
 
             # Create new goal
-            new_goal = EmployeeGoalEnhanced(
+            new_goal = EmployeeGoal(
                 for_employee_id=for_employee_id,
                 set_by_employee_id=created_by_id,
                 goal_type=goal_type,
@@ -209,9 +209,9 @@ class EnhancedGoalsService:
             Dict with skillDevelopment and other goals lists
         """
         try:
-            goals = EmployeeGoalEnhanced.query.filter_by(
+            goals = EmployeeGoal.query.filter_by(
                 for_employee_id=employee_id
-            ).order_by(EmployeeGoalEnhanced.deadline.asc()).all()
+            ).order_by(EmployeeGoal.deadline.asc()).all()
 
             skill_goals = []
             other_goals = []
@@ -237,12 +237,12 @@ class EnhancedGoalsService:
     def get_goals_created_by_me(employee_id: str) -> List[Dict]:
         """Get goals created by current user for other employees."""
         try:
-            goals = EmployeeGoalEnhanced.query.filter(
+            goals = EmployeeGoal.query.filter(
                 and_(
-                    EmployeeGoalEnhanced.set_by_employee_id == employee_id,
-                    EmployeeGoalEnhanced.for_employee_id != employee_id
+                    EmployeeGoal.set_by_employee_id == employee_id,
+                    EmployeeGoal.for_employee_id != employee_id
                 )
-            ).order_by(EmployeeGoalEnhanced.deadline.asc()).all()
+            ).order_by(EmployeeGoal.deadline.asc()).all()
 
             return [EnhancedGoalsService._format_goal(goal) for goal in goals]
 
@@ -254,7 +254,7 @@ class EnhancedGoalsService:
     def update_goal_progress(goal_id: int, progress: float, notes: Optional[str] = None) -> Dict:
         """Update goal progress percentage."""
         try:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=goal_id).first()
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
@@ -294,7 +294,7 @@ class EnhancedGoalsService:
     def update_goal(goal_id: int, payload: Dict) -> None:
         """Update goal details."""
         try:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=goal_id).first()
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
@@ -323,7 +323,7 @@ class EnhancedGoalsService:
     def delete_goal(goal_id: int) -> None:
         """Delete a goal and its associated comments and reviews."""
         try:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=goal_id).first()
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
@@ -340,7 +340,7 @@ class EnhancedGoalsService:
     def add_goal_comment(goal_id: int, comment_text: str, commented_by_id: str) -> Dict:
         """Add a comment to a goal."""
         try:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=goal_id).first()
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
@@ -396,7 +396,7 @@ class EnhancedGoalsService:
     def add_goal_review(goal_id: int, rating: float, review_text: str, reviewed_by_id: str) -> Dict:
         """Add a review/rating to a goal."""
         try:
-            goal = EmployeeGoalEnhanced.query.filter_by(goal_id=goal_id).first()
+            goal = EmployeeGoal.query.filter_by(goal_id=goal_id).first()
             if not goal:
                 raise ValueError(f"Goal {goal_id} not found")
 
@@ -455,7 +455,7 @@ class EnhancedGoalsService:
             raise
 
     @staticmethod
-    def _format_goal(goal: EmployeeGoalEnhanced) -> Dict:
+    def _format_goal(goal: EmployeeGoal) -> Dict:
         """Format goal object for API response."""
         # Get employee names
         for_employee = Employee.query.filter_by(employee_id=goal.for_employee_id).first()
@@ -520,16 +520,16 @@ class EnhancedGoalsService:
 
             rows = (
                 db.session.query(
-                    EmployeeGoalEnhanced,
+                    EmployeeGoal,
                     ForEmployee,
                     SetByEmployee,
                     MasterSkill,
                 )
-                .join(ForEmployee, EmployeeGoalEnhanced.for_employee_id == ForEmployee.employee_id)
-                .join(SetByEmployee, EmployeeGoalEnhanced.set_by_employee_id == SetByEmployee.employee_id)
-                .outerjoin(MasterSkill, EmployeeGoalEnhanced.skill_id == MasterSkill.skill_id)
+                .join(ForEmployee, EmployeeGoal.for_employee_id == ForEmployee.employee_id)
+                .join(SetByEmployee, EmployeeGoal.set_by_employee_id == SetByEmployee.employee_id)
+                .outerjoin(MasterSkill, EmployeeGoal.skill_id == MasterSkill.skill_id)
                 .filter(ForEmployee.employment_status.notin_(['Relieved', 'Absconding']))
-                .order_by(ForEmployee.first_name, EmployeeGoalEnhanced.deadline.asc())
+                .order_by(ForEmployee.first_name, EmployeeGoal.deadline.asc())
                 .all()
             )
 
@@ -587,9 +587,9 @@ class EnhancedGoalsService:
             # 2. Get latest goal deadline for each employee
             # Subquery to find max deadline per employee
             latest_goals = db.session.query(
-                EmployeeGoalEnhanced.for_employee_id,
-                func.max(EmployeeGoalEnhanced.deadline).label('max_deadline')
-            ).group_by(EmployeeGoalEnhanced.for_employee_id).all()
+                EmployeeGoal.for_employee_id,
+                func.max(EmployeeGoal.deadline).label('max_deadline')
+            ).group_by(EmployeeGoal.for_employee_id).all()
             
             # Map employee_id -> max_deadline
             coverage_map = {row.for_employee_id: row.max_deadline for row in latest_goals}
