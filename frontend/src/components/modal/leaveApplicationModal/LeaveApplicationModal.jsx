@@ -415,6 +415,10 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
   const disableDatesForPrivilegeLeave = (current) => {
     if (!current) return false;
 
+    // Standard weekend check (Saturday=6, Sunday=0)
+    const isWeekend = current.day() === 0 || current.day() === 6;
+    if (isWeekend) return true;
+
     const today = dayjs().startOf('day');
 
     // Privilege Leave & Unpaid Privilege Leave: must be at least 7 days in advance
@@ -427,7 +431,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       return current.isAfter(today, 'day');
     }
 
-    // Work From Home: cannot apply for Monday and must be today or future
+    // Work From Home: must be today or future
     if (leaveType === 'Work From Home') {
       return current.isBefore(today, 'day');
     }
@@ -439,6 +443,10 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
 
   const disableDatesForPrivilegeLeaveEnd = (current, type, startDate) => {
     if (!current) return false;
+
+    // Standard weekend check (Saturday=6, Sunday=0)
+    const isWeekend = current.day() === 0 || current.day() === 6;
+    if (isWeekend) return true;
 
     const today = dayjs().startOf('day');
 
@@ -457,7 +465,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
       return current.isAfter(today, 'day');
     }
 
-    // Work From Home: cannot apply for Monday and must be today or future
+    // Work From Home: must be today or future
     if (type === 'Work From Home') {
       return current.isBefore(today, 'day');
     }
