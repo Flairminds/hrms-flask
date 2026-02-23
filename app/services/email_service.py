@@ -964,34 +964,34 @@ class EmailService:
                     
                     html = f"""
                     <html>
-                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6;">
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f7f6; padding: 20px;">
+                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #ffffff;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; padding: 10px;">
                             <tr>
                                 <td align="center">
-                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
                                         <!-- Header -->
                                         <tr>
-                                            <td style="background: linear-gradient(135deg, #108ee9 0%, #87d068 100%); padding: 40px; text-align: center; color: white;">
-                                                <h1 style="margin: 0; font-size: 32px; letter-spacing: 1px;">Work Anniversary!</h1>
-                                                <p style="font-size: 18px; margin-top: 10px; opacity: 0.9;">Celebrating <strong>{years}{suffix}</strong> year with Flairminds.</p>
+                                            <td style="text-align: center; padding: 50px 20px 20px 20px;">
+                                                <h1 style="margin: 0; font-size: 38px; color: #2c3e50; font-weight: 800; letter-spacing: -0.5px;">Work Anniversary!</h1>
+                                                <p style="font-size: 18px; margin-top: 15px; color: #666;">Celebrating <strong>{years}{suffix}</strong> year with Flairminds.</p>
                                             </td>
                                         </tr>
                                         <!-- Content -->
                                         <tr>
-                                            <td style="padding: 40px;">
-                                                <p style="font-size: 18px; margin-bottom: 20px;">Dear <strong>{emp.first_name}</strong>,</p>
-                                                <p>Congratulations on reaching your <strong>{years}{suffix} work anniversary</strong> at <strong>Flairminds</strong>!</p>
-                                                <p>We want to take this moment to thank you for your commitment, expertise, and the valuable contribution you have made to our growth and success over the past year(s). It is team members like you who make us who we are.</p>
-                                                <p>We are proud to have you with us and look forward to many more years of working together.</p>
-                                                <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-                                                    <p style="margin: 0; color: #666;">Warmest Regards,</p>
-                                                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #2c3e50; font-weight: bold;">Team Flairminds</p>
+                                            <td style="padding: 20px 50px 50px 50px;">
+                                                <p style="font-size: 18px; margin-bottom: 25px;">Dear <strong>{emp.first_name}</strong>,</p>
+                                                <p style="margin-bottom: 15px;">Congratulations on reaching your <strong>{years}{suffix} work anniversary</strong> at <strong>Flairminds</strong>!</p>
+                                                <p style="margin-bottom: 15px;">We want to take this moment to thank you for your commitment, expertise, and the valuable contribution you have made to our growth and success over the past year(s). It is team members like you who make us who we are.</p>
+                                                <p style="margin-bottom: 30px;">We are proud to have you with us and look forward to many more years of working together.</p>
+                                                <div style="margin-top: 40px; border-top: 1px solid #f0f0f0; padding-top: 30px;">
+                                                    <p style="margin: 0; color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Warmest Regards,</p>
+                                                    <p style="margin: 8px 0 0 0; font-size: 20px; color: #2c3e50; font-weight: bold;">Flairminds Team</p>
                                                 </div>
                                             </td>
                                         </tr>
                                         <!-- Footer -->
                                         <tr>
-                                            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+                                            <td style="padding: 30px; text-align: center; font-size: 12px; color: #aaa; border-top: 1px solid #f9f9f9;">
                                                 <p style="margin: 0;">&copy; {today.year} Flairminds. This is an automated greeting from HRMS.</p>
                                             </td>
                                         </tr>

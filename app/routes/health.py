@@ -22,7 +22,6 @@ def health_check():
         200: Server is running
     """
     Logger.debug("Health check endpoint accessed")
-    EmailService.send_anniversary_wishes()
     return jsonify({
         "status": "healthy",
         "message": "Server is running",
