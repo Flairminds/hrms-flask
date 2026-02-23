@@ -57,12 +57,13 @@
   color: white;
 }
 
-.addButtonContainer:hover{
+.addButtonContainer:hover {
   color: #5c6ac8 !important;
   font-weight: 400;
 }
+
 .downloadButton {
-  
+
   background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
   border: 1.4px solid #b3c7ff !important;
   border-radius: 5px;
@@ -80,7 +81,7 @@
 
 }
 
-.downloadButton:hover{
+.downloadButton:hover {
   color: #5c6ac8 !important;
   font-weight: 400;
 }

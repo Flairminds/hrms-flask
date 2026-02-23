@@ -60,7 +60,7 @@ function Band() {
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ width: 300 }}
         />
-        <CSVLink
+        {/* <CSVLink
           data={filteredBands}
           headers={[
             { label: 'Designation ID', key: 'designation_id' },
@@ -70,7 +70,7 @@ function Band() {
           className={styles.downloadButton}
         >
           Download CSV
-        </CSVLink>
+        </CSVLink> */}
       </Space>
 
       <Table
@@ -78,7 +78,7 @@ function Band() {
         dataSource={filteredBands}
         rowKey="designation_id"
         loading={loading}
-        pagination={{ pageSize: 15 }}
+        pagination={{ pageSize: 5 }}
         bordered
       />
       {error && <p style={{ color: 'red' }}>{error}</p>}
