@@ -10,6 +10,7 @@ import TeamLead from '../../components/TeamLead/TeamLead';
 import Projects from '../../pages/Projects/Projects';
 import SkillsAssessment from '../../components/SkillsAssessment/SkillsAssessment';
 import CapabilityDevelopmentLead from '../CapabilityDevelopmentLead/CapabilityDevelopmentLead';
+import EmailNotifications from '../../components/EmailNotifications/EmailNotifications';
 
 const MasterHR = () => {
     const items = [
@@ -27,6 +28,11 @@ const MasterHR = () => {
             key: 'Designation',
             label: 'Designation',
             children: <Designation />,
+        },
+        {
+            key: 'Email Notifications',
+            label: 'Email Notifications',
+            children: <EmailNotifications />,
         },
         // {
         //     key: 'Lob',

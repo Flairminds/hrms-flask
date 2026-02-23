@@ -93,4 +93,4 @@ class EmailConfig:
     # Global CC list for leave notifications
     LEAVE_NOTIFICATION_CC = ['hr@flairminds.com']
 
-    REVIEW_ALERT_CC = ['punit.suman@flairminds.com']
+    REVIEW_ALERT_CC = ['ahiresh.gaikwad@flairminds.com']

@@ -32,7 +32,7 @@ ROLE_PERMISSIONS = {
     # HR Module - Employee Management
     # ===========================
     "hr": {
-        "get_all_employees": ["Admin", "HR"],
+        "get_all_employees": ["Admin", "HR", "Lead"],
         "upsert_employee": ["Admin", "HR"],
         "insert_employee": ["Admin", "HR"],  # Note: Currently open without auth
         "monthly_report": ["Admin", "HR"],
