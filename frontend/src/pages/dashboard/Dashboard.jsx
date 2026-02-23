@@ -216,12 +216,12 @@ export const Dashboard = () => {
             <List
               loading={loadingBirthdays}
               dataSource={birthdayData}
-              locale={{ emptyText: 'No upcoming birthdays in the next 2 months' }}
+              locale={{ emptyText: 'No upcoming birthdays in the next 1 month' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar style={{ backgroundColor: '#13c2c2' }}>{item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    avatar={<Avatar src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
                     title={<Text strong>{item.employee_name}</Text>}
                     description={`Celebrating on ${item.date}`}
                   />

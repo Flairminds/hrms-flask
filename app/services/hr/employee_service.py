@@ -1073,10 +1073,10 @@ class EmployeeService:
             from dateutil.relativedelta import relativedelta
             from sqlalchemy import extract
             
-            Logger.info("Fetching upcoming birthdays (next 2 months)")
+            Logger.info("Fetching upcoming birthdays (next 1 month)")
             
             today = datetime.now().date()
-            two_months_from_now = today + relativedelta(months=2)
+            two_months_from_now = today + relativedelta(months=1)
             
             # Extract month and day for comparison
             m1, d1 = today.month, today.day
@@ -1087,7 +1087,9 @@ class EmployeeService:
                 Employee.first_name,
                 Employee.middle_name,
                 Employee.last_name,
-                Employee.date_of_birth
+                Employee.date_of_birth,
+                Employee.profile_image,
+                Employee.profile_image_type
             ).filter(
                 Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding']),
                 Employee.date_of_birth != None
@@ -1126,7 +1128,8 @@ class EmployeeService:
                     "employee_id": e.employee_id,
                     "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
                     "date": dob.strftime("%d %b"), # Format: 05 Oct
-                    "sort_date": bday_this_year
+                    "sort_date": bday_this_year,
+                    "profile_image": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None
                 })
             
             # Sort by upcoming date
