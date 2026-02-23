@@ -1039,6 +1039,8 @@ class EmployeeService:
                 Employee.middle_name,
                 Employee.last_name,
                 Employee.date_of_joining,
+                Employee.profile_image,
+                Employee.profile_image_type,
                 MasterDesignation.designation_name.label('band'),
                 MasterSubRole.sub_role_name.label('sub_role')
             ).outerjoin(
@@ -1060,7 +1062,8 @@ class EmployeeService:
                     "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
                     "date_of_joining": e.date_of_joining.isoformat() if e.date_of_joining else None,
                     "band": e.band or "Not Assigned",
-                    "sub_role": e.sub_role or "Not Assigned"
+                    "sub_role": e.sub_role or "Not Assigned",
+                    "profile_image": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None
                 } for e in new_joinees
             ]
         except Exception as e:

@@ -221,7 +221,7 @@ export const Dashboard = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    avatar={<Avatar size={48} src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
                     title={<Text strong>{item.employee_name}</Text>}
                     description={`Celebrating on ${item.date}`}
                   />
@@ -246,7 +246,7 @@ export const Dashboard = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar style={{ backgroundColor: '#13c2c2' }}>{item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    avatar={<Avatar size={48} src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
                     title={<Text strong>{item.employee_name}</Text>}
                     description={
                       <div style={{ fontSize: '12px' }}>
