@@ -87,6 +87,19 @@ const EmailNotifications = () => {
             recipients: 'ahiresh.gaikwad@flairminds.com',
             trigger: 'Daily 9:00am - Review Status is pending or not scheduled',
         },
+        {
+            key: '9',
+            type: 'Leave Approver Change',
+            recipients: <>
+                <div>Employee</div>
+                <br />
+                <div>CC:</div>
+                <div>hr@flairminds.com</div>
+                <div>New Leave Approver</div>
+                <div>Old Leave Approver</div>
+            </>,
+            trigger: 'Immediate (On Approver Assignment/Change)',
+        },
     ];
 
     return (
