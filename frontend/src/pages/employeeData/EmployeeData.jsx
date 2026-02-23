@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Card, Statistic, Row, Col } from 'antd';
+import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space } from 'antd';
 import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
 import { CSVLink } from 'react-csv';
@@ -119,6 +119,16 @@ export const EmployeeData = () => {
     }
   };
 
+  const StatCard = ({ label, count, color }) => (
+    <div style={{
+      background: '#fff', border: `1px solid ${color}22`, borderRadius: 8,
+      padding: '12px 20px', minWidth: 120, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    }}>
+      <div style={{ fontSize: 16, fontWeight: 400, color }}>{count}</div>
+      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{label}</div>
+    </div>
+  );
+
   const columns = [
     {
       title: 'Employee ID',
@@ -186,48 +196,12 @@ export const EmployeeData = () => {
 
   return (
     <div className={styles.employeeData}>
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Total Active Employees"
-              value={stats.total_active}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Interns"
-              value={stats.total_interns}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: 'orange' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="In Probation"
-              value={stats.total_probation}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: 'violet' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Resigned"
-              value={stats.total_resigned}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: 'orange' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <Space wrap style={{ marginBottom: 20 }}>
+        <StatCard label="Active Employees" count={stats.total_active} color="#3f8600" />
+        <StatCard label="Interns" count={stats.total_interns} color="orange" />
+        <StatCard label="In Probation" count={stats.total_probation} color="violet" />
+        <StatCard label="Resigned" count={stats.total_resigned} color="orange" />
+      </Space>
       <div className={styles.upperArea}>
         <Input
           className={styles.searchBar}

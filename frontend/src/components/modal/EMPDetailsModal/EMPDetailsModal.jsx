@@ -477,11 +477,13 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                         option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                       }
                     >
-                      {potentialApprovers.map(approver => (
-                        <Option key={approver.employeeId} value={approver.employeeId}>
-                          {approver.employeeName} ({approver.roleName})
-                        </Option>
-                      ))}
+                      {potentialApprovers
+                        .filter(approver => approver.employeeId !== personalEmployeeDetails?.employeeId)
+                        .map(approver => (
+                          <Option key={approver.employeeId} value={approver.employeeId}>
+                            {approver.employeeName} ({approver.roleName})
+                          </Option>
+                        ))}
                     </Select>
                   </Form.Item>
                 </Col>
