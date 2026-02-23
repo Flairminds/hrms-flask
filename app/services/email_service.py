@@ -157,7 +157,7 @@ class EmailService:
             
             # Prepare email
             msg = MIMEMultipart()
-            msg['From'] = from_address
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = ", ".join(to_addresses)
             msg['Subject'] = f"Leave Report - {current_date_str}"
             msg.attach(MIMEText(f"<html><body>{leave_table}</body></html>", 'html'))
@@ -286,7 +286,7 @@ class EmailService:
             
             # Prepare email
             msg = MIMEMultipart()
-            msg['From'] = from_address
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = ", ".join(to_addresses)
             msg['Subject'] = f"In Office Report - {current_date_str}"
             msg.attach(MIMEText(f"<html><body>{html}</body></html>", 'html'))
@@ -391,6 +391,12 @@ class EmailService:
 
 
     @staticmethod
+    def _get_from_string(from_address: str) -> str:
+        """Returns the standardized 'From' header string."""
+        return f"HRMS <{from_address}>"
+
+
+    @staticmethod
     def send_leave_notification_email(employee_name: str, recipients: str, leave_details: Dict[str, Any] = None) -> bool:
         """
         Sends leave approval request notification to team lead.
@@ -476,11 +482,10 @@ class EmailService:
             if not from_address or not from_password:
                 Logger.error("SMTP credentials not configured for leave notification")
                 raise ValueError("Email configuration missing: MAIL_USERNAME and MAIL_PASSWORD required")
-            from_name = "HRMS"
             
             # Create message
             msg = MIMEMultipart()
-            msg['From'] = f"{from_name} <{from_address}>"
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = ', '.join(recipient_list)
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'html'))
@@ -639,11 +644,10 @@ class EmailService:
             if not from_address or not from_password:
                 Logger.error("SMTP credentials not configured for leave status notification")
                 raise ValueError("Email configuration missing: MAIL_USERNAME and MAIL_PASSWORD required")
-            from_name = "HRMS"
             
             # Create message
             msg = MIMEMultipart()
-            msg['From'] = f"{from_name} <{from_address}>"
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = to_address
             if cc_addresses:
                 msg['Cc'] = ', '.join(cc_addresses)
@@ -804,8 +808,8 @@ class EmailService:
             employees = Employee.query.filter(
                 Employee.employment_status.notin_(['Relieved', 'Absconding']),
                 Employee.date_of_birth.isnot(None),
-                # extract('month', Employee.date_of_birth) == today.month,
-                # extract('day', Employee.date_of_birth) == today.day
+                extract('month', Employee.date_of_birth) == today.month,
+                extract('day', Employee.date_of_birth) == today.day
             ).all()
             
             if not employees:
@@ -829,8 +833,6 @@ class EmailService:
             
             sent_count = 0
             for emp in employees:
-                if emp.email != 'punit.suman@flairminds.com':
-                    continue
                 try:
                     to_email = emp.email or emp.personal_email
                     if not to_email:
@@ -838,40 +840,40 @@ class EmailService:
                         continue
                         
                     msg = MIMEMultipart()
-                    msg['From'] = f"Flairminds HRMS <{from_address}>"
+                    msg['From'] = EmailService._get_from_string(from_address)
                     msg['To'] = to_email
                     msg['Subject'] = f"Happy Birthday, {emp.first_name}! 🎂"
                     
                     html = f"""
                     <html>
-                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6;">
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f7f6; padding: 20px;">
+                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #ffffff;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; padding: 10px;">
                             <tr>
                                 <td align="center">
-                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
                                         <!-- Header -->
                                         <tr>
-                                            <td style="text-align: center;">
-                                                <h1 style="margin: 0; font-size: 32px; letter-spacing: 1px;">Happy Birthday!</h1>
-                                                <p style="font-size: 18px; margin-top: 10px; opacity: 0.9;">Wishing you a day full of joy and treats.</p>
+                                            <td style="text-align: center; padding: 50px 20px 20px 20px;">
+                                                <h1 style="margin: 0; font-size: 38px; color: #2c3e50; font-weight: 800; letter-spacing: -0.5px;">Happy Birthday!</h1>
+                                                <p style="font-size: 18px; margin-top: 15px; color: #666;">Wishing you a day full of joy and treats.</p>
                                             </td>
                                         </tr>
                                         <!-- Content -->
                                         <tr>
-                                            <td style="padding: 40px;">
-                                                <p style="font-size: 18px; margin-bottom: 20px;">Dear <strong>{emp.first_name}</strong>,</p>
-                                                <p>On behalf of everyone at <strong>Flairminds</strong>, we wish you a very <strong>Happy Birthday!</strong></p>
-                                                <p>We truly value your presence in our team. Your contributions and positive energy help make this a great place to work. We hope your special day is filled with happiness, and the coming year brings you even more success and fulfillment.</p>
-                                                <p>Have a wonderful celebration with your loved ones!</p>
-                                                <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-                                                    <p style="margin: 0; color: #666;">Warmest Regards,</p>
-                                                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #2c3e50; font-weight: bold;">Flairminds Team</p>
+                                            <td style="padding: 20px 50px 50px 50px;">
+                                                <p style="font-size: 18px; margin-bottom: 25px;">Dear <strong>{emp.first_name}</strong>,</p>
+                                                <p style="margin-bottom: 15px;">On behalf of everyone at <strong>Flairminds</strong>, we wish you a very <strong>Happy Birthday!</strong></p>
+                                                <p style="margin-bottom: 15px;">We truly value your presence in our team. Your contributions and positive energy help make this a great place to work. We hope your special day is filled with happiness, and the coming year brings you even more success and fulfillment.</p>
+                                                <p style="margin-bottom: 30px;">Have a wonderful celebration with your loved ones!</p>
+                                                <div style="margin-top: 40px; border-top: 1px solid #f0f0f0; padding-top: 30px;">
+                                                    <p style="margin: 0; color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Warmest Regards,</p>
+                                                    <p style="margin: 8px 0 0 0; font-size: 20px; color: #2c3e50; font-weight: bold;">Team Flairminds</p>
                                                 </div>
                                             </td>
                                         </tr>
                                         <!-- Footer -->
                                         <tr>
-                                            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+                                            <td style="padding: 30px; text-align: center; font-size: 12px; color: #aaa; border-top: 1px solid #f9f9f9;">
                                                 <p style="margin: 0;">&copy; {today.year} Flairminds. This is an automated greeting from HRMS.</p>
                                             </td>
                                         </tr>
@@ -956,7 +958,7 @@ class EmailService:
                     elif years == 3: suffix = "rd"
                     
                     msg = MIMEMultipart()
-                    msg['From'] = f"Flairminds HRMS <{from_address}>"
+                    msg['From'] = EmailService._get_from_string(from_address)
                     msg['To'] = to_email
                     msg['Subject'] = f"Happy Work Anniversary, {emp.first_name}! 🎊"
                     
@@ -1161,7 +1163,7 @@ class EmailService:
 
         try:
             msg = MIMEMultipart()
-            msg['From'] = f"HRMS <{from_address}>"
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = ", ".join(recipients)
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'html'))
@@ -1364,7 +1366,7 @@ class EmailService:
 
         try:
             msg = MIMEMultipart()
-            msg['From'] = f"HRMS <{from_address}>"
+            msg['From'] = EmailService._get_from_string(from_address)
             msg['To'] = ", ".join(recipients)
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'html'))
