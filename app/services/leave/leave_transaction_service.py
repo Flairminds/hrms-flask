@@ -38,6 +38,9 @@ class LeaveTransactionService:
         applied_by = data.get('appliedBy')
         duration = data.get('duration')
         comments = data.get('comments', '')
+        is_hr_override = data.get('is_hr_override', False)
+        hr_leave_status = data.get('hr_leave_status')
+
         
         if not emp_id or not from_date or not to_date or not applied_by:
             raise ValueError("Missing required fields for leave transaction")
@@ -115,158 +118,134 @@ class LeaveTransactionService:
                 raise ValueError("Leaves already applied for some of the selected dates.")
 
         try:
-            # 1. Privilege Leave Validation
-            # at least 7 days in advance, cannot exceed balance
-            if leave_type_name == LeaveTypeName.PRIVILEGE_LEAVE:
-                if (from_date_only - app_date_only).days < 7:
-                    raise ValueError("You must apply for Privilege Leave at least 7 days in advance.")
+            if not is_hr_override:
+                # 1. Privilege Leave Validation: at least 7 days in advance
+                if leave_type_name == LeaveTypeName.PRIVILEGE_LEAVE:
+                    if (from_date_only - app_date_only).days < 7:
+                        raise ValueError("You must apply for Privilege Leave at least 7 days in advance.")
 
-                if remaining < no_of_days:
-                    raise ValueError(f"Insufficient Privilege Leave balance. Available: {remaining}")
+                # 2. Sick/Emergency Leave Validation
+                if leave_type_name == LeaveTypeName.SICK_LEAVE:
+                    if remaining < no_of_days:
+                        raise ValueError(f"Insufficient {LeaveTypeName.SICK_LEAVE} balance. Available: {remaining}")
 
-            # 2. Sick/Emergency Leave Validation
-            if leave_type_name == LeaveTypeName.SICK_LEAVE:
-                if remaining < no_of_days:
-                    raise ValueError(f"Insufficient {LeaveTypeName.SICK_LEAVE} balance. Available: {remaining}")
+                # 3. Missed Door Entry Validation
+                if leave_type_name == "Missed Door Entry":
+                    if duration != "Full Day":
+                        raise ValueError("Missed Door Entry leave must be Full Day only.")
+                    if from_date_only > app_date_only:
+                        raise ValueError("Missed Door Entry leave can only be applied for past or current dates, not future dates.")
 
-            # 3. Missed Door Entry Validation
-            if leave_type_name == "Missed Door Entry":
-                # Only full day allowed
-                if duration != "Full Day":
-                    raise ValueError("Missed Door Entry leave must be Full Day only.")
-                
-                # Only past or current date allowed (not future)
-                if from_date_only > app_date_only:
-                    raise ValueError("Missed Door Entry leave can only be applied for past or current dates, not future dates.")
+                # 4. WFH Validations
+                if leave_type_id == LeaveTypeID.WFH:
+                    if no_of_days > 5:
+                        raise ValueError("WFH leave cannot be applied for more than 5 days at a time.")
+                    if no_of_days == 5:
+                        six_months_ago = from_date - timedelta(days=180)
+                        last_wfh = db.session.query(func.max(LeaveTransaction.to_date)).filter(
+                            LeaveTransaction.employee_id == emp_id,
+                            LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
+                            LeaveTransaction.no_of_days >= 5,
+                            LeaveTransaction.from_date >= six_months_ago,
+                            LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
+                        ).scalar()
+                        if last_wfh and (from_date - last_wfh).days < 180:
+                            raise ValueError("You have already taken a continuous 5-day WFH leave within the last 6 months.")
 
-            # 4. WFH Validations
-            if leave_type_id == LeaveTypeID.WFH:
-                if no_of_days > 5:
-                    raise ValueError("WFH leave cannot be applied for more than 5 days at a time.")
-                if no_of_days == 5:
-                    six_months_ago = from_date - timedelta(days=180)
-                    last_wfh = db.session.query(func.max(LeaveTransaction.to_date)).filter(
+                    if not employee:
+                        employee = Employee.query.filter_by(employee_id=emp_id).first()
+
+                    lateral_info = LateralAndExempt.query.filter_by(employee_id=emp_id).first()
+                    is_lateral = lateral_info.lateral_hire if lateral_info else False
+                    if not is_lateral and employee and employee.date_of_joining:
+                        ist_today = (datetime.utcnow() + timedelta(minutes=330)).date()
+                        if (ist_today - employee.date_of_joining).days < 360:
+                            raise ValueError("Before Twelve Months of Joining, you cannot apply for Work From Home.")
+
+                    ist_now = datetime.utcnow() + timedelta(minutes=330)
+                    current_time = ist_now.time()
+                    if app_date_only == from_date_only:
+                        if no_of_days >= 1.0:
+                            if current_time > time(9, 30):
+                                raise ValueError("For current date, Full Day WFH must be applied before 9:30 AM.")
+                        else:
+                            if current_time > time(11, 59):
+                                raise ValueError("For current date, Half Day WFH must be applied before 11:59 AM.")
+
+                    if app_date_only > from_date_only:
+                        raise ValueError("You cannot apply for Work From Home as the application date is after the from date.")
+
+                    from_week = from_date.isocalendar()[1]
+                    conflicting_wfh = db.session.query(LeaveTransaction.to_date).filter(
                         LeaveTransaction.employee_id == emp_id,
                         LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
-                        LeaveTransaction.no_of_days >= 5,
-                        LeaveTransaction.from_date >= six_months_ago,
+                        LeaveTransaction.no_of_days == 5,
+                        func.extract('week', LeaveTransaction.to_date) == from_week,
                         LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
-                    ).scalar()
-                    
-                    if last_wfh and (from_date - last_wfh).days < 180:
-                        raise ValueError("You have already taken a continuous 5-day WFH leave within the last 6 months.")
+                    ).first()
+                    if conflicting_wfh:
+                        raise ValueError("You cannot take any WFH leave this week as you have already taken a 5-day WFH leave.")
 
-                if not employee: # Double check, though we checked above
-                     employee = Employee.query.filter_by(employee_id=emp_id).first()
+                    fy_year = application_date.year if application_date.month >= 4 else application_date.year - 1
+                    fy_start, fy_end = LeaveUtils.get_financial_year_dates(fy_year)
+                    wfh_in_week = db.session.query(func.sum(LeaveTransaction.no_of_days)).filter(
+                        LeaveTransaction.employee_id == emp_id,
+                        LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
+                        func.extract('week', LeaveTransaction.from_date) == from_week,
+                        LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
+                        LeaveTransaction.from_date >= fy_start,
+                        LeaveTransaction.to_date <= fy_end
+                    ).scalar() or 0
+                    if wfh_in_week >= 1 or no_of_days > 1:
+                        flag_for_second_approval = 1
 
-                lateral_info = LateralAndExempt.query.filter_by(employee_id=emp_id).first()
-                is_lateral = lateral_info.lateral_hire if lateral_info else False
-                
-                if not is_lateral and employee and employee.date_of_joining:
-                    # General 12-month restriction — use IST to be consistent with application_date
-                    ist_today = (datetime.utcnow() + timedelta(minutes=330)).date()
-                    if (ist_today - employee.date_of_joining).days < 360:
-                        raise ValueError("Before Twelve Months of Joining, you cannot apply for Work From Home.")
+                # 5. Customer Approved Comp-off Validation
+                if leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF:
+                    comp_offs = data.get('compOffTransactions', [])
+                    if not comp_offs and no_of_days > 0:
+                        raise ValueError("Please provide comp-off work details.")
+                    total_hours = sum(float(co.get('numberOfHours', 0)) for co in comp_offs)
+                    required_hours = float(no_of_days) * 8
+                    if total_hours < required_hours:
+                        raise ValueError(f"Total comp-off hours ({total_hours}) must be at least {required_hours} for {no_of_days} days leave.")
+                    limit_date = date.today() - timedelta(days=90)
+                    for co in comp_offs:
+                        worked_date_str = co.get('compOffDate')
+                        if worked_date_str:
+                            try:
+                                worked_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
+                                if worked_date < limit_date:
+                                    raise ValueError(f"Comp-off worked date {worked_date_str} cannot be older than 3 months.")
+                            except (ValueError, TypeError):
+                                pass
 
-                # Time Validations for Current Date — always in IST (UTC+5:30)
-                ist_now = datetime.utcnow() + timedelta(minutes=330)
-                current_time = ist_now.time()
-                if app_date_only == from_date_only:
-                    if no_of_days >= 1.0: # Full Day
-                        if current_time > time(9, 30):
-                             raise ValueError("For current date, Full Day WFH must be applied before 9:30 AM.")
-                    else: # Half Day
-                        if current_time > time(11, 59):
-                             raise ValueError("For current date, Half Day WFH must be applied before 11:59 AM.")
-
-                if app_date_only > from_date_only:
-                    raise ValueError("You cannot apply for Work From Home as the application date is after the from date.")
-
-                from_week = from_date.isocalendar()[1]
-                # In production, use a more compatible approach if WEEK part is not supported directly in all dialects
-                # Assuming SQL Server style based on previous context or just using SQLAlchemy native functions
-                conflicting_wfh = db.session.query(LeaveTransaction.to_date).filter(
-                    LeaveTransaction.employee_id == emp_id,
-                    LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
-                    LeaveTransaction.no_of_days == 5,
-                    func.extract('week', LeaveTransaction.to_date) == from_week,
-                    LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING])
-                ).first()
-                
-                if conflicting_wfh:
-                    raise ValueError("You cannot take any WFH leave this week as you have already taken a 5-day WFH leave.")
-
-                fy_year = application_date.year if application_date.month >= 4 else application_date.year - 1
-                fy_start, fy_end = LeaveUtils.get_financial_year_dates(fy_year)
-                
-                wfh_in_week = db.session.query(func.sum(LeaveTransaction.no_of_days)).filter(
-                    LeaveTransaction.employee_id == emp_id,
-                    LeaveTransaction.leave_type_id == LeaveTypeID.WFH,
-                    func.extract('week', LeaveTransaction.from_date) == from_week,
-                    LeaveTransaction.leave_status.in_([LeaveStatus.APPROVED, LeaveStatus.PARTIAL_APPROVED, LeaveStatus.PENDING]),
-                    LeaveTransaction.from_date >= fy_start,
-                    LeaveTransaction.to_date <= fy_end
-                ).scalar() or 0
-                
-                if wfh_in_week >= 1 or no_of_days > 1:
-                    flag_for_second_approval = 1
-
-            # 3. Customer Approved Comp-off Validation
-            if leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF:
-                comp_offs = data.get('compOffTransactions', [])
-                if not comp_offs and no_of_days > 0:
-                    raise ValueError("Please provide comp-off work details.")
-                
-                total_hours = sum(float(co.get('numberOfHours', 0)) for co in comp_offs)
-                required_hours = float(no_of_days) * 8
-                
-                # Check 1: Total hours >= 8 * no_of_days
-                if total_hours < required_hours:
-                    raise ValueError(f"Total comp-off hours ({total_hours}) must be at least {required_hours} for {no_of_days} days leave.")
-                    
-                limit_date = date.today() - timedelta(days=90)
-                for co in comp_offs:
-                    worked_date_str = co.get('compOffDate')
-                    if worked_date_str:
-                        try:
-                            # Try parsing YYYY-MM-DD
-                            worked_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
-                            # Check 2: Worked date expiry (3 months)
-                            if worked_date < limit_date:
-                                 raise ValueError(f"Comp-off worked date {worked_date_str} cannot be older than 3 months.")
-                        except (ValueError, TypeError):
-                             # Continue if format issues, or log warning
-                             pass
-
-            # 4. General Balance Check (for any leave cards flagged types)
+            # Balance check applies to all (including HR override) where applicable
             # Exclude "Missed Door Entry" from balance checks as it's for attendance correction
             if target_card and target_card['leave_cards_flag'] and leave_type_name != "Missed Door Entry":
                 remaining = target_card['total_alloted_leaves'] - target_card['total_used_leaves']
                 if (remaining - no_of_days) < 0:
                     raise ValueError(f"Insufficient {leave_type_name} balance. Available: {remaining}")
 
-            # 5. Customer Holiday Validation
+            # Customer Holiday Validation (non-override only)
             customer_holiday_date = None
-            if leave_type_name == LeaveTypeName.CUSTOMER_HOLIDAY:
+            if not is_hr_override and leave_type_name == LeaveTypeName.CUSTOMER_HOLIDAY:
                 ch_data = data.get('cutsomerHolidays', {})
                 worked_date_str = ch_data.get('workedDate')
-                
                 if not worked_date_str:
                     raise ValueError("Please provide worked date for Customer Holiday.")
-                
                 try:
                     customer_holiday_date = datetime.strptime(worked_date_str, '%Y-%m-%d').date()
-                    # Validate worked_date < from_date
                     if customer_holiday_date >= from_date_only:
                         raise ValueError(f"Worked date ({worked_date_str}) must be before the leave date.")
                 except ValueError as e:
-                     if "must be before" in str(e):
-                         raise e
-                     pass # Ignore parse error, let db handle or fail later? Or strict? Raise error better.
-                     # raise ValueError(f"Invalid worked date format: {worked_date_str}")
+                    if "must be before" in str(e):
+                        raise e
+                    pass
 
-            # Generate sequence if needed or use autoincrement
-            # For now, following leave_tran_id = autoincrement in model definition
+            # Determine leave status: HR override can set custom status, otherwise Pending
+            leave_status = hr_leave_status if is_hr_override and hr_leave_status else LeaveStatus.PENDING
+
+
             is_second_approval = True if (flag_for_second_approval == 1 or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_WFH or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF) else False
             
             new_leave = LeaveTransaction(
@@ -281,7 +260,7 @@ class LeaveTransactionService:
                 application_date=application_date,
                 approved_by=data.get('approvedBy'),
                 is_for_second_approval=is_second_approval,
-                leave_status=LeaveStatus.PENDING,
+                leave_status=leave_status,
                 duration=duration,
                 approver_id=approver_id  # Store leave approver
             )
@@ -344,7 +323,22 @@ class LeaveTransactionService:
                         Logger.info("Sending leave notification email", 
                                    employee_name=employee_name, 
                                    approver_email=approver.email)
-                        EmailService.send_leave_notification_email(employee_name, approver.email, leave_details)
+                        if is_hr_override and leave_status == LeaveStatus.APPROVED:
+                            approver = Employee.query.filter_by(employee_id=applied_by).first()
+                            details = {
+                                'employee_name': employee_name,
+                                'employee_email': employee.email,
+                                'leave_status': leave_status,
+                                'leave_type': leave_type_id,
+                                'leave_type_name': leave_type_name,
+                                'start_date': from_date,
+                                'end_date': to_date,
+                                'approver_mail_id': approver.email,
+                                'approved_by': approver.first_name + ' ' + approver.last_name
+                            }
+                            EmailService.send_leave_status_notification(details)
+                        else:
+                            EmailService.send_leave_notification_email(employee_name, approver.email, leave_details)
                     else:
                         Logger.warning("Approver not found or no email", approver_id=approver_id)
                 else:

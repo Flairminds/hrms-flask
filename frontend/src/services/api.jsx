@@ -115,7 +115,27 @@ export const insertLeaveTransaction = async (payload) => {
   return res;
 };
 
-// Gets available leave types and the approver for a given employee.
+// HR applies leave on behalf of any employee (Admin/HR only).
+export const hrApplyLeave = async (payload) => {
+  const res = await axiosInstance.post(`${API_BASE_URL}/leave/hr-apply-leave`, {
+    "employeeId": payload.employeeId,
+    "comments": payload.comments,
+    "leaveType": payload.leaveType,
+    "duration": payload.duration,
+    "fromDate": payload.fromDate,
+    "toDate": payload.toDate,
+    "handOverComments": payload.handOverComments || "",
+    "noOfDays": payload.noOfDays,
+    "approvedBy": payload.approvedBy,
+    "hr_leave_status": payload.hr_leave_status,
+    "compOffTransactions": [],
+    "cutsomerHolidays": { workedDate: null },
+    "workingLates": { fromtime: null, totime: null, reasonforworkinglate: null }
+  });
+  return res;
+};
+
+
 export const getTypeApprover = () => {
   const res = axiosInstance.get(`${API_BASE_URL}/leave/leave-types-and-approver`);
   return res;

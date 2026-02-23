@@ -166,6 +166,8 @@ export function LeaveManagementPage() {
     setLeaveApplicationModal(true);
   }
 
+  const hrTabContent = undefined; // unused - kept for reference
+
   return (
     <>
       <div className={styles.mainContainer}>

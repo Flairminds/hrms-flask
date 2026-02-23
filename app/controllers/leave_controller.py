@@ -112,6 +112,51 @@ class LeaveController:
             }), 500
 
     @staticmethod
+    def hr_apply_leave():
+        """HR applies leave on behalf of any employee, bypassing most validations."""
+        Logger.info("HR apply-on-behalf leave request received")
+
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"Message": "Request body must be JSON"}), 400
+
+            hr_emp_id = g.employee_id  # HR's own employee ID
+            if not hr_emp_id:
+                return jsonify({"Message": "Unauthorized"}), 401
+
+            # Mark as HR override — service will conditionally skip validations
+            data['is_hr_override'] = True
+            # applied_by = HR's employee ID (differentiates from regular applications)
+            data['appliedBy'] = hr_emp_id
+
+            tran_id = LeaveService.insert_leave_transaction(data)
+
+            Logger.info("HR leave-on-behalf submitted successfully",
+                        transaction_id=tran_id,
+                        hr_employee_id=hr_emp_id,
+                        target_employee_id=data.get('employeeId'))
+
+            return jsonify({
+                "Message": "Leave applied successfully on behalf of employee",
+                "TransactionId": tran_id
+            }), 201
+
+        except ValueError as ve:
+            Logger.warning("Validation error in HR leave application", error=str(ve))
+            return jsonify({"Message": str(ve)}), 400
+
+        except LookupError as le:
+            Logger.warning("Resource not found for HR leave application", error=str(le))
+            return jsonify({"Message": str(le)}), 404
+
+        except Exception as e:
+            Logger.error("Unexpected error in HR leave application",
+                         error=str(e), error_type=type(e).__name__)
+            return jsonify({"Message": "Failed to apply leave. Please try again."}), 500
+
+
+    @staticmethod
     def update_leave_status():
         """Updates the approval status of a leave request."""
         Logger.info("Update leave status request received")

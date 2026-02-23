@@ -1,0 +1,110 @@
+.titleDiv {
+    display: flex;
+    align-items: center;
+}
+
+.titleHeading {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #0F6CBD;
+    padding-bottom: 0.4rem;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.typeofLeaveDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 0.4rem;
+    border-radius: 8px;
+}
+
+.heading {
+    font-weight: 600;
+    color: #34495e;
+    padding-bottom: 0.3rem;
+}
+
+.datesContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    padding-bottom: 0.8rem;
+    padding-top: 0.4rem;
+}
+
+.dateDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0.4rem;
+}
+
+.leaveDaysDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0.4rem;
+}
+
+.desDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 0.4rem;
+    padding-bottom: 10px;
+}
+
+.inputDes {
+    border: 1px solid #ced6e0;
+    border-radius: 6px;
+    padding: 8px;
+    transition: border-color 0.3s ease;
+}
+
+.inputDes:focus {
+    border-color: #2d98da;
+    outline: none;
+    box-shadow: 0 0 4px rgba(45, 152, 218, 0.5);
+}
+
+.approverDiv {
+    display: flex;
+    justify-content: start;
+    margin-top: 0.4rem;
+    box-shadow: 1px 1px 1px 0px #b3c7ff !important;
+    background-color: white !important;
+    border-color: #b3c7ff !important;
+    color: black !important;
+    border-radius: 5px;
+    padding: 0.8rem;
+    width: 100%;
+}
+
+.btnDiv {
+    display: flex;
+    justify-content: end;
+    gap: 10px;
+    padding-right: 8px;
+}
+
+.btnStyle {
+    padding: 12px;
+    background: linear-gradient(135deg, #b3c7ff, #697df7) !important;
+    color: #fff !important;
+    border: 1.4px solid #b3c7ff !important;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btnStyle:hover {
+    color: #5c6ac8 !important;
+    background-color: #b3c7ff !important;
+    border: 1.4px solid #b3c7ff !important;
+    font-weight: 400;
+}

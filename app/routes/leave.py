@@ -72,3 +72,11 @@ def update_holiday(holiday_id):
 @roles_required(*ROLE_PERMISSIONS['leave']['manage_holidays'])
 def delete_holiday(holiday_id):
     return LeaveController.delete_holiday(holiday_id)
+
+
+# ---- HR Apply Leave on Behalf (HR/Admin only) ----
+
+@leave_bp.route('/hr-apply-leave', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['leave']['hr_apply_leave'])
+def hr_apply_leave():
+    return LeaveController.hr_apply_leave()
