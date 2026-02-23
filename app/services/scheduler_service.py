@@ -56,6 +56,26 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in daily review alert job", error=str(e))
             
+    @scheduler.task('cron', id='birthday_greetings', hour=0, minute=5, timezone='Asia/Kolkata')
+    def birthday_greetings_job():
+        """Daily job for sending birthday wishes at 12:05 AM IST."""
+        with app.app_context():
+            Logger.info("Running scheduled birthday greetings job")
+            try:
+                EmailService.send_birthday_wishes()
+            except Exception as e:
+                Logger.error("Error in birthday greetings job", error=str(e))
+
+    @scheduler.task('cron', id='anniversary_greetings', hour=10, minute=0, timezone='Asia/Kolkata')
+    def anniversary_greetings_job():
+        """Daily job for sending work anniversary greetings at 10:00 AM IST."""
+        with app.app_context():
+            Logger.info("Running scheduled anniversary greetings job")
+            try:
+                EmailService.send_anniversary_wishes()
+            except Exception as e:
+                Logger.error("Error in anniversary greetings job", error=str(e))
+
     @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0, timezone='Asia/Kolkata')
     def monthly_leave_allocation():
         """Automatically allocates leaves on the 1st of every month."""

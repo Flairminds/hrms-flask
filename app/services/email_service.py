@@ -18,7 +18,7 @@ from email.mime.text import MIMEText
 from datetime import datetime, timedelta, date
 
 from flask import current_app
-from sqlalchemy import text
+from sqlalchemy import text, extract
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
@@ -782,6 +782,240 @@ class EmailService:
 
         return f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
 
+
+    # ==================================================================
+    # GREETING EMAILS (Birthdays & Anniversaries)
+    # ==================================================================
+
+    @staticmethod
+    def send_birthday_wishes() -> int:
+        """
+        Sends daily birthday wishes to active employees whose birthday is today (IST).
+        
+        Returns:
+            Number of emails successfully sent.
+        """
+        Logger.info("Starting scheduled birthday wishes job")
+        # IST today
+        today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).date()
+        
+        try:
+            # Query active employees with birthday today
+            employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.date_of_birth.isnot(None),
+                # extract('month', Employee.date_of_birth) == today.month,
+                # extract('day', Employee.date_of_birth) == today.day
+            ).all()
+            
+            if not employees:
+                Logger.info("No birthdays today")
+                return 0
+            
+            Logger.info(f"Found {len(employees)} employee(s) with birthday today")
+            
+            from_address = current_app.config.get('MAIL_USERNAME')
+            from_password = current_app.config.get('MAIL_PASSWORD')
+            if not from_address or not from_password:
+                Logger.error("SMTP credentials not configured for birthday wishes")
+                return 0
+            
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587)
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+            
+            sent_count = 0
+            for emp in employees:
+                if emp.email != 'punit.suman@flairminds.com':
+                    continue
+                try:
+                    to_email = emp.email or emp.personal_email
+                    if not to_email:
+                        Logger.warning("Skipping birthday email - no email address", employee_id=emp.employee_id)
+                        continue
+                        
+                    msg = MIMEMultipart()
+                    msg['From'] = f"Flairminds HRMS <{from_address}>"
+                    msg['To'] = to_email
+                    msg['Subject'] = f"Happy Birthday, {emp.first_name}! 🎂"
+                    
+                    html = f"""
+                    <html>
+                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f7f6; padding: 20px;">
+                            <tr>
+                                <td align="center">
+                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                        <!-- Header -->
+                                        <tr>
+                                            <td style="text-align: center;">
+                                                <h1 style="margin: 0; font-size: 32px; letter-spacing: 1px;">Happy Birthday!</h1>
+                                                <p style="font-size: 18px; margin-top: 10px; opacity: 0.9;">Wishing you a day full of joy and treats.</p>
+                                            </td>
+                                        </tr>
+                                        <!-- Content -->
+                                        <tr>
+                                            <td style="padding: 40px;">
+                                                <p style="font-size: 18px; margin-bottom: 20px;">Dear <strong>{emp.first_name}</strong>,</p>
+                                                <p>On behalf of everyone at <strong>Flairminds</strong>, we wish you a very <strong>Happy Birthday!</strong></p>
+                                                <p>We truly value your presence in our team. Your contributions and positive energy help make this a great place to work. We hope your special day is filled with happiness, and the coming year brings you even more success and fulfillment.</p>
+                                                <p>Have a wonderful celebration with your loved ones!</p>
+                                                <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                                                    <p style="margin: 0; color: #666;">Warmest Regards,</p>
+                                                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #2c3e50; font-weight: bold;">Flairminds Team</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Footer -->
+                                        <tr>
+                                            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+                                                <p style="margin: 0;">&copy; {today.year} Flairminds. This is an automated greeting from HRMS.</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </body>
+                    </html>
+                    """
+                    msg.attach(MIMEText(html, 'html'))
+                    server.sendmail(from_address, [to_email], msg.as_string())
+                    sent_count += 1
+                except Exception as e:
+                    Logger.error(f"Error sending individual birthday email", employee_id=emp.employee_id, error=str(e))
+            
+            server.quit()
+            Logger.info(f"Birthday wishes job completed. Successfully sent {sent_count} email(s)")
+            return sent_count
+            
+        except SQLAlchemyError as e:
+            Logger.error("DB error during birthday wishes job", error=str(e))
+            return 0
+        except Exception as e:
+            Logger.critical("Unexpected error in birthday wishes job", error=str(e))
+            return 0
+
+    @staticmethod
+    def send_anniversary_wishes() -> int:
+        """
+        Sends daily work anniversary greetings to active employees whose anniversary is today (IST).
+        Only sends to employees who have completed at least 1 year.
+        
+        Returns:
+            Number of emails successfully sent.
+        """
+        Logger.info("Starting scheduled work anniversary wishes job")
+        # IST today
+        today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).date()
+        
+        try:
+            # Query active employees with anniversary today (joined >= 1 year ago)
+            employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.date_of_joining.isnot(None),
+                Employee.date_of_joining < today,
+                extract('month', Employee.date_of_joining) == today.month,
+                extract('day', Employee.date_of_joining) == today.day
+            ).all()
+            
+            if not employees:
+                Logger.info("No work anniversaries today")
+                return 0
+            
+            Logger.info(f"Found {len(employees)} employee(s) with work anniversary today")
+            
+            from_address = current_app.config.get('MAIL_USERNAME')
+            from_password = current_app.config.get('MAIL_PASSWORD')
+            if not from_address or not from_password:
+                Logger.error("SMTP credentials not configured for anniversary wishes")
+                return 0
+            
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587)
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+            
+            sent_count = 0
+            for emp in employees:
+                try:
+                    to_email = emp.email or emp.personal_email
+                    if not to_email:
+                        Logger.warning("Skipping anniversary email - no email address", employee_id=emp.employee_id)
+                        continue
+                    
+                    years = today.year - emp.date_of_joining.year
+                    suffix = "th"
+                    if years == 1: suffix = "st"
+                    elif years == 2: suffix = "nd"
+                    elif years == 3: suffix = "rd"
+                    
+                    msg = MIMEMultipart()
+                    msg['From'] = f"Flairminds HRMS <{from_address}>"
+                    msg['To'] = to_email
+                    msg['Subject'] = f"Happy Work Anniversary, {emp.first_name}! 🎊"
+                    
+                    html = f"""
+                    <html>
+                    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f7f6; padding: 20px;">
+                            <tr>
+                                <td align="center">
+                                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                        <!-- Header -->
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #108ee9 0%, #87d068 100%); padding: 40px; text-align: center; color: white;">
+                                                <h1 style="margin: 0; font-size: 32px; letter-spacing: 1px;">Work Anniversary!</h1>
+                                                <p style="font-size: 18px; margin-top: 10px; opacity: 0.9;">Celebrating <strong>{years}{suffix}</strong> year with Flairminds.</p>
+                                            </td>
+                                        </tr>
+                                        <!-- Content -->
+                                        <tr>
+                                            <td style="padding: 40px;">
+                                                <p style="font-size: 18px; margin-bottom: 20px;">Dear <strong>{emp.first_name}</strong>,</p>
+                                                <p>Congratulations on reaching your <strong>{years}{suffix} work anniversary</strong> at <strong>Flairminds</strong>!</p>
+                                                <p>We want to take this moment to thank you for your commitment, expertise, and the valuable contribution you have made to our growth and success over the past year(s). It is team members like you who make us who we are.</p>
+                                                <p>We are proud to have you with us and look forward to many more years of working together.</p>
+                                                <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                                                    <p style="margin: 0; color: #666;">Warmest Regards,</p>
+                                                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #2c3e50; font-weight: bold;">Team Flairminds</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Footer -->
+                                        <tr>
+                                            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+                                                <p style="margin: 0;">&copy; {today.year} Flairminds. This is an automated greeting from HRMS.</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </body>
+                    </html>
+                    """
+                    msg.attach(MIMEText(html, 'html'))
+                    server.sendmail(from_address, [to_email], msg.as_string())
+                    sent_count += 1
+                except Exception as e:
+                    Logger.error(f"Error sending individual anniversary email", employee_id=emp.employee_id, error=str(e))
+            
+            server.quit()
+            Logger.info(f"Anniversary wishes job completed. Successfully sent {sent_count} email(s)")
+            return sent_count
+            
+        except SQLAlchemyError as e:
+            Logger.error("DB error during anniversary wishes job", error=str(e))
+            return 0
+        except Exception as e:
+            Logger.critical("Unexpected error in anniversary wishes job", error=str(e))
+            return 0
 
     # ==================================================================
     # PERIOD END DATE ALERTS (Intern & Probation)
