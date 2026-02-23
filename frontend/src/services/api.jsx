@@ -273,18 +273,26 @@ export const addAccessibility = (payload) => {
   return res;
 };
 
-// Standardized exports
-export const getCompanyBands = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-designations`)
-  return res;
-}
+// Standardized exports for HR Configuration
+export const getCompanyBands = () => axiosInstance.get(`${API_BASE_URL}/hr/get-designations`);
+export const addBand = (designation_name) => axiosInstance.post(`${API_BASE_URL}/hr/add-designation`, { designation_name });
+export const updateBand = (id, designation_name) => axiosInstance.put(`${API_BASE_URL}/hr/update-designation/${id}`, { designation_name });
+export const deleteBand = (id) => axiosInstance.delete(`${API_BASE_URL}/hr/delete-designation/${id}`);
 
-export const getCompanyRoles = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-sub-roles`)
-  return res;
-}
+export const getCompanyRoles = () => axiosInstance.get(`${API_BASE_URL}/hr/get-sub-roles`);
+export const addRole = (sub_role_name) => axiosInstance.post(`${API_BASE_URL}/hr/add-sub-role`, { sub_role_name });
+export const updateRole = (id, sub_role_name) => axiosInstance.put(`${API_BASE_URL}/hr/update-sub-role/${id}`, { sub_role_name });
+export const deleteRole = (id) => axiosInstance.delete(`${API_BASE_URL}/hr/delete-sub-role/${id}`);
 
-// Aliases for backward compatibility
+export const getMasterRoles = () => axiosInstance.get(`${API_BASE_URL}/hr/get-roles`);
+export const addMasterRole = (role_name) => axiosInstance.post(`${API_BASE_URL}/hr/add-role`, { role_name });
+export const updateMasterRole = (id, role_name) => axiosInstance.put(`${API_BASE_URL}/hr/update-role/${id}`, { role_name });
+export const deleteMasterRole = (id) => axiosInstance.delete(`${API_BASE_URL}/hr/delete-role/${id}`);
+
+// Aliases for compatibility with existing components
+export const getBands = getCompanyBands;
+export const addBands = addBand;
+export const getRoles = getCompanyRoles;
 export const getBands1 = getCompanyBands;
 export const getRoles1 = getCompanyRoles;
 
@@ -294,18 +302,9 @@ export const insertEmployee = async (payload) => {
   return res;
 }
 
-
-// Retrieves all master roles.
-export const getMasterRoles = () => {
-  const res = axiosInstance.get(`${API_BASE_URL}/hr/get-roles`)
-  return res;
-}
-
 // Retrieves all LOB leads.
-export const getLobLead = async (policyId) => {
-  const response = await axiosInstance.get(`${API_BASE_URL}/policy/download/${policyId}`);
-  return response;
-};
+export const getLobLeads = () => axiosInstance.get(`${API_BASE_URL}/hr/get-lob-leads`);
+export const getLobLead = getLobLeads; // Alias for compatibility
 
 // ============= HARDWARE MANAGEMENT API FUNCTIONS =============
 
@@ -363,49 +362,28 @@ export const deleteHardwareMaintenance = (maintenanceId) => {
 
 // Adds a new LOB lead.
 export const addLobLead = (payload) => {
-  const res = axiosInstance.post(`${API_BASE_URL}/HRFunctionality/lobleads`, payload)
+  const res = axiosInstance.post(`${API_BASE_URL}/hr/add-lob-lead`, payload)
   return res;
-};
-
-// Retrieves all company bands.
-export const getBands = async () => {
-  const res = await axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getbands`)
-  return res;
-}
-
-// Adds a new band (level/grade) to the company.
-export const addBands = (Band) => {
-  const payload = { Band };
-  return axiosInstance.post(`${API_BASE_URL}/HRFunctionality/AddBand`, payload);
 };
 
 // Adds a new holiday to the company holiday list.
 export const addHolidays = (payload) => {
-  const res = axiosInstance.post(`${API_BASE_URL}/HRFunctionality/AddHoliday`, payload)
+  const res = axiosInstance.post(`${API_BASE_URL}/leave/add-holiday`, {
+    holiday_name: payload.holidayName,
+    holiday_date: payload.holidayDate
+  })
   return res;
-};
-
-// Retrieves the list of company subroles (HR view).
-export const getRoles = async () => {
-  const res = await axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getsubrole`)
-  return res;
-}
-
-// Adds a new subrole to the company.
-export const addRole = (roleName) => {
-  const payload = { subRole: roleName };
-  return axiosInstance.post(`${API_BASE_URL}/HRFunctionality/addsubrole`, payload);
 };
 
 // Retrieves the list of team leads.
 export const getTeamLeadList = async () => {
-  const res = await axiosInstance.get(`${API_BASE_URL}/HRFunctionality/getteamlead`)
+  const res = await axiosInstance.get(`${API_BASE_URL}/hr/get-all-team-leads`)
   return res;
 }
 
 // Adds a new team lead to the company.
 export const addTeamLead = (payload) => {
-  const res = axiosInstance.post(`${API_BASE_URL}/HRFunctionality/addteamlead`, payload)
+  const res = axiosInstance.post(`${API_BASE_URL}/hr/add-team-lead`, payload)
   return res;
 }
 

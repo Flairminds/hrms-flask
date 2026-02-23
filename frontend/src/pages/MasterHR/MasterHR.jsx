@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import styleMasterHrLeave from './MasterHR.module.css';
 import Lob from '../../components/Lob/Lob';
-import Role from '../../components/Role/Role';
-import Band from '../../components/Band/Band';
+import MasterRole from '../../components/MasterRole/MasterRole';
+import SubRole from '../../components/SubRole/SubRole';
+import Designation from '../../components/Band/Band'; // Reusing Band.jsx but will refactor it
 import Holiday from '../../components/Holiday/Holiday';
 import TeamLead from '../../components/TeamLead/TeamLead';
 import Projects from '../../pages/Projects/Projects';
@@ -10,17 +11,18 @@ import SkillsAssessment from '../../components/SkillsAssessment/SkillsAssessment
 import CapabilityDevelopmentLead from '../CapabilityDevelopmentLead/CapabilityDevelopmentLead';
 
 const MasterHR = () => {
-    const [activeTab, setActiveTab] = useState('lob');
-
+    const [activeTab, setActiveTab] = useState('Master Role');
 
     const renderContent = () => {
         switch (activeTab) {
             case 'Lob':
                 return <Lob />;
-            case 'Role':
-                return <Role />;
-            case 'Band':
-                return <Band />;
+            case 'Master Role':
+                return <MasterRole />;
+            case 'Sub Role':
+                return <SubRole />;
+            case 'Designation':
+                return <Designation />;
             case 'Holiday List':
                 return <Holiday />;
             case 'Team Lead':
@@ -33,64 +35,34 @@ const MasterHR = () => {
                 return <CapabilityDevelopmentLead />;
 
             default:
-                return <Lob />;
+                return <MasterRole />;
         }
     };
+
+    const tabs = [
+        // 'Lob',
+        'Master Role',
+        'Sub Role',
+        'Designation',
+        // 'Holiday List',
+        // 'Team Lead',
+        // 'Projects',
+        // 'Skills Assessment',
+        // 'Capability Development Lead'
+    ];
 
     return (
         <div className={styleMasterHrLeave.wrapper}>
             <div className={styleMasterHrLeave.tabContainer}>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Lob' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Lob')}
-                >
-                    Lob
-                </button>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Role' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Role')}
-                >
-                    Role
-                </button>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Band' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Band')}
-                >
-                    Band
-                </button>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Holiday List' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Holiday List')}
-                >
-                    Holiday List
-                </button>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Team Lead' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Team Lead')}
-                >
-                    Team Lead
-                </button>
-
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Projects' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Projects')}
-                >
-                    Projects
-                </button>
-
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Skills Assessment' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Skills Assessment')}
-                >
-                    Skills Assessment
-                </button>
-                <button
-                    className={`${styleMasterHrLeave.tabButton} ${activeTab === 'Capability Development Lead' ? styleMasterHrLeave.activeTab : ''}`}
-                    onClick={() => setActiveTab('Capability Development Lead')}
-                >
-                    Capability Development Lead
-                </button>
-
+                {tabs.map(tab => (
+                    <button
+                        key={tab}
+                        className={`${styleMasterHrLeave.tabButton} ${activeTab === tab ? styleMasterHrLeave.activeTab : ''}`}
+                        onClick={() => setActiveTab(tab)}
+                    >
+                        {tab}
+                    </button>
+                ))}
             </div>
             <div className={styleMasterHrLeave.contentContainer}>
                 {renderContent()}

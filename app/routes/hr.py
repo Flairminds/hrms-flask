@@ -70,15 +70,60 @@ def get_upcoming_birthdays():
 def get_designations():
     return HRController.get_designations()
 
+@hr_bp.route('/add-designation', methods=['POST'])
+@roles_required('HR', 'Admin')
+def add_designation():
+    return HRController.add_designation()
+
+@hr_bp.route('/update-designation/<int:designation_id>', methods=['PUT'])
+@roles_required('HR', 'Admin')
+def update_designation(designation_id):
+    return HRController.update_designation(designation_id)
+
+@hr_bp.route('/delete-designation/<int:designation_id>', methods=['DELETE'])
+@roles_required('HR', 'Admin')
+def delete_designation(designation_id):
+    return HRController.delete_designation(designation_id)
+
 @hr_bp.route('/get-sub-roles', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
 def get_sub_roles():
     return HRController.get_sub_roles()
 
+@hr_bp.route('/add-sub-role', methods=['POST'])
+@roles_required('HR', 'Admin')
+def add_sub_role():
+    return HRController.add_sub_role()
+
+@hr_bp.route('/update-sub-role/<int:sub_role_id>', methods=['PUT'])
+@roles_required('HR', 'Admin')
+def update_sub_role(sub_role_id):
+    return HRController.update_sub_role(sub_role_id)
+
+@hr_bp.route('/delete-sub-role/<int:sub_role_id>', methods=['DELETE'])
+@roles_required('HR', 'Admin')
+def delete_sub_role(sub_role_id):
+    return HRController.delete_sub_role(sub_role_id)
+
 @hr_bp.route('/get-roles', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
 def get_roles():
     return HRController.get_roles()
+
+@hr_bp.route('/add-role', methods=['POST'])
+@roles_required('HR', 'Admin')
+def add_role():
+    return HRController.add_role()
+
+@hr_bp.route('/update-role/<int:role_id>', methods=['PUT'])
+@roles_required('HR', 'Admin')
+def update_role(role_id):
+    return HRController.update_role(role_id)
+
+@hr_bp.route('/delete-role/<int:role_id>', methods=['DELETE'])
+@roles_required('HR', 'Admin')
+def delete_role(role_id):
+    return HRController.delete_role(role_id)
 
 @hr_bp.route('/get-all-skills', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr']['get_all_skills'])
@@ -94,3 +139,23 @@ def get_all_employee_documents():
 @roles_required('HR', 'Admin')
 def get_employee_document_stats():
     return HRController.get_employee_document_stats()
+
+@hr_bp.route('/get-lob-leads', methods=['GET'])
+@roles_required('HR', 'Admin', 'Manager')
+def get_lob_leads():
+    return HRController.get_lob_leads()
+
+@hr_bp.route('/add-lob-lead', methods=['POST'])
+@roles_required('HR', 'Admin')
+def add_lob_lead():
+    return HRController.add_lob_lead()
+
+@hr_bp.route('/get-all-team-leads', methods=['GET'])
+@roles_required('HR', 'Admin', 'Manager')
+def get_all_team_leads():
+    return HRController.get_all_team_leads()
+
+@hr_bp.route('/add-team-lead', methods=['POST'])
+@roles_required('HR', 'Admin')
+def add_team_lead():
+    return HRController.add_team_lead()

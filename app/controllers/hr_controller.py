@@ -448,6 +448,52 @@ class HRController:
             }), 500
 
     @staticmethod
+    def add_designation():
+        """Adds a new designation."""
+        Logger.info("Add designation request received")
+        try:
+            data = request.get_json()
+            designation_name = data.get('designation_name')
+            if not designation_name:
+                return jsonify({"message": "Designation name is required"}), 400
+            
+            if HRService.insert_designation(designation_name):
+                return jsonify({"message": "Designation added successfully"}), 201
+            return jsonify({"message": "Failed to add designation"}), 500
+        except Exception as e:
+            Logger.error("Error in add_designation", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def update_designation(designation_id):
+        """Updates a designation."""
+        Logger.info("Update designation request", id=designation_id)
+        try:
+            data = request.get_json()
+            designation_name = data.get('designation_name')
+            if not designation_name:
+                return jsonify({"message": "Designation name is required"}), 400
+            
+            if HRService.update_designation(designation_id, designation_name):
+                return jsonify({"message": "Designation updated successfully"}), 200
+            return jsonify({"message": "Designation not found or update failed"}), 404
+        except Exception as e:
+            Logger.error("Error in update_designation", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def delete_designation(designation_id):
+        """Deletes a designation."""
+        Logger.info("Delete designation request", id=designation_id)
+        try:
+            if HRService.delete_designation(designation_id):
+                return jsonify({"message": "Designation deleted successfully"}), 200
+            return jsonify({"message": "Designation not found or delete failed"}), 404
+        except Exception as e:
+            Logger.error("Error in delete_designation", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
     def get_sub_roles():
         """Retrieves all available sub-roles for dropdown population."""
         Logger.info("Get sub-roles request received")
@@ -466,6 +512,52 @@ class HRController:
             }), 500
 
     @staticmethod
+    def add_sub_role():
+        """Adds a new sub-role."""
+        Logger.info("Add sub-role request received")
+        try:
+            data = request.get_json()
+            sub_role_name = data.get('sub_role_name')
+            if not sub_role_name:
+                return jsonify({"message": "Sub-role name is required"}), 400
+            
+            if HRService.insert_sub_role(sub_role_name):
+                return jsonify({"message": "Sub-role added successfully"}), 201
+            return jsonify({"message": "Failed to add sub-role"}), 500
+        except Exception as e:
+            Logger.error("Error in add_sub_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def update_sub_role(sub_role_id):
+        """Updates a sub-role."""
+        Logger.info("Update sub-role request", id=sub_role_id)
+        try:
+            data = request.get_json()
+            sub_role_name = data.get('sub_role_name')
+            if not sub_role_name:
+                return jsonify({"message": "Sub-role name is required"}), 400
+            
+            if HRService.update_sub_role(sub_role_id, sub_role_name):
+                return jsonify({"message": "Sub-role updated successfully"}), 200
+            return jsonify({"message": "Sub-role not found or update failed"}), 404
+        except Exception as e:
+            Logger.error("Error in update_sub_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def delete_sub_role(sub_role_id):
+        """Deletes a sub-role."""
+        Logger.info("Delete sub-role request", id=sub_role_id)
+        try:
+            if HRService.delete_sub_role(sub_role_id):
+                return jsonify({"message": "Sub-role deleted successfully"}), 200
+            return jsonify({"message": "Sub-role not found or delete failed"}), 404
+        except Exception as e:
+            Logger.error("Error in delete_sub_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
     def get_roles():
         """Retrieves all available roles for dropdown population."""
         Logger.info("Get roles request received")
@@ -482,6 +574,52 @@ class HRController:
                 'status': 'error',
                 'message': 'An unexpected error occurred while fetching roles.'
             }), 500
+
+    @staticmethod
+    def add_role():
+        """Adds a new master role."""
+        Logger.info("Add role request received")
+        try:
+            data = request.get_json()
+            role_name = data.get('role_name')
+            if not role_name:
+                return jsonify({"message": "Role name is required"}), 400
+            
+            if HRService.insert_role(role_name):
+                return jsonify({"message": "Role added successfully"}), 201
+            return jsonify({"message": "Failed to add role"}), 500
+        except Exception as e:
+            Logger.error("Error in add_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def update_role(role_id):
+        """Updates a master role."""
+        Logger.info("Update role request", id=role_id)
+        try:
+            data = request.get_json()
+            role_name = data.get('role_name')
+            if not role_name:
+                return jsonify({"message": "Role name is required"}), 400
+            
+            if HRService.update_role(role_id, role_name):
+                return jsonify({"message": "Role updated successfully"}), 200
+            return jsonify({"message": "Role not found or update failed"}), 404
+        except Exception as e:
+            Logger.error("Error in update_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def delete_role(role_id):
+        """Deletes a master role."""
+        Logger.info("Delete role request", id=role_id)
+        try:
+            if HRService.delete_role(role_id):
+                return jsonify({"message": "Role deleted successfully"}), 200
+            return jsonify({"message": "Role not found or delete failed"}), 404
+        except Exception as e:
+            Logger.error("Error in delete_role", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
 
     @staticmethod
     def get_all_skills():
@@ -538,3 +676,69 @@ class HRController:
                 'status': 'error',
                 'message': 'Failed to retrieve document statistics'
             }), 500
+
+    @staticmethod
+    def get_lob_leads():
+        """Retrieves all LOB leads with standardized keys for frontend."""
+        Logger.info("Get LOB leads request received")
+        try:
+            lob_leads = HRService.get_lob_leads()
+            # Standardize for Lob.jsx: 'LobName' -> 'Lob', 'LeadName' -> 'LobLead'
+            standardized = [
+                {
+                    'LobId': l['LobId'],
+                    'Lob': l['LobName'],
+                    'LobLead': l['LeadName']
+                } for l in lob_leads
+            ]
+            Logger.info("LOB leads retrieved", count=len(standardized))
+            return jsonify(standardized), 200
+        except Exception as e:
+            Logger.error("Error in get_lob_leads", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def add_lob_lead():
+        """Adds a new LOB lead."""
+        Logger.info("Add LOB lead request received")
+        try:
+            data = request.get_json()
+            lob_lead = data.get('lobLead')
+            lob_name = data.get('lob')
+            if not lob_lead or not lob_name:
+                return jsonify({"message": "lobLead and lob are required"}), 400
+            
+            if HRService.insert_lob_lead(lob_lead, lob_name):
+                return jsonify({"message": "LOB lead added successfully"}), 201
+            return jsonify({"message": "Failed to add LOB lead"}), 500
+        except Exception as e:
+            Logger.error("Error in add_lob_lead", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def get_all_team_leads():
+        """Retrieves all team leads."""
+        Logger.info("Get all team leads request received")
+        try:
+            leads = HRService.get_team_leads()
+            return jsonify(leads), 200
+        except Exception as e:
+            Logger.error("Error in get_all_team_leads", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+
+    @staticmethod
+    def add_team_lead():
+        """Adds a new team lead."""
+        Logger.info("Add team lead request received")
+        try:
+            data = request.get_json()
+            employee_id = data.get('employeeId')
+            if not employee_id:
+                return jsonify({"message": "employeeId is required"}), 400
+            
+            if HRService.insert_team_lead(employee_id):
+                return jsonify({"message": "Team lead added successfully"}), 201
+            return jsonify({"message": "Failed to add team lead"}), 500
+        except Exception as e:
+            Logger.error("Error in add_team_lead", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500

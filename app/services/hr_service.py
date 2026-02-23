@@ -3,6 +3,7 @@ from .hr.employee_service import EmployeeService
 from .hr.role_service import RoleService
 from .hr.access_service import AccessService
 from .hr.report_service import ReportService
+from .project_service import ProjectService
 from ..utils.constants import LeaveStatus
 
 class HRService:
@@ -78,16 +79,32 @@ class HRService:
         return RoleService.get_designations()
 
     @staticmethod
-    def get_bands():
-        return RoleService.get_bands()
-
-    @staticmethod
     def insert_designation(designation_name):
         return RoleService.insert_designation(designation_name)
 
     @staticmethod
+    def update_designation(designation_id, designation_name):
+        return RoleService.update_designation(designation_id, designation_name)
+
+    @staticmethod
+    def delete_designation(designation_id):
+        return RoleService.delete_designation(designation_id)
+
+    @staticmethod
     def get_sub_roles():
         return RoleService.get_sub_roles()
+
+    @staticmethod
+    def insert_sub_role(sub_role_name):
+        return RoleService.insert_sub_role(sub_role_name)
+
+    @staticmethod
+    def update_sub_role(sub_role_id, sub_role_name):
+        return RoleService.update_sub_role(sub_role_id, sub_role_name)
+
+    @staticmethod
+    def delete_sub_role(sub_role_id):
+        return RoleService.delete_sub_role(sub_role_id)
 
     @staticmethod
     def get_roles():
@@ -95,8 +112,16 @@ class HRService:
         return RoleService.get_employee_roles()
 
     @staticmethod
-    def insert_sub_role(sub_role_name):
-        return RoleService.insert_sub_role(sub_role_name)
+    def insert_role(role_name):
+        return RoleService.insert_role(role_name)
+
+    @staticmethod
+    def update_role(role_id, role_name):
+        return RoleService.update_role(role_id, role_name)
+
+    @staticmethod
+    def delete_role(role_id):
+        return RoleService.delete_role(role_id)
 
     @staticmethod
     def update_team_lead(employee_id, team_lead_id):
@@ -143,3 +168,14 @@ class HRService:
     @staticmethod
     def get_upcoming_birthdays():
         return EmployeeService.get_upcoming_birthdays()
+
+    # Project related
+    @staticmethod
+    def add_project(name, description=None):
+        """Adds a new project."""
+        # Align with ProjectService.create_project style or add_project style
+        # ProjectService has both create_project (ORM) and add_project (SQL)
+        # HRController used: project_id = HRService.add_project(project_name, data.get('Description'))
+        if description:
+            return ProjectService.add_project(name, None, True) # end_date=None, required=True
+        return ProjectService.add_project(name, None, False)

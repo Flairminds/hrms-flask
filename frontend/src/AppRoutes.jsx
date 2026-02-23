@@ -66,7 +66,7 @@ function AppRoutes() {
                 {/* <Route path="HRLeaveManagement" element={<HRLeaveManagement />} /> */}
                 <Route path="employee-management" element={<EmployeeData />} />
                 {/* <Route path="allLeaveRecords" element={<AllLeavesRecords />} /> */}
-                {/* <Route path="MasterHR" element={<MasterHR />} /> */}
+                <Route path="/configuration" element={<MasterHR isRole={user?.roleName} />} />
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />
                 <Route path="monthly-report" element={<MonthlyReport />} />
                 {/* <Route path="SkillTracking" element={<SkillTracking />} /> */}

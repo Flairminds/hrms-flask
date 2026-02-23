@@ -149,6 +149,13 @@ export const Sidebar = ({ isRole }) => {
       path: '/monthly-report',
       icon: BarChartOutlined,
       roles: ['HR', 'Manager']
+    },
+    {
+      key: 'configuration',
+      label: 'Configuration',
+      path: '/configuration',
+      icon: FileProtectOutlined,
+      roles: ['HR', 'Admin']
     }
   ], [isEvaluator]);
 

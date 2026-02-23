@@ -52,21 +52,46 @@ class RoleService:
             raise e
 
     @staticmethod
-    def get_bands() -> List[Dict[str, Any]]:
-        """Retrieves all designations/bands (alias for get_designations)."""
-        return RoleService.get_designations()
-
-    @staticmethod
     def insert_designation(designation_name: str) -> bool:
         """Inserts a new designation."""
         try:
-            designation = Designation(designation_name=designation_name)
+            designation = MasterDesignation(designation_name=designation_name)
             db.session.add(designation)
             db.session.commit()
             return True
         except Exception as e:
             db.session.rollback()
             Logger.error("Error inserting designation", error=str(e))
+            return False
+
+    @staticmethod
+    def update_designation(designation_id: int, designation_name: str) -> bool:
+        """Updates an existing designation."""
+        try:
+            designation = MasterDesignation.query.get(designation_id)
+            if designation:
+                designation.designation_name = designation_name
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating designation", error=str(e))
+            return False
+
+    @staticmethod
+    def delete_designation(designation_id: int) -> bool:
+        """Deletes a designation."""
+        try:
+            designation = MasterDesignation.query.get(designation_id)
+            if designation:
+                db.session.delete(designation)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting designation", error=str(e))
             return False
 
     @staticmethod
@@ -85,6 +110,79 @@ class RoleService:
         except Exception as e:
             db.session.rollback()
             Logger.error("Error inserting sub-role", error=str(e))
+            return False
+
+    @staticmethod
+    def update_sub_role(sub_role_id: int, sub_role_name: str) -> bool:
+        """Updates an existing sub-role."""
+        try:
+            sub_role = MasterSubRole.query.get(sub_role_id)
+            if sub_role:
+                sub_role.sub_role_name = sub_role_name
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating sub-role", error=str(e))
+            return False
+
+    @staticmethod
+    def delete_sub_role(sub_role_id: int) -> bool:
+        """Deletes a sub-role."""
+        try:
+            sub_role = MasterSubRole.query.get(sub_role_id)
+            if sub_role:
+                db.session.delete(sub_role)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting sub-role", error=str(e))
+            return False
+
+    @staticmethod
+    def insert_role(role_name: str) -> bool:
+        """Inserts a new master role."""
+        try:
+            role = MasterRole(role_name=role_name)
+            db.session.add(role)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error inserting role", error=str(e))
+            return False
+
+    @staticmethod
+    def update_role(role_id: int, role_name: str) -> bool:
+        """Updates an existing master role."""
+        try:
+            role = MasterRole.query.get(role_id)
+            if role:
+                role.role_name = role_name
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error updating role", error=str(e))
+            return False
+
+    @staticmethod
+    def delete_role(role_id: int) -> bool:
+        """Deletes a master role."""
+        try:
+            role = MasterRole.query.get(role_id)
+            if role:
+                db.session.delete(role)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting role", error=str(e))
             return False
 
     @staticmethod

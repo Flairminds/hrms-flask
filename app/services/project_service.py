@@ -396,12 +396,16 @@ class ProjectService:
         """Adds a new project to the ProjectList table."""
         Logger.info("Adding new project", project_name=name)
         try:
-            db.session.execute(
-                text("INSERT INTO ProjectList (ProjectName, EndDate, Required) VALUES (:pname, :edate, :req)"),
-                {"pname": name, "edate": end_date, "req": 1 if required else 0}
+            from ..models.hr import ProjectList
+            new_project = ProjectList(
+                project_name=name,
+                end_date=end_date,
+                required=required
             )
+            db.session.add(new_project)
             db.session.commit()
-            Logger.info("Project added successfully", project_name=name)
+            Logger.info("Project added successfully", project_name=name, project_id=new_project.project_id)
+            return new_project.project_id
         except Exception as e:
             db.session.rollback()
             Logger.error("Error adding project", project_name=name, error=str(e))
