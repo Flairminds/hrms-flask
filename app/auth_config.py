@@ -193,6 +193,14 @@ ROLE_PERMISSIONS = {
     "feedback": {
         "get_emp_report": ["Admin", "HR", "Lead", "Employee"],
         "add_emp_report": ["Admin", "HR", "Lead"]
+    },
+
+    # ===========================
+    # Email Configuration Module
+    # ===========================
+    "email_configuration": {
+        "get_configs": ["Admin", "HR"],
+        "manage_configs": ["Admin", "HR"]
     }
 }
 
