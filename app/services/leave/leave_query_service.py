@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+import base64
 from datetime import datetime, date, timedelta
 from sqlalchemy import text, func, case, and_, or_, Integer
 from sqlalchemy.exc import SQLAlchemyError
@@ -995,7 +996,9 @@ class LeaveQueryService:
             query = db.session.query(
                 LeaveTransaction,
                 Employee.first_name,
-                Employee.last_name
+                Employee.last_name,
+                Employee.profile_image,
+                Employee.profile_image_type
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
@@ -1008,13 +1011,14 @@ class LeaveQueryService:
             results = query.all()
             
             leave_list = []
-            for txn, first_name, last_name in results:
+            for txn, first_name, last_name, profile_image, profile_image_type in results:
                 leave_list.append({
                     "employee_name": f"{first_name} {last_name}",
                     "leave_status": txn.leave_status,
                     "from_date": txn.from_date.isoformat(),
                     "to_date": txn.to_date.isoformat(),
-                    "leave_type_id": txn.leave_type_id
+                    "leave_type_id": txn.leave_type_id,
+                    "profile_image": f"data:{profile_image_type};base64,{base64.b64encode(profile_image).decode('utf-8')}" if profile_image else None
                 })
                 
             Logger.info("Retrieved employees on leave", 

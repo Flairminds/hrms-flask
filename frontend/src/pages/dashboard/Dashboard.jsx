@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, List, Typography, Progress, Badge, Avatar, message } from 'antd';
+import { Row, Col, List, Typography, Progress, Badge, Avatar, message, Image } from 'antd';
 import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
 import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
@@ -12,6 +12,9 @@ const WIDGET_COL_MAX_HEIGHT = '300px';
 const WIDGET_LIST_MAX_HEIGHT = '200px';
 
 export const Dashboard = () => {
+  // State for preview
+  const [previewImage, setPreviewImage] = useState(null);
+
   // State for new joinees
   const [newJoinees, setNewJoinees] = useState([]);
   const [loadingJoinees, setLoadingJoinees] = useState(true);
@@ -28,8 +31,9 @@ export const Dashboard = () => {
   const [peopleOnLeave, setPeopleOnLeave] = useState([]);
   const [loadingPeopleOnLeave, setLoadingPeopleOnLeave] = useState(true);
 
-  // Fetch new joinees on component mount
+  // Fetch data on component mount
   useEffect(() => {
+    // ... existing fetch logic ...
     const fetchNewJoinees = async () => {
       try {
         setLoadingJoinees(true);
@@ -101,12 +105,9 @@ export const Dashboard = () => {
     fetchPeopleOnLeave();
   }, []);
 
-  // Sample Data - initialized to empty as per requirement
-  const recentNotifications = [];
-  const upcomingEvents = [];
-
   // Helper function to format date from DD-MM-YYYY to readable format
   const formatDate = (dateStr) => {
+    if (!dateStr) return '';
     const [day, month, year] = dateStr.split("-");
     const date = new Date(`${year}-${month}-${day}`);
     const options = {
@@ -118,20 +119,16 @@ export const Dashboard = () => {
     return date.toLocaleDateString("en-US", options).replace(/ /g, " ");
   };
 
+  const recentNotifications = [];
+  const upcomingEvents = [];
   const myGoals = [];
 
   return (
     <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
-      {/* <Title level={2} style={{ marginBottom: '24px', fontWeight: 600 }}>Employee Dashboard (dummy data)</Title> */}
-
       <Row gutter={[16, 16]}>
         {/* Recent Notifications */}
         <Col xs={24} lg={16} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="Recent Notifications"
-            icon={<BellOutlined />}
-            iconColor="#f5222d"
-          >
+          <WidgetCard title="Recent Notifications" icon={<BellOutlined />} iconColor="#f5222d">
             <List
               dataSource={recentNotifications}
               locale={{ emptyText: 'No recent notifications' }}
@@ -153,11 +150,7 @@ export const Dashboard = () => {
 
         {/* Upcoming Events */}
         <Col xs={24} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="Upcoming Events"
-            icon={<CalendarOutlined />}
-            iconColor="#1890ff"
-          >
+          <WidgetCard title="Upcoming Events" icon={<CalendarOutlined />} iconColor="#1890ff">
             <List
               dataSource={upcomingEvents}
               locale={{ emptyText: 'No upcoming events' }}
@@ -176,11 +169,7 @@ export const Dashboard = () => {
 
         {/* People on Leave */}
         <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="People on Leave"
-            icon={<UserOutlined />}
-            iconColor="#52c41a"
-          >
+          <WidgetCard title="People on Leave" icon={<UserOutlined />} iconColor="#52c41a">
             <List
               loading={loadingPeopleOnLeave}
               dataSource={peopleOnLeave}
@@ -189,7 +178,20 @@ export const Dashboard = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar style={{ backgroundColor: '#87d068' }}>{item.employee_name?.charAt(0)}</Avatar>}
+                    avatar={
+                      <div
+                        style={{ cursor: item?.profile_image ? 'pointer' : 'default' }}
+                        onClick={() => item?.profile_image && setPreviewImage(item.profile_image)}
+                      >
+                        <Avatar
+                          size={48}
+                          src={item?.profile_image}
+                          style={{ backgroundColor: '#87d068' }}
+                        >
+                          {item?.profile_image ? '' : item.employee_name?.charAt(0)}
+                        </Avatar>
+                      </div>
+                    }
                     title={<Text strong>{item.employee_name}</Text>}
                     description={
                       <div style={{ fontSize: '12px' }}>
@@ -208,11 +210,7 @@ export const Dashboard = () => {
 
         {/* Upcoming Birthdays */}
         <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="Upcoming Birthdays"
-            icon={<GiftOutlined />}
-            iconColor="#eb2f96"
-          >
+          <WidgetCard title="Upcoming Birthdays" icon={<GiftOutlined />} iconColor="#eb2f96">
             <List
               loading={loadingBirthdays}
               dataSource={birthdayData}
@@ -221,7 +219,20 @@ export const Dashboard = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar size={48} src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    avatar={
+                      <div
+                        style={{ cursor: item?.profile_image ? 'pointer' : 'default' }}
+                        onClick={() => item?.profile_image && setPreviewImage(item.profile_image)}
+                      >
+                        <Avatar
+                          size={48}
+                          src={item?.profile_image}
+                          style={{ backgroundColor: '#13c2c2' }}
+                        >
+                          {item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}
+                        </Avatar>
+                      </div>
+                    }
                     title={<Text strong>{item.employee_name}</Text>}
                     description={`Celebrating on ${item.date}`}
                   />
@@ -233,11 +244,7 @@ export const Dashboard = () => {
 
         {/* New Joinees */}
         <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="New Joinees"
-            icon={<UserAddOutlined />}
-            iconColor="#13c2c2"
-          >
+          <WidgetCard title="New Joinees" icon={<UserAddOutlined />} iconColor="#13c2c2">
             <List
               loading={loadingJoinees}
               dataSource={newJoinees}
@@ -246,7 +253,20 @@ export const Dashboard = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar size={48} src={item?.profile_image} style={{ backgroundColor: '#13c2c2' }}>{item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}</Avatar>}
+                    avatar={
+                      <div
+                        style={{ cursor: item?.profile_image ? 'pointer' : 'default' }}
+                        onClick={() => item?.profile_image && setPreviewImage(item.profile_image)}
+                      >
+                        <Avatar
+                          size={48}
+                          src={item?.profile_image}
+                          style={{ backgroundColor: '#13c2c2' }}
+                        >
+                          {item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}
+                        </Avatar>
+                      </div>
+                    }
                     title={<Text strong>{item.employee_name}</Text>}
                     description={
                       <div style={{ fontSize: '12px' }}>
@@ -265,11 +285,7 @@ export const Dashboard = () => {
 
         {/* Upcoming Holidays */}
         <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
-          <WidgetCard
-            title="Upcoming Holidays"
-            icon={<PushpinOutlined />}
-            iconColor="#fa8c16"
-          >
+          <WidgetCard title="Upcoming Holidays" icon={<PushpinOutlined />} iconColor="#fa8c16">
             <List
               loading={loadingHolidays}
               dataSource={holidayData}
@@ -289,11 +305,7 @@ export const Dashboard = () => {
 
         {/* My Goals Progress */}
         <Col xs={24} lg={16}>
-          <WidgetCard
-            title="My Goals Progress"
-            icon={<RocketOutlined />}
-            iconColor="#722ed1"
-          >
+          <WidgetCard title="My Goals Progress" icon={<RocketOutlined />} iconColor="#722ed1">
             <Row gutter={[16, 16]}>
               {myGoals.length > 0 ? (
                 myGoals.map((goal, index) => (
@@ -318,6 +330,18 @@ export const Dashboard = () => {
           </WidgetCard>
         </Col>
       </Row>
+
+      {/* Hidden Image for Preview */}
+      <div style={{ display: 'none' }}>
+        <Image
+          preview={{
+            visible: !!previewImage,
+            src: previewImage,
+            onVisibleChange: (value) => !value && setPreviewImage(null),
+            toolbarRender: () => null
+          }}
+        />
+      </div>
     </div>
   );
 };
