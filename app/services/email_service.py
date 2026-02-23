@@ -1193,6 +1193,103 @@ class EmailService:
 
     # ==================================================================
     # REVIEW STATUS ALERTS
+    @staticmethod
+    def send_lead_assignment_notification(details: Dict[str, Any]) -> bool:
+        """
+        Sends notification when a Team Lead or LOB Lead is assigned or updated.
+        
+        Args:
+            details (Dict): Contains employee/lead names, emails, and change type.
+        """
+        required_fields = ['employee_name', 'employee_email', 'new_lead_name', 'new_lead_email', 'lead_type']
+        missing = [f for f in required_fields if not details.get(f)]
+        if missing:
+            Logger.error("Missing required fields for lead assignment notification", missing_fields=missing)
+            return False
+
+        Logger.info("Sending lead assignment notification", 
+                   employee_name=details.get('employee_name'),
+                   lead_type=details.get('lead_type'))
+
+        try:
+            # Recipients
+            to_addresses = [details.get('employee_email'), details.get('new_lead_email')]
+            old_lead_email = details.get('old_lead_email')
+            if old_lead_email:
+                to_addresses.append(old_lead_email)
+            
+            # Add HR to CC from dynamic configuration
+            cc_addresses = []
+            hr_cc = EmailConfig.LEAVE_NOTIFICATION_CC
+            if hr_cc:
+                cc_addresses.extend(hr_cc)
+
+            # Deduplicate and filter
+            to_addresses = list(set(filter(None, to_addresses)))
+            cc_addresses = list(set(filter(None, cc_addresses)))
+
+            from_address = current_app.config.get('MAIL_USERNAME')
+            from_password = current_app.config.get('MAIL_PASSWORD')
+
+            if not from_address or not from_password:
+                Logger.error("SMTP credentials not configured for lead assignment notification")
+                return False
+
+            action = details.get('action', 'assigned')
+            lead_type = details.get('lead_type')
+            
+            subject = f"Notification: {lead_type} {action.capitalize()} - {details.get('employee_name')}"
+            
+            old_lead_html = f"<p><strong>Previous {lead_type}:</strong> {details.get('old_lead_name')}</p>" if details.get('old_lead_name') else ""
+
+            styles = EmailService._get_common_styles()
+            header = EmailService._get_email_header(f"{lead_type} Assignment")
+            footer = EmailService._get_email_footer()
+
+            body_content = f"""
+                <div class="content">
+                    <p>Hello,</p>
+                    <p>This is to inform you that the <strong>{lead_type}</strong> for <strong>{details.get('employee_name')}</strong> has been {action}.</p>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #1890ff;">
+                        <p style="margin-top:0;"><strong>Employee:</strong> {details.get('employee_name')} ({details.get('employee_id')})</p>
+                        {old_lead_html}
+                        <p style="margin-bottom:0;"><strong>New {lead_type}:</strong> {details.get('new_lead_name')}</p>
+                    </div>
+                    
+                    <p>Please ensure all relevant handovers and system accesses are updated accordingly.</p>
+                    <p>You can view the details in the HRMS portal.</p>
+                </div>
+            """
+
+            body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+
+            msg = MIMEMultipart()
+            msg['From'] = EmailService._get_from_string(from_address)
+            msg['To'] = ", ".join(to_addresses)
+            if cc_addresses:
+                msg['CC'] = ", ".join(cc_addresses)
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'html'))
+
+            import smtplib
+            server = smtplib.SMTP(current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'), current_app.config.get('MAIL_PORT', 587))
+            server.starttls()
+            server.login(from_address, from_password)
+            
+            all_recipients = to_addresses + cc_addresses
+            server.sendmail(from_address, all_recipients, msg.as_string())
+            server.quit()
+
+            Logger.info("Lead assignment notification email sent", 
+                       employee_id=details.get('employee_id'), 
+                       recipients=len(all_recipients))
+            return True
+
+        except Exception as e:
+            Logger.error("Error sending lead assignment notification", error=str(e))
+            return False
+
     # ==================================================================
 
     @staticmethod

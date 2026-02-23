@@ -267,6 +267,10 @@ class EmployeeService:
                 Logger.warning("Employee not found for update", employee_id=emp_id)
                 return -1
             
+            # Change detection: store old lead IDs
+            old_team_lead_id = employee.team_lead_id
+            old_lob_lead = employee.lob_lead
+            
             sub_role_id = employee_data.get('sub_role_id') or employee_data.get('sub_role') or employee_data.get('MasterSubRole')
             if sub_role_id and str(sub_role_id).isdigit() and int(sub_role_id) != 0:
                 employee.sub_role = int(sub_role_id)
@@ -439,6 +443,17 @@ class EmployeeService:
                     db.session.add(new_alloc)
             
             db.session.commit()
+            
+            # Post-commit notifications
+            try:
+                EmployeeService._trigger_lead_change_notifications(
+                    employee, 
+                    old_team_lead_id, 
+                    old_lob_lead
+                )
+            except Exception as notify_err:
+                Logger.error("Failed to trigger lead change notifications", error=str(notify_err))
+
             Logger.info("Employee details updated successfully", employee_id=emp_id)
             return 1
         except Exception as e:
@@ -996,6 +1011,21 @@ class EmployeeService:
                 ))
             
             db.session.commit()
+            
+            # Post-commit notifications
+            try:
+                # Fetch freshly to ensure all relationships and fields are loaded
+                emp_record = Employee.query.filter_by(employee_id=employee_id).first()
+                if emp_record:
+                    EmployeeService._trigger_lead_change_notifications(
+                        emp_record, 
+                        None, 
+                        None, 
+                        is_new=True
+                    )
+            except Exception as notify_err:
+                Logger.error("Failed to trigger lead change notifications for new employee", error=str(notify_err))
+
             Logger.info("Employee inserted successfully", employee_id=employee_id)
             return employee_id
             
@@ -1146,3 +1176,33 @@ class EmployeeService:
         except Exception as e:
             Logger.error("Error fetching upcoming birthdays", error=str(e))
             return []
+
+    @staticmethod
+    def _trigger_lead_change_notifications(employee, old_team_lead_id, old_lob_lead, is_new=False):
+        """Helper to check for lead changes and trigger emails."""
+        from ..email_service import EmailService
+        
+        # 1. Team Lead / Leave Approver Changed
+        if is_new or (employee.team_lead_id != old_team_lead_id):
+            if employee.team_lead_id:
+                new_lead = Employee.query.filter_by(employee_id=employee.team_lead_id).first()
+                if new_lead:
+                    old_lead_name = None
+                    old_lead_email = None
+                    if old_team_lead_id:
+                        old_lead = Employee.query.filter_by(employee_id=old_team_lead_id).first()
+                        if old_lead:
+                            old_lead_name = f"{old_lead.first_name} {old_lead.last_name}"
+                            old_lead_email = old_lead.email
+
+                    EmailService.send_lead_assignment_notification({
+                        'employee_id': employee.employee_id,
+                        'employee_name': f"{employee.first_name} {employee.last_name}",
+                        'employee_email': employee.email,
+                        'new_lead_name': f"{new_lead.first_name} {new_lead.last_name}",
+                        'new_lead_email': new_lead.email,
+                        'old_lead_name': old_lead_name,
+                        'old_lead_email': old_lead_email,
+                        'lead_type': "Leave Approver",
+                        'action': "assigned" if is_new or not old_team_lead_id else "updated"
+                    })
