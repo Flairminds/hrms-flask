@@ -100,7 +100,7 @@ def register_jobs(app):
                     return
 
                 # Get all active employees
-                active_employees = Employee.query.filter_by(employment_status=EmployeeStatus.ACTIVE).all()
+                active_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
                 
                 for emp in active_employees:
                     for lt_id, days in allocations:
@@ -136,7 +136,7 @@ def register_jobs(app):
             
             try:
                 # Get all active employees
-                active_employees = Employee.query.filter_by(employment_status=EmployeeStatus.ACTIVE).all()
+                active_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
                 
                 deduction_days = LeaveConfiguration.WFH['monthly_deduction']
                 
