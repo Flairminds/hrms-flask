@@ -258,6 +258,11 @@ class LeaveTransactionService:
             # Determine leave status: HR override can set custom status, otherwise Pending
             leave_status = hr_leave_status if is_hr_override and hr_leave_status else LeaveStatus.PENDING
 
+            approved_by = data.get('approvedBy')
+            approved_date = data.get('approvedDate')
+            if is_hr_override and leave_status == LeaveStatus.APPROVED:
+                approved_by = applied_by.upper()
+                approved_date = application_date
 
             is_second_approval = True if (flag_for_second_approval == 1 or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_WFH or leave_type_name == LeaveTypeName.CUSTOMER_APPROVED_COMP_OFF) else False
             
@@ -271,7 +276,8 @@ class LeaveTransactionService:
                 hand_over_comments=data.get('handOverComments'),
                 applied_by=applied_by.upper(),
                 application_date=application_date,
-                approved_by=data.get('approvedBy'),
+                approved_by=approved_by,
+                approved_date=approved_date,
                 is_for_second_approval=is_second_approval,
                 leave_status=leave_status,
                 duration=duration,
