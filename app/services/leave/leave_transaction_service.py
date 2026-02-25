@@ -1,5 +1,6 @@
 from typing import Dict, List, Any, Optional
 from datetime import datetime, date, timedelta, time
+import calendar
 from sqlalchemy import text, func, case, and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
@@ -129,6 +130,15 @@ class LeaveTransactionService:
 
                 # 2. Sick/Emergency Leave Validation
                 if leave_type_name == LeaveTypeName.SICK_LEAVE:
+                    # Sick leave can only be applied for the current calendar month
+                    current_month_start = app_date_only.replace(day=1)
+                    last_day = calendar.monthrange(app_date_only.year, app_date_only.month)[1]
+                    current_month_end = app_date_only.replace(day=last_day)
+                    if from_date_only < current_month_start or to_date_only > current_month_end:
+                        raise ValueError(
+                            f"Sick Leave can only be applied for dates within the current month "
+                            f"({current_month_start.strftime('%b %Y')})."
+                        )
                     if remaining < no_of_days:
                         raise ValueError(f"Insufficient {LeaveTypeName.SICK_LEAVE} balance. Available: {remaining}")
 
