@@ -9,7 +9,10 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, LeaveTypeName, EmailConfig
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, LeaveTypeName, EmailConfig, LeaveConfiguration
+from .leave_utils import LeaveUtils
+from .leave_query_service import LeaveQueryService
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 class LeaveTransactionService:
     @staticmethod
@@ -619,3 +622,88 @@ class LeaveTransactionService:
             db.session.rollback()
             Logger.error("Error inserting working late transaction", employee_id=employee_id, error=str(e))
             raise e
+
+    def scheduler_monthly_leave_allocation():
+        try:
+            today = datetime.now().date()
+            month = today.month
+            Logger.info("Running monthly leave allocation job", month=month)
+            
+            # Determing leave types to allocate
+            allocations = []
+            
+            # Get all active employees
+            active_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
+            
+            # Quarterly Sick Leave (Apr, Jul, Oct, Jan)
+            if month in [4, 7, 10, 1]:
+                allocations.append((LeaveTypeID.SICK, LeaveConfiguration.SICK_LEAVE['default_allocation']))
+            
+            # Yearly Privilege Leave (Apr)
+            if month == 4:
+                allocations.append((LeaveTypeID.PRIVILEGE, LeaveConfiguration.PRIVILEGE_LEAVE['default_allocation']))
+                allocations.append((LeaveTypeID.WFH, LeaveConfiguration.WFH['default_allocation']))
+
+                # get previous year's privilege leave balance
+                carry_forward_rows = []
+                for employee in active_employees:
+                    previous_year_leave_data = LeaveQueryService.get_employee_leave_cards(employee.employee_id, previous_year=True)
+                    previous_year_privilege_leave_data = [item for item in previous_year_leave_data if int(item['leave_type_id']) == LeaveTypeID.PRIVILEGE]
+                    previous_year_privilege_balance = previous_year_privilege_leave_data[0].get('total_alloted_leaves', 0) - previous_year_privilege_leave_data[0].get('total_used_leaves', 0)
+
+                    # Carry-forward rows: unused balance (min 0) per employee
+                    if previous_year_privilege_balance > 0:
+                        carry_forward_rows.append({
+                            'employee_id': employee.employee_id,
+                            'leave_type_id': LeaveTypeID.PRIVILEGE,
+                            'no_of_days': previous_year_privilege_balance,
+                            'added_by': 'System',
+                            'transaction_date': today,
+                            'approved_by': 'System',
+                            'approved_date': today,
+                            'is_carry_forwarded': True,
+                            'comments': f'System: Privilege Leave Carry Forward from FY {today.year - 1}-{today.year}'
+                        })
+
+                if carry_forward_rows:
+                    cf_stmt = pg_insert(LeaveOpeningTransaction).values(carry_forward_rows)
+                    cf_stmt = cf_stmt.on_conflict_do_nothing(
+                        index_elements=['leave_type_id', 'employee_id', 'transaction_date']
+                    )
+                    db.session.execute(cf_stmt)
+                    Logger.info("Privilege leave carry-forward records inserted",
+                                count=len(carry_forward_rows))
+
+            if not allocations:
+                Logger.info("No leave allocations required for this month")
+                return
+
+            rows = [
+                    {
+                        'employee_id': emp.employee_id,
+                        'leave_type_id': lt_id,
+                        'no_of_days': days,
+                        'added_by': 'System',
+                        'transaction_date': today,
+                        'approved_by': 'System',
+                        'approved_date': today,
+                        'is_carry_forwarded': False
+                    }
+                    for emp in active_employees
+                    for lt_id, days in allocations
+                ]
+
+            if rows:
+                stmt = pg_insert(LeaveOpeningTransaction).values(rows)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=['leave_type_id', 'employee_id', 'transaction_date']
+                )
+                db.session.execute(stmt)
+
+            db.session.commit()
+            Logger.info("Monthly leave allocation completed successfully", 
+                        employee_count=len(active_employees),
+                        allocations=[lv[0] for lv in allocations])
+        except Exception as e:
+            Logger.error("Error in monthly leave allocation", error=str(e))
+            raise

@@ -10,7 +10,7 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig, LeaveConfiguration
 from .leave_utils import LeaveUtils
 
 class LeaveQueryService:
@@ -70,7 +70,7 @@ class LeaveQueryService:
             raise
 
     @staticmethod
-    def get_employee_leave_cards(employee_id: str) -> List[Dict[str, Any]]:
+    def get_employee_leave_cards(employee_id: str, previous_year: bool = False) -> List[Dict[str, Any]]:
         """
         Retrieves leave balance cards/summary for an employee.
         """
@@ -86,6 +86,10 @@ class LeaveQueryService:
                 Logger.warning("Employee not found", employee_id=employee_id)
                 raise LookupError(f"Employee {employee_id} not found")
             
+            today = datetime.now().date()
+            month = today.month
+            start_date, end_date = LeaveUtils.get_financial_year_dates(today.year, month)
+            
             # Subquery for LeaveOpeningTransaction aggregation with date logic
             # Groups by LeaveTypeID and filters by TransactionDate based on leave type
             # Using specific dates from constants or logic
@@ -95,38 +99,47 @@ class LeaveQueryService:
                     LeaveOpeningTransaction.employee_id
                 ).filter(
                     LeaveOpeningTransaction.employee_id == employee_id,
-                    # Date logic: types 1,3 use '2025-03-31', others use '2024-03-31'
-                    case(
-                        (LeaveOpeningTransaction.leave_type_id.in_([LeaveTypeID.SICK, LeaveTypeID.WFH]), 
-                         LeaveOpeningTransaction.transaction_date > datetime(2025, 3, 31)),
-                        else_=LeaveOpeningTransaction.transaction_date > datetime(2024, 3, 31)
-                    )
+                    LeaveOpeningTransaction.transaction_date.between(start_date, end_date)
                 ).group_by(
                     LeaveOpeningTransaction.leave_type_id,
                     LeaveOpeningTransaction.employee_id
                 ).subquery()
             
-            # Subquery for LeaveAudit aggregation (used leaves)
+            # Subquery for used leaves — handles FY boundary leaves correctly
+            # For leaves spanning the FY end (e.g. from Mar 28 to Apr 3), only days within
+            # [start_date, end_date] are counted by prorating no_of_days by the overlap ratio.
+            total_span = func.greatest(
+                func.cast(
+                    (func.cast(LeaveTransaction.to_date, db.Date) - func.cast(LeaveTransaction.from_date, db.Date)),
+                    db.Integer
+                ) + 1,
+                1  # guard against zero-day spans
+            )
+            overlap_days = func.greatest(
+                func.cast(
+                    (func.cast(func.least(LeaveTransaction.to_date, end_date), db.Date) -
+                     func.cast(func.greatest(LeaveTransaction.from_date, start_date), db.Date)),
+                    db.Integer
+                ) + 1,
+                0  # no overlap → 0
+            )
+            prorated_days = (
+                func.cast(LeaveTransaction.no_of_days, db.Numeric) *
+                func.cast(overlap_days, db.Numeric) /
+                func.cast(total_span, db.Numeric)
+            )
+
             used_subq = db.session.query(
-                func.sum(LeaveTransaction.no_of_days).label('number_of_days'),
+                func.sum(prorated_days).label('number_of_days'),
                 LeaveTransaction.leave_type_id,
                 LeaveTransaction.employee_id
             ).filter(
                 LeaveTransaction.employee_id == employee_id,
-                # Date logic based on leave type
-                case(
-                    (LeaveTransaction.leave_type_id.in_([LeaveTypeID.SICK, LeaveTypeID.WFH]),
-                     and_(
-                         LeaveTransaction.from_date >= datetime(2025, 4, 1),
-                         LeaveTransaction.to_date <= datetime(2026, 3, 31)
-                     )),
-                    else_=and_(
-                        LeaveTransaction.from_date >= datetime(2024, 4, 1),
-                        LeaveTransaction.to_date <= datetime(2026, 3, 31)
-                    )
+                or_(
+                    LeaveTransaction.from_date.between(start_date, end_date),
+                    LeaveTransaction.to_date.between(start_date, end_date)
                 ),
-                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED, "Rejected", "Cancelled"]),
-                ~LeaveTransaction.leave_tran_id.in_([10598, 10599, 10601, 10618, 10634])
+                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED]),
             ).group_by(
                 LeaveTransaction.leave_type_id,
                 LeaveTransaction.employee_id

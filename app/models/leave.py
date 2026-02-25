@@ -88,14 +88,20 @@ class LeaveAudit(BaseModel):
 
 class LeaveOpeningTransaction(BaseModel):
     __tablename__ = 'leave_opening_transaction'
-    leave_type_id = db.Column(db.Integer, primary_key=True)
-    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    leave_type_id = db.Column(db.Integer, nullable=False)
+    employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False)
     no_of_days = db.Column(db.Numeric(5, 2))
     added_by = db.Column(db.String(100))
-    transaction_date = db.Column(db.Date)
+    transaction_date = db.Column(db.Date, nullable=False)
     approved_by = db.Column(db.String(100))
     approved_date = db.Column(db.Date)
     is_carry_forwarded = db.Column(db.Boolean)
+    comments = db.Column(db.Text)
+
+    __table_args__ = (
+        db.UniqueConstraint('leave_type_id', 'employee_id', 'transaction_date', name='uq_leave_opening_emp_type_date'),
+    )
 
 
 class CompensatoryOff(BaseModel):
