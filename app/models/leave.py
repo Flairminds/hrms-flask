@@ -99,10 +99,6 @@ class LeaveOpeningTransaction(BaseModel):
     is_carry_forwarded = db.Column(db.Boolean)
     comments = db.Column(db.Text)
 
-    __table_args__ = (
-        db.UniqueConstraint('leave_type_id', 'employee_id', 'transaction_date', name='uq_leave_opening_emp_type_date'),
-    )
-
 
 class CompensatoryOff(BaseModel):
     __tablename__ = 'compensatory_off'

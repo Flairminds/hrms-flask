@@ -23,7 +23,6 @@ def health_check():
         200: Server is running
     """
     Logger.debug("Health check endpoint accessed")
-    LeaveTransactionService.scheduler_monthly_leave_allocation()
     return jsonify({
         "status": "healthy",
         "message": "Server is running",

@@ -6,7 +6,7 @@ from .. import db
 from ..models.hr import Employee
 from ..models.leave import LeaveOpeningTransaction, LeaveTransaction
 from ..utils.constants import LeaveTypeID, LeaveConfiguration, EmployeeStatus, LeaveStatus
-from ..services.leave.leave_query_service import LeaveQueryService
+from ..services.leave.leave_transaction_service import LeaveTransactionService
 
 scheduler = APScheduler()
 
@@ -82,7 +82,7 @@ def register_jobs(app):
         """Automatically allocates leaves on the 1st of every month."""
         with app.app_context():
             try:
-                LeaveQueryService.scheduler_monthly_leave_allocation()
+                LeaveTransactionService.scheduler_monthly_leave_allocation()
             except Exception as e:
                 db.session.rollback()
                 Logger.error("Error in monthly leave allocation job", error=str(e))

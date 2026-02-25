@@ -677,9 +677,6 @@ class LeaveTransactionService:
 
                 if carry_forward_rows:
                     cf_stmt = pg_insert(LeaveOpeningTransaction).values(carry_forward_rows)
-                    cf_stmt = cf_stmt.on_conflict_do_nothing(
-                        index_elements=['leave_type_id', 'employee_id', 'transaction_date']
-                    )
                     db.session.execute(cf_stmt)
                     Logger.info("Privilege leave carry-forward records inserted",
                                 count=len(carry_forward_rows))
@@ -705,9 +702,6 @@ class LeaveTransactionService:
 
             if rows:
                 stmt = pg_insert(LeaveOpeningTransaction).values(rows)
-                stmt = stmt.on_conflict_do_nothing(
-                    index_elements=['leave_type_id', 'employee_id', 'transaction_date']
-                )
                 db.session.execute(stmt)
 
             db.session.commit()
