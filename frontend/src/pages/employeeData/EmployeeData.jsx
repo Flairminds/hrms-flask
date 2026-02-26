@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space } from 'antd';
-import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space, Tooltip, message } from 'antd';
+import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
 import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
@@ -168,7 +168,25 @@ export const EmployeeData = () => {
     {
       title: 'Email',
       dataIndex: 'email',
-      key: 'email'
+      key: 'email',
+      render: (email) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{email}</span>
+          {email && (
+            <Tooltip title="Copy email">
+              <CopyOutlined
+                style={{ color: '#1890ff', cursor: 'pointer', fontSize: 13 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(email).then(() => {
+                    message.success('Email copied!');
+                  });
+                }}
+              />
+            </Tooltip>
+          )}
+        </span>
+      ),
     },
     // {
     //   title: 'Joining Date',

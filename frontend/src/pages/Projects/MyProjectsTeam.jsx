@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Card, message, Tag } from 'antd';
+import { Table, Card, message, Tag, Tooltip } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import { getMyProjectsTeam } from '../../services/api';
 
 const MyProjectsTeam = () => {
@@ -45,7 +46,29 @@ const MyProjectsTeam = () => {
         const teamColumns = [
             { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
             { title: 'Name', dataIndex: 'employee_name', key: 'employee_name' },
-            { title: 'Email', dataIndex: 'email', key: 'email' },
+            {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email',
+                render: (email) => (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>{email}</span>
+                        {email && (
+                            <Tooltip title="Copy email">
+                                <CopyOutlined
+                                    style={{ color: '#1890ff', cursor: 'pointer', fontSize: 13 }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(email).then(() => {
+                                            message.success('Email copied!');
+                                        });
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
+                    </span>
+                ),
+            },
             { title: 'Role', dataIndex: 'role', key: 'role' },
             {
                 title: 'Allocation %',
