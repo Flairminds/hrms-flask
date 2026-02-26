@@ -960,7 +960,7 @@ class LeaveQueryService:
                     'empName': emp_name,
                     'comments': row.comments or '',
                     'leaveType': row.leave_type_id,
-                    'leaveTypeName': row.leave_name,
+                    'leaveName': row.leave_name,
                     'fromDate': row.from_date,
                     'toDate': row.to_date,
                     'duration': row.duration or '',
@@ -977,6 +977,7 @@ class LeaveQueryService:
                     'reasonForWorkingLate': row.reason_for_working_late or '',
                     'compOffDate': row.comp_off_date,
                     'workedDate': row.worked_date,
+                    'noOfDays': int(row.no_of_days),
                     'compOffTransactions': comp_off_map.get(row.leave_tran_id, []),
                     'approverName': row.approver_name or 'N/A'
                 })

@@ -315,6 +315,8 @@ class EmployeeService:
                 employee.personal_email = employee_data['personal_email']
             if employee_data.get('email') is not None:
                 employee.email = employee_data['email']
+            if employee_data.get('email') is not None:
+                employee.email = employee_data['email']
             if employee_data.get('date_of_joining') is not None:
                 employee.date_of_joining = employee_data['date_of_joining']
             if employee_data.get('highestQualification') is not None:

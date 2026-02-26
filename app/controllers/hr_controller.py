@@ -128,6 +128,7 @@ class HRController:
                 'date_of_birth': data.get('dateOfBirth'),
                 'gender': data.get('gender'),
                 'blood_group': data.get('bloodGroup'),
+                'email': data.get('email'),
                 'personal_email': data.get('personalEmail'),
                 'mobile_no': data.get('contactNumber'), # map contactNumber to mobile_no for service
                 'date_of_joining': data.get('dateOfJoining'),

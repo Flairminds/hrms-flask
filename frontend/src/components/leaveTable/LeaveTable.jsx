@@ -100,7 +100,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
               applicationDate: item.application_date,
               leaveStatus: item.leave_status,
               approverName: item.approver_name,
-              approvedBy: item.approved_by,
+              approvedBy: item.leave_status == LEAVE_STATUS.APPROVED ? item.approver_name : '',
               approvalComment: item.approval_comment
             }));
             setEmployeeData(mappedData);
