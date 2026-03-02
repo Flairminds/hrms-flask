@@ -10,6 +10,7 @@ import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../..
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
 import { EMPDetailsModal } from '../../components/modal/EMPDetailsModal/EMPDetailsModal';
 import { convertDate } from '../../util/helperFunctions';
+import { employmentStatusOptions, LEAVE_STATUS } from '../../util/helper';
 
 const { Search } = Input;
 
@@ -149,6 +150,7 @@ export const EmployeeData = () => {
       key: 'employmentStatus',
       filters: statusOptions.map(status => ({ text: status, value: status })),
       onFilter: (value, record) => record.employmentStatus === value,
+      defaultFilteredValue: employmentStatusOptions.filter(status => status !== 'Relieved' && status !== 'Absconding'),
       render: (text) => <span className={getStatusClassName(text)}>{text}</span>,
     },
     {

@@ -1130,7 +1130,7 @@ class EmployeeService:
                 Employee.profile_image,
                 Employee.profile_image_type
             ).filter(
-                Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding']),
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
                 Employee.date_of_birth != None
             )
             
