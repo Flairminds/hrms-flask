@@ -185,7 +185,7 @@ const HardwareManagement = () => {
             fetchAssignments();
             fetchAssets(); // Refresh assets to update status
         } catch (error) {
-            message.error(editingAssignment ? 'Failed to update assignment' : 'Failed to create assignment');
+            message.error(error.response.data.message ? error.response.data.message : editingAssignment ? 'Failed to update assignment' : 'Failed to create assignment');
         }
     };
 
@@ -252,7 +252,6 @@ const HardwareManagement = () => {
 
     // ============= TABLE COLUMNS =============
     const assetColumns = [
-        { title: 'ID', dataIndex: 'asset_id', key: 'asset_id' },
         {
             title: 'Type',
             dataIndex: 'type',
@@ -298,7 +297,6 @@ const HardwareManagement = () => {
     ];
 
     const assignmentColumns = [
-        { title: 'ID', dataIndex: 'assignment_id', key: 'assignment_id' },
         {
             title: 'Asset',
             dataIndex: 'asset_name',
@@ -332,7 +330,6 @@ const HardwareManagement = () => {
     ];
 
     const maintenanceColumns = [
-        { title: 'ID', dataIndex: 'maintenance_id', key: 'maintenance_id' },
         { title: 'Asset', dataIndex: 'asset_name', key: 'asset_name', width: 250 },
         { title: 'Issue', dataIndex: 'issue_description', key: 'issue_description' },
         { title: 'Date', dataIndex: 'maintenance_date', key: 'maintenance_date' },
@@ -481,7 +478,7 @@ const HardwareManagement = () => {
                             <Select showSearch optionFilterProp="children">
                                 {assets.map(asset => (
                                     <Option key={asset.asset_id} value={asset.asset_id}>
-                                        {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
+                                        {`${asset.type}${asset.brand ? ` - ${asset.brand}` : ''}${asset.model ? ` - ${asset.model}` : ''} (${asset.serial_number})`}
                                     </Option>
                                 ))}
                             </Select>
