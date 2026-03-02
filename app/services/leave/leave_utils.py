@@ -20,12 +20,12 @@ class LeaveUtils:
         if year is None:
             year = datetime.now().year
         if month is None:
-            start_date = date(year, 3, 31)
+            start_date = date(year, 4, 1)
             end_date = date(year + 1, 3, 31)
         elif month > 3:
-            start_date = date(year, 3, 31)
+            start_date = date(year, 4, 1)
             end_date = date(year + 1, 3, 31)
         else:
-            start_date = date(year - 1, 3, 31)
+            start_date = date(year - 1, 4, 1)
             end_date = date(year, 3, 31)
         return start_date, end_date

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
     getAllHardwareAssets,
@@ -30,6 +30,7 @@ const HardwareManagement = () => {
     const [assetModalVisible, setAssetModalVisible] = useState(false);
     const [assetForm] = Form.useForm();
     const [editingAsset, setEditingAsset] = useState(null);
+    const [assetSearch, setAssetSearch] = useState('');
 
     // State for assignments
     const [assignments, setAssignments] = useState([]);
@@ -38,6 +39,8 @@ const HardwareManagement = () => {
     const [assignmentForm] = Form.useForm();
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [employees, setEmployees] = useState([]);
+    const [assignmentSearch, setAssignmentSearch] = useState('');
+    const [assignmentEmployee, setAssignmentEmployee] = useState(null);
 
     // State for maintenance
     const [maintenance, setMaintenance] = useState([]);
@@ -45,6 +48,91 @@ const HardwareManagement = () => {
     const [maintenanceModalVisible, setMaintenanceModalVisible] = useState(false);
     const [maintenanceForm] = Form.useForm();
     const [editingMaintenance, setEditingMaintenance] = useState(null);
+
+    // State for stats summary modal
+    const [statsSummaryVisible, setStatsSummaryVisible] = useState(false);
+
+    // All known asset statuses (fixed order)
+    const ALL_STATUSES = ['Available', 'Assigned', 'Need Repair', 'Under Maintenance', 'Retired'];
+
+    // Build a Type × Status matrix from the assets list
+    const buildAssetMatrix = () => {
+        const types = [...new Set(assets.map(a => a.type))].sort();
+        const statuses = ALL_STATUSES;
+
+        const rows = types.map(type => {
+            const row = { key: type, type };
+            let rowTotal = 0;
+            statuses.forEach(status => {
+                const count = assets.filter(a => a.type === type && a.status === status).length;
+                row[status] = count;
+                rowTotal += count;
+            });
+            row['__total'] = rowTotal;
+            return row;
+        });
+
+        // Add totals row
+        const totalsRow = { key: '__totals', type: 'Total' };
+        let grandTotal = 0;
+        statuses.forEach(status => {
+            const count = assets.filter(a => a.status === status).length;
+            totalsRow[status] = count;
+            grandTotal += count;
+        });
+        totalsRow['__total'] = grandTotal;
+        rows.push(totalsRow);
+
+        const STATUS_COLORS = {
+            'Available': '#52c41a',
+            'Assigned': '#1890ff',
+            'Need Repair': '#fa8c16',
+            'Under Maintenance': '#faad14',
+            // 'Retired': '#ff4d4f',
+        };
+
+        const columns = [
+            {
+                title: 'Type',
+                dataIndex: 'type',
+                key: 'type',
+                fixed: 'left',
+                width: 140,
+                render: (val) => <strong>{val}</strong>,
+            },
+            ...statuses.map(status => ({
+                title: (
+                    <span style={{ color: STATUS_COLORS[status] || '#333', fontWeight: 600 }}>
+                        {status}
+                    </span>
+                ),
+                dataIndex: status,
+                key: status,
+                align: 'center',
+                render: (val, record) => (
+                    <span style={{
+                        fontWeight: record.type === 'Total' ? 700 : (val > 0 ? 600 : 400),
+                        color: val > 0 ? (STATUS_COLORS[status] || '#333') : '#bbb',
+                    }}>
+                        {val ?? 0}
+                    </span>
+                ),
+            })),
+            {
+                title: <strong>Total</strong>,
+                dataIndex: '__total',
+                key: '__total',
+                align: 'center',
+                render: (val, record) => (
+                    <strong style={{ color: record.type === 'Total' ? '#1890ff' : '#333' }}>
+                        {val ?? 0}
+                    </strong>
+                ),
+            },
+        ];
+
+        return { rows, columns, statuses };
+    };
 
     useEffect(() => {
         fetchAssets();
@@ -185,7 +273,7 @@ const HardwareManagement = () => {
             fetchAssignments();
             fetchAssets(); // Refresh assets to update status
         } catch (error) {
-            message.error(editingAssignment ? 'Failed to update assignment' : 'Failed to create assignment');
+            message.error(error.response.data.message ? error.response.data.message : editingAssignment ? 'Failed to update assignment' : 'Failed to create assignment');
         }
     };
 
@@ -252,7 +340,6 @@ const HardwareManagement = () => {
 
     // ============= TABLE COLUMNS =============
     const assetColumns = [
-        { title: 'ID', dataIndex: 'asset_id', key: 'asset_id' },
         {
             title: 'Type',
             dataIndex: 'type',
@@ -298,16 +385,19 @@ const HardwareManagement = () => {
     ];
 
     const assignmentColumns = [
-        { title: 'ID', dataIndex: 'assignment_id', key: 'assignment_id' },
         {
             title: 'Asset',
             dataIndex: 'asset_name',
             key: 'asset_name',
             width: 250,
-            filters: [...new Set(assignments.map(a => a.asset_name))].filter(Boolean).map(name => ({ text: name, value: name })),
-            onFilter: (value, record) => record.asset_name === value,
         },
-        { title: 'Employee', dataIndex: 'employee_name', key: 'employee_name' },
+        {
+            title: 'Employee',
+            dataIndex: 'employee_name',
+            key: 'employee_name',
+            filters: [...new Set(assignments.map(a => a.employee_name))].filter(Boolean).sort().map(name => ({ text: name, value: name })),
+            onFilter: (value, record) => record.employee_name === value,
+        },
         { title: 'Assigned Date', dataIndex: 'assignment_date', key: 'assignment_date' },
         { title: 'Assigned By', dataIndex: 'assigned_by_name', key: 'assigned_by_name' },
         { title: 'Return Date', dataIndex: 'return_date', key: 'return_date' },
@@ -332,7 +422,6 @@ const HardwareManagement = () => {
     ];
 
     const maintenanceColumns = [
-        { title: 'ID', dataIndex: 'maintenance_id', key: 'maintenance_id' },
         { title: 'Asset', dataIndex: 'asset_name', key: 'asset_name', width: 250 },
         { title: 'Issue', dataIndex: 'issue_description', key: 'issue_description' },
         { title: 'Date', dataIndex: 'maintenance_date', key: 'maintenance_date' },
@@ -362,34 +451,68 @@ const HardwareManagement = () => {
 
             <Tabs defaultActiveKey="1">
                 <TabPane tab="Assets" key="1">
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleAddAsset}
-                        style={{ marginBottom: 16 }}
-                    >
-                        Add Asset
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddAsset}
+                        >
+                            Add Asset
+                        </Button>
+                        <Button
+                            icon={<BarChartOutlined />}
+                            onClick={() => setStatsSummaryVisible(true)}
+                        >
+                            Summary
+                        </Button>
+                        <Input
+                            placeholder="Search by serial number or model..."
+                            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+                            allowClear
+                            value={assetSearch}
+                            onChange={e => setAssetSearch(e.target.value)}
+                            style={{ width: 260 }}
+                        />
+                    </div>
                     <Table
                         columns={assetColumns}
-                        dataSource={assets}
+                        dataSource={assets.filter(a => {
+                            const q = assetSearch.trim().toLowerCase();
+                            if (!q) return true;
+                            return (
+                                (a.serial_number || '').toLowerCase().includes(q) ||
+                                (a.model || '').toLowerCase().includes(q)
+                            );
+                        })}
                         loading={assetsLoading}
                         rowKey="asset_id"
                     />
                 </TabPane>
 
                 <TabPane tab="Assignments" key="2">
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleAddAssignment}
-                        style={{ marginBottom: 16 }}
-                    >
-                        Assign Asset
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddAssignment}
+                        >
+                            Assign Asset
+                        </Button>
+                        <Input
+                            placeholder="Search by brand, model, serial no..."
+                            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+                            allowClear
+                            value={assignmentSearch}
+                            onChange={e => setAssignmentSearch(e.target.value)}
+                            style={{ width: 260 }}
+                        />
+                    </div>
                     <Table
                         columns={assignmentColumns}
-                        dataSource={assignments}
+                        dataSource={assignments.filter(a => {
+                            const q = assignmentSearch.trim().toLowerCase();
+                            return !q || (a.asset_name || '').toLowerCase().includes(q);
+                        })}
                         loading={assignmentsLoading}
                         rowKey="assignment_id"
                     />
@@ -412,6 +535,41 @@ const HardwareManagement = () => {
                     />
                 </TabPane>
             </Tabs>
+
+            {/* Asset Stats Summary Modal */}
+            <Modal
+                title={
+                    <span style={{ fontWeight: 600, color: 'black' }}>
+                        Asset Summary
+                    </span>
+                }
+                open={statsSummaryVisible}
+                onCancel={() => setStatsSummaryVisible(false)}
+                footer={null}
+                width={820}
+                style={{ top: 40 }}
+            >
+                {(() => {
+                    const { rows, columns } = buildAssetMatrix();
+                    return (
+                        <>
+                            <Table
+                                columns={columns}
+                                dataSource={rows}
+                                pagination={false}
+                                size="middle"
+                                bordered
+                                rowClassName={(record) =>
+                                    record.type === 'Total'
+                                        ? 'ant-table-row-selected'
+                                        : ''
+                                }
+                                style={{ borderRadius: 8 }}
+                            />
+                        </>
+                    );
+                })()}
+            </Modal>
 
             {/* Asset Modal */}
             <Modal
@@ -448,6 +606,7 @@ const HardwareManagement = () => {
                             <Select>
                                 <Option value="Available">Available</Option>
                                 <Option value="Assigned">Assigned</Option>
+                                <Option value="Need Repair">Need Repair</Option>
                                 <Option value="Under Maintenance">Under Maintenance</Option>
                                 <Option value="Retired">Retired</Option>
                             </Select>
@@ -480,7 +639,7 @@ const HardwareManagement = () => {
                             <Select showSearch optionFilterProp="children">
                                 {assets.map(asset => (
                                     <Option key={asset.asset_id} value={asset.asset_id}>
-                                        {`${asset.type} - ${asset.brand} ${asset.model} (${asset.serial_number})`}
+                                        {`${asset.type}${asset.brand ? ` - ${asset.brand}` : ''}${asset.model ? ` - ${asset.model}` : ''} (${asset.serial_number})`}
                                     </Option>
                                 ))}
                             </Select>

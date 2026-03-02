@@ -195,7 +195,7 @@ class AssetService:
                     'asset_brand': asset.brand,
                     'asset_model': asset.model,
                     'asset_serial_number': asset.serial_number,
-                    'asset_name': f"{asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
+                    'asset_name': f"{asset.type} {asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
                     'employee_id': assignment.employee_id,
                     'employee_name': f"{emp.first_name or ''} {emp.last_name or ''}".strip() if emp else assignment.employee_id,
                     'assignment_date': assignment.assignment_date.strftime('%Y-%m-%d') if assignment.assignment_date else None,
@@ -228,12 +228,21 @@ class AssetService:
             raise ValueError("Employee ID is required")
         if not assignment_data.get('assigned_by'):
             raise ValueError("Assigned by is required")
-        
-        Logger.info("Creating hardware assignment", 
+
+        Logger.info("Creating hardware assignment",
                    asset_id=assignment_data.get('asset_id'),
                    employee_id=assignment_data.get('employee_id'))
-        
+
         try:
+            # Verify the asset exists and is available for assignment
+            asset = HardwareAssets.query.get(assignment_data['asset_id'])
+            if not asset:
+                raise ValueError(f"Asset with ID {assignment_data['asset_id']} not found")
+            if asset.status != 'Available':
+                raise ValueError(
+                    f"Asset '{asset.serial_number}' is not available for assignment"
+                )
+
             new_assignment = HardwareAssignment(
                 asset_id=assignment_data['asset_id'],
                 employee_id=assignment_data['employee_id'],
@@ -243,13 +252,20 @@ class AssetService:
                 condition_at_assignment=assignment_data.get('condition_at_assignment'),
                 assignment_notes=assignment_data.get('assignment_notes')
             )
-            
+
             db.session.add(new_assignment)
+
+            # Update the asset status to Assigned
+            asset.status = 'Assigned'
+
             db.session.commit()
-            
+
             Logger.info("Hardware assignment created", assignment_id=new_assignment.assignment_id)
             return True
-            
+
+        except ValueError:
+            db.session.rollback()
+            raise
         except IntegrityError as e:
             db.session.rollback()
             Logger.error("Integrity error creating assignment", error=str(e))
@@ -258,6 +274,7 @@ class AssetService:
             db.session.rollback()
             Logger.error("Database error creating assignment", error=str(e))
             return False
+
 
     @staticmethod
     def update_hardware_assignment(assignment_data: Dict[str, Any]) -> bool:

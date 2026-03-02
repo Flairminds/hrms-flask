@@ -18,7 +18,7 @@ def verify_otp():
     return AccountController.verify_otp()
 
 @account_bp.route('/reset-password', methods=['POST'])
-# No roles_required here as user might not be logged in to reset password
+@roles_required(*ROLE_PERMISSIONS['account']['reset_password'])
 def reset_password():
     return AccountController.reset_password()
 

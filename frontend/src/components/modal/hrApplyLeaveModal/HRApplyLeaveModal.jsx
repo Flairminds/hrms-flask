@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, DatePicker, Input } from 'antd';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import styles from './HRApplyLeaveModal.module.css';
 import { getAllEmployeesList, getTypeApprover, holidayListData } from '../../../services/api';
 import { hrApplyLeave } from '../../../services/api';
@@ -181,8 +183,11 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
 
             if (res.status === 200 || res.status === 201) {
                 toast.success('Leave applied successfully on behalf of employee!');
-                if (onSuccess) onSuccess();
-                handleCancel();
+                // Delay closing so the toast is visible before the modal unmounts
+                setTimeout(() => {
+                    if (onSuccess) onSuccess();
+                    handleCancel();
+                }, 1500);
             } else {
                 toast.info(res.data?.Message || 'Leave applied');
             }
@@ -357,6 +362,7 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
 
                 </div>
             </Modal>
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }

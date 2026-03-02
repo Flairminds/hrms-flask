@@ -58,8 +58,7 @@ const EmailNotifications = () => {
                 <br />
                 <div>CC:</div>
                 <div>Team Lead / Approver</div>
-                <div>hr@flairminds.com</div>
-                <div>ahiresh.gaikwad@flairminds.com (Second approval)</div>
+                <div>hr@flairminds.com (also for Second Approval)</div>
             </>,
             trigger: 'Immediate (On Approval/Rejection)',
         },
@@ -78,13 +77,19 @@ const EmailNotifications = () => {
         {
             key: '7',
             type: 'Internship/Probation End Alert',
-            recipients: 'ahiresh.gaikwad@flairminds.com',
+            recipients: <>
+                <div>priyanka.mandale@flairminds.com</div>
+                <div>hr@flairminds.com</div>
+            </>,
             trigger: 'Daily 9:00am - End Date is in 5 days or in past',
         },
         {
             key: '8',
             type: 'Employee Review Digest',
-            recipients: 'ahiresh.gaikwad@flairminds.com',
+            recipients: <>
+                <div>priyanka.mandale@flairminds.com</div>
+                <div>hr@flairminds.com</div>
+            </>,
             trigger: 'Daily 9:00am - Review Status is pending or not scheduled',
         },
         {
@@ -95,6 +100,7 @@ const EmailNotifications = () => {
                 <br />
                 <div>CC:</div>
                 <div>hr@flairminds.com</div>
+                <div>priyanka.mandale@flairminds.com</div>
                 <div>New Leave Approver</div>
                 <div>Old Leave Approver</div>
             </>,

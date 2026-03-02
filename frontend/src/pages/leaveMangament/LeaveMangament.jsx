@@ -210,11 +210,7 @@ export function LeaveManagementPage() {
                               <div style={{ color: '#8c8c8c' }}>Available</div>
                               <div style={{ fontWeight: 'bold', color: '#262626' }}>
                                 {leave && leave.totalAllotedLeaves !== undefined && leave.totalUsedLeaves !== undefined
-                                  ? (
-                                    leave.leaveName === "Privilege Leave"
-                                      ? ((leave.totalAllotedLeaves - leave.totalUsedLeaves).toFixed(1) + '/' + (leave.totalAllotedLeaves > 12 ? 12 : leave.totalAllotedLeaves).toFixed(1))
-                                      : ((leave.totalAllotedLeaves - leave.totalUsedLeaves).toFixed(1) + '/' + (leave.totalAllotedLeaves).toFixed(1))
-                                  )
+                                  ? (leave.totalAllotedLeaves - leave.totalUsedLeaves).toFixed(1) + '/' + (leave.totalAllotedLeaves).toFixed(1)
                                   : "N/A"
                                 }
                               </div>

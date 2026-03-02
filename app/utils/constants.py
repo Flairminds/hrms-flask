@@ -88,9 +88,9 @@ class EmailConfig:
     DEFAULT_TEAM_LEAD_EMAIL = 'hr@flairminds.com'
     
     # Secondary Approver for multi-level approval (e.g., Customer Approved WFH)
-    SECONDARY_LEAVE_APPROVER_EMAIL = 'ahiresh.gaikwad@flairminds.com'
+    SECONDARY_LEAVE_APPROVER_EMAIL = 'hr@flairminds.com'
     
     # Global CC list for leave notifications
-    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com']
+    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
-    REVIEW_ALERT_CC = ['ahiresh.gaikwad@flairminds.com']
+    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']

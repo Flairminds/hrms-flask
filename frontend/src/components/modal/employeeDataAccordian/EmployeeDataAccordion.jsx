@@ -157,11 +157,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                     skill_id: skill,
                     skill_name: fethNameById(skill),
                     skill_level: 'Primary'
-                })),
-                ...(data.secondarySkills || []).map((skill) => ({
-                    skill_id: skill,
-                    skill_name: fethNameById(skill),
-                    skill_level: 'Secondary'
                 }))
             ],
             resumeLink: data.resumeLink || '',
@@ -252,7 +247,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8', height: '100%' }}
                         >
                             <Row gutter={[12, 4]}>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="First Name"
                                         name="firstName"
@@ -261,12 +256,12 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="First name" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item label="Middle Name" name="middleName">
                                         <Input placeholder="Middle name" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Last Name"
                                         name="lastName"
@@ -275,19 +270,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Last name" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
-                                    <Form.Item
-                                        label="Password"
-                                        name="password"
-                                        rules={[
-                                            { required: true, message: 'Required' },
-                                            { min: 8, message: 'Min 8 characters' }
-                                        ]}
-                                    >
-                                        <Input.Password placeholder="Password" />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Gender"
                                         name="gender"
@@ -299,7 +282,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         </Select>
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Date of Birth"
                                         name="dateOfBirth"
@@ -312,7 +295,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Blood Group"
                                         name="bloodGroup"
@@ -320,7 +303,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Blood Group" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Date of Joining"
                                         name="dateOfJoining"
@@ -342,6 +325,18 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Highest Qualification" />
                                     </Form.Item>
                                 </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        label="Password"
+                                        name="password"
+                                        rules={[
+                                            { required: true, message: 'Required' },
+                                            { min: 8, message: 'Min 8 characters' }
+                                        ]}
+                                    >
+                                        <Input.Password placeholder="Password" />
+                                    </Form.Item>
+                                </Col>
                             </Row>
                         </WidgetCard>
                     </Col>
@@ -355,7 +350,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8', height: '100%' }}
                         >
                             <Row gutter={[16, 8]}>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item
                                         label={<><MailOutlined style={{ marginRight: '8px' }} />Official Email</>}
                                         name="email"
@@ -364,7 +359,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="official@company.com" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item
                                         label={<><MailOutlined style={{ marginRight: '8px' }} />Personal Email</>}
                                         name="personalEmail"
@@ -373,7 +368,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="personal@email.com" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item
                                         label={<><PhoneOutlined style={{ marginRight: '8px' }} />Contact Number</>}
                                         name="contactNumber"
@@ -459,15 +454,6 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         </Select>
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
-                                    <Form.Item
-                                        label="Resume Link"
-                                        name="resumeLink"
-                                        rules={[{ required: true, message: 'Required' }]}
-                                    >
-                                        <Input placeholder="Google Drive or Dropbox link" />
-                                    </Form.Item>
-                                </Col>
                             </Row>
                         </WidgetCard>
                     </Col>
@@ -481,7 +467,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}
                         >
                             <Row gutter={[16, 8]}>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Contact Person"
                                         name="emergencyContactPerson"
@@ -489,7 +475,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Name" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Relation"
                                         name="emergencyContactRelation"
@@ -497,7 +483,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Relation" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Contact Number"
                                         name="emergencyContactNumber"
@@ -523,58 +509,21 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                         >
                             <Row gutter={[16, 8]}>
                                 <Col span={24}>
-                                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.secondarySkills !== curr.secondarySkills}>
-                                        {({ getFieldValue }) => {
-                                            const secondary = getFieldValue('secondarySkills') || [];
-                                            const filteredOptions = skillEmp
-                                                .filter(skill => !secondary.some(id => String(id) === String(skill.skillId)))
-                                                .map(skill => ({
-                                                    label: skill.skillName,
-                                                    value: skill.skillId
-                                                }));
-                                            return (
-                                                <Form.Item
-                                                    label="Primary Skills"
-                                                    name="primarySkills"
-                                                    rules={[{ required: true, message: 'Required' }]}
-                                                >
-                                                    <Select
-                                                        mode="multiple"
-                                                        placeholder="Select primary skills"
-                                                        showSearch
-                                                        optionFilterProp="label"
-                                                        options={filteredOptions}
-                                                    />
-                                                </Form.Item>
-                                            );
-                                        }}
-                                    </Form.Item>
-                                </Col>
-                                <Col span={24}>
-                                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.primarySkills !== curr.primarySkills}>
-                                        {({ getFieldValue }) => {
-                                            const primary = getFieldValue('primarySkills') || [];
-                                            const filteredOptions = skillEmp
-                                                .filter(skill => !primary.some(id => String(id) === String(skill.skillId)))
-                                                .map(skill => ({
-                                                    label: skill.skillName,
-                                                    value: skill.skillId
-                                                }));
-                                            return (
-                                                <Form.Item
-                                                    label="Secondary Skills"
-                                                    name="secondarySkills"
-                                                >
-                                                    <Select
-                                                        mode="multiple"
-                                                        placeholder="Select secondary skills"
-                                                        showSearch
-                                                        optionFilterProp="label"
-                                                        options={filteredOptions}
-                                                    />
-                                                </Form.Item>
-                                            );
-                                        }}
+                                    <Form.Item
+                                        label="Primary Skills"
+                                        name="primarySkills"
+                                        rules={[{ required: true, message: 'Required' }]}
+                                    >
+                                        <Select
+                                            mode="multiple"
+                                            placeholder="Select primary skills"
+                                            showSearch
+                                            optionFilterProp="label"
+                                            options={skillEmp.map(skill => ({
+                                                label: skill.skillName,
+                                                value: skill.skillId
+                                            }))}
+                                        />
                                     </Form.Item>
                                 </Col>
                             </Row>
@@ -590,7 +539,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                             style={{ borderRadius: '10px', border: '1px solid #e8e8e8' }}
                         >
                             <Row gutter={[16, 8]}>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item
                                         label="Address Line 1"
                                         name="currentAddressLine1"
@@ -599,12 +548,12 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Address Line 1" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item label="Address Line 2" name="currentAddressLine2">
                                         <Input placeholder="Address Line 2" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="City"
                                         name="currentCity"
@@ -613,7 +562,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="City" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="State"
                                         name="currentState"
@@ -626,7 +575,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         </Select>
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Zip Code"
                                         name="currentZipCode"
@@ -654,7 +603,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                 Same as Current Address
                             </Checkbox>
                             <Row gutter={[16, 8]}>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item
                                         label="Address Line 1"
                                         name="permanentAddressLine1"
@@ -663,12 +612,12 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="Address Line 1" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={12}>
                                     <Form.Item label="Address Line 2" name="permanentAddressLine2">
                                         <Input placeholder="Address Line 2" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="City"
                                         name="permanentCity"
@@ -677,7 +626,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         <Input placeholder="City" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={12}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="State"
                                         name="permanentState"
@@ -690,7 +639,7 @@ const EmployeeDataAccordion = ({ isSetLeaveApplicationModal, handleOk, setIsAcco
                                         </Select>
                                     </Form.Item>
                                 </Col>
-                                <Col span={24}>
+                                <Col span={8}>
                                     <Form.Item
                                         label="Zip Code"
                                         name="permanentZipCode"

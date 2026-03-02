@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Card, Tag, InputNumber } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip } from 'antd';
+import { SearchOutlined, CopyOutlined } from '@ant-design/icons';
 import { getEmployeeAllocations } from '../../services/api';
 
 const EmployeeAllocations = () => {
@@ -34,7 +34,29 @@ const EmployeeAllocations = () => {
     const columns = [
         { title: 'Employee ID', dataIndex: 'employee_id', key: 'employee_id' },
         { title: 'Name', dataIndex: 'employee_name', key: 'employee_name' },
-        { title: 'Email', dataIndex: 'email', key: 'email' },
+        {
+            title: 'Email',
+            dataIndex: 'email',
+            key: 'email',
+            render: (email) => (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{email}</span>
+                    {email && (
+                        <Tooltip title="Copy email">
+                            <CopyOutlined
+                                style={{ color: '#1890ff', cursor: 'pointer', fontSize: 13 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(email).then(() => {
+                                        message.success('Email copied!');
+                                    });
+                                }}
+                            />
+                        </Tooltip>
+                    )}
+                </span>
+            ),
+        },
         {
             title: 'Total Allocation',
             dataIndex: 'total_allocation',

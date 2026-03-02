@@ -35,9 +35,15 @@ def seed_master_sub_roles():
         INSERT INTO master_sub_role (sub_role_id, sub_role_name) VALUES
         (1, N'Software Engineer'),
         (2, N'Data Scientist'),
-        (3, N'Testers'),
+        (3, N'Tester'),
         (4, N'DevOps Engineer'),
-        (5, N'Human Resource Manager');
+        (5, N'Human Resource Manager'),
+        (6, N'Sales & Marketing'),
+        (7, N'Business Analyst'),
+        (8, N'Project Manager'),
+        (9, N'UI/UX Designer'),
+        (10, N'Business Development'),
+        (11, N'Operations Manager');
     """)
     
     db.session.execute(sub_roles_sql)
@@ -280,13 +286,13 @@ def seed_hr_employee():
         "first_name": "HR",
         "last_name": "Manager",
         "email": "hr@flairminds.com",
-        "contact_number": "1234567890",
-        "password": "pass@123",
-        "date_of_birth": "2022-04-01",
+        "contact_number": "9420281731",
+        "password": "hrfm#@2602",
+        "date_of_birth": "2000-04-01",
         "date_of_joining": "2022-04-01",
         "sub_role": 5,
         "role_id": 3,
-        "band": 10
+        "band": 11
     }
     
     try:
@@ -327,13 +333,13 @@ def seed_all():
     print("="*50 + "\n")
     
     try:
-        seed_master_roles()
-        seed_master_sub_roles()
-        seed_master_skills()
-        seed_master_designation()
-        seed_holidays()
-        seed_leave_types()
-        # seed_hr_employee()
+        # seed_master_roles()
+        # seed_master_sub_roles()
+        # seed_master_skills()
+        # seed_master_designation()
+        # seed_holidays()
+        # seed_leave_types()
+        seed_hr_employee()
         
         db.session.commit()
         

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space } from 'antd';
-import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space, Tooltip, message } from 'antd';
+import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
 import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
@@ -10,6 +10,7 @@ import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../..
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
 import { EMPDetailsModal } from '../../components/modal/EMPDetailsModal/EMPDetailsModal';
 import { convertDate } from '../../util/helperFunctions';
+import { employmentStatusOptions, LEAVE_STATUS } from '../../util/helper';
 
 const { Search } = Input;
 
@@ -149,6 +150,7 @@ export const EmployeeData = () => {
       key: 'employmentStatus',
       filters: statusOptions.map(status => ({ text: status, value: status })),
       onFilter: (value, record) => record.employmentStatus === value,
+      defaultFilteredValue: employmentStatusOptions.filter(status => status !== 'Relieved' && status !== 'Absconding'),
       render: (text) => <span className={getStatusClassName(text)}>{text}</span>,
     },
     {
@@ -168,7 +170,25 @@ export const EmployeeData = () => {
     {
       title: 'Email',
       dataIndex: 'email',
-      key: 'email'
+      key: 'email',
+      render: (email) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{email}</span>
+          {email && (
+            <Tooltip title="Copy email">
+              <CopyOutlined
+                style={{ color: '#1890ff', cursor: 'pointer', fontSize: 13 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(email).then(() => {
+                    message.success('Email copied!');
+                  });
+                }}
+              />
+            </Tooltip>
+          )}
+        </span>
+      ),
     },
     // {
     //   title: 'Joining Date',
@@ -201,6 +221,7 @@ export const EmployeeData = () => {
         <StatCard label="Interns" count={stats.total_interns} color="orange" />
         <StatCard label="In Probation" count={stats.total_probation} color="violet" />
         <StatCard label="Resigned" count={stats.total_resigned} color="orange" />
+        <StatCard label="Leave Without Pay" count={stats.total_lwp} color="orange" />
       </Space>
       <div className={styles.upperArea}>
         <Input

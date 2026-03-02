@@ -30,12 +30,12 @@ class EmployeeService:
                 Employee.team_lead_id,
                 Employee.email,
                 MasterRole.role_name
-            ).join(
+            ).outerjoin(
                 EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
-            ).join(
+            ).outerjoin(
                 MasterRole, EmployeeRole.role_id == MasterRole.role_id
             ).order_by(
-                Employee.date_of_joining.asc()
+                Employee.first_name.asc()
             ).all()
 
             # Helper to get approver name
@@ -100,7 +100,7 @@ class EmployeeService:
         """Aggregates employee dashboard statistics."""
         try:
             # Total Active Employees (Not Relieved or Absconding)
-            total_active = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay'])).count()
+            total_active = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).count()
             
             # Total Interns
             total_interns = Employee.query.filter_by(employment_status='Intern').count()
@@ -111,11 +111,15 @@ class EmployeeService:
             # Total Resigned
             total_resigned = Employee.query.filter_by(employment_status='Resigned').count()
 
+            # Total Leave Without Pay
+            total_lwp = Employee.query.filter_by(employment_status='Leave Without Pay').count()
+
             return {
                 'total_active': total_active,
                 'total_interns': total_interns,
                 'total_probation': total_probation,
-                'total_resigned': total_resigned
+                'total_resigned': total_resigned,
+                'total_lwp': total_lwp
             }
         except Exception as e:
             Logger.error("Error fetching employee dashboard stats", error=str(e))
@@ -313,6 +317,8 @@ class EmployeeService:
                 employee.blood_group = employee_data['blood_group']
             if employee_data.get('personal_email') is not None:
                 employee.personal_email = employee_data['personal_email']
+            if employee_data.get('email') is not None:
+                employee.email = employee_data['email']
             if employee_data.get('email') is not None:
                 employee.email = employee_data['email']
             if employee_data.get('date_of_joining') is not None:
@@ -1089,7 +1095,7 @@ class EmployeeService:
             return [
                 {
                     "employee_id": e.employee_id,
-                    "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
+                    "employee_name": f"{e.first_name} {e.last_name}".replace("  ", " ").strip(),
                     "date_of_joining": e.date_of_joining.isoformat() if e.date_of_joining else None,
                     "band": e.band or "Not Assigned",
                     "sub_role": e.sub_role or "Not Assigned",
@@ -1124,7 +1130,7 @@ class EmployeeService:
                 Employee.profile_image,
                 Employee.profile_image_type
             ).filter(
-                Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding']),
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
                 Employee.date_of_birth != None
             )
             
@@ -1159,7 +1165,7 @@ class EmployeeService:
                 
                 results.append({
                     "employee_id": e.employee_id,
-                    "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
+                    "employee_name": f"{e.first_name} {e.last_name}".replace("  ", " ").strip(),
                     "date": dob.strftime("%d %b"), # Format: 05 Oct
                     "sort_date": bday_this_year,
                     "profile_image": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None

@@ -9,6 +9,7 @@ from sqlalchemy import text
 from .. import db
 from ..utils.logger import Logger
 from ..services.email_service import EmailService
+from ..services.leave.leave_transaction_service import LeaveTransactionService
 
 health_bp = Blueprint('health', __name__)
 
