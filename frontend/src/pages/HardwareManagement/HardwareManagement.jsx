@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
     getAllHardwareAssets,
@@ -45,6 +45,91 @@ const HardwareManagement = () => {
     const [maintenanceModalVisible, setMaintenanceModalVisible] = useState(false);
     const [maintenanceForm] = Form.useForm();
     const [editingMaintenance, setEditingMaintenance] = useState(null);
+
+    // State for stats summary modal
+    const [statsSummaryVisible, setStatsSummaryVisible] = useState(false);
+
+    // All known asset statuses (fixed order)
+    const ALL_STATUSES = ['Available', 'Assigned', 'Need Repair', 'Under Maintenance', 'Retired'];
+
+    // Build a Type × Status matrix from the assets list
+    const buildAssetMatrix = () => {
+        const types = [...new Set(assets.map(a => a.type))].sort();
+        const statuses = ALL_STATUSES;
+
+        const rows = types.map(type => {
+            const row = { key: type, type };
+            let rowTotal = 0;
+            statuses.forEach(status => {
+                const count = assets.filter(a => a.type === type && a.status === status).length;
+                row[status] = count;
+                rowTotal += count;
+            });
+            row['__total'] = rowTotal;
+            return row;
+        });
+
+        // Add totals row
+        const totalsRow = { key: '__totals', type: 'Total' };
+        let grandTotal = 0;
+        statuses.forEach(status => {
+            const count = assets.filter(a => a.status === status).length;
+            totalsRow[status] = count;
+            grandTotal += count;
+        });
+        totalsRow['__total'] = grandTotal;
+        rows.push(totalsRow);
+
+        const STATUS_COLORS = {
+            'Available': '#52c41a',
+            'Assigned': '#1890ff',
+            'Need Repair': '#fa8c16',
+            'Under Maintenance': '#faad14',
+            // 'Retired': '#ff4d4f',
+        };
+
+        const columns = [
+            {
+                title: 'Type',
+                dataIndex: 'type',
+                key: 'type',
+                fixed: 'left',
+                width: 140,
+                render: (val) => <strong>{val}</strong>,
+            },
+            ...statuses.map(status => ({
+                title: (
+                    <span style={{ color: STATUS_COLORS[status] || '#333', fontWeight: 600 }}>
+                        {status}
+                    </span>
+                ),
+                dataIndex: status,
+                key: status,
+                align: 'center',
+                render: (val, record) => (
+                    <span style={{
+                        fontWeight: record.type === 'Total' ? 700 : (val > 0 ? 600 : 400),
+                        color: val > 0 ? (STATUS_COLORS[status] || '#333') : '#bbb',
+                    }}>
+                        {val ?? 0}
+                    </span>
+                ),
+            })),
+            {
+                title: <strong>Total</strong>,
+                dataIndex: '__total',
+                key: '__total',
+                align: 'center',
+                render: (val, record) => (
+                    <strong style={{ color: record.type === 'Total' ? '#1890ff' : '#333' }}>
+                        {val ?? 0}
+                    </strong>
+                ),
+            },
+        ];
+
+        return { rows, columns, statuses };
+    };
 
     useEffect(() => {
         fetchAssets();
@@ -359,14 +444,21 @@ const HardwareManagement = () => {
 
             <Tabs defaultActiveKey="1">
                 <TabPane tab="Assets" key="1">
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleAddAsset}
-                        style={{ marginBottom: 16 }}
-                    >
-                        Add Asset
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddAsset}
+                        >
+                            Add Asset
+                        </Button>
+                        <Button
+                            icon={<BarChartOutlined />}
+                            onClick={() => setStatsSummaryVisible(true)}
+                        >
+                            Summary
+                        </Button>
+                    </div>
                     <Table
                         columns={assetColumns}
                         dataSource={assets}
@@ -409,6 +501,41 @@ const HardwareManagement = () => {
                     />
                 </TabPane>
             </Tabs>
+
+            {/* Asset Stats Summary Modal */}
+            <Modal
+                title={
+                    <span style={{ fontWeight: 600, color: 'black' }}>
+                        Asset Summary
+                    </span>
+                }
+                open={statsSummaryVisible}
+                onCancel={() => setStatsSummaryVisible(false)}
+                footer={null}
+                width={820}
+                style={{ top: 40 }}
+            >
+                {(() => {
+                    const { rows, columns } = buildAssetMatrix();
+                    return (
+                        <>
+                            <Table
+                                columns={columns}
+                                dataSource={rows}
+                                pagination={false}
+                                size="middle"
+                                bordered
+                                rowClassName={(record) =>
+                                    record.type === 'Total'
+                                        ? 'ant-table-row-selected'
+                                        : ''
+                                }
+                                style={{ borderRadius: 8 }}
+                            />
+                        </>
+                    );
+                })()}
+            </Modal>
 
             {/* Asset Modal */}
             <Modal
