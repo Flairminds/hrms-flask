@@ -77,7 +77,7 @@ export const EmployeeData = () => {
 
     // Filter logic combining search text and status filters
     const filtered = employeeData.filter(item => {
-      const nameMatch = item.employeeName?.toLowerCase().includes(value);
+      const nameMatch = item.employeeName?.toLowerCase().includes(value) || item.employeeId?.toLowerCase().includes(value);
       const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(item.employmentStatus);
       return nameMatch && statusMatch;
     });
@@ -165,7 +165,9 @@ export const EmployeeData = () => {
       title: 'Leave Approver',
       dataIndex: 'leaveApprover',
       key: 'leaveApprover',
-      sorter: (a, b) => (a.leaveApprover || "").localeCompare(b.leaveApprover || ""),
+      filters: employeeData.map(item => item.leaveApprover).filter((value, index, self) => self.indexOf(value) === index).map(approver => ({ text: approver, value: approver })),
+      // sorter: (a, b) => (a.leaveApprover || "").localeCompare(b.leaveApprover || ""),
+      onFilter: (value, record) => record.leaveApprover === value,
     },
     {
       title: 'Email',
