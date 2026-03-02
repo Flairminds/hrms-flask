@@ -287,12 +287,12 @@ def seed_hr_employee():
         "last_name": "Manager",
         "email": "hr@flairminds.com",
         "contact_number": "9420281731",
-        "password": "hrfm#@2602",
+        "password": "hrms@#2602",
         "date_of_birth": "2000-04-01",
         "date_of_joining": "2022-04-01",
         "sub_role": 5,
         "role_id": 3,
-        "band": 11
+        "band": 6
     }
     
     try:

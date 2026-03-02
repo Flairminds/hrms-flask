@@ -523,7 +523,7 @@ class BlobDocumentService:
             from ...models.hr import Employee
             
             # Get all employees
-            employees = Employee.query.all()
+            employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
             stats_list = []
             
             for emp in employees:
@@ -549,7 +549,7 @@ class BlobDocumentService:
                     'verified': verified_count,
                     'not_verified': not_verified_count,
                     'upload_percentage': round((uploaded_count / total_expected) * 100, 1) if total_expected > 0 else 0,
-                    'verification_percentage': round((verified_count / uploaded_count) * 100, 1) if uploaded_count > 0 else 0
+                    'verification_percentage': round((verified_count / total_expected) * 100, 1) if total_expected > 0 else 0
                 })
             
             # Sort by employee_id

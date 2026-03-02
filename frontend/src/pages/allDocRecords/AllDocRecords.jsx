@@ -9,6 +9,7 @@ export const AllDocRecords = () => {
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [statsSearch, setStatsSearch] = useState("");
 
   useEffect(() => {
     fetchDocuments();
@@ -203,19 +204,19 @@ export const AllDocRecords = () => {
         return labels[text] || text;
       }
     },
-    {
-      title: 'File Name',
-      dataIndex: 'file_name',
-      key: 'file_name',
-      ellipsis: true,
-    },
-    {
-      title: 'File Size',
-      dataIndex: 'file_size',
-      key: 'file_size',
-      render: (size) => formatFileSize(size),
-      sorter: (a, b) => (a.file_size || 0) - (b.file_size || 0),
-    },
+    // {
+    //   title: 'File Name',
+    //   dataIndex: 'file_name',
+    //   key: 'file_name',
+    //   ellipsis: true,
+    // },
+    // {
+    //   title: 'File Size',
+    //   dataIndex: 'file_size',
+    //   key: 'file_size',
+    //   render: (size) => formatFileSize(size),
+    //   sorter: (a, b) => (a.file_size || 0) - (b.file_size || 0),
+    // },
     {
       title: 'Uploaded Date',
       dataIndex: 'uploaded_at',
@@ -368,8 +369,8 @@ export const AllDocRecords = () => {
             rowKey="id"
             loading={loading}
             pagination={{
-              pageSize: 20,
-              showSizeChanger: true,
+              pageSize: 10,
+              showSizeChanger: false,
               showTotal: (total) => `Total ${total} documents`,
             }}
             scroll={{ x: 1200 }}
@@ -381,25 +382,44 @@ export const AllDocRecords = () => {
       key: '2',
       label: 'Statistics',
       children: (
-        <Table
-          columns={statsColumns}
-          dataSource={stats}
-          rowKey="emp_id"
-          loading={statsLoading}
-          pagination={{
-            pageSize: 20,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} employees`,
-          }}
-          scroll={{ x: 1000 }}
-        />
+        <>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Input
+              placeholder="Search by Employee ID or Name..."
+              prefix={<SearchOutlined />}
+              value={statsSearch}
+              onChange={(e) => setStatsSearch(e.target.value)}
+              style={{ width: '320px' }}
+              allowClear
+            />
+          </div>
+          <Table
+            columns={statsColumns}
+            dataSource={stats.filter(s => {
+              const q = statsSearch.trim().toLowerCase();
+              if (!q) return true;
+              return (
+                (s.emp_id || '').toLowerCase().includes(q) ||
+                (s.employee_name || '').toLowerCase().includes(q)
+              );
+            })}
+            rowKey="emp_id"
+            loading={statsLoading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => `Total ${total} employees`,
+            }}
+            scroll={{ x: 1000 }}
+          />
+        </>
       ),
     },
   ];
 
   return (
     <div style={{ padding: '24px' }}>
-      <h2>Employee Document Repository</h2>
+      {/* <h2>Employee Document Repository</h2> */}
       <Tabs defaultActiveKey="1" items={tabItems} />
     </div>
   );
