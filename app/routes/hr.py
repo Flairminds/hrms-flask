@@ -159,3 +159,7 @@ def get_all_team_leads():
 @roles_required('HR', 'Admin')
 def add_team_lead():
     return HRController.add_team_lead()
+
+# @hr_bp.route('/add-employee-password', methods=['GET'])
+# def add_employee_password():
+#     return HRController.add_employee_password()
