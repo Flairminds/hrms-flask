@@ -137,6 +137,7 @@ class HRController:
                 'emergency_contact_relation': data.get('emergencyContactRelation'),
                 'emergency_contact_number': data.get('emergencyContactNumber'),
                 'designation_id': data.get('band'),
+                'role_id': data.get('role_id'),
                 'sub_role_id': data.get('MasterSubRole'),
                 'addresses': data.get('addresses', []),
                 'skills': data.get('skills', []),

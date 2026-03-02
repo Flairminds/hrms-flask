@@ -10,7 +10,7 @@ ROLE_PERMISSIONS = {
         "login": ["Admin", "HR", "Lead", "Employee"],  # Public endpoint
         "send_otp": ["Admin", "HR", "Lead", "Employee"],  # Password reset
         "verify_otp": ["Admin", "HR", "Lead", "Employee"],  # Password reset
-        "reset_password": ["Admin", "HR", "Lead", "Employee"],  # Password reset
+        "reset_password": ["Admin", "HR"],  # Password reset
         "me": ["Admin", "HR", "Lead", "Employee"]  # Get current user info
     },
     

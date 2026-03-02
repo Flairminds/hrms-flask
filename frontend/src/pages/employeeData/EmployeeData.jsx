@@ -219,6 +219,7 @@ export const EmployeeData = () => {
         <StatCard label="Interns" count={stats.total_interns} color="orange" />
         <StatCard label="In Probation" count={stats.total_probation} color="violet" />
         <StatCard label="Resigned" count={stats.total_resigned} color="orange" />
+        <StatCard label="Leave Without Pay" count={stats.total_lwp} color="orange" />
       </Space>
       <div className={styles.upperArea}>
         <Input
