@@ -448,6 +448,7 @@ const HardwareManagement = () => {
                             <Select>
                                 <Option value="Available">Available</Option>
                                 <Option value="Assigned">Assigned</Option>
+                                <Option value="Need Repair">Need Repair</Option>
                                 <Option value="Under Maintenance">Under Maintenance</Option>
                                 <Option value="Retired">Retired</Option>
                             </Select>

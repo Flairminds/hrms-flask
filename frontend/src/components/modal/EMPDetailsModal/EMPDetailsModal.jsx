@@ -474,13 +474,13 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                       disabled={!isEditMode}
                       showSearch
                       filterOption={(input, option) =>
-                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                       }
                     >
                       {potentialApprovers
                         .filter(approver => approver.employeeId !== personalEmployeeDetails?.employeeId)
                         .map(approver => (
-                          <Option key={approver.employeeId} value={approver.employeeId}>
+                          <Option key={approver.employeeId} value={approver.employeeId} label={`${approver.employeeName} (${approver.roleName})`}>
                             {approver.employeeName} ({approver.roleName})
                           </Option>
                         ))}

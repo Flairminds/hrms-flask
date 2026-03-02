@@ -1165,7 +1165,7 @@ class EmployeeService:
                 
                 results.append({
                     "employee_id": e.employee_id,
-                    "employee_name": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " ").strip(),
+                    "employee_name": f"{e.first_name} {e.last_name}".replace("  ", " ").strip(),
                     "date": dob.strftime("%d %b"), # Format: 05 Oct
                     "sort_date": bday_this_year,
                     "profile_image": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None
