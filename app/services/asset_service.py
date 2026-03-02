@@ -195,7 +195,7 @@ class AssetService:
                     'asset_brand': asset.brand,
                     'asset_model': asset.model,
                     'asset_serial_number': asset.serial_number,
-                    'asset_name': f"{asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
+                    'asset_name': f"{asset.type} {asset.brand or ''} {asset.model or ''} ({asset.serial_number or ''})".strip(),
                     'employee_id': assignment.employee_id,
                     'employee_name': f"{emp.first_name or ''} {emp.last_name or ''}".strip() if emp else assignment.employee_id,
                     'assignment_date': assignment.assignment_date.strftime('%Y-%m-%d') if assignment.assignment_date else None,

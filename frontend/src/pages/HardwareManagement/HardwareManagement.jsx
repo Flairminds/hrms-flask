@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
     getAllHardwareAssets,
@@ -30,6 +30,7 @@ const HardwareManagement = () => {
     const [assetModalVisible, setAssetModalVisible] = useState(false);
     const [assetForm] = Form.useForm();
     const [editingAsset, setEditingAsset] = useState(null);
+    const [assetSearch, setAssetSearch] = useState('');
 
     // State for assignments
     const [assignments, setAssignments] = useState([]);
@@ -38,6 +39,8 @@ const HardwareManagement = () => {
     const [assignmentForm] = Form.useForm();
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [employees, setEmployees] = useState([]);
+    const [assignmentSearch, setAssignmentSearch] = useState('');
+    const [assignmentEmployee, setAssignmentEmployee] = useState(null);
 
     // State for maintenance
     const [maintenance, setMaintenance] = useState([]);
@@ -387,10 +390,14 @@ const HardwareManagement = () => {
             dataIndex: 'asset_name',
             key: 'asset_name',
             width: 250,
-            filters: [...new Set(assignments.map(a => a.asset_name))].filter(Boolean).map(name => ({ text: name, value: name })),
-            onFilter: (value, record) => record.asset_name === value,
         },
-        { title: 'Employee', dataIndex: 'employee_name', key: 'employee_name' },
+        {
+            title: 'Employee',
+            dataIndex: 'employee_name',
+            key: 'employee_name',
+            filters: [...new Set(assignments.map(a => a.employee_name))].filter(Boolean).sort().map(name => ({ text: name, value: name })),
+            onFilter: (value, record) => record.employee_name === value,
+        },
         { title: 'Assigned Date', dataIndex: 'assignment_date', key: 'assignment_date' },
         { title: 'Assigned By', dataIndex: 'assigned_by_name', key: 'assigned_by_name' },
         { title: 'Return Date', dataIndex: 'return_date', key: 'return_date' },
@@ -444,7 +451,7 @@ const HardwareManagement = () => {
 
             <Tabs defaultActiveKey="1">
                 <TabPane tab="Assets" key="1">
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
@@ -458,27 +465,54 @@ const HardwareManagement = () => {
                         >
                             Summary
                         </Button>
+                        <Input
+                            placeholder="Search by serial number or model..."
+                            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+                            allowClear
+                            value={assetSearch}
+                            onChange={e => setAssetSearch(e.target.value)}
+                            style={{ width: 260 }}
+                        />
                     </div>
                     <Table
                         columns={assetColumns}
-                        dataSource={assets}
+                        dataSource={assets.filter(a => {
+                            const q = assetSearch.trim().toLowerCase();
+                            if (!q) return true;
+                            return (
+                                (a.serial_number || '').toLowerCase().includes(q) ||
+                                (a.model || '').toLowerCase().includes(q)
+                            );
+                        })}
                         loading={assetsLoading}
                         rowKey="asset_id"
                     />
                 </TabPane>
 
                 <TabPane tab="Assignments" key="2">
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleAddAssignment}
-                        style={{ marginBottom: 16 }}
-                    >
-                        Assign Asset
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddAssignment}
+                        >
+                            Assign Asset
+                        </Button>
+                        <Input
+                            placeholder="Search by brand, model, serial no..."
+                            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+                            allowClear
+                            value={assignmentSearch}
+                            onChange={e => setAssignmentSearch(e.target.value)}
+                            style={{ width: 260 }}
+                        />
+                    </div>
                     <Table
                         columns={assignmentColumns}
-                        dataSource={assignments}
+                        dataSource={assignments.filter(a => {
+                            const q = assignmentSearch.trim().toLowerCase();
+                            return !q || (a.asset_name || '').toLowerCase().includes(q);
+                        })}
                         loading={assignmentsLoading}
                         rowKey="assignment_id"
                     />
