@@ -31,7 +31,7 @@ export const EmployeeData = () => {
   const [paginationConfig, setPaginationConfig] = useState({
     current: 1,
     pageSize: 10,
-    showSizeChanger: true,
+    showSizeChanger: false,
     pageSizeOptions: ['10', '20', '50'],
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

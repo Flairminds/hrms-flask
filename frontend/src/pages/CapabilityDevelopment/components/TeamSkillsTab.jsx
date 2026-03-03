@@ -167,7 +167,7 @@ const TeamSkillsTab = () => {
                                         overflowCount={9999}
                                     /> */}
                                 </div>
-                                <div style={{ fontWeight: 700, marginTop: 6, fontSize: 14, color: '#111827', lineHeight: 1.3 }}>
+                                <div style={{ fontWeight: 600, marginTop: 6, fontSize: 12, color: '#111827', lineHeight: 1.3 }}>
                                     {skill.skillName}
                                 </div>
                                 <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -220,7 +220,7 @@ const TeamSkillsTab = () => {
                 >
                     {skillOptions.map(s => <Option key={s} value={s}>{s}</Option>)}
                 </Select>
-                <Select
+                {/* <Select
                     placeholder="Filter by Category"
                     allowClear
                     value={filterCategory}
@@ -230,8 +230,8 @@ const TeamSkillsTab = () => {
                     {['Primary', 'Secondary', 'Cross Tech Skill'].map(c => (
                         <Option key={c} value={c}>{c}</Option>
                     ))}
-                </Select>
-                <Select
+                </Select> */}
+                {/* <Select
                     placeholder="Filter by Level"
                     allowClear
                     value={filterLevel}
@@ -241,7 +241,7 @@ const TeamSkillsTab = () => {
                     {['Beginner', 'Intermediate', 'Expert'].map(l => (
                         <Option key={l} value={l}>{l}</Option>
                     ))}
-                </Select>
+                </Select> */}
                 <Statistic
                     value={filtered.length}
                     suffix={`/ ${allSkills.length} entries`}
