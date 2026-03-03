@@ -665,22 +665,37 @@ class HRController:
 
     @staticmethod
     def get_employee_document_stats():
-        """Get document upload and verification statistics for all employees."""
+        """Get document upload and verification statistics for all employees,
+        including resume staleness flags."""
         Logger.info("Get employee document statistics request received")
-        
+
         try:
             from ..services.document_service import DocumentService
-            
+
             stats = DocumentService.get_employee_document_stats()
+
+            # Merge resume staleness data keyed by emp_id
+            staleness_data = DocumentService.get_resume_staleness_report()
+            staleness_map = {row['employee_id']: row for row in staleness_data}
+
+            for row in stats:
+                emp_id = row.get('emp_id')
+                staleness = staleness_map.get(emp_id, {})
+                row['resume_uploaded_at'] = staleness.get('resume_uploaded_at')
+                row['days_since_upload'] = staleness.get('days_since_upload')
+                row['need_resume_update'] = staleness.get('need_resume_update', True)
+                row['resume_status'] = staleness.get('resume_status')
+
             Logger.info("Employee document statistics retrieved successfully", count=len(stats))
             return jsonify(stats), 200
-            
+
         except Exception as e:
             Logger.error("Error fetching employee document statistics", error=str(e))
             return jsonify({
                 'status': 'error',
                 'message': 'Failed to retrieve document statistics'
             }), 500
+
 
     @staticmethod
     def get_lob_leads():
