@@ -495,7 +495,14 @@ function PersonalInfoPage() {
               <Tooltip
                 title={
                   profileCompletion.missing_fields.length > 0
-                    ? `Missing: ${profileCompletion.missing_fields.join(', ')}`
+                    ? <>
+                      {profileCompletion.missing_fields.length} missing details: <br />
+                      <ul>
+                        {profileCompletion.missing_fields.map((field, index) => (
+                          <li key={index}>{index + 1}. {field}</li>
+                        ))}
+                      </ul>
+                    </>
                     : 'Profile complete!'
                 }
               >
