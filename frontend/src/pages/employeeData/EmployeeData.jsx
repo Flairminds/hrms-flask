@@ -38,6 +38,7 @@ export const EmployeeData = () => {
   const [editingRow, setEditingRow] = useState(null);
   const [detailsModal, setDetailsModal] = useState(false);
   const [personalEmployeeDetails, setPersonalEmployeeDetails] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     getEmployees();
@@ -54,6 +55,7 @@ export const EmployeeData = () => {
   };
 
   const getEmployees = async () => {
+    setLoading(true);
     try {
       const response = await getAllEmployeesList();
       console.log("getAllEmployeesList Response:", response.data);
@@ -68,6 +70,8 @@ export const EmployeeData = () => {
       setRoleOptions(uniqueRoles);
     } catch (error) {
       console.error("Failed to fetch employees", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -258,6 +262,7 @@ export const EmployeeData = () => {
         columns={columns}
         dataSource={filteredData}
         rowKey="employeeId"
+        loading={loading}
         pagination={paginationConfig}
         onChange={(pagination, filters, sorter) => setPaginationConfig(pagination)}
         className={styles.empTable}
