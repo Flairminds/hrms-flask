@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space, Tooltip, message } from 'antd';
+import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space, Tooltip, message, Progress } from 'antd';
 import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
 import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
 import DownloadOptionsModal from '../../components/modal/downloadOptionsModal/DownloadOptionsModal';
 import EmployeeDataAccordion from '../../components/modal/employeeDataAccordian/EmployeeDataAccordion';
-import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../../services/api';
+import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats, getProfileCompletion } from '../../services/api';
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
 import { EMPDetailsModal } from '../../components/modal/EMPDetailsModal/EMPDetailsModal';
 import { convertDate } from '../../util/helperFunctions';
@@ -39,6 +39,7 @@ export const EmployeeData = () => {
   const [detailsModal, setDetailsModal] = useState(false);
   const [personalEmployeeDetails, setPersonalEmployeeDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [profileScores, setProfileScores] = useState({});
 
   useEffect(() => {
     getEmployees();
@@ -68,11 +69,33 @@ export const EmployeeData = () => {
       const uniqueRoles = [...new Set(response.data.map(item => item.roleName))].filter(Boolean);
       setStatusOptions(uniqueStatuses);
       setRoleOptions(uniqueRoles);
+
+      // Fetch profile completion scores for all employees in parallel
+      fetchAllProfileScores(response.data);
     } catch (error) {
       console.error("Failed to fetch employees", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllProfileScores = async (employees) => {
+    const results = await Promise.allSettled(
+      employees.map(emp => getProfileCompletion(emp.employeeId))
+    );
+    const scoresMap = {};
+    results.forEach((result, idx) => {
+      const empId = employees[idx].employeeId;
+      if (result.status === 'fulfilled') {
+        scoresMap[empId] = {
+          score: result.value.data.completion_percentage ?? null,
+          missing_fields: result.value.data.missing_fields ?? [],
+        };
+      } else {
+        scoresMap[empId] = null;
+      }
+    });
+    setProfileScores(scoresMap);
   };
 
   const handleSearch = (event) => {
@@ -147,6 +170,43 @@ export const EmployeeData = () => {
       dataIndex: 'employeeName',
       key: 'employeeName',
       sorter: (a, b) => a.employeeName.localeCompare(b.employeeName),
+    },
+    {
+      title: 'Profile Score',
+      key: 'profileScore',
+      width: 160,
+      sorter: (a, b) => (profileScores[a.employeeId]?.score ?? -1) - (profileScores[b.employeeId]?.score ?? -1),
+      render: (_, record) => {
+        const data = profileScores[record.employeeId];
+        if (data === undefined) return <span style={{ color: '#bbb', fontSize: 12 }}>Loading...</span>;
+        if (data === null) return <span style={{ color: '#bbb', fontSize: 12 }}>—</span>;
+        const { score, missing_fields } = data;
+        const color = score >= 80 ? '#52c41a' : score >= 50 ? '#faad14' : '#ff4d4f';
+        const tooltipContent = missing_fields.length > 0 ? (
+          <div>
+            <div>{missing_fields.length} missing details:</div>
+            <ul style={{ margin: '4px 0 0 0', paddingLeft: 16 }}>
+              {missing_fields.map((field, index) => (
+                <li key={index}>{field}</li>
+              ))}
+            </ul>
+          </div>
+        ) : 'Profile complete!';
+        return (
+          <Tooltip title={tooltipContent}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Progress
+                percent={score}
+                size="small"
+                strokeColor={color}
+                showInfo={false}
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              <span style={{ fontSize: 12, color, fontWeight: 600, minWidth: 32 }}>{score}%</span>
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Employment Status',
