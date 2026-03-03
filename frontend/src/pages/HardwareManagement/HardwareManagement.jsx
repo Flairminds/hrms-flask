@@ -395,9 +395,9 @@ const HardwareManagement = () => {
             onFilter: (value, record) => record.model === value,
         },
         { title: 'Serial Number', dataIndex: 'serial_number', key: 'serial_number' },
-        { title: 'Status', dataIndex: 'status', key: 'status', filters: [...new Set(assets.map(a => a.status))].filter(Boolean).map(status => ({ text: status, value: status })), onFilter: (value, record) => record.status === value },
-        { title: 'Purchase Date', dataIndex: 'purchase_date', key: 'purchase_date' },
-        { title: 'Warranty Till', dataIndex: 'warranty_till', key: 'warranty_till' },
+        { title: 'Status', dataIndex: 'status', key: 'status', filters: [...new Set(assets.map(a => a.status))].filter(Boolean).map(status => ({ text: status, value: status })), onFilter: (value, record) => record.status === value, defaultFilteredValue: ['Available'] },
+        { title: 'Purchase Date', dataIndex: 'purchase_date', key: 'purchase_date', render: (date, record) => date == null ? '-' : convertDate(date) },
+        { title: 'Warranty Till', dataIndex: 'warranty_till', key: 'warranty_till', render: (date, record) => date == null ? '-' : convertDate(date) },
         {
             title: 'Actions',
             key: 'actions',
@@ -407,8 +407,8 @@ const HardwareManagement = () => {
                         icon={<EditOutlined />}
                         onClick={() => openAssetDetail(record)}
                         size="small"
-                    >Edit</Button>
-                    <Popconfirm
+                    >More Details</Button>
+                    {/* <Popconfirm
                         title="Are you sure to delete this asset?"
                         onConfirm={() => handleDeleteAsset(record.asset_id)}
                         okText="Yes"
@@ -417,7 +417,7 @@ const HardwareManagement = () => {
                         <Button icon={<DeleteOutlined />} danger size="small">
                             Delete
                         </Button>
-                    </Popconfirm>
+                    </Popconfirm> */}
                 </Space>
             ),
         },
@@ -627,7 +627,9 @@ const HardwareManagement = () => {
                             <Form.Item name="type" label="Type" rules={[{ required: true }]}>
                                 <Select>
                                     <Option value="Laptop">Laptop</Option>
-                                    <Option value="Desktop">Desktop</Option>
+                                    <Option value="CPU">CPU</Option>
+                                    <Option value="GPU">GPU</Option>
+                                    <Option value="ROM">ROM</Option>
                                     <Option value="Monitor">Monitor</Option>
                                     <Option value="Keyboard">Keyboard</Option>
                                     <Option value="Mouse">Mouse</Option>
@@ -644,7 +646,7 @@ const HardwareManagement = () => {
                             <Form.Item name="serial_number" label="Serial Number">
                                 <Input placeholder="S/N" />
                             </Form.Item>
-                            <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                            <Form.Item name="status" label="Status" initialValue={"Available"} rules={[{ required: true }]}>
                                 <Select>
                                     <Option value="Available">Available</Option>
                                     <Option value="Assigned">Assigned</Option>
