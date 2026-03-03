@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Table, Input, message, Button, Space, Tag, Popconfirm, Tabs } from "antd";
 import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { getAllEmployeeDocuments, getDocuments, verifyDocument, getEmployeeDocumentStats } from "../../services/api";
+import { convertDate } from "../../util/helperFunctions";
 
 export const AllDocRecords = () => {
   const [documents, setDocuments] = useState([]);
@@ -9,6 +10,7 @@ export const AllDocRecords = () => {
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [statsSearch, setStatsSearch] = useState("");
 
   useEffect(() => {
     fetchDocuments();
@@ -166,11 +168,6 @@ export const AllDocRecords = () => {
       dataIndex: 'emp_id',
       key: 'emp_id',
       sorter: (a, b) => a.emp_id.localeCompare(b.emp_id),
-      filteredValue: searchText ? [searchText] : null,
-      onFilter: (value, record) =>
-        record.emp_id.toLowerCase().includes(value.toLowerCase()) ||
-        record.employee_name.toLowerCase().includes(value.toLowerCase()) ||
-        record.doc_type.toLowerCase().includes(value.toLowerCase()),
     },
     {
       title: 'Employee Name',
@@ -203,19 +200,19 @@ export const AllDocRecords = () => {
         return labels[text] || text;
       }
     },
-    {
-      title: 'File Name',
-      dataIndex: 'file_name',
-      key: 'file_name',
-      ellipsis: true,
-    },
-    {
-      title: 'File Size',
-      dataIndex: 'file_size',
-      key: 'file_size',
-      render: (size) => formatFileSize(size),
-      sorter: (a, b) => (a.file_size || 0) - (b.file_size || 0),
-    },
+    // {
+    //   title: 'File Name',
+    //   dataIndex: 'file_name',
+    //   key: 'file_name',
+    //   ellipsis: true,
+    // },
+    // {
+    //   title: 'File Size',
+    //   dataIndex: 'file_size',
+    //   key: 'file_size',
+    //   render: (size) => formatFileSize(size),
+    //   sorter: (a, b) => (a.file_size || 0) - (b.file_size || 0),
+    // },
     {
       title: 'Uploaded Date',
       dataIndex: 'uploaded_at',
@@ -233,7 +230,12 @@ export const AllDocRecords = () => {
         { text: 'Rejected', value: false },
         { text: 'Pending', value: null },
       ],
-      onFilter: (value, record) => record.is_verified === value,
+      onFilter: (value, record) => {
+        // Ant Design passes filter values as strings; coerce back to the correct type
+        if (value === 'true' || value === true) return record.is_verified === true;
+        if (value === 'false' || value === false) return record.is_verified === false;
+        return record.is_verified === null || record.is_verified === undefined;
+      },
     },
     {
       title: 'Actions',
@@ -306,13 +308,13 @@ export const AllDocRecords = () => {
       align: 'center',
       render: (count) => count > 0 ? <Tag color="blue">{count}</Tag> : <Tag color="red">0</Tag>,
     },
-    {
-      title: 'Not Uploaded',
-      dataIndex: 'not_uploaded',
-      key: 'not_uploaded',
-      align: 'center',
-      render: (count) => count > 0 ? <Tag color="red">{count}</Tag> : <Tag color="green">0</Tag>,
-    },
+    // {
+    //   title: 'Not Uploaded',
+    //   dataIndex: 'not_uploaded',
+    //   key: 'not_uploaded',
+    //   align: 'center',
+    //   render: (count) => count > 0 ? <Tag color="red">{count}</Tag> : <Tag color="green">0</Tag>,
+    // },
     {
       title: 'Upload %',
       dataIndex: 'upload_percentage',
@@ -328,13 +330,13 @@ export const AllDocRecords = () => {
       align: 'center',
       render: (count) => <Tag color="green">{count}</Tag>,
     },
-    {
-      title: 'Not Verified',
-      dataIndex: 'not_verified',
-      key: 'not_verified',
-      align: 'center',
-      render: (count) => count > 0 ? <Tag color="orange">{count}</Tag> : <Tag color="green">0</Tag>,
-    },
+    // {
+    //   title: 'Not Verified',
+    //   dataIndex: 'not_verified',
+    //   key: 'not_verified',
+    //   align: 'center',
+    //   render: (count) => count > 0 ? <Tag color="orange">{count}</Tag> : <Tag color="green">0</Tag>,
+    // },
     {
       title: 'Verification %',
       dataIndex: 'verification_percentage',
@@ -342,6 +344,41 @@ export const AllDocRecords = () => {
       align: 'center',
       sorter: (a, b) => a.verification_percentage - b.verification_percentage,
       render: (percent) => `${percent}%`,
+    },
+    // {
+    //   title: 'Resume Uploaded',
+    //   dataIndex: 'resume_uploaded_at',
+    //   key: 'resume_uploaded_at',
+    //   align: 'center',
+    //   render: (date, record) => {
+    //     return date == null ? '-' : convertDate(date);
+    //   },
+    //   sorter: (a, b) => new Date(a.resume_uploaded_at || 0) - new Date(b.resume_uploaded_at || 0),
+    // },
+    {
+      title: 'Resume Uploaded',
+      dataIndex: 'days_since_upload',
+      key: 'days_since_upload',
+      align: 'center',
+      sorter: (a, b) => (a.days_since_upload ?? 9999) - (b.days_since_upload ?? 9999),
+      render: (days) => days !== null && days !== undefined ? `${days} day ${days === 1 ? '' : 's'} ago` : '—',
+    },
+    {
+      title: 'Resume Status',
+      dataIndex: 'resume_status',
+      key: 'resume_status',
+      align: 'center',
+      filters: [...new Set(stats.map(item => item.resume_status))].map(status => ({ text: status, value: status })),
+      onFilter: (value, record) => record.resume_status === value,
+      render: (status) => {
+        const config = {
+          'Up to Date': { color: 'green' },
+          'Need Review': { color: 'orange' },
+          'Need Update': { color: 'red' },
+        };
+        const { color } = config[status] || { color: 'default' };
+        return <Tag color={color}>{status || '—'}</Tag>;
+      },
     },
   ];
 
@@ -364,12 +401,19 @@ export const AllDocRecords = () => {
 
           <Table
             columns={columns}
-            dataSource={documents}
+            dataSource={documents.filter(doc => {
+              if (!searchText) return true;
+              const q = searchText.toLowerCase();
+              return (
+                (doc.emp_id || '').toLowerCase().includes(q) ||
+                (doc.employee_name || '').toLowerCase().includes(q)
+              );
+            })}
             rowKey="id"
             loading={loading}
             pagination={{
-              pageSize: 20,
-              showSizeChanger: true,
+              pageSize: 10,
+              showSizeChanger: false,
               showTotal: (total) => `Total ${total} documents`,
             }}
             scroll={{ x: 1200 }}
@@ -381,25 +425,44 @@ export const AllDocRecords = () => {
       key: '2',
       label: 'Statistics',
       children: (
-        <Table
-          columns={statsColumns}
-          dataSource={stats}
-          rowKey="emp_id"
-          loading={statsLoading}
-          pagination={{
-            pageSize: 20,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} employees`,
-          }}
-          scroll={{ x: 1000 }}
-        />
+        <>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Input
+              placeholder="Search by Employee ID or Name..."
+              prefix={<SearchOutlined />}
+              value={statsSearch}
+              onChange={(e) => setStatsSearch(e.target.value)}
+              style={{ width: '320px' }}
+              allowClear
+            />
+          </div>
+          <Table
+            columns={statsColumns}
+            dataSource={stats.filter(s => {
+              const q = statsSearch.trim().toLowerCase();
+              if (!q) return true;
+              return (
+                (s.emp_id || '').toLowerCase().includes(q) ||
+                (s.employee_name || '').toLowerCase().includes(q)
+              );
+            })}
+            rowKey="emp_id"
+            loading={statsLoading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => `Total ${total} employees`,
+            }}
+            scroll={{ x: 1000 }}
+          />
+        </>
       ),
     },
   ];
 
   return (
     <div style={{ padding: '24px' }}>
-      <h2>Employee Document Repository</h2>
+      {/* <h2>Employee Document Repository</h2> */}
       <Tabs defaultActiveKey="1" items={tabItems} />
     </div>
   );

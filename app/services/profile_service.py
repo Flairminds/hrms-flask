@@ -60,7 +60,7 @@ class ProfileService:
             
             # Define weighted fields (critical fields have higher weight)
             employee_fields = {
-                'first_name': 2,
+                'first_name': 3,
                 'last_name': 2,
                 'email': 3,
                 'contact_number': 3,
@@ -68,12 +68,12 @@ class ProfileService:
                 'gender': 1,
                 'blood_group': 1,
                 'personal_email': 2,
-                'emergency_contact_number': 3,
-                'emergency_contact_person': 3,
-                'emergency_contact_relation': 2,
+                'emergency_contact_number': 1,
+                'emergency_contact_person': 1,
+                'emergency_contact_relation': 1,
                 'highest_qualification': 2,
                 'profile_image': 2,
-                'date_of_joining': 1,
+                'date_of_joining': 2,
             }
             
             # Calculate employee fields completion
@@ -91,14 +91,10 @@ class ProfileService:
             # Check address completion
             address = EmployeeAddress.query.filter_by(employee_id=emp_id).first()
             address_fields = {
-                'permanent_address_line1': 2,
-                'permanent_city': 2,
-                'permanent_state': 2,
-                'permanent_pincode': 2,
-                'current_address_line1': 2,
-                'current_city': 2,
-                'current_state': 2,
-                'current_pincode': 2,
+                'address1': 2,
+                'city': 2,
+                'state': 2,
+                'zip_code': 2
             }
             
             total_weight += sum(address_fields.values())
@@ -112,7 +108,36 @@ class ProfileService:
                         missing_fields.append(f"Address: {field.replace('_', ' ').title()}")
             else:
                 missing_fields.extend([f"Address: {field.replace('_', ' ').title()}" for field in address_fields.keys()])
-            
+
+            # Check uploaded documents
+            from ..models.documents import EmployeeDocument
+            required_doc_types = {
+                'adhar': 2,
+                'pan': 3,
+                'tenth': 2,
+                'twelve': 2,
+                'grad': 3,
+                'resume': 3,
+            }
+            total_weight += sum(required_doc_types.values())
+            uploaded_docs = {
+                doc.doc_type for doc in EmployeeDocument.query.filter_by(emp_id=emp_id).all()
+            }
+            for doc_type, weight in required_doc_types.items():
+                if doc_type in uploaded_docs:
+                    filled_weight += weight
+                else:
+                    missing_fields.append(f"Document: {doc_type.title()}")
+
+            # Check skills
+            skills_weight = 3
+            total_weight += skills_weight
+            has_skills = EmployeeSkill.query.filter_by(employee_id=emp_id).first() is not None
+            if has_skills:
+                filled_weight += skills_weight
+            else:
+                missing_fields.append("Skills")
+
             # Calculate percentage
             completion_percentage = round((filled_weight / total_weight) * 100)
             

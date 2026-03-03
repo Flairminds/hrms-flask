@@ -3,6 +3,9 @@ from ..services.hr.employee_service import EmployeeService
 from ..services.hr.report_service import ReportService
 from ..services.hr_service import HRService
 from ..utils.logger import Logger
+from werkzeug.security import generate_password_hash
+from ..models.hr import EmployeeCredentials, Employee
+from .. import db
 
 
 class HRController:
@@ -662,22 +665,37 @@ class HRController:
 
     @staticmethod
     def get_employee_document_stats():
-        """Get document upload and verification statistics for all employees."""
+        """Get document upload and verification statistics for all employees,
+        including resume staleness flags."""
         Logger.info("Get employee document statistics request received")
-        
+
         try:
             from ..services.document_service import DocumentService
-            
+
             stats = DocumentService.get_employee_document_stats()
+
+            # Merge resume staleness data keyed by emp_id
+            staleness_data = DocumentService.get_resume_staleness_report()
+            staleness_map = {row['employee_id']: row for row in staleness_data}
+
+            for row in stats:
+                emp_id = row.get('emp_id')
+                staleness = staleness_map.get(emp_id, {})
+                row['resume_uploaded_at'] = staleness.get('resume_uploaded_at')
+                row['days_since_upload'] = staleness.get('days_since_upload')
+                row['need_resume_update'] = staleness.get('need_resume_update', True)
+                row['resume_status'] = staleness.get('resume_status')
+
             Logger.info("Employee document statistics retrieved successfully", count=len(stats))
             return jsonify(stats), 200
-            
+
         except Exception as e:
             Logger.error("Error fetching employee document statistics", error=str(e))
             return jsonify({
                 'status': 'error',
                 'message': 'Failed to retrieve document statistics'
             }), 500
+
 
     @staticmethod
     def get_lob_leads():
@@ -743,4 +761,77 @@ class HRController:
             return jsonify({"message": "Failed to add team lead"}), 500
         except Exception as e:
             Logger.error("Error in add_team_lead", error=str(e))
+            return jsonify({"message": "Internal server error"}), 500
+    
+    @staticmethod
+    def add_employee_password():
+        """Bulk-seeds passwords for all active employees who don't yet have credentials.
+
+        Password format: capitalize(first_name) + '@' + year_of_birth
+        Active employees = those with no lwd (last working day) set.
+        Employees already in EmployeeCredentials are skipped silently.
+        Employees with no date_of_birth are also skipped (counted separately).
+        """
+        Logger.info("Bulk seed employee passwords request received")
+        try:
+            # Fetch all active employees (lwd is null = still employed)
+            active_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
+
+            # Build a set of employee_ids that already have credentials
+            existing_ids = {
+                cred.employee_id
+                for cred in EmployeeCredentials.query.with_entities(EmployeeCredentials.employee_id).all()
+            }
+
+            inserted = 0
+            skipped_existing = 0
+            skipped_no_dob = 0
+
+            for emp in active_employees:
+                if emp.employee_id in existing_ids:
+                    skipped_existing += 1
+                    continue
+
+                if not emp.date_of_birth:
+                    skipped_no_dob += 1
+                    Logger.warning(
+                        "Skipping employee — no date_of_birth",
+                        employee_id=emp.employee_id
+                    )
+                    continue
+
+                # Build password: capitalize first name + '@' + 4-digit birth year
+                plain_password = f"{emp.first_name.strip().capitalize()}@{emp.date_of_birth.year}"
+
+                password_hash = generate_password_hash(
+                    plain_password,
+                    method='pbkdf2:sha256',
+                    salt_length=16
+                )
+
+                db.session.add(EmployeeCredentials(
+                    employee_id=emp.employee_id,
+                    password_hash=password_hash
+                ))
+                inserted += 1
+
+            db.session.commit()
+
+            Logger.info(
+                "Bulk password seed complete",
+                inserted=inserted,
+                skipped_existing=skipped_existing,
+                skipped_no_dob=skipped_no_dob
+            )
+
+            return jsonify({
+                "message": "Password seeding complete",
+                "inserted": inserted,
+                "skipped_already_exists": skipped_existing,
+                "skipped_no_dob": skipped_no_dob
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error in add_employee_password", error=str(e))
             return jsonify({"message": "Internal server error"}), 500

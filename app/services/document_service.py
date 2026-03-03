@@ -220,13 +220,85 @@ class DocumentService:
     def list_employee_documents(emp_id: str) -> List[Dict[str, Any]]:
         """
         List all documents for an employee.
-        
+
         Args:
             emp_id: Employee ID
-            
+
         Returns:
             List of document metadata dictionaries
         """
         return BlobDocumentService.list_employee_documents(emp_id)
+
+    @staticmethod
+    def get_resume_staleness_report() -> List[Dict[str, Any]]:
+        """
+        Check if active employees' resumes are stale (> 60 days since upload).
+
+        Returns a list of all active employees with:
+            - employee_id, name, email, employment_status
+            - resume_uploaded_at: ISO timestamp or None
+            - days_since_upload: int or None
+            - need_resume_update: True if resume is missing or older than 60 days
+        """
+        from datetime import datetime, timezone
+        from ..models.hr import Employee
+        from ..models.documents import EmployeeDocument
+
+        STALE_DAYS = 60
+        INACTIVE_STATUSES = {'Relieved', 'Absconding'}
+
+        active_employees = Employee.query.filter(
+            Employee.employment_status.notin_(INACTIVE_STATUSES)
+        ).all()
+
+        now = datetime.now(timezone.utc)
+        results = []
+
+        for emp in active_employees:
+            resume_doc = EmployeeDocument.query.filter_by(
+                emp_id=emp.employee_id, doc_type='resume'
+            ).first()
+
+            if resume_doc and resume_doc.uploaded_at:
+                uploaded_at = resume_doc.uploaded_at
+                if uploaded_at.tzinfo is None:
+                    uploaded_at = uploaded_at.replace(tzinfo=timezone.utc)
+                days_since = (now - uploaded_at).days + 1
+                uploaded_at_iso = uploaded_at.isoformat()
+                is_verified = resume_doc.is_verified  # True / False / None
+
+                if is_verified is not True:
+                    # Not yet verified (pending or rejected) — HR needs to review
+                    resume_status = 'Need Review'
+                    need_update = True
+                elif days_since > STALE_DAYS:
+                    # Verified but stale
+                    resume_status = 'Need To Update'
+                    need_update = True
+                else:
+                    # Verified and fresh
+                    resume_status = 'Up To Date'
+                    need_update = False
+            else:
+                days_since = None
+                uploaded_at_iso = None
+                is_verified = None
+                resume_status = 'Need Update'
+                need_update = True
+
+            results.append({
+                'employee_id': emp.employee_id,
+                'name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                'email': emp.email,
+                'employment_status': emp.employment_status,
+                'resume_uploaded_at': uploaded_at_iso,
+                'days_since_upload': days_since,
+                'resume_is_verified': is_verified,
+                'resume_status': resume_status,
+                'need_resume_update': need_update,
+            })
+
+        return results
+
 
 

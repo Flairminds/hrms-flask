@@ -8,7 +8,7 @@ export const PageLayout = ({ isRole }) => {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* <Navbar /> */}
       <div style={{ display: "flex", flex: 1 }}>
-        <div>
+        <div style={{ position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
           <Sidebar isRole={isRole} />
         </div>
         <div style={{ flex: 1, background: '#f5f7fa', overflow: 'auto' }}>

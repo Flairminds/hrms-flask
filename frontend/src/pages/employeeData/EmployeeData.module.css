@@ -3,8 +3,8 @@
 }
 
 .empTable {
-    border: 1px solid #8ec5fc;
-    border-radius: 8px;
+    /* border: 1px solid #8ec5fc; */
+    border-radius: 6px;
     overflow-y: auto;
     width: 100%;
 }
