@@ -75,7 +75,7 @@ export const LoginPage = () => {
       navigate('/');
     } catch (error) {
       console.error('There was a problem with the login operation:', error);
-      toast.error('Login failed. Please check your credentials and try again.');
+      toast.error(error.response.data.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setLoader(false);
     }
