@@ -198,7 +198,7 @@ export const Dashboard = () => {
                         <div>
                           {new Date(item.from_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {new Date(item.to_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                         </div>
-                        <Text type="secondary" style={{ fontSize: '11px' }}>{item.leave_status}</Text>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>{item.leave_name} | {item.leave_status}</Text>
                       </div>
                     }
                   />
@@ -234,7 +234,12 @@ export const Dashboard = () => {
                       </div>
                     }
                     title={<Text strong>{item.employee_name}</Text>}
-                    description={`Celebrating on ${item.date}`}
+                    description={
+                      <div style={{ fontSize: '12px' }}>
+                        <div style={{ marginTop: '2px' }}>
+                          <Text type="secondary" style={{ fontSize: '12px' }}>Celebrating on {item.date}</Text>
+                        </div>
+                      </div>}
                   />
                 </List.Item>
               )}
@@ -270,9 +275,9 @@ export const Dashboard = () => {
                     title={<Text strong>{item.employee_name}</Text>}
                     description={
                       <div style={{ fontSize: '12px' }}>
-                        <div><CalendarOutlined /> {new Date(item.date_of_joining).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        <div>{new Date(item.date_of_joining).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                         <div style={{ marginTop: '2px' }}>
-                          <Badge status="default" text={`${item.band} • ${item.sub_role}`} />
+                          <Text type="secondary" style={{ fontSize: '12px' }}>{item.band} • {item.sub_role}</Text>
                         </div>
                       </div>
                     }
