@@ -1,6 +1,6 @@
 export const tableHeaders = [
-  { key: 'empName', displayName: 'Employee Name' },
-  { key: 'description', displayName: 'Description' },
+  // { key: 'empName', displayName: 'Employee Name' },
+  // { key: 'description', displayName: 'Description' },
   { key: 'leaveName', displayName: 'Leave Type' },
   { key: 'duration', displayName: 'Duration' },
   { key: 'fromDate', displayName: 'From Date' },
@@ -10,7 +10,7 @@ export const tableHeaders = [
   { key: 'leaveStatus', displayName: 'Leave Status' },
   { key: 'approverName', displayName: 'Leave Approver' },
   { key: 'approvedBy', displayName: 'Approved By' },
-  { key: 'approvalComment', displayName: 'Approval Comment' },
+  // { key: 'approvalComment', displayName: 'Approval Comment' },
   // { key: 'isCommunicatedToTeam', displayName: 'Communicated to Team' },
   // { key: 'isCustomerApprovalRequired', displayName: 'Customer Approval Required' }
 ];

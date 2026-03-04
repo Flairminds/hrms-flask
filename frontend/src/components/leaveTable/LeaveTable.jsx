@@ -41,15 +41,8 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
 
 
   const handleChangeYear = (value) => {
-    // setSelectedRange(value);
-
-    // Extract the first year from the selected range
-    const firstYear = value.split("-")[0];
-    setSelectedRange(firstYear)
+    setSelectedRange(value);
   };
-
-
-
 
   const leaveCardDetails = async () => {
     try {
@@ -427,14 +420,6 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
               <span>{selectedLeaveDetails.appliedLeaveCount}</span>
             </div>
             <div className={styles.leaveDetailsRow}>
-              <strong>Leave Approver:</strong>
-              <span>{selectedLeaveDetails.approverName}</span>
-            </div>
-            <div className={styles.leaveDetailsRow}>
-              <strong>Approved By:</strong>
-              <span>{selectedLeaveDetails.approvedBy}</span>
-            </div>
-            <div className={styles.leaveDetailsRow}>
               <strong>Description:</strong>
               <span>{selectedLeaveDetails.description}</span>
             </div>
@@ -445,6 +430,18 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
             <div className={styles.leaveDetailsRow}>
               <strong>Leave Name:</strong>
               <span>{selectedLeaveDetails.leaveName}</span>
+            </div>
+            <div className={styles.leaveDetailsRow}>
+              <strong>Leave Approver:</strong>
+              <span>{selectedLeaveDetails.approverName}</span>
+            </div>
+            <div className={styles.leaveDetailsRow}>
+              <strong>Approved By:</strong>
+              <span>{selectedLeaveDetails.approvedBy}</span>
+            </div>
+            <div className={styles.leaveDetailsRow}>
+              <strong>Approval Comment:</strong>
+              <span>{selectedLeaveDetails.approvalComment}</span>
             </div>
             <div className={styles.leaveDetailsRow}>
               <strong>Leave Status:</strong>

@@ -123,7 +123,7 @@ export function LeaveManagementPage() {
 
       if (item.leaveName === "Privilege Leave") {
         // Use 12 as denominator if totalAllotedLeaves is greater than 12, else use totalAllotedLeaves
-        const denominator = item.totalAllotedLeaves > 12 ? 12 : item.totalAllotedLeaves;
+        const denominator = item.totalAllotedLeaves;
         percentage = ((item.totalAllotedLeaves - item.totalUsedLeaves) / denominator) * 100;
       } else {
         // Calculate percentage normally for other leave types

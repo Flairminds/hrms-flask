@@ -10,7 +10,7 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig, LeaveConfiguration
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig, LeaveConfiguration, LeaveTypeName
 from .leave_utils import LeaveUtils
 
 class LeaveQueryService:
@@ -171,14 +171,45 @@ class LeaveQueryService:
                 MasterLeaveTypes.leave_cards_flag == True
             ).all()
             
+            # Separate query: WFH days used in the current calendar month only
+            month_start = today.replace(day=1)
+            month_end = (month_start.replace(month=month_start.month % 12 + 1, day=1)
+                         if month_start.month < 12
+                         else month_start.replace(year=month_start.year + 1, month=1, day=1))
+
+            wfh_this_month_rows = db.session.query(
+                func.coalesce(func.sum(LeaveTransaction.no_of_days), 0).label('used_this_month'),
+                LeaveTransaction.leave_type_id
+            ).join(
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
+            ).filter(
+                LeaveTransaction.employee_id == employee_id,
+                MasterLeaveTypes.leave_name == LeaveTypeName.WFH,
+                LeaveTransaction.from_date >= month_start,
+                LeaveTransaction.from_date < end_date,
+                ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED])
+            ).group_by(
+                LeaveTransaction.leave_type_id
+            ).all()
+
+            wfh_used_this_month = float(wfh_this_month_rows[0].used_this_month) if wfh_this_month_rows else 0.0
+
             result = []
             for row in query:
+
+                tal =  float(row.total_alloted_leaves) if row.total_alloted_leaves else 0.0
+                used = abs(float(row.total_used_leaves))
+
+                if row.leave_name == LeaveTypeName.WFH and (used - wfh_used_this_month) < (LeaveConfiguration.WFH['default_allocation'] - tal):
+                    used = wfh_used_this_month
                 result.append({
                     'employee': row.employee,
                     'leave_type_id': str(row.leave_type_id),
                     'leave_name': row.leave_name,
-                    'total_alloted_leaves': float(row.total_alloted_leaves) if row.total_alloted_leaves else 0.0,
-                    'total_used_leaves': abs(float(row.total_used_leaves)),  # ABS for safety
+                    'total_alloted_leaves': tal,
+                    'total_used_leaves': used,
+                    'wfh_used_this_month': wfh_used_this_month if row.leave_name == LeaveTypeName.WFH else None,
                     'leave_cards_flag': row.leave_cards_flag,
                     'date_of_joining': row.date_of_joining.strftime('%d %b %Y') if row.date_of_joining else ''
                 })
@@ -212,6 +243,8 @@ class LeaveQueryService:
         
         if not year:
             year = datetime.now().year
+        
+        if not month:
             month = datetime.now().month
         
         Logger.info("Getting leave details", employee_id=employee_id, year=year)
@@ -271,10 +304,10 @@ class LeaveQueryService:
                 LeaveTransaction.approver_id == Approver.employee_id
             ).filter(
                 Employee.employee_id == employee_id,
-                LeaveTransaction.from_date.between(date(year, 1, 1), date(year, 12, 31)),
+                LeaveTransaction.from_date.between(start_date, end_date),
                 LeaveTransaction.applied_by.isnot(None)
             ).order_by(
-                LeaveTransaction.leave_tran_id.desc()
+                LeaveTransaction.from_date.desc()
             ).all()
             
             result = []

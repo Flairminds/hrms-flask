@@ -95,6 +95,12 @@ def register_jobs(app):
             Logger.info("Running monthly leave deduction job")
             
             try:
+                today = datetime.now().date()
+                month = today.month
+
+                if month == 4:
+                    Logger.info("Monthly leave deduction not required for April month")
+                    return
                 # Get all active employees
                 active_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).all()
                 
