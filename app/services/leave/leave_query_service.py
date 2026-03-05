@@ -1045,26 +1045,31 @@ class LeaveQueryService:
                 Employee.first_name,
                 Employee.last_name,
                 Employee.profile_image,
-                Employee.profile_image_type
+                Employee.profile_image_type,
+                MasterLeaveTypes.leave_name
             ).join(
                 Employee,
                 LeaveTransaction.employee_id == Employee.employee_id
+            ).join(
+                MasterLeaveTypes,
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
             ).filter(
-                LeaveTransaction.leave_status == LeaveStatus.APPROVED,
-                func.date(LeaveTransaction.from_date) <= end_date,
-                func.date(LeaveTransaction.to_date) >= start_date
+                LeaveTransaction.leave_status.notin_([LeaveStatus.CANCELLED, LeaveStatus.REJECTED]),
+                func.date(LeaveTransaction.from_date) >= start_date,
+                func.date(LeaveTransaction.to_date) >= end_date
             ).order_by(LeaveTransaction.from_date)
             
             results = query.all()
             
             leave_list = []
-            for txn, first_name, last_name, profile_image, profile_image_type in results:
+            for txn, first_name, last_name, profile_image, profile_image_type, leave_name in results:
                 leave_list.append({
                     "employee_name": f"{first_name} {last_name}",
                     "leave_status": txn.leave_status,
                     "from_date": txn.from_date.isoformat(),
                     "to_date": txn.to_date.isoformat(),
                     "leave_type_id": txn.leave_type_id,
+                    "leave_name": leave_name,
                     "profile_image": f"data:{profile_image_type};base64,{base64.b64encode(profile_image).decode('utf-8')}" if profile_image else None
                 })
                 
