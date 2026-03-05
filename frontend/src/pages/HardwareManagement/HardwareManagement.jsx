@@ -493,7 +493,7 @@ const HardwareManagement = () => {
 
                 <Tabs defaultActiveKey="1">
                     <TabPane tab="Assets" key="1">
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                        <div className="hw-toolbar">
                             <Button
                                 type="primary"
                                 icon={<PlusOutlined />}
@@ -513,7 +513,7 @@ const HardwareManagement = () => {
                                 allowClear
                                 value={assetSearch}
                                 onChange={e => setAssetSearch(e.target.value)}
-                                style={{ width: 260 }}
+                                className="hw-search"
                             />
                         </div>
                         <Table
@@ -528,11 +528,12 @@ const HardwareManagement = () => {
                             })}
                             loading={assetsLoading}
                             rowKey="asset_id"
+                            scroll={{ x: 'max-content' }}
                         />
                     </TabPane>
 
                     <TabPane tab="Assignments" key="2">
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                        <div className="hw-toolbar">
                             {/* <Button
                                 type="primary"
                                 icon={<PlusOutlined />}
@@ -546,7 +547,7 @@ const HardwareManagement = () => {
                                 allowClear
                                 value={assignmentSearch}
                                 onChange={e => setAssignmentSearch(e.target.value)}
-                                style={{ width: 260 }}
+                                className="hw-search"
                             />
                         </div>
                         <Table
@@ -557,6 +558,7 @@ const HardwareManagement = () => {
                             })}
                             loading={assignmentsLoading}
                             rowKey="assignment_id"
+                            scroll={{ x: 'max-content' }}
                         />
                     </TabPane>
 
