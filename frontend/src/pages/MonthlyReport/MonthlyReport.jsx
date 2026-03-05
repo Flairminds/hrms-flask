@@ -254,8 +254,8 @@ const LeaveReportTab = () => {
 
     // Detail View
     return (
-        <div style={{ marginTop: '20px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
             </div>
             <Table
@@ -264,6 +264,7 @@ const LeaveReportTab = () => {
                 rowKey={(record, index) => `${record.Employee_Id}-${index}`}
                 scroll={{ x: 'max-content' }}
                 className={styles.empTable}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
                 loading={detailLoading}
             />
         </div>
@@ -750,8 +751,8 @@ const DoorEntryReportTab = () => {
 
     // Detail View
     return (
-        <div style={{ marginTop: '20px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
             </div>
             <Table
@@ -759,6 +760,7 @@ const DoorEntryReportTab = () => {
                 columns={detailColumns}
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
                 className={styles.empTable}
                 loading={detailLoading}
             />
@@ -873,6 +875,8 @@ const AttendanceReportTab = () => {
         // 'Working Day',
         // 'Status',
         // 'Entry Exempt',
+        'Unpaid Status',
+        'Remark',
         'Entry in Time',
         // 'AM In',
         // 'AM Out',
@@ -884,8 +888,6 @@ const AttendanceReportTab = () => {
         'Approval Date',
         // 'Approved on same date',
         // 'Swapped holiday date',
-        'Unpaid Status',
-        'Remark',
         // 'Days Logs',
         // 'Zymmr Logged Time',
     ];
@@ -1183,8 +1185,8 @@ const AttendanceReportTab = () => {
     }
 
     return (
-        <div style={{ marginTop: '10px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
                 <Button
                     type="default"
@@ -1200,7 +1202,7 @@ const AttendanceReportTab = () => {
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
                 loading={loading}
-                pagination={{ pageSize: 10 }}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
             />
 
             {/* Per-employee Summary Modal */}
