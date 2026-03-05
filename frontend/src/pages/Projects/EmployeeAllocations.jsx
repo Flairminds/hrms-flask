@@ -96,6 +96,7 @@ const EmployeeAllocations = () => {
                     pagination={false}
                     size="small"
                     rowKey="project_id"
+                    scroll={{ x: 'max-content' }}
                 />
             </div>
         );
@@ -111,7 +112,7 @@ const EmployeeAllocations = () => {
                         prefix={<SearchOutlined />}
                         value={employeeSearchText}
                         onChange={e => setEmployeeSearchText(e.target.value)}
-                        style={{ width: 300 }}
+                        style={{ width: '100%', maxWidth: 300 }}
                     />
                     <Button
                         type={allocationFilter === 0.5 ? 'primary' : 'default'}
@@ -131,6 +132,7 @@ const EmployeeAllocations = () => {
                     rowKey="employee_id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 'max-content' }}
                 />
             </Card>
         </div>

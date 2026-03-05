@@ -278,7 +278,7 @@ const Projects = () => {
                                 placeholder="Search projects by name, client or lead..."
                                 prefix={<SearchOutlined />}
                                 onChange={e => setSearchText(e.target.value)}
-                                style={{ width: 300 }}
+                                style={{ width: '100%', maxWidth: 300 }}
                             />
                         </div>
 
@@ -288,6 +288,7 @@ const Projects = () => {
                             rowKey="project_id"
                             loading={loading}
                             pagination={{ pageSize: 10 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </Card>
 
