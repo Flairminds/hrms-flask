@@ -216,7 +216,7 @@ const LeaveReportTab = () => {
                     {/* <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ fontWeight: 'bold' }}>Generate New Report:</span>
                     </div> */}
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
                             {months.map((m, index) => (
                                 <Select.Option key={index} value={m}>{m}</Select.Option>
@@ -246,6 +246,7 @@ const LeaveReportTab = () => {
                         rowKey="id"
                         loading={listLoading}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 'max-content' }}
                     />
                 </div>
             </div>
@@ -445,7 +446,7 @@ const MappingList = ({ mappedEmployees, unmappedEmployees, onRefresh }) => {
                 {
                     key: '1',
                     label: `Unmapped Employees (${unmappedEmployees.length})`,
-                    children: <Table dataSource={unmappedEmployees} columns={unmappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                    children: <Table dataSource={unmappedEmployees} columns={unmappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" scroll={{ x: 'max-content' }} />
                 },
                 {
                     key: '2',
@@ -453,7 +454,7 @@ const MappingList = ({ mappedEmployees, unmappedEmployees, onRefresh }) => {
                     children: (
                         <div>
                             {/* <Button type="primary" onClick={handleManualAdd} style={{marginBottom: 10}}>Add New Mapping</Button> */}
-                            <Table dataSource={mappedEmployees} columns={mappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                            <Table dataSource={mappedEmployees} columns={mappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" scroll={{ x: 'max-content' }} />
                         </div>
                     )
                 }
@@ -702,7 +703,7 @@ const DoorEntryReportTab = () => {
             <div style={{ marginTop: '10px' }}>
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
                     <div style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
                                 {months.map((m, index) => (
                                     <Select.Option key={index} value={m}>{m}</Select.Option>
@@ -738,6 +739,7 @@ const DoorEntryReportTab = () => {
                             rowKey="id"
                             loading={listLoading}
                             pagination={{ pageSize: 10 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </div>
                 </div>
@@ -1178,6 +1180,7 @@ const AttendanceReportTab = () => {
                         rowKey="id"
                         loading={loading}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 'max-content' }}
                     />
                 </div>
             </div>

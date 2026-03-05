@@ -361,7 +361,7 @@ export const AllDocRecords = () => {
       key: 'days_since_upload',
       align: 'center',
       sorter: (a, b) => (a.days_since_upload ?? 9999) - (b.days_since_upload ?? 9999),
-      render: (days) => days !== null && days !== undefined ? `${days} day ${days === 1 ? '' : 's'} ago` : '—',
+      render: (days) => days !== null && days !== undefined ? `${days} day${days === 1 ? '' : 's'} ago` : '—',
     },
     {
       title: 'Resume Status',
