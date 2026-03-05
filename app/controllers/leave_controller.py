@@ -449,7 +449,7 @@ class LeaveController:
             today = datetime.now().date()
             
             # Calculate start of this week (Monday)
-            start_of_this_week = today - timedelta(days=today.weekday())
+            start_of_this_week = today - timedelta(days=today.weekday()) - timedelta(days=7)
             
             # Calculate end of next week (Sunday of next week)
             # Days until next Sunday = (6 - weekday) + 7
@@ -461,7 +461,7 @@ class LeaveController:
             
             people_on_leave = LeaveQueryService.get_employees_on_leave(
                 start_of_this_week, 
-                end_of_next_week
+                today
             )
             
             return jsonify({
