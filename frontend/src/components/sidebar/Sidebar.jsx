@@ -22,7 +22,7 @@ import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext';
 import { getAllEmployeeEvaluators } from '../../services/api';
 
-export const Sidebar = ({ isRole }) => {
+export const Sidebar = ({ isRole, onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
@@ -58,6 +58,7 @@ export const Sidebar = ({ isRole }) => {
     localStorage.removeItem('loginPassword');
     logout();
     navigate('/login');
+    onNavigate?.();
   };
 
   const isActive = (path) => path === activePath;
@@ -179,7 +180,7 @@ export const Sidebar = ({ isRole }) => {
             <div
               key={item.key}
               className={`${stylesSidebar.divs} ${isActive(item.path) ? stylesSidebar.active : ''}`}
-              onClick={() => navigate(item.path)}
+              onClick={() => { navigate(item.path); onNavigate?.(); }}
             >
               <Icon className={stylesSidebar.iconsSidebar} />
               <span className={item.infoClass ? stylesSidebar.info : ''}>{item.label}</span>
