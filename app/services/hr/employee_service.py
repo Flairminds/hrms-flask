@@ -17,8 +17,10 @@ from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailCon
 class EmployeeService:
     @staticmethod
     def get_all_employees():
-        """Retrieves all active employees with their roles."""
+        """Retrieves all active employees with their roles and profile completion."""
         try:
+            from ...services.profile_service import ProfileService
+
             Logger.info("Fetching all active employees")
             employees = db.session.query(
                 Employee.employee_id,
@@ -46,6 +48,10 @@ class EmployeeService:
                     return f"{approver.first_name} {approver.last_name}"
                 return "Unknown"
 
+            # Bulk-fetch profile completion for all employees in 4 queries
+            emp_ids = [e.employee_id for e in employees]
+            profile_completion_map = ProfileService.get_bulk_profile_completion(emp_ids)
+
             return [
                 {
                     "employeeId": e.employee_id,
@@ -55,7 +61,11 @@ class EmployeeService:
                     "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
                     "leaveApprover": get_approver_name(e.team_lead_id),
                     "teamLeadName": get_approver_name(e.team_lead_id),
-                    "email": e.email
+                    "email": e.email,
+                    "profileCompletion": profile_completion_map.get(
+                        e.employee_id,
+                        {"completion_percentage": 0, "missing_fields": []}
+                    ),
                 } for e in employees
             ]
         except Exception as e:

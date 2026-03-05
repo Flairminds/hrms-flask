@@ -46,111 +46,144 @@ class ProfileService:
             return False, f"An error occurred: {str(e)}"
     
     @staticmethod
-    def calculate_profile_completion(emp_id):
+    def get_bulk_profile_completion(emp_ids: list) -> dict:
         """
-        Calculate profile completion percentage based on filled fields
-        Returns: {'completion_percentage': 85, 'missing_fields': ['blood_group', ...]}
+        Calculate profile completion for a list of employee IDs in bulk.
+        Executes 4 queries total (employees, addresses, documents, skills)
+        regardless of the number of employees, avoiding N+1 query overhead.
+
+        Returns:
+            dict keyed by emp_id ->
+            {'completion_percentage': int, 'missing_fields': list[str]}
         """
+        if not emp_ids:
+            return {}
+
         try:
             from ..models.hr import Employee, EmployeeAddress
-            
-            employee = Employee.query.filter_by(employee_id=emp_id).first()
-            if not employee:
-                return {'completion_percentage': 0, 'missing_fields': ['All fields']}
-            
-            # Define weighted fields (critical fields have higher weight)
-            employee_fields = {
-                'first_name': 3,
-                'last_name': 2,
-                'email': 3,
-                'contact_number': 3,
-                'date_of_birth': 2,
-                'gender': 1,
-                'blood_group': 1,
-                'personal_email': 2,
-                'emergency_contact_number': 1,
-                'emergency_contact_person': 1,
-                'emergency_contact_relation': 1,
-                'highest_qualification': 2,
-                'profile_image': 2,
-                'date_of_joining': 2,
+            from ..models.documents import EmployeeDocument
+
+            # --- constants (mirrors calculate_profile_completion) ---
+            EMPLOYEE_FIELDS = {
+                'first_name': 3, 'last_name': 2, 'email': 3,
+                'contact_number': 3, 'date_of_birth': 2, 'gender': 1,
+                'blood_group': 1, 'personal_email': 2,
+                'emergency_contact_number': 1, 'emergency_contact_person': 1,
+                'emergency_contact_relation': 1, 'highest_qualification': 2,
+                'profile_image': 2, 'date_of_joining': 2,
             }
-            
-            # Calculate employee fields completion
-            total_weight = sum(employee_fields.values())
-            filled_weight = 0
-            missing_fields = []
-            
-            for field, weight in employee_fields.items():
-                value = getattr(employee, field, None)
-                if value is not None and str(value).strip():
-                    filled_weight += weight
-                else:
-                    missing_fields.append(field.replace('_', ' ').title())
-            
-            # Check address completion
-            address = EmployeeAddress.query.filter_by(employee_id=emp_id).first()
-            address_fields = {
-                'address1': 2,
-                'city': 2,
-                'state': 2,
-                'zip_code': 2
+            ADDRESS_FIELDS = {'address1': 2, 'city': 2, 'state': 2, 'zip_code': 2}
+            REQUIRED_DOCS = {'adhar': 2, 'pan': 3, 'tenth': 2, 'twelve': 2, 'grad': 3, 'resume': 3}
+            SKILLS_WEIGHT = 3
+
+            TOTAL_WEIGHT = (
+                sum(EMPLOYEE_FIELDS.values())
+                + sum(ADDRESS_FIELDS.values())
+                + sum(REQUIRED_DOCS.values())
+                + SKILLS_WEIGHT
+            )
+
+            # --- Bulk query 1: employee rows ---
+            employees = Employee.query.filter(Employee.employee_id.in_(emp_ids)).all()
+            emp_map = {e.employee_id: e for e in employees}
+
+            # --- Bulk query 2: addresses (first address per employee) ---
+            addresses = EmployeeAddress.query.filter(
+                EmployeeAddress.employee_id.in_(emp_ids)
+            ).all()
+            addr_map = {}
+            for a in addresses:
+                addr_map.setdefault(a.employee_id, a)  # keep first occurrence
+
+            # --- Bulk query 3: uploaded document types per employee ---
+            docs = EmployeeDocument.query.filter(
+                EmployeeDocument.emp_id.in_(emp_ids)
+            ).with_entities(EmployeeDocument.emp_id, EmployeeDocument.doc_type).all()
+            doc_map: dict = {}
+            for d in docs:
+                doc_map.setdefault(d.emp_id, set()).add(d.doc_type)
+
+            # --- Bulk query 4: employees with at least one skill ---
+            skill_emp_ids = {
+                row.employee_id
+                for row in EmployeeSkill.query.filter(
+                    EmployeeSkill.employee_id.in_(emp_ids)
+                ).with_entities(EmployeeSkill.employee_id).distinct().all()
             }
-            
-            total_weight += sum(address_fields.values())
-            
-            if address:
-                for field, weight in address_fields.items():
-                    value = getattr(address, field, None)
+
+            # --- Compute per employee ---
+            results = {}
+            for emp_id in emp_ids:
+                employee = emp_map.get(emp_id)
+                if not employee:
+                    results[emp_id] = {'completion_percentage': 0, 'missing_fields': ['All fields']}
+                    continue
+
+                filled_weight = 0
+                missing_fields = []
+
+                # Employee fields
+                for field, weight in EMPLOYEE_FIELDS.items():
+                    value = getattr(employee, field, None)
                     if value is not None and str(value).strip():
                         filled_weight += weight
                     else:
-                        missing_fields.append(f"Address: {field.replace('_', ' ').title()}")
-            else:
-                missing_fields.extend([f"Address: {field.replace('_', ' ').title()}" for field in address_fields.keys()])
+                        missing_fields.append(field.replace('_', ' ').title())
 
-            # Check uploaded documents
-            from ..models.documents import EmployeeDocument
-            required_doc_types = {
-                'adhar': 2,
-                'pan': 3,
-                'tenth': 2,
-                'twelve': 2,
-                'grad': 3,
-                'resume': 3,
-            }
-            total_weight += sum(required_doc_types.values())
-            uploaded_docs = {
-                doc.doc_type for doc in EmployeeDocument.query.filter_by(emp_id=emp_id).all()
-            }
-            for doc_type, weight in required_doc_types.items():
-                if doc_type in uploaded_docs:
-                    filled_weight += weight
+                # Address fields
+                address = addr_map.get(emp_id)
+                if address:
+                    for field, weight in ADDRESS_FIELDS.items():
+                        value = getattr(address, field, None)
+                        if value is not None and str(value).strip():
+                            filled_weight += weight
+                        else:
+                            missing_fields.append(f"Address: {field.replace('_', ' ').title()}")
                 else:
-                    missing_fields.append(f"Document: {doc_type.title()}")
+                    missing_fields.extend(
+                        [f"Address: {f.replace('_', ' ').title()}" for f in ADDRESS_FIELDS]
+                    )
 
-            # Check skills
-            skills_weight = 3
-            total_weight += skills_weight
-            has_skills = EmployeeSkill.query.filter_by(employee_id=emp_id).first() is not None
-            if has_skills:
-                filled_weight += skills_weight
-            else:
-                missing_fields.append("Skills")
+                # Documents
+                uploaded_docs = doc_map.get(emp_id, set())
+                for doc_type, weight in REQUIRED_DOCS.items():
+                    if doc_type in uploaded_docs:
+                        filled_weight += weight
+                    else:
+                        missing_fields.append(f"Document: {doc_type.title()}")
 
-            # Calculate percentage
-            completion_percentage = round((filled_weight / total_weight) * 100)
-            
-            Logger.info(f"Profile completion calculated", emp_id=emp_id, percentage=completion_percentage)
-            
-            return {
-                'completion_percentage': completion_percentage,
-                'missing_fields': missing_fields[:10]  # Limit to top 10 missing fields
-            }
-            
+                # Skills
+                if emp_id in skill_emp_ids:
+                    filled_weight += SKILLS_WEIGHT
+                else:
+                    missing_fields.append("Skills")
+
+                completion_percentage = round((filled_weight / TOTAL_WEIGHT) * 100)
+                results[emp_id] = {
+                    'completion_percentage': completion_percentage,
+                    'missing_fields': missing_fields[:10],
+                }
+
+            Logger.info("Bulk profile completion calculated", count=len(results))
+            return results
+
         except Exception as e:
-            Logger.error("Error calculating profile completion", error=str(e))
-            return {'completion_percentage': 0, 'missing_fields': ['Error calculating completion']}
+            Logger.error("Error in get_bulk_profile_completion", error=str(e))
+            return {}
+
+    @staticmethod
+    def calculate_profile_completion(emp_id):
+        """
+        Calculate profile completion percentage for a single employee.
+        Delegates to get_bulk_profile_completion for a single ID so all
+        logic stays in one place.
+        Returns: {'completion_percentage': 85, 'missing_fields': ['blood_group', ...]}
+        """
+        result = ProfileService.get_bulk_profile_completion([emp_id])
+        return result.get(
+            emp_id,
+            {'completion_percentage': 0, 'missing_fields': ['Error calculating completion']}
+        )
 
     @staticmethod
     def get_employee_profile(emp_id):
