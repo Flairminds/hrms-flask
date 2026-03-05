@@ -192,26 +192,6 @@ const Projects = () => {
                 <Tabs.TabPane tab="Projects" key="1">
 
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
-                                <Statistic
-                                    title="Active Projects"
-                                    value={stats.active_projects}
-                                    prefix={<ProjectOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
-                                <Statistic
-                                    title="Prospective Projects"
-                                    value={stats.prospective_projects}
-                                    prefix={<RiseOutlined />}
-                                    valueStyle={{ color: '#1890ff' }}
-                                />
-                            </Card>
-                        </Col>
                         <Col xs={24} sm={24} md={10}>
                             <Card bordered={false}>
                                 <Row gutter={16}>
@@ -263,6 +243,26 @@ const Projects = () => {
                                 </Row>
                             </Card>
                         </Col>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Active Projects"
+                                    value={stats.active_projects}
+                                    prefix={<ProjectOutlined />}
+                                    valueStyle={{ color: '#3f8600' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Prospective Projects"
+                                    value={stats.prospective_projects}
+                                    prefix={<RiseOutlined />}
+                                    valueStyle={{ color: '#1890ff' }}
+                                />
+                            </Card>
+                        </Col>
                         <Col xs={24} sm={24} md={4}>
                             {isHRorAdmin && (
                                 <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
@@ -278,7 +278,7 @@ const Projects = () => {
                                 placeholder="Search projects by name, client or lead..."
                                 prefix={<SearchOutlined />}
                                 onChange={e => setSearchText(e.target.value)}
-                                style={{ width: 300 }}
+                                style={{ width: '100%', maxWidth: 300 }}
                             />
                         </div>
 
@@ -288,6 +288,7 @@ const Projects = () => {
                             rowKey="project_id"
                             loading={loading}
                             pagination={{ pageSize: 10 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </Card>
 

@@ -216,7 +216,7 @@ const LeaveReportTab = () => {
                     {/* <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ fontWeight: 'bold' }}>Generate New Report:</span>
                     </div> */}
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
                             {months.map((m, index) => (
                                 <Select.Option key={index} value={m}>{m}</Select.Option>
@@ -246,6 +246,7 @@ const LeaveReportTab = () => {
                         rowKey="id"
                         loading={listLoading}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 'max-content' }}
                     />
                 </div>
             </div>
@@ -254,8 +255,8 @@ const LeaveReportTab = () => {
 
     // Detail View
     return (
-        <div style={{ marginTop: '20px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
             </div>
             <Table
@@ -264,6 +265,7 @@ const LeaveReportTab = () => {
                 rowKey={(record, index) => `${record.Employee_Id}-${index}`}
                 scroll={{ x: 'max-content' }}
                 className={styles.empTable}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
                 loading={detailLoading}
             />
         </div>
@@ -444,7 +446,7 @@ const MappingList = ({ mappedEmployees, unmappedEmployees, onRefresh }) => {
                 {
                     key: '1',
                     label: `Unmapped Employees (${unmappedEmployees.length})`,
-                    children: <Table dataSource={unmappedEmployees} columns={unmappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                    children: <Table dataSource={unmappedEmployees} columns={unmappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" scroll={{ x: 'max-content' }} />
                 },
                 {
                     key: '2',
@@ -452,7 +454,7 @@ const MappingList = ({ mappedEmployees, unmappedEmployees, onRefresh }) => {
                     children: (
                         <div>
                             {/* <Button type="primary" onClick={handleManualAdd} style={{marginBottom: 10}}>Add New Mapping</Button> */}
-                            <Table dataSource={mappedEmployees} columns={mappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" />
+                            <Table dataSource={mappedEmployees} columns={mappedColumns} rowKey="employee_id" pagination={{ pageSize: 5 }} size="small" scroll={{ x: 'max-content' }} />
                         </div>
                     )
                 }
@@ -701,7 +703,7 @@ const DoorEntryReportTab = () => {
             <div style={{ marginTop: '10px' }}>
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
                     <div style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <Select value={genInMonth} onChange={setGenInMonth} style={{ width: 120 }}>
                                 {months.map((m, index) => (
                                     <Select.Option key={index} value={m}>{m}</Select.Option>
@@ -737,6 +739,7 @@ const DoorEntryReportTab = () => {
                             rowKey="id"
                             loading={listLoading}
                             pagination={{ pageSize: 10 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </div>
                 </div>
@@ -750,8 +753,8 @@ const DoorEntryReportTab = () => {
 
     // Detail View
     return (
-        <div style={{ marginTop: '20px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
             </div>
             <Table
@@ -759,6 +762,7 @@ const DoorEntryReportTab = () => {
                 columns={detailColumns}
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
                 className={styles.empTable}
                 loading={detailLoading}
             />
@@ -873,6 +877,8 @@ const AttendanceReportTab = () => {
         // 'Working Day',
         // 'Status',
         // 'Entry Exempt',
+        'Unpaid Status',
+        'Remark',
         'Entry in Time',
         // 'AM In',
         // 'AM Out',
@@ -884,8 +890,6 @@ const AttendanceReportTab = () => {
         'Approval Date',
         // 'Approved on same date',
         // 'Swapped holiday date',
-        'Unpaid Status',
-        'Remark',
         // 'Days Logs',
         // 'Zymmr Logged Time',
     ];
@@ -1176,6 +1180,7 @@ const AttendanceReportTab = () => {
                         rowKey="id"
                         loading={loading}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 'max-content' }}
                     />
                 </div>
             </div>
@@ -1183,8 +1188,8 @@ const AttendanceReportTab = () => {
     }
 
     return (
-        <div style={{ marginTop: '10px' }}>
-            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
                 <Button
                     type="default"
@@ -1200,7 +1205,7 @@ const AttendanceReportTab = () => {
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
                 loading={loading}
-                pagination={{ pageSize: 10 }}
+                pagination={{ pageSize: 7, showSizeChanger: false }}
             />
 
             {/* Per-employee Summary Modal */}

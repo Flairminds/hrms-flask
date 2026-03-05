@@ -117,6 +117,7 @@ const EmailNotifications = () => {
                 pagination={false}
                 bordered
                 size="middle"
+                scroll={{ x: 'max-content' }}
             />
         </div>
     );

@@ -34,31 +34,11 @@
     padding: 0 1rem;
 }
 
-/* Responsive sidebar - adjust width for smaller screens */
+/* Responsive sidebar */
 @media (max-width: 768px) {
     .main {
-        width: 200px;
-    }
-}
-
-@media (max-width: 576px) {
-    .main {
-        width: 72px;
-        padding: 12px 4px;
-    }
-
-    .logoContainer {
-        display: none;
-    }
-
-    .divs span,
-    .info {
-        display: none;
-    }
-
-    .divs {
-        justify-content: center;
-        padding: 12px !important;
+        width: 225px;
+        height: 100vh;
     }
 }
 

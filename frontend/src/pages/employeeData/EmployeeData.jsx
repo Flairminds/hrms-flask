@@ -6,7 +6,7 @@ import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
 import DownloadOptionsModal from '../../components/modal/downloadOptionsModal/DownloadOptionsModal';
 import EmployeeDataAccordion from '../../components/modal/employeeDataAccordian/EmployeeDataAccordion';
-import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats, getProfileCompletion } from '../../services/api';
+import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../../services/api';
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
 import { EMPDetailsModal } from '../../components/modal/EMPDetailsModal/EMPDetailsModal';
 import { convertDate } from '../../util/helperFunctions';
@@ -60,42 +60,30 @@ export const EmployeeData = () => {
     try {
       const response = await getAllEmployeesList();
       console.log("getAllEmployeesList Response:", response.data);
-      // Backend returns: employeeId, employeeName, roleName, employmentStatus, joiningDate, leaveApprover
       setEmployeeData(response.data);
       setFilteredData(response.data);
 
-      // Extract unique statuses from data
+      // Extract unique statuses and roles from data
       const uniqueStatuses = [...new Set(response.data.map(item => item.employmentStatus))].filter(Boolean);
       const uniqueRoles = [...new Set(response.data.map(item => item.roleName))].filter(Boolean);
       setStatusOptions(uniqueStatuses);
       setRoleOptions(uniqueRoles);
 
-      // Fetch profile completion scores for all employees in parallel
-      fetchAllProfileScores(response.data);
+      // Build profile scores map from the profileCompletion field already
+      // embedded in each employee record — no extra API calls needed.
+      const scoresMap = {};
+      response.data.forEach(emp => {
+        const pc = emp.profileCompletion;
+        scoresMap[emp.employeeId] = pc
+          ? { score: pc.completion_percentage ?? null, missing_fields: pc.missing_fields ?? [] }
+          : null;
+      });
+      setProfileScores(scoresMap);
     } catch (error) {
       console.error("Failed to fetch employees", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchAllProfileScores = async (employees) => {
-    const results = await Promise.allSettled(
-      employees.map(emp => getProfileCompletion(emp.employeeId))
-    );
-    const scoresMap = {};
-    results.forEach((result, idx) => {
-      const empId = employees[idx].employeeId;
-      if (result.status === 'fulfilled') {
-        scoresMap[empId] = {
-          score: result.value.data.completion_percentage ?? null,
-          missing_fields: result.value.data.missing_fields ?? [],
-        };
-      } else {
-        scoresMap[empId] = null;
-      }
-    });
-    setProfileScores(scoresMap);
   };
 
   const handleSearch = (event) => {

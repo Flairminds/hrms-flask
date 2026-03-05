@@ -247,14 +247,14 @@ const EmployeeReviewTab = () => {
             <p>
                 Reviews to be done monthly for Interns and Probationers, and quarterly for Confirmed employees.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 <Space>
                     <Input
                         placeholder="Search..."
                         prefix={<SearchOutlined />}
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={{ width: 250 }}
+                        style={{ width: '100%', maxWidth: 250 }}
                     />
                 </Space>
                 {canManage && (
@@ -275,6 +275,7 @@ const EmployeeReviewTab = () => {
                 rowKey="review_id"
                 loading={loading}
                 pagination={{ pageSize: 10 }}
+                scroll={{ x: 'max-content' }}
             />
 
             <ReviewSummaryModal

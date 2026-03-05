@@ -1,6 +1,6 @@
 .empTable {
-    border: 1px solid #8ec5fc;
-    border-radius: 10px;
+    /* border: 1px solid #8ec5fc; */
+    border-radius: 8px;
     overflow-y: auto;
     /* width: 175vh; */
 }

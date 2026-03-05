@@ -1,21 +1,39 @@
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '../../components/sidebar/Sidebar'
-import { Navbar } from '../../components/navbar/Navbar'
+import { MenuOutlined, CloseOutlined } from '@ant-design/icons'
+import styles from './PageLayout.module.css'
 
 export const PageLayout = ({ isRole }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {/* <Navbar /> */}
-      <div style={{ display: "flex", flex: 1 }}>
-        <div style={{ position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
-          <Sidebar isRole={isRole} />
+    <div className={styles.root}>
+      {/* Hamburger — only rendered on mobile */}
+      <button
+        className={styles.hamburger}
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Toggle navigation"
+      >
+        {sidebarOpen ? <CloseOutlined /> : <MenuOutlined />}
+      </button>
+
+      {/* Backdrop — tap outside to close */}
+      {sidebarOpen && (
+        <div className={styles.backdrop} onClick={closeSidebar} />
+      )}
+
+      <div className={styles.body}>
+        {/* Sidebar wrapper — class drives open/closed on mobile */}
+        <div className={`${styles.sidebarWrapper} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
+          <Sidebar isRole={isRole} onNavigate={closeSidebar} />
         </div>
-        <div style={{ flex: 1, background: '#f5f7fa', overflow: 'auto' }}>
+
+        <div className={styles.content}>
           <Outlet />
         </div>
       </div>
     </div>
-  )
+  );
 }
-

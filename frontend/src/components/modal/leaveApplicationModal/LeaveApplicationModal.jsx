@@ -522,7 +522,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
         onOk={handleOk}
         centered
         onCancel={handleCancel}
-        width={'60%'}
+        width="min(92vw, 680px)"
         closable={true}
         footer={[
           <div key="footer-buttons" className={stylesLeaveApplication.btnDiv}>
@@ -544,9 +544,9 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
           )}
           <div className={stylesLeaveApplication.typeofLeaveDiv}>
             {/* <span className={stylesLeaveApplication.heading}>Select type of leave*</span> */}
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className={stylesLeaveApplication.leaveTypeRow}>
               <Select
-                style={{ width: '45%' }}
+                className={stylesLeaveApplication.leaveTypeSelect}
                 onChange={handleLeaveTypeChange}
                 options={preSelectedLeaveType ? [{ value: preSelectedLeaveType, label: preSelectedLeaveType }] : leaveOptions.leaveTypes}
                 placeholder="Type of Leave"
@@ -554,7 +554,7 @@ export const LeaveApplicationModal = ({ setLeaveCardData, leaveCardData, leaveDa
                 disabled={!!preSelectedLeaveType}
               />
               <Select
-                style={{ width: '45%' }}
+                className={stylesLeaveApplication.leaveTypeSelect}
                 onChange={handleDurationChange}
                 options={durationOptions}
                 placeholder="Leave Duration"

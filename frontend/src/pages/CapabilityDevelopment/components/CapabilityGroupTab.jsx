@@ -303,7 +303,7 @@ const CapabilityGroupTab = () => {
             label: 'Capability Groups',
             children: (
                 <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                         <div>
                             {/* <Title level={5} style={{ margin: 0 }}>Master List</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{groups.length} groups</Text>
@@ -322,6 +322,7 @@ const CapabilityGroupTab = () => {
                             size="small"
                             pagination={{ pageSize: 10 }}
                             style={{ border: '1px solid #eee', borderRadius: 8 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </Spin>
                 </div>
@@ -332,7 +333,7 @@ const CapabilityGroupTab = () => {
             label: 'Employee Assignments',
             children: (
                 <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                         <div>
                             {/* <Title level={5} style={{ margin: 0 }}>Current Assignments</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{assignments.length} employees assigned</Text>
@@ -354,6 +355,7 @@ const CapabilityGroupTab = () => {
                             size="small"
                             pagination={{ pageSize: 10 }}
                             style={{ border: '1px solid #eee', borderRadius: 8 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </Spin>
                 </div>
@@ -364,7 +366,7 @@ const CapabilityGroupTab = () => {
             label: 'Assignment History',
             children: (
                 <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                         <div>
                             {/* <Title level={5} style={{ margin: 0 }}>History</Title> */}
                             <Text type="secondary" style={{ fontSize: 12 }}>{history.length} records</Text>
@@ -373,7 +375,7 @@ const CapabilityGroupTab = () => {
                             placeholder="Filter by Employee"
                             allowClear
                             showSearch
-                            style={{ width: 260 }}
+                            style={{ width: '100%', maxWidth: 260 }}
                             options={employeeOptions}
                             onChange={val => {
                                 setHistoryEmpFilter(val || null);
@@ -392,6 +394,7 @@ const CapabilityGroupTab = () => {
                             size="small"
                             pagination={{ pageSize: 10 }}
                             style={{ border: '1px solid #eee', borderRadius: 8 }}
+                            scroll={{ x: 'max-content' }}
                         />
                     </Spin>
                 </div>

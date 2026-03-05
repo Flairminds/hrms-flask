@@ -98,6 +98,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
           last_name: employeeData.lastName,
           company_email: employeeData.email,
           gender: employeeData.gender,
+          blood_group: employeeData.bloodGroup || employeeData.blood_group,
           date_of_birth: employeeData.dateOfBirth ? dayjs(employeeData.dateOfBirth) : null,
 
           // Personal
@@ -437,13 +438,18 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                         <Input disabled />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col span={8}>
                       <Form.Item name="date_of_birth" label="Date of Birth">
                         <DatePicker disabled style={{ width: '100%' }} format="DD-MM-YYYY" />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col span={8}>
                       <Form.Item name="gender" label="Gender">
+                        <Input disabled />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item name="blood_group" label="Blood Group">
                         <Input disabled />
                       </Form.Item>
                     </Col>
@@ -454,12 +460,12 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item name="contact_number" label="Contact Number" rules={[{ required: true, message: 'Please enter contact number' }]}>
-                        <Input />
+                        <Input disabled />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
                       <Form.Item name="personal_email" label="Personal Email" rules={[{ type: 'email' }]}>
-                        <Input />
+                        <Input disabled />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -484,7 +490,7 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                   </Card>
                   <Card size="small" title="Qualification" style={{ marginBottom: 16 }}>
                     <Row gutter={16}>
-                      <Col span={24}>
+                      <Col span={8}>
                         <Form.Item name="highest_qualification" label="Highest Qualification">
                           <Input />
                         </Form.Item>
@@ -495,11 +501,11 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
                           <DatePicker picker="month" style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
-                      <Col span={8}>
+                      {/* <Col span={8}>
                         <Form.Item name="FullStackReady" valuePropName="checked" label="Full Stack Ready?">
                           <Checkbox>Yes, I am ready (Level 1+)</Checkbox>
                         </Form.Item>
-                      </Col>
+                      </Col> */}
                     </Row>
                   </Card>
                 </Card>

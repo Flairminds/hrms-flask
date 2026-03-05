@@ -223,7 +223,7 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
                 }
                 centered
                 onCancel={handleCancel}
-                width={'60%'}
+                width="min(92vw, 680px)"
                 closable={true}
                 footer={[
                     <div key="footer-buttons" className={styles.btnDiv}>
@@ -266,16 +266,16 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
 
                     {/* Leave Type + Duration */}
                     <div className={styles.typeofLeaveDiv}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className={styles.leaveTypeRow}>
                             <Select
-                                style={{ width: '45%' }}
+                                className={styles.leaveTypeSelect}
                                 onChange={handleLeaveTypeChange}
                                 options={leaveOptions.leaveTypes}
                                 placeholder="Type of Leave"
                                 value={leaveType}
                             />
                             <Select
-                                style={{ width: '45%' }}
+                                className={styles.leaveTypeSelect}
                                 onChange={handleDurationChange}
                                 options={DURATION_OPTIONS}
                                 placeholder="Leave Duration"
@@ -325,7 +325,7 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
                     <div className={styles.desDiv}>
                         <span className={styles.heading}>Leave Status*</span>
                         <Select
-                            style={{ width: '45%' }}
+                            className={styles.leaveStatusSelect}
                             onChange={setLeaveStatus}
                             options={LEAVE_STATUS_OPTIONS}
                             value={leaveStatus}

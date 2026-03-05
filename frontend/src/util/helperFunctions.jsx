@@ -5,13 +5,7 @@ export const convertDate = (date, showTime = false) => {
     // Check if date string implies a timestamp (has time component)
     const hasTime = typeof date === 'string' && (date.includes('T') || (date.includes(':') && date.length > 10));
 
-    // Special handling for GMT strings to prevent timezone shifting
-    if (typeof date === 'string' && date.includes('GMT')) {
-        const offset = d.getTimezoneOffset() * 60000;
-        d = new Date(d.getTime() + offset);
-    }
-
-    const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' };
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
 
     if (hasTime && showTime) {
         options.hour = '2-digit';

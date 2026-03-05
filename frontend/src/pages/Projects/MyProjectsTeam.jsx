@@ -86,6 +86,7 @@ const MyProjectsTeam = () => {
                     pagination={false}
                     size="small"
                     rowKey="employee_id"
+                    scroll={{ x: 'max-content' }}
                 />
             </div>
         );
@@ -104,6 +105,7 @@ const MyProjectsTeam = () => {
                     rowKey="project_id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 'max-content' }}
                 />
             </Card>
         </div>

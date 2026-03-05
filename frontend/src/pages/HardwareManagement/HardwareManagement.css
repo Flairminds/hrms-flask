@@ -26,3 +26,26 @@
     max-height: 60vh;
     overflow-y: auto;
 }
+
+/* Responsive toolbar */
+.hw-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.hw-search {
+    width: 260px;
+}
+
+@media (max-width: 600px) {
+    .hardware-management {
+        padding: 12px;
+    }
+
+    .hw-search {
+        width: 100%;
+    }
+}

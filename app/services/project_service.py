@@ -2,6 +2,7 @@ from sqlalchemy import text, func, and_
 from ..models.hr import db, Project, ProjectAllocation, Employee, ProjectHistory, ProjectAllocationHistory
 from ..utils.logger import Logger
 from datetime import datetime
+from ..utils.constants import IgnoreEmployees
 
 class ProjectService:
     """Service class for project management operations."""
@@ -185,10 +186,13 @@ class ProjectService:
             # Get all employees with their allocations
             employees_data = db.session.query(
                 Employee.employee_id,
-                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('employee_name'),
+                func.concat(Employee.first_name, ' ', Employee.last_name).label('employee_name'),
                 Employee.email
             ).filter(
-                Employee.employment_status.notin_(['Relieved', 'Absconding'])
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
+            ).order_by(
+                Employee.first_name
             ).all()
             
             result = []
@@ -312,7 +316,10 @@ class ProjectService:
             billable_allocation = sum(float(a.project_allocation) for a in allocations if a.is_billing) / 100.0 if allocations else 0
             
             # Total Employees (Capacity)
-            total_employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).count()
+            total_employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
+            ).count()
 
             return {
                 'active_projects': active_projects,
