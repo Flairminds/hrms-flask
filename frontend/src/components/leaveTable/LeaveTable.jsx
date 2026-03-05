@@ -342,10 +342,10 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                               today.setHours(0, 0, 0, 0);
                               fromDate.setHours(0, 0, 0, 0);
 
-                              const isTodayOrFuture = fromDate >= today;
+                              const isFuture = fromDate > today;
                               const isCancellable = employee.leaveStatus !== LEAVE_STATUS.CANCELLED && employee.leaveStatus !== LEAVE_STATUS.REJECTED;
 
-                              return isTodayOrFuture && isCancellable;
+                              return isFuture && isCancellable;
                             })()}
                           >
                             Cancel
