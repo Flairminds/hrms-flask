@@ -33,10 +33,48 @@
 .datesContainer {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 6px;
     padding-bottom: 0.8rem;
     padding-top: 0.4rem;
 }
+
+/* Leave type + duration row */
+.leaveTypeRow {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.leaveTypeSelect {
+    width: 48%;
+}
+
+/* Leave status select */
+.leaveStatusSelect {
+    width: 48%;
+}
+
+@media (max-width: 480px) {
+    .leaveTypeRow {
+        flex-direction: column;
+    }
+
+    .leaveTypeSelect,
+    .leaveStatusSelect {
+        width: 100%;
+    }
+
+    .datesContainer {
+        flex-direction: column;
+    }
+
+    .dateDiv,
+    .leaveDaysDiv {
+        width: 100%;
+    }
+}
+
 
 .dateDiv {
     display: flex;
