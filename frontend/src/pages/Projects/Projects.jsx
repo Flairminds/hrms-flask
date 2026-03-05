@@ -192,26 +192,6 @@ const Projects = () => {
                 <Tabs.TabPane tab="Projects" key="1">
 
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
-                                <Statistic
-                                    title="Active Projects"
-                                    value={stats.active_projects}
-                                    prefix={<ProjectOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
-                                <Statistic
-                                    title="Prospective Projects"
-                                    value={stats.prospective_projects}
-                                    prefix={<RiseOutlined />}
-                                    valueStyle={{ color: '#1890ff' }}
-                                />
-                            </Card>
-                        </Col>
                         <Col xs={24} sm={24} md={10}>
                             <Card bordered={false}>
                                 <Row gutter={16}>
@@ -261,6 +241,26 @@ const Projects = () => {
                                         />
                                     </Col>
                                 </Row>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Active Projects"
+                                    value={stats.active_projects}
+                                    prefix={<ProjectOutlined />}
+                                    valueStyle={{ color: '#3f8600' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={8} md={5}>
+                            <Card bordered={false}>
+                                <Statistic
+                                    title="Prospective Projects"
+                                    value={stats.prospective_projects}
+                                    prefix={<RiseOutlined />}
+                                    valueStyle={{ color: '#1890ff' }}
+                                />
                             </Card>
                         </Col>
                         <Col xs={24} sm={24} md={4}>
