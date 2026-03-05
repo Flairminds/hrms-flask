@@ -544,10 +544,10 @@ function PersonalInfoPage() {
                 <InfoRow label="Band" value={employeeData.designationName} />
                 <InfoRow label="Highest Qualification" value={employeeData.highestQualification} />
                 <InfoRow label="Qualification Date" value={highestQualificationYearMonth} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                {/* <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                   <Text type="secondary">Full Stack Ready:</Text>
                   <Tag color={fullStackReady ? 'success' : 'default'}>{fullStackReady ? "Yes" : "No"}</Tag>
-                </div>
+                </div> */}
               </WidgetCard>
             </Col>
 
@@ -559,7 +559,7 @@ function PersonalInfoPage() {
                     const docStatus = documentStatusDetails?.documents?.[key];
                     return (
                       <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                        <div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
                           <Text strong>{label}</Text>
                           {docStatus ? (
                             <Tag color={docStatus?.uploaded ? "green" : "red"}>
