@@ -17,7 +17,10 @@ from ...utils.constants import LeaveTypeID, LeaveStatus, FinancialYear, EmailCon
 class EmployeeService:
     @staticmethod
     def get_all_employees():
-        """Retrieves all active employees with their roles and profile completion."""
+        """Retrieves all active employees with their roles and profile completion.
+
+        DB queries: 1 (employees+roles JOIN) + 1 (approver names) + 4 (bulk profile completion) = 6 total.
+        """
         try:
             from ...services.profile_service import ProfileService
 
@@ -40,15 +43,20 @@ class EmployeeService:
                 Employee.first_name.asc()
             ).all()
 
-            # Helper to get approver name
-            def get_approver_name(approver_id):
-                if not approver_id: return "None"
-                approver = Employee.query.filter_by(employee_id=approver_id).first()
-                if approver:
-                    return f"{approver.first_name} {approver.last_name}"
-                return "Unknown"
+            # --- Bulk query: fetch all team-lead names in one shot ---
+            unique_lead_ids = {e.team_lead_id for e in employees if e.team_lead_id}
+            approver_name_map = {}
+            if unique_lead_ids:
+                approvers = db.session.query(
+                    Employee.employee_id,
+                    Employee.first_name,
+                    Employee.last_name,
+                ).filter(Employee.employee_id.in_(unique_lead_ids)).all()
+                approver_name_map = {
+                    a.employee_id: f"{a.first_name} {a.last_name}" for a in approvers
+                }
 
-            # Bulk-fetch profile completion for all employees in 4 queries
+            # --- Bulk-fetch profile completion for all employees (4 queries) ---
             emp_ids = [e.employee_id for e in employees]
             profile_completion_map = ProfileService.get_bulk_profile_completion(emp_ids)
 
@@ -59,8 +67,8 @@ class EmployeeService:
                     "roleName": e.role_name,
                     "employmentStatus": e.employment_status,
                     "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
-                    "leaveApprover": get_approver_name(e.team_lead_id),
-                    "teamLeadName": get_approver_name(e.team_lead_id),
+                    "leaveApprover": approver_name_map.get(e.team_lead_id, "None"),
+                    "teamLeadName": approver_name_map.get(e.team_lead_id, "None"),
                     "email": e.email,
                     "profileCompletion": profile_completion_map.get(
                         e.employee_id,
@@ -71,6 +79,7 @@ class EmployeeService:
         except Exception as e:
             Logger.error("Error fetching all employees", error=str(e))
             return []
+
 
     @staticmethod
     def get_potential_approvers():
