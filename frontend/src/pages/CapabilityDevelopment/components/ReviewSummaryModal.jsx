@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Modal, Table, Button, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { convertDate } from '../../../util/helperFunctions';
+import { employmentStatusOptions } from '../../../util/helper';
 
 const { Text } = Typography;
 
@@ -136,7 +137,8 @@ const ReviewSummaryModal = ({ visible, onClose, employees, reviews }) => {
             key: 'status',
             filters: [...new Set(summaryData.map(d => d.status).filter(Boolean))].map(s => ({ text: s, value: s })),
             onFilter: (value, record) => record.status === value,
-            render: status => <Tag>{status}</Tag>
+            render: status => <Tag>{status}</Tag>,
+            defaultFilteredValue: employmentStatusOptions.filter(status => status !== 'Relieved' && status !== 'Absconding')
         },
         {
             title: 'Joining Date',

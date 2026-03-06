@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Button, Modal, Form, Input, DatePicker, Select, Space,
-    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty
+    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty, Row, Col
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
@@ -14,6 +14,7 @@ import {
 } from '../../../services/api';
 import dayjs from 'dayjs';
 import ReviewSummaryModal from './ReviewSummaryModal';
+import { convertDate } from '../../../util/helperFunctions';
 
 const { Text, Title, Link } = Typography;
 const { Option } = Select;
@@ -182,12 +183,13 @@ const EmployeeReviewTab = () => {
             dataIndex: 'review_date',
             key: 'review_date',
             sorter: (a, b) => new Date(a.review_date) - new Date(b.review_date),
+            render: (date) => convertDate(date) || '-'
         },
         {
             title: 'Reviewed Date',
             dataIndex: 'reviewed_date',
             key: 'reviewed_date',
-            render: (date) => date || '-'
+            render: (date) => convertDate(date) || '-'
         },
         {
             title: 'Status',
@@ -293,61 +295,79 @@ const EmployeeReviewTab = () => {
                 style={{ top: 15 }}
             >
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                    <Form.Item
-                        name="employee_id"
-                        label="Employee"
-                        rules={[{ required: true, message: 'Please select employee' }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="Select Employee"
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                option.children.toLowerCase().includes(input.toLowerCase())
-                            }
-                            disabled={!!editingReview} // Prevent changing employee on edit? Usually OK.
-                        >
-                            {employees.map(e => (
-                                <Option key={e.employeeId} value={e.employeeId}>
-                                    {e.employeeName} ({e.employeeId})
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
+                    {/* Row 1: Employee (full width) */}
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="employee_id"
+                                label="Employee"
+                                rules={[{ required: true, message: 'Please select employee' }]}
+                            >
+                                <Select
+                                    showSearch
+                                    placeholder="Select Employee"
+                                    optionFilterProp="label"
+                                    filterOption={(input, option) =>
+                                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                    }
+                                    disabled={!!editingReview}
+                                >
+                                    {employees.map(e => (
+                                        <Option key={e.employeeId} value={e.employeeId} label={`${e.employeeName} (${e.employeeId})`}>
+                                            {e.employeeName} ({e.employeeId})
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="review_date"
+                                label="Scheduled Review Date"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <DatePicker style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                    <Form.Item
-                        name="review_date"
-                        label="Scheduled Review Date"
-                        rules={[{ required: true, message: 'Required' }]}
-                    >
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-
-                    <Form.Item name="reviewed_date" label="Actual Reviewed Date">
-                        <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-
-                    <Form.Item name="status" label="Status" initialValue="Pending">
-                        <Select>
-                            <Option value="Pending">Pending</Option>
-                            <Option value="Reviewed">Reviewed</Option>
-                            <Option value="Extended">Extended</Option>
-                            <Option value="Scheduled">Scheduled</Option>
-                            <Option value="Cancelled">Cancelled</Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item name="review_comment" label="Review Key Comments">
-                        <TextArea rows={3} />
-                    </Form.Item>
-
-                    <Form.Item name="other_comments" label="Other Comments">
-                        <TextArea rows={2} />
-                    </Form.Item>
+                    {/* Row 2: Dates */}
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="status" label="Status" initialValue="Pending">
+                                <Select>
+                                    <Option value="Pending">Pending</Option>
+                                    <Option value="Reviewed">Reviewed</Option>
+                                    <Option value="Extended">Extended</Option>
+                                    <Option value="Scheduled">Scheduled</Option>
+                                    <Option value="Cancelled">Cancelled</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="reviewed_date" label="Actual Reviewed Date">
+                                <DatePicker style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
                     <Form.Item name="file_link" label="Document/File Link">
                         <Input prefix={<LinkOutlined />} placeholder="https://..." />
                     </Form.Item>
+
+                    {/* Row 4: Comments */}
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="review_comment" label="Review Key Comments">
+                                <TextArea rows={3} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="other_comments" label="Other Comments">
+                                <TextArea rows={3} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Button onClick={() => setModalOpen(false)} style={{ marginRight: 8 }}>
