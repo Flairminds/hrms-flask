@@ -28,17 +28,7 @@ class EmployeeReviewController:
         
         try:
             reviews = EmployeeReviewService.get_reviews(target_employee_id)
-            return jsonify([{
-                'review_id': r.review_id,
-                'employee_id': r.employee_id,
-                'review_date': r.review_date.strftime('%Y-%m-%d') if r.review_date else None,
-                'reviewed_date': r.reviewed_date.strftime('%Y-%m-%d') if r.reviewed_date else None,
-                'review_comment': r.review_comment,
-                'other_comments': r.other_comments,
-                'file_link': r.file_link,
-                'status': r.status,
-                'created_by': r.created_by
-            } for r in reviews]), 200
+            return jsonify(reviews), 200
         except Exception as e:
             Logger.error(f"Error getting reviews: {str(e)}")
             return jsonify({'message': 'Error fetching reviews'}), 500

@@ -136,10 +136,8 @@ const EmployeeReviewTab = () => {
             // For HR view, we need names.
 
             // Let's assume we map ID to name using `employees` list.
-            const empName = employees.find(e => e.employeeId === r.employee_id)?.employeeName || r.employee_id;
-
             return (
-                empName.toLowerCase().includes(q) ||
+                r.employee_name.toLowerCase().includes(q) ||
                 (r.review_comment && r.review_comment.toLowerCase().includes(q)) ||
                 (r.status && r.status.toLowerCase().includes(q))
             );
@@ -152,30 +150,25 @@ const EmployeeReviewTab = () => {
             title: 'Employee',
             dataIndex: 'employee_id',
             key: 'employee_id',
-            filters: employees.map(e => ({ text: e.employeeName, value: e.employeeId })),
-            onFilter: (value, record) => record.employee_id === value,
+            filters: [...new Set(reviews.map(e => e.employee_name).filter(Boolean))].map(s => ({ text: s, value: s })),
+            onFilter: (value, record) => record.employee_name === value,
             filterSearch: true,
             render: (id) => {
-                const emp = employees.find(e => e.employeeId === id);
-                return emp ?
-                    <Text strong>{emp.employeeName} <Text type="secondary" style={{ fontSize: 12 }}>({id})</Text></Text>
-                    : <Text>{user.employeeId === id ? user.fullName : id}</Text>;
+                const emp = reviews.find(e => e.employee_id === id);
+                return <Text strong>{emp.employee_name} <Text type="secondary" style={{ fontSize: 12 }}>({id})</Text></Text>
             }
         },
         {
             title: 'Employee Status',
-            dataIndex: 'employee_id',
+            dataIndex: 'employment_status',
             key: 'employment_status',
-            filters: [...new Set(employees.map(e => e.employmentStatus).filter(Boolean))].map(s => ({ text: s, value: s })),
+            filters: [...new Set(reviews.map(e => e.employment_status).filter(Boolean))].map(s => ({ text: s, value: s })),
             onFilter: (value, record) => {
-                const emp = employees.find(e => e.employeeId === record.employee_id);
-                return emp?.employmentStatus === value;
+                const emp = reviews.find(e => e.employment_status === record.employment_status);
+                return emp?.employment_status === value;
             },
-            render: (id) => {
-                const emp = employees.find(e => e.employeeId === id);
-                return emp ?
-                    <Text strong>{emp.employmentStatus}</Text>
-                    : <Text>-</Text>;
+            render: (status) => {
+                return <Text strong>{status}</Text>;
             },
         },
         {

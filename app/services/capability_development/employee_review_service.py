@@ -12,11 +12,41 @@ class EmployeeReviewService:
         Otherwise, returns all reviews.
         """
         try:
-            query = EmployeeReview.query
+            from sqlalchemy.orm import aliased
+            from ...models.hr import Employee
+            
+            query = db.session.query(
+                EmployeeReview,
+                (Employee.first_name + ' ' + 
+                 Employee.last_name).label('emp_name'),
+                Employee.employment_status
+            ).join(
+                Employee, EmployeeReview.employee_id == Employee.employee_id
+            )
+            
             if employee_id:
-                query = query.filter_by(employee_id=employee_id)
+                query = query.filter(EmployeeReview.employee_id == employee_id)
+            
             # Sort by review_date descending
-            return query.order_by(EmployeeReview.review_date.desc()).all()
+            results = query.order_by(EmployeeReview.review_date.desc()).all()
+            
+            reviews_list = []
+            for r, emp_name, employment_status in results:
+                reviews_list.append({
+                    'review_id': r.review_id,
+                    'employee_id': r.employee_id,
+                    'employee_name': emp_name,
+                    'employment_status': employment_status,
+                    'review_date': r.review_date.strftime('%Y-%m-%d') if r.review_date else None,
+                    'reviewed_date': r.reviewed_date.strftime('%Y-%m-%d') if r.reviewed_date else None,
+                    'review_comment': r.review_comment,
+                    'other_comments': r.other_comments,
+                    'file_link': r.file_link,
+                    'status': r.status,
+                    'created_by': r.created_by
+                })
+            
+            return reviews_list
         except Exception as e:
             Logger.error("Error fetching reviews", error=str(e))
             return []
