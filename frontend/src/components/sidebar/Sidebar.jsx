@@ -12,6 +12,7 @@ import {
   TeamOutlined,
   TrophyOutlined,
   ContactsOutlined,
+  FileTextOutlined,
   FileSyncOutlined,
   LaptopOutlined,
   BarChartOutlined,
@@ -149,6 +150,13 @@ export const Sidebar = ({ isRole, onNavigate }) => {
       label: 'Monthly Report',
       path: '/monthly-report',
       icon: BarChartOutlined,
+      roles: ['HR', 'Manager']
+    },
+    {
+      key: 'salary-slip-generator',
+      label: 'Salary Slip Generator',
+      path: '/salary-slip-generator',
+      icon: FileTextOutlined,
       roles: ['HR', 'Manager']
     },
     {

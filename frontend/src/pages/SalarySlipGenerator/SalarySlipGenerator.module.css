@@ -1,0 +1,421 @@
+.container {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 64px);
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.formCard {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.payoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.dynamicRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.addRowBtn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.totalBox {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.netPayBox {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.netPayLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.netPayAmount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* Print/PDF Preview Styles */
+.slipPreview {
+  padding: 40px;
+  background: white;
+  color: black;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  width: 800px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.watermark img {
+  width: 70%;
+  max-width: 500px;
+  filter: grayscale(100%);
+}
+
+.contentWrapper {
+  position: relative;
+  z-index: 1;
+}
+
+.slipHeader {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #1f2937;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.logo {
+  height: 60px;
+  margin-right: 24px;
+}
+
+.companyInfo h2 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.companyInfo p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.slipTitle {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  color: #111827;
+  background-color: #f3f4f6;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.empDetailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 10px;
+  border: 1px solid #1f2937;
+}
+
+.detailRow {
+  display: flex;
+}
+
+.detailLabel {
+  width: 140px;
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.detailValue {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tablesContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.slipTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.slipTable th,
+.slipTable td {
+  border: 1px solid #d1d5db;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.slipTable th {
+  background-color: #f9fafb;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+}
+
+.slipTable .amount {
+  text-align: right;
+}
+
+.slipTotalRow {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.slipNetPay {
+  border: 2px solid #1f2937;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  background-color: #f9fafb;
+}
+
+.slipNetPayLabel {
+  font-size: 16px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.slipNetPayAmount {
+  font-size: 20px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.amountInWords {
+  font-size: 10px;
+  color: #4b5563;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.slipFooter {
+  margin-top: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.signatureLine {
+  text-align: center;
+}
+
+.signatureLine .line {
+  width: 200px;
+  border-bottom: 1px solid #111827;
+  margin-bottom: 8px;
+}
+
+.signatureLine p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.computerGenerated {
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 32px;
+  font-style: italic;
+}
+
+/* NEW Advanced Layout Styles */
+.categoryBlock {
+  margin-bottom: 24px;
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.categoryHeader h4 {
+  margin: 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.emptyText {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.slipHeaderAlt {
+  display: flex;
+  /* border-bottom: 1px solid #1f2937; */
+  padding-bottom: 10px;
+  /* margin-bottom: 16px; */
+}
+
+.logoAlt {
+  height: 80px;
+  margin-right: 32px;
+}
+
+.companyInfoAlt {
+  flex: 1;
+}
+
+.complexTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.complexTable th,
+.complexTable td {
+  border: 0.5px solid #1f2937;
+  border-right: none;
+  border-bottom: none;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.complexTable td:last-child,
+.complexTable th:last-child {
+  border-right: 0.5px solid #1f2937;
+}
+
+.complexTable tr:last-child td,
+.complexTable tr:last-child th {
+  border-bottom: 0.5px solid #1f2937;
+}
+
+.complexTable th {
+  background-color: rgba(243, 244, 246, 0.85);
+  /* #f3f4f6 */
+  text-align: left;
+  font-weight: 600;
+}
+
+.amountCol {
+  text-align: right !important;
+  width: 100px;
+}
+
+.commentsCol {
+  color: #4b5563;
+  width: 100px;
+  font-size: 10px;
+}
+
+.rowHighlight {
+  background-color: rgba(229, 231, 235, 0.85);
+  /* #e5e7eb */
+}
+
+.rowAccent {
+  background-color: rgba(229, 231, 235, 0.85);
+  border-bottom: 0.5px solid #1f2937;
+  /* #d1d5db */
+}
+
+.rowFinal {
+  background-color: rgba(229, 231, 235, 0.85);
+  color: #111827;
+}
+
+.sectionHeaderRow td {
+  /* background-color: #374151 !important; */
+  /* color: #f3f4f6 !important; */
+  background-color: rgba(209, 213, 219, 0.85);
+  text-align: center !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 0 !important;
+}

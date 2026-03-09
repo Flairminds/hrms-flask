@@ -717,7 +717,6 @@ class LeaveQueryService:
                 LeaveTransaction.leave_tran_id,
                 LeaveTransaction.employee_id,
                 (Employee.first_name + ' ' + 
-                 func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
                 LeaveTransaction.comments,
                 LeaveTransaction.leave_type_id,
@@ -875,7 +874,6 @@ class LeaveQueryService:
                 LeaveTransaction.leave_tran_id,
                 LeaveTransaction.employee_id,
                 (Employee.first_name + ' ' + 
-                 func.coalesce(Employee.middle_name, '') + ' ' + 
                  Employee.last_name).label('emp_name'),
                 LeaveTransaction.comments,
                 LeaveTransaction.leave_type_id,

@@ -19,6 +19,7 @@ import MasterHR from './pages/MasterHR/MasterHR.jsx';
 import MonthlyReport from './pages/MonthlyReport/MonthlyReport.jsx';
 import { ResetPassword } from './pages/resetPassword/ResetPassword.jsx';
 import { SalarySlipUpload } from './pages/salarySlipUpload/SalarySlipUpload.jsx';
+import SalarySlipGenerator from './pages/SalarySlipGenerator/SalarySlipGenerator.jsx';
 import { SkillTracking } from './pages/skillTracking/SkillTracking.jsx';
 import { AllDocRecords } from './pages/allDocRecords/AllDocRecords.jsx';
 import { EmployeesSkillEvaluationList } from './pages/EmployeesSkillEvaluationList/EmployeesSkillEvaluationList.jsx';
@@ -68,6 +69,7 @@ function AppRoutes() {
                 {/* <Route path="allLeaveRecords" element={<AllLeavesRecords />} /> */}
                 <Route path="/configuration" element={<MasterHR isRole={user?.roleName} />} />
                 <Route path="salarySlipUpload" element={<SalarySlipUpload />} />
+                <Route path="salary-slip-generator" element={<SalarySlipGenerator />} />
                 <Route path="monthly-report" element={<MonthlyReport />} />
                 {/* <Route path="SkillTracking" element={<SkillTracking />} /> */}
                 <Route path="document-repo" element={<AllDocRecords />} />

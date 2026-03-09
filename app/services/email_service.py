@@ -18,7 +18,7 @@ from email.mime.text import MIMEText
 from datetime import datetime, timedelta, date
 
 from flask import current_app
-from sqlalchemy import text, extract
+from sqlalchemy import text, extract, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import db
@@ -1052,15 +1052,13 @@ class EmailService:
             # Fetch Interns with internship_end_date <= cutoff
             interns = Employee.query.filter(
                 Employee.employment_status == 'Intern',
-                Employee.internship_end_date.isnot(None),
-                Employee.internship_end_date <= cutoff
+                or_(Employee.internship_end_date.is_(None), Employee.internship_end_date <= cutoff)
             ).all()
 
             # Fetch Probationers with probation_end_date <= cutoff
             probationers = Employee.query.filter(
                 Employee.employment_status == 'Probation',
-                Employee.probation_end_date.isnot(None),
-                Employee.probation_end_date <= cutoff
+                or_(Employee.probation_end_date.is_(None), Employee.probation_end_date <= cutoff)
             ).all()
 
             if not interns and not probationers:
@@ -1091,19 +1089,23 @@ class EmailService:
 
         # Build HTML rows
         def _row(emp, end_date, status_label):
-            days_left = (end_date - today).days
-            if days_left < 0:
+            if end_date is None:
                 row_color = "#fff0f0"  # past — red tint
-                urgency = f'<span style="color:#dc3545;font-weight:bold;">{abs(days_left)} day(s) overdue</span>'
-            elif days_left == 0:
-                row_color = "#fff0f0"
-                urgency = '<span style="color:#dc3545;font-weight:bold;">Today</span>'
+                urgency = f'<span style="color:#dc3545;font-weight:bold;">No end date</span>'
             else:
-                row_color = "#fff8e6"  # upcoming — orange tint
-                urgency = f'<span style="color:#e67e00;font-weight:bold;">In {days_left} day(s)</span>'
+                days_left = (end_date - today).days
+                if days_left < 0:
+                    row_color = "#fff0f0"  # past — red tint
+                    urgency = f'<span style="color:#dc3545;font-weight:bold;">{abs(days_left)} day(s) overdue</span>'
+                elif days_left == 0:
+                    row_color = "#fff0f0"
+                    urgency = '<span style="color:#dc3545;font-weight:bold;">Today</span>'
+                else:
+                    row_color = "#fff8e6"  # upcoming — orange tint
+                    urgency = f'<span style="color:#e67e00;font-weight:bold;">In {days_left} day(s)</span>'
 
-            full_name = f"{emp.first_name} {emp.middle_name or ''} {emp.last_name}".replace("  ", " ").strip()
-            end_str = end_date.strftime('%d-%b-%Y')
+            full_name = f"{emp.first_name} {emp.last_name}".replace("  ", " ").strip()
+            end_str = end_date.strftime('%d-%b-%Y') if end_date else "-"
             return (
                 f'<tr style="background-color:{row_color};">'
                 f'<td width="15%" style="padding:8px;">{emp.employee_id}</td>'
@@ -1129,8 +1131,8 @@ class EmailService:
                 <p>Dear HR Team,</p>
                 <p>
                     The following employees have their <strong>Internship / Probation end date</strong>
-                    within the next <strong>5 days</strong> or it has <strong>already passed</strong>.
-                    Please take the necessary action (confirmation, extension, or separation).
+                    within the next <strong>5 days</strong>, or it has <strong>already passed</strong>, or <strong>no end date is assigned</strong>.
+                    Please take the necessary action.
                 </p>
 
                 <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;">
