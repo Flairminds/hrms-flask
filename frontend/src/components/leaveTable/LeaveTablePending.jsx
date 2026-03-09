@@ -82,7 +82,7 @@ export const LeaveTablePending = ({ isRole }) => {
   useEffect(() => {
     const filtered = myEmployeeData?.filter((emp) => {
       const statusMatch = selectedLeaveStatus.length > 0 ? selectedLeaveStatus.includes(emp.leaveStatus) : true;
-      const nameMatch = selectedEmployeeName.length > 0 ? selectedEmployeeName.includes(emp.empName) : true;
+      const nameMatch = selectedEmployeeName?.length > 0 ? selectedEmployeeName.includes(emp.empName) : true;
       return statusMatch && nameMatch;
     });
     setMyEmployeeFilteredData(filtered);
@@ -142,11 +142,17 @@ export const LeaveTablePending = ({ isRole }) => {
         <div style={{ display: "flex", width: "100%" }}>
           <h5 style={{ paddingTop: "10px", paddingRight: "5px" }} className={styles.heading}>Employee Name :</h5>
           <Select
+            showSearch
+            allowClear
             placeholder="Search"
-            onChange={handleEmployeeNameChange}
+            onChange={(val) => handleEmployeeNameChange(val || '')}
             style={{ width: '60%' }}
+            optionFilterProp="label"
+            filterOption={(input, option) =>
+              option?.label?.toLowerCase().includes(input.toLowerCase())
+            }
             options={employeeNames}
-            value={selectedEmployeeName}
+            value={selectedEmployeeName || undefined}
           />
         </div>
 
