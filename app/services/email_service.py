@@ -10,6 +10,7 @@ This module provides email functionality for:
 All email operations use SMTP with configured credentials.
 """
 
+from app.utils.constants import IgnoreEmployees
 import smtplib
 import collections
 from typing import Dict, Any, List, Optional
@@ -1318,7 +1319,8 @@ class EmailService:
         try:
             # Get all active employees
             active_employees = Employee.query.filter(
-                Employee.employment_status.notin_(['Relieved', 'Absconding'])
+                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS)
             ).all()
 
             if not active_employees:
@@ -1337,6 +1339,7 @@ class EmailService:
                 reviews_by_emp[r.employee_id].append(r)
 
             alerts = []
+            alerts_by_lead = collections.defaultdict(list)
 
             for emp in active_employees:
                 # Use grouped reviews from memory
@@ -1371,14 +1374,19 @@ class EmailService:
                     urgency = "Normal"
 
                 if reason:
-                    alerts.append({
+                    alert_data = {
                         'id': emp.employee_id,
                         'name': f"{emp.first_name} {emp.last_name}".strip(),
+                        'email': emp.email,
                         'joining_date': emp.date_of_joining.strftime('%d-%b-%Y') if emp.date_of_joining else 'N/A',
                         'last_review': max([r.reviewed_date for r in reviews if r.reviewed_date], default=None),
                         'reason': reason,
-                        'urgency': urgency
-                    })
+                        'urgency': urgency,
+                        'team_lead_id': emp.team_lead_id
+                    }
+                    alerts.append(alert_data)
+                    if emp.team_lead_id:
+                        alerts_by_lead[emp.team_lead_id].append(alert_data)
 
             if not alerts:
                 Logger.info("No review status alerts found")
@@ -1403,8 +1411,17 @@ class EmailService:
             Logger.error("SMTP credentials not configured for review alert")
             return False
 
-        # Build HTML Rows
-        rows_html = ""
+        # Gather all Lead emails
+        lead_ids = list(alerts_by_lead.keys())
+        lead_emails = {}
+        if lead_ids:
+            leads = Employee.query.filter(Employee.employee_id.in_(lead_ids)).all()
+            for lead in leads:
+                if lead.email:
+                    lead_emails[lead.employee_id] = lead.email
+
+        # Build HTML Rows for HR Digest
+        rows_html_hr = ""
         for alert in alerts:
             row_color = "#ffffff"
             urgency_style = "color:#333;"
@@ -1420,7 +1437,7 @@ class EmailService:
 
             last_review_str = alert['last_review'].strftime('%d-%b-%Y') if alert['last_review'] else 'Never'
             
-            rows_html += f"""
+            rows_html_hr += f"""
                 <tr style="background-color:{row_color};">
                     <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{alert['id']}</td>
                     <td width="20%" style="padding:8px;border-bottom:1px solid #eee;">{alert['name']}</td>
@@ -1431,55 +1448,138 @@ class EmailService:
             """
 
         styles = EmailService._get_common_styles()
-        header = EmailService._get_email_header("Employee Review Status Digest")
         footer = EmailService._get_email_footer()
-
-        body_content = f"""
-            <div class="content">
-                <p>Dear HR Team,</p>
-                <p>Please find the daily digest of employee review statuses that require attention or are upcoming.</p>
-
-                <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;">
-                    <thead>
-                        <tr style="background-color:#f8f9fa;">
-                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">ID</th>
-                            <th width="20%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Name</th>
-                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Joined</th>
-                            <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Last Review</th>
-                            <th width="35%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Alert / Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows_html}
-                    </tbody>
-                </table>
-
-                <div style="text-align:center;margin-top:25px;">
-                    <a href="https://hrms.flairminds.com/login" class="button">Go to Review Dashboard</a>
-                </div>
-            </div>
-        """
-
-        body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
-        subject = f"HR Alert: Employee Review Status Digest - {today.strftime('%d %b %Y')}"
-
+        
         try:
-            msg = MIMEMultipart()
-            msg['From'] = EmailService._get_from_string(from_address)
-            msg['To'] = ", ".join(recipients)
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'html'))
-
             server = smtplib.SMTP(
                 current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
                 current_app.config.get('MAIL_PORT', 587)
             )
             server.starttls()
             server.login(from_address, from_password)
-            server.sendmail(from_address, recipients, msg.as_string())
+
+            # 1. Send Individual Alerts
+            for alert in alerts:
+                if alert['email'] and alert['email'] not in IgnoreEmployees.IGNORE_FOR_REVIEWS:
+                    header = EmailService._get_email_header("Your Review Status Alert")
+                    body_content = f"""
+                        <div class="content">
+                            <p>Dear {alert['name']},</p>
+                            <p>This is an automated notification regarding your review status.</p>
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #1890ff;">
+                                <p style="margin-top:0;"><strong>Status:</strong> <span style="font-weight:bold;">{alert['reason']}</span></p>
+                            </div>
+                            <p>Please connect with your Lead or HR for further details.</p>
+                        </div>
+                    """
+                    body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+                    msg = MIMEMultipart()
+                    msg['From'] = EmailService._get_from_string(from_address)
+                    msg['To'] = alert['email']
+                    msg['Subject'] = f"Action Required: Employee Review Alert - {alert['name']}"
+                    msg.attach(MIMEText(body, 'html'))
+                    server.sendmail(from_address, [alert['email']], msg.as_string())
+
+            # 2. Send Lead Alerts
+            for lead_id, lead_alerts in alerts_by_lead.items():
+                if lead_id in lead_emails:
+                    lead_email = lead_emails[lead_id]
+                    header = EmailService._get_email_header("Team Review Status Digest")
+                    rows_html_lead = ""
+                    for alert in lead_alerts:
+                        row_color = "#ffffff"
+                        urgency_style = "color:#333;"
+                        if alert['urgency'] == "High":
+                            row_color = "#fff0f0"
+                            urgency_style = "color:#dc3545;font-weight:bold;"
+                        elif alert['urgency'] == "Medium":
+                            row_color = "#fff8e6"
+                            urgency_style = "color:#e67e00;font-weight:bold;"
+                        elif alert['urgency'] == "Normal":
+                            urgency_style = "color:#28a745;font-weight:bold;"
+
+                        last_review_str = alert['last_review'].strftime('%d-%b-%Y') if alert['last_review'] else 'Never'
+                        rows_html_lead += f"""
+                            <tr style="background-color:{row_color};">
+                                <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{alert['id']}</td>
+                                <td width="20%" style="padding:8px;border-bottom:1px solid #eee;">{alert['name']}</td>
+                                <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{alert['joining_date']}</td>
+                                <td width="15%" style="padding:8px;border-bottom:1px solid #eee;">{last_review_str}</td>
+                                <td width="35%" style="padding:8px;border-bottom:1px solid #eee;{urgency_style}">{alert['reason']}</td>
+                            </tr>
+                        """
+                        
+                    body_content = f"""
+                        <div class="content">
+                            <p>Dear Team Lead,</p>
+                            <p>Please find the digest of review statuses for your team members that require attention or are upcoming.</p>
+
+                            <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;">
+                                <thead>
+                                    <tr style="background-color:#f8f9fa;">
+                                        <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">ID</th>
+                                        <th width="20%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Name</th>
+                                        <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Joined</th>
+                                        <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Last Review</th>
+                                        <th width="35%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Alert / Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows_html_lead}
+                                </tbody>
+                            </table>
+
+                            <div style="text-align:center;margin-top:25px;">
+                                <a href="https://hrms.flairminds.com/login" class="button">Go to Review Dashboard</a>
+                            </div>
+                        </div>
+                    """
+                    body = f"<html><head>{styles}</head><body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+                    msg = MIMEMultipart()
+                    msg['From'] = EmailService._get_from_string(from_address)
+                    msg['To'] = lead_email
+                    msg['Subject'] = f"Action Required: Team Review Status Digest - {today.strftime('%d %b %Y')}"
+                    msg.attach(MIMEText(body, 'html'))
+                    server.sendmail(from_address, [lead_email], msg.as_string())
+
+            # 3. Send HR Digest
+            header_hr = EmailService._get_email_header("Employee Review Status Digest")
+            body_content_hr = f"""
+                <div class="content">
+                    <p>Dear HR Team,</p>
+                    <p>Please find the daily digest of employee review statuses that require attention or are upcoming.</p>
+
+                    <table width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;">
+                        <thead>
+                            <tr style="background-color:#f8f9fa;">
+                                <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">ID</th>
+                                <th width="20%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Name</th>
+                                <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Joined</th>
+                                <th width="15%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Last Review</th>
+                                <th width="35%" style="padding:10px;text-align:left;border-bottom:2px solid #dee2e6;">Alert / Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows_html_hr}
+                        </tbody>
+                    </table>
+
+                    <div style="text-align:center;margin-top:25px;">
+                        <a href="https://hrms.flairminds.com/login" class="button">Go to Review Dashboard</a>
+                    </div>
+                </div>
+            """
+            body_hr = f"<html><head>{styles}</head><body><div class='container'>{header_hr}{body_content_hr}{footer}</div></body></html>"
+            msg_hr = MIMEMultipart()
+            msg_hr['From'] = EmailService._get_from_string(from_address)
+            msg_hr['To'] = ", ".join(recipients)
+            msg_hr['Subject'] = f"HR Alert: Employee Review Status Digest - {today.strftime('%d %b %Y')}"
+            msg_hr.attach(MIMEText(body_hr, 'html'))
+            server.sendmail(from_address, recipients, msg_hr.as_string())
+            
             server.quit()
 
-            Logger.info("Review status alert email sent", recipients=len(recipients), alert_count=len(alerts))
+            Logger.info("Review status alert emails sent successfully")
             return True
 
         except smtplib.SMTPException as e:

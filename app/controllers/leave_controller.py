@@ -225,7 +225,7 @@ class LeaveController:
             elif message == "Transaction not found":
                 return jsonify({"Message": message}), 404
             else:
-                return jsonify({"Message": message}), 200  # e.g. "Leave Already Approved"
+                return jsonify({"Message": message}), 406  # e.g. "Leave Already Approved"
                 
         except ValueError as ve:
             Logger.warning("Validation error in update_leave_status", error=str(ve))

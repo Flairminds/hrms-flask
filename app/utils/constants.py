@@ -93,17 +93,30 @@ class EmailConfig:
     # Global CC list for leave notifications
     LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
-    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
+    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com']
 
 class IgnoreEmployees:
     IGNORE_FOR_ATTENDANCE = [
         'hr@flairminds.com', 
         'hasmukh@flairminds.com', 
+        'barun.sharma@flairminds.com',
+        'yogesh.amritkar@flairminds.com',
+        'shrinivas.sarmane@flairminds.com',
+        'shishir.nigam@flairminds.com'
+    ]
+
+    IGNORE_FOR_REVIEWS = [
+        'hr@flairminds.com', 
+        'hasmukh@flairminds.com', 
         'barun.sharma@flairminds.com', 
-        'yogesh.amritkar@flairminds.com'
+        'yogesh.amritkar@flairminds.com',
+        'shrinivas.sarmane@flairminds.com',
+        'shishir.nigam@flairminds.com'
     ]
 
     IGNORE_FOR_PROJECTS = [
         'hr@flairminds.com',
-        'hasmukh@flairminds.com'
+        'hasmukh@flairminds.com',
+        'priyanka.mandale@flairminds.com',
+        'shishir.nigam@flairminds.com'
     ]

@@ -409,6 +409,11 @@ class LeaveTransactionService:
                     send_mail_flag = 2
                     changed_status = LeaveStatus.PARTIAL_APPROVED if status == LeaveStatus.APPROVED else status
                 elif current_status == LeaveStatus.PARTIAL_APPROVED:
+                    approver = Employee.query.filter_by(employee_id = approved_by_id).first()
+                    if not approver:
+                        return 'You are not authorized to approve this leave.', 0
+                    if approver.email != EmailConfig.SECONDARY_LEAVE_APPROVER_EMAIL:
+                        return 'You are not authorized to approve this leave.', 0
                     leave.leave_status = status
                     leave.second_approval_comment = approver_comment
                     leave.second_approval_date = datetime.now()
