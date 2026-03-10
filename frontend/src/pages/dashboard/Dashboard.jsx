@@ -3,7 +3,7 @@ import { Row, Col, List, Typography, Progress, Badge, Avatar, message, Image } f
 import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
 import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
-import { filterUpcomingHolidays } from '../../util/helperFunctions';
+import { convertDate, filterUpcomingHolidays } from '../../util/helperFunctions';
 
 const { Title, Text } = Typography;
 
@@ -119,8 +119,42 @@ export const Dashboard = () => {
     return date.toLocaleDateString("en-US", options).replace(/ /g, " ");
   };
 
-  const recentNotifications = [];
-  const upcomingEvents = [];
+  // Helper function to format birthday text
+  const getBirthdayText = (dateStr) => {
+    if (!dateStr) return '';
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const formatDayMonth = (d) => {
+      const day = d.getDate().toString().padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${day} ${months[d.getMonth()]}`;
+    };
+
+    if (dateStr === formatDayMonth(today)) return 'Celebrating Today 🎉';
+    if (dateStr === formatDayMonth(tomorrow)) return 'Celebrating Tomorrow';
+    return `Celebrating on ${dateStr}`;
+  };
+
+  const recentNotifications = [{
+    title: 'Inviting creative ideas for Annual Day celebration',
+    date: '2026-03-10',
+    desc: `We are excited to announce the upcoming Annual Day celebration! We invite all employees to share their creative ideas for making this year's event a memorable one.`
+  }, {
+    title: 'New canteen vendor',
+    date: '2026-03-09',
+    desc: `Complimentary tea, coffee, and snacks for everyone for today.`
+  }, {
+    title: 'New HRMS version',
+    date: '2026-03-05',
+    desc: `New HRMS version deployed. Contact HR for any issues.`
+  }];
+  const upcomingEvents = [{
+    title: 'Annual Day',
+    date: '2026-04-01',
+    type: 'Work'
+  }];
   const myGoals = [];
 
   return (
@@ -132,15 +166,15 @@ export const Dashboard = () => {
             <List
               dataSource={recentNotifications}
               locale={{ emptyText: 'No recent notifications' }}
-              style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
+              style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto', padding: '0 5px' }}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
                     title={<div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Text strong>{item.title}</Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>{item.time}</Text>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>{convertDate(item.date)}</Text>
                     </div>}
-                    description={item.desc}
+                    description={<Text type="secondary" style={{ fontSize: '12px' }}>{item.desc}</Text>}
                   />
                 </List.Item>
               )}
@@ -159,7 +193,7 @@ export const Dashboard = () => {
                 <List.Item>
                   <List.Item.Meta
                     title={<Text strong>{item.title}</Text>}
-                    description={<Badge status={item.type === 'Work' ? 'processing' : 'warning'} text={item.date} />}
+                    description={<Badge status={item.type === 'Work' ? 'processing' : 'warning'} text={convertDate(item.date)} />}
                   />
                 </List.Item>
               )}
@@ -237,7 +271,7 @@ export const Dashboard = () => {
                     description={
                       <div style={{ fontSize: '12px' }}>
                         <div style={{ marginTop: '2px' }}>
-                          <Text type="secondary" style={{ fontSize: '12px' }}>Celebrating on {item.date}</Text>
+                          <Text type="secondary" style={{ fontSize: '12px' }}>{getBirthdayText(item.date)}</Text>
                         </div>
                       </div>}
                   />
