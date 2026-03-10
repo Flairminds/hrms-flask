@@ -93,7 +93,7 @@ class EmailConfig:
     # Global CC list for leave notifications
     LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
-    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
+    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com']
 
 class IgnoreEmployees:
     IGNORE_FOR_ATTENDANCE = [
