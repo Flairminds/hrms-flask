@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Table, Input, Button, Select, Card, Statistic, Row, Col, Space, Tooltip, message, Progress } from 'antd';
 import { FilePdfOutlined, PlusOutlined, DownloadOutlined, SearchOutlined, UserOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import styles from './EmployeeData.module.css';
-import { CSVLink } from 'react-csv';
 import 'antd/dist/reset.css';
-import DownloadOptionsModal from '../../components/modal/downloadOptionsModal/DownloadOptionsModal';
+import ExportModal from './ExportModal';
 import EmployeeDataAccordion from '../../components/modal/employeeDataAccordian/EmployeeDataAccordion';
 import { getAllEmployeesList, getEmployeeDetails, getEmployeeStats } from '../../services/api';
 import EditEmployeeAccordian from '../../components/modal/employeeDataAccordian/EditEmployeeAccordian';
@@ -17,6 +16,11 @@ const { Search } = Input;
 export const EmployeeData = () => {
   const [employeeData, setEmployeeData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [tableFilters, setTableFilters] = useState({
+    employmentStatus: employmentStatusOptions.filter(status => status !== 'Relieved' && status !== 'Absconding')
+  });
+  const [tableSorter, setTableSorter] = useState({});
   const [stats, setStats] = useState({
     total_active: 0,
     total_interns: 0,
@@ -45,6 +49,45 @@ export const EmployeeData = () => {
     getEmployees();
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    let data = [...filteredData];
+
+    // Apply manual filters mirroring Ant Design internal state
+    if (tableFilters.employmentStatus && tableFilters.employmentStatus.length > 0) {
+      data = data.filter(item => tableFilters.employmentStatus.includes(item.employmentStatus));
+    }
+    if (tableFilters.roleName && tableFilters.roleName.length > 0) {
+      data = data.filter(item => tableFilters.roleName.includes(item.roleName));
+    }
+    if (tableFilters.leaveApprover && tableFilters.leaveApprover.length > 0) {
+      data = data.filter(item => tableFilters.leaveApprover.includes(item.leaveApprover));
+    }
+
+    // Apply manual sorter mirroring Ant Design internal state
+    if (tableSorter.field && tableSorter.order) {
+       if (tableSorter.field === 'employeeId') {
+         data.sort((a, b) => {
+           const res = a.employeeId.localeCompare(b.employeeId);
+           return tableSorter.order === 'descend' ? -res : res;
+         });
+       } else if (tableSorter.field === 'employeeName') {
+         data.sort((a, b) => {
+           const res = (a.employeeName || '').localeCompare(b.employeeName || '');
+           return tableSorter.order === 'descend' ? -res : res;
+         });
+       } else if (tableSorter.field === 'profileScore') {
+         data.sort((a, b) => {
+           const s1 = profileScores[a.employeeId]?.score ?? -1;
+           const s2 = profileScores[b.employeeId]?.score ?? -1;
+           const res = s1 - s2;
+           return tableSorter.order === 'descend' ? -res : res;
+         });
+       }
+    }
+
+    setTableData(data);
+  }, [filteredData, tableFilters, tableSorter, profileScores]);
 
   const fetchStats = async () => {
     try {
@@ -312,7 +355,15 @@ export const EmployeeData = () => {
         rowKey="employeeId"
         loading={loading}
         pagination={paginationConfig}
-        onChange={(pagination, filters, sorter) => setPaginationConfig(pagination)}
+        onChange={(pagination, filters, sorter, extra) => {
+          setPaginationConfig(pagination);
+          setTableFilters(filters || {});
+          if (Array.isArray(sorter)) {
+            setTableSorter(sorter[0] || {});
+          } else {
+            setTableSorter(sorter || {});
+          }
+        }}
         className={styles.empTable}
         onRow={(record) => ({
           onClick: () => handleRowClick(record),
@@ -320,20 +371,10 @@ export const EmployeeData = () => {
         })}
       />
 
-      <DownloadOptionsModal
+      <ExportModal
         visible={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
-        onDownload={() => {
-          // CSV Download Logic - simplified
-          return (
-            <CSVLink
-              data={filteredData}
-              filename={'employee_data.csv'}
-            >
-              <Button>Download CSV</Button>
-            </CSVLink>
-          )
-        }}
+        data={tableData}
       />
 
       {isAccordionVisible && (
