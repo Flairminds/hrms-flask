@@ -142,10 +142,6 @@ export const Dashboard = () => {
     date: '2026-03-10',
     desc: `We are excited to announce the upcoming Annual Day celebration! We invite all employees to share their creative ideas for making this year's event a memorable one.`
   }, {
-    title: 'New canteen vendor',
-    date: '2026-03-09',
-    desc: `Complimentary tea, coffee, and snacks for everyone for today.`
-  }, {
     title: 'New HRMS version',
     date: '2026-03-05',
     desc: `New HRMS version deployed. Contact HR for any issues.`
