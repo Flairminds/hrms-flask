@@ -80,6 +80,7 @@ const EmailNotifications = () => {
             recipients: <>
                 <div>priyanka.mandale@flairminds.com</div>
                 <div>hr@flairminds.com</div>
+                <div>shishir.nigam@flairminds.com</div>
             </>,
             trigger: 'Daily 9:00am - End Date is in 5 days or in past',
         },
@@ -87,10 +88,15 @@ const EmailNotifications = () => {
             key: '8',
             type: 'Employee Review Digest',
             recipients: <>
+                <div>Employee - Individual Review Status</div>
+                <div>Team Lead - Team Review Status</div>
+                <br />
+                <div>All Employees Review Status-</div>
                 <div>priyanka.mandale@flairminds.com</div>
                 <div>hr@flairminds.com</div>
+                <div>shishir.nigam@flairminds.com</div>
             </>,
-            trigger: 'Daily 9:00am - Review Status is pending or not scheduled',
+            trigger: 'Daily 9:00am - Missing (>1 month of joining), no future schedule, or upcoming in 7 days',
         },
         {
             key: '9',
