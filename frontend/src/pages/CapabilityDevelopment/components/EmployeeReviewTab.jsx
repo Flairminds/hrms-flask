@@ -276,8 +276,6 @@ const EmployeeReviewTab = () => {
             <ReviewSummaryModal
                 visible={summaryModalOpen}
                 onClose={() => setSummaryModalOpen(false)}
-                employees={employees}
-                reviews={reviews}
             />
 
             <Modal

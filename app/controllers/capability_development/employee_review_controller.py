@@ -82,3 +82,19 @@ class EmployeeReviewController:
             return jsonify({'message': 'Review not found'}), 404
         except Exception as e:
             return jsonify({'message': str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
+    def get_review_summaries():
+        """Returns review summary data for all employees (HR/Admin/Lead only)."""
+        claims = get_jwt()
+        role = claims.get('role', '').lower()
+        if role not in ['admin', 'hr', 'lead']:
+            return jsonify({'message': 'Unauthorized'}), 403
+
+        try:
+            summaries = EmployeeReviewService.get_review_summaries()
+            return jsonify(summaries), 200
+        except Exception as e:
+            Logger.error(f"Error getting review summaries: {str(e)}")
+            return jsonify({'message': 'Error fetching review summaries'}), 500

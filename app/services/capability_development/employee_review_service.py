@@ -1,7 +1,9 @@
+from app.utils.constants import ActiveEmployees, IgnoreEmployees
 from ...models.capability_development import EmployeeReview, db
 from sqlalchemy.exc import SQLAlchemyError
 from ...utils.logger import Logger
 from datetime import datetime
+from sqlalchemy import and_, or_, case, func
 
 class EmployeeReviewService:
     @staticmethod
@@ -137,4 +139,119 @@ class EmployeeReviewService:
         except Exception as e:
             db.session.rollback()
             Logger.error("Error deleting review", error=str(e))
+            raise e
+
+    @staticmethod
+    def get_review_summaries():
+        """
+        Returns review summary data for all employees.
+        Includes last review date, time since, next schedule, and pending scheduled reviews.
+        """
+        try:
+            from ...models.hr import Employee
+            from datetime import date, timedelta
+            from sqlalchemy import literal, text
+
+            # Subquery: last completed review per employee
+            last_completed = db.session.query(
+                EmployeeReview.employee_id,
+                func.max(EmployeeReview.reviewed_date).label('last_reviewed_date')
+            ).filter(
+                EmployeeReview.status == 'Reviewed',
+                EmployeeReview.reviewed_date.isnot(None)
+            ).group_by(EmployeeReview.employee_id).subquery()
+
+            # Subquery: next pending review per employee
+            next_pending = db.session.query(
+                EmployeeReview.employee_id,
+                func.min(EmployeeReview.review_date).label('next_pending_date')
+            ).filter(
+                EmployeeReview.status.in_(['Pending', 'Scheduled']),
+                EmployeeReview.review_date >= date.today()
+            ).group_by(EmployeeReview.employee_id).subquery()
+
+            # Main query
+            results = db.session.query(
+                Employee.employee_id,
+                (Employee.first_name + ' ' + Employee.last_name).label('employeeName'),
+                Employee.employment_status,
+                Employee.date_of_joining,
+                last_completed.c.last_reviewed_date,
+                next_pending.c.next_pending_date
+            ).outerjoin(
+                last_completed,
+                Employee.employee_id == last_completed.c.employee_id
+            ).outerjoin(
+                next_pending,
+                Employee.employee_id == next_pending.c.employee_id
+            ).filter(
+                Employee.employment_status.notin_(ActiveEmployees.STATUS_NOT_IN_FOR_REVIEW),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS)
+            ).order_by(Employee.first_name).all()
+
+            summaries = []
+            today = date.today()
+
+            for r in results:
+                # Time since last review
+                time_since = '-'
+                if r.last_reviewed_date:
+                    months = (today.year - r.last_reviewed_date.year) * 12 + (today.month - r.last_reviewed_date.month)
+                    if today.day < r.last_reviewed_date.day:
+                        months -= 1
+                    days = (today - r.last_reviewed_date).days % 30
+                    if months > 0:
+                        time_since = f"{months}m {days}d"
+                    else:
+                        time_since = f"{days}d"
+
+                # Next schedule logic
+                next_schedule = '-'
+                joining_date = r.date_of_joining
+
+                if not r.last_reviewed_date:
+                    if joining_date:
+                        one_month_mark = joining_date + timedelta(days=30)
+                        if today > one_month_mark:
+                            next_schedule = (today + timedelta(days=5)).isoformat()
+                        else:
+                            next_schedule = one_month_mark.isoformat()
+                else:
+                    status = r.employment_status
+                    if status in ('Intern', 'Probation'):
+                        if joining_date:
+                            months_diff = (today.year - joining_date.year) * 12 + (today.month - joining_date.month)
+                            target = joining_date + timedelta(days=30 * months_diff)
+                            if target <= today:
+                                target += timedelta(days=30)
+                            next_schedule = target.isoformat()
+                    elif status == 'Confirmed':
+                        quarters = [
+                            date(today.year, 4, 25),
+                            date(today.year, 7, 25),
+                            date(today.year, 10, 25),
+                            date(today.year, 1, 25)
+                        ]
+                        target = next((q for q in quarters if q > today), None)
+                        if not target:
+                            target = date(today.year + 1, 4, 25)
+                        next_schedule = target.isoformat()
+                    else:
+                        next_schedule = 'N/A'
+
+                summaries.append({
+                    'employeeId': r.employee_id,
+                    'employeeName': r.employeeName,
+                    'status': r.employment_status,
+                    'joiningDate': r.date_of_joining.isoformat() if r.date_of_joining else None,
+                    'lastReviewDate': r.last_reviewed_date.isoformat() if r.last_reviewed_date else None,
+                    'timeSince': time_since,
+                    'nextSchedule': next_schedule,
+                    'scheduledPending': r.next_pending_date.isoformat() if r.next_pending_date else None
+                })
+
+            return summaries
+
+        except Exception as e:
+            Logger.error("Error fetching review summaries", error=str(e))
             raise e
