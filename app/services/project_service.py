@@ -40,7 +40,7 @@ class ProjectService:
                 Project.project_status,
                 Project.lead_by,
                 Project.contractual_allocation,
-                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('lead_name'),
+                func.concat(Employee.first_name, ' ', Employee.last_name).label('lead_name'),
                 func.coalesce(total_alloc_subq.c.total_allocation, 0).label('total_allocation'),
                 func.coalesce(billable_alloc_subq.c.billable_allocation, 0).label('billable_allocation')
             ).outerjoin(
