@@ -44,6 +44,7 @@ class EmployeeStatus:
     ABSCONDING = 'Absconding'
     PROBATION = 'Probation'
     INTERN = 'Intern'
+    LEAVE_WITHOUT_PAY = 'Leave Without Pay'
 
 class Roles:
     ADMIN = 'Admin'
@@ -80,6 +81,9 @@ class LeaveConfiguration:
         'monthly_deduction': 3,
     }
 
+class ActiveEmployees:
+    STATUS_NOT_IN = ['Relieved', 'Absconding']
+    STATUS_NOT_IN_FOR_REVIEW = ['Relieved', 'Absconding', 'Leave Without Pay']
 
 class EmailConfig:
     """Email service configuration constants."""

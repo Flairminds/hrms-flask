@@ -26,7 +26,7 @@ from .. import db
 from ..models.hr import Employee, MasterSubRole
 from ..models.leave import LeaveTransaction, MasterLeaveTypes
 from ..utils.logger import Logger
-from ..utils.constants import LeaveStatus, LeaveTypeID, EmailConfig
+from ..utils.constants import LeaveStatus, LeaveTypeID, EmailConfig, ActiveEmployees
 
 
 class EmailService:
@@ -1313,14 +1313,16 @@ class EmailService:
         # IST today
         today_datetime = datetime.utcnow() + timedelta(hours=5, minutes=30)
         today = today_datetime.date()
+        two_weeks_ago = today - timedelta(days=15)
         one_month_ago = today - timedelta(days=30)
         next_week = today + timedelta(days=7)
 
         try:
             # Get all active employees
             active_employees = Employee.query.filter(
-                Employee.employment_status.notin_(['Relieved', 'Absconding']),
-                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS)
+                Employee.employment_status.notin_(ActiveEmployees.STATUS_NOT_IN_FOR_REVIEW),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS),
+                Employee.date_of_joining <= two_weeks_ago
             ).all()
 
             if not active_employees:

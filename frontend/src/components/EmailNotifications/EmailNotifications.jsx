@@ -96,7 +96,7 @@ const EmailNotifications = () => {
                 <div>hr@flairminds.com</div>
                 <div>shishir.nigam@flairminds.com</div>
             </>,
-            trigger: 'Daily 9:00am - Missing (>1 month of joining), no future schedule, or upcoming in 7 days',
+            trigger: 'Daily 9:00am - Missing (>1 month of joining), no future schedule of review, or upcoming in 7 days; employee status is Intern, Probation, Confirmed; joined more than 2 weeks ago; only for full time employees',
         },
         {
             key: '9',
