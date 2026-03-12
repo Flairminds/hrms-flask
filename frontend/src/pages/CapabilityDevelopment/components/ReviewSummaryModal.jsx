@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Modal, Table, Button, Tag, Typography, Spin } from 'antd';
+import { Modal, Table, Button, Tag, Typography, Spin, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { convertDate } from '../../../util/helperFunctions';
 import { employmentStatusOptions } from '../../../util/helper';
@@ -10,6 +11,7 @@ const { Text } = Typography;
 const ReviewSummaryModal = ({ visible, onClose }) => {
     const [summaries, setSummaries] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [searchText, setSearchText] = useState('');
 
     useEffect(() => {
         if (visible) {
@@ -24,6 +26,17 @@ const ReviewSummaryModal = ({ visible, onClose }) => {
                 .finally(() => setLoading(false));
         }
     }, [visible]);
+
+    // Filter summaries based on search text
+    const filteredSummaries = useMemo(() => {
+        if (!searchText.trim()) return summaries;
+        
+        const searchLower = searchText.toLowerCase();
+        return summaries.filter(summary => 
+            summary.employeeName?.toLowerCase().includes(searchLower) ||
+            summary.employeeId?.toLowerCase().includes(searchLower)
+        );
+    }, [summaries, searchText]);
 
     const columns = useMemo(() => [
         {
@@ -58,6 +71,18 @@ const ReviewSummaryModal = ({ visible, onClose }) => {
                 if (!b.joiningDate) return 1;
                 return dayjs(a.joiningDate).diff(dayjs(b.joiningDate));
             }
+        },
+        {
+            title: 'Lead/Manager',
+            dataIndex: 'teamLeadName',
+            key: 'teamLeadName',
+            render: (name) => name || '-'
+        },
+        {
+            title: 'Project Leads',
+            dataIndex: 'projectLeadNames',
+            key: 'projectLeadNames',
+            render: (names) => names || '-'
         },
         {
             title: 'Last Reviewed',
@@ -120,15 +145,28 @@ const ReviewSummaryModal = ({ visible, onClose }) => {
             title="Review Summary & Schedule"
             open={visible}
             onCancel={onClose}
-            width={1000}
+            width={1200}
             footer={null}
             style={{ top: 15 }}
         >
+            <p>
+                <div>Showing Lead/Manager and Project Leads for past 3 months.</div>
+                <div>'Next Review By' date is a suggestion by the system based on past reviews.</div>
+            </p>
+            <div style={{ marginBottom: 16 }}>
+                <Input
+                    placeholder="Search by employee name or ID..."
+                    prefix={<SearchOutlined />}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    allowClear
+                />
+            </div>
             <Table
                 columns={columns}
-                dataSource={summaries}
+                dataSource={filteredSummaries}
                 loading={loading}
-                pagination={{ pageSize: 12 }}
+                pagination={{ pageSize: 10 }}
                 scroll={{ x: true }}
                 size="small"
                 rowKey="employeeId"

@@ -1,9 +1,12 @@
 from app.utils.constants import ActiveEmployees, IgnoreEmployees
 from ...models.capability_development import EmployeeReview, db
+from ...models.hr import Employee, Project, ProjectAllocation, ProjectAllocationHistory, EmployeeHistory
 from sqlalchemy.exc import SQLAlchemyError
 from ...utils.logger import Logger
-from datetime import datetime
-from sqlalchemy import and_, or_, case, func
+from datetime import datetime, date, timedelta
+from sqlalchemy import and_, or_, case, func, distinct
+from sqlalchemy.orm import aliased
+from sqlalchemy.dialects.postgresql import array
 
 class EmployeeReviewService:
     @staticmethod
@@ -145,12 +148,15 @@ class EmployeeReviewService:
     def get_review_summaries():
         """
         Returns review summary data for all employees.
-        Includes last review date, time since, next schedule, and pending scheduled reviews.
+        Includes last review date, time since, next schedule, pending scheduled reviews,
+        and team lead/project lead names for past 3 months.
         """
         try:
-            from ...models.hr import Employee
             from datetime import date, timedelta
             from sqlalchemy import literal, text
+
+            # Date range for past 3 months
+            three_months_ago = date.today() - timedelta(days=90)
 
             # Subquery: last completed review per employee
             last_completed = db.session.query(
@@ -170,6 +176,85 @@ class EmployeeReviewService:
                 EmployeeReview.review_date >= date.today()
             ).group_by(EmployeeReview.employee_id).subquery()
 
+            # Subquery: team leads for past 3 months
+            Lead = aliased(Employee)
+
+            past_team_leads = (
+                db.session.query(
+                    EmployeeHistory.employee_id,
+                    func.array_agg(
+                        distinct(EmployeeHistory.team_lead_id)
+                    ).label("past_team_lead_ids")
+                )
+                .filter(
+                    EmployeeHistory.operation_timestamp >= three_months_ago,
+                    EmployeeHistory.team_lead_id.isnot(None)
+                )
+                .group_by(EmployeeHistory.employee_id)
+            ).subquery()
+
+            team_leads = (
+                db.session.query(
+                    Employee.employee_id,
+                    func.array_agg(
+                        distinct(Lead.first_name + ' ' + Lead.last_name)
+                    ).label("team_lead_names")
+                )
+                .select_from(Employee)
+                .outerjoin(
+                    past_team_leads,
+                    past_team_leads.c.employee_id == Employee.employee_id
+                )
+                .outerjoin(
+                    Lead,
+                    Lead.employee_id == func.any(
+                        func.array_remove(
+                            func.array_cat(
+                                array([Employee.team_lead_id]),
+                                past_team_leads.c.past_team_lead_ids
+                            ),
+                            None
+                        )
+                    )
+                )
+                .group_by(Employee.employee_id)
+            ).subquery()
+
+            # Subquery: project leads for past 3 months
+            project_leads = (
+                db.session.query(
+                    ProjectAllocationHistory.employee_id,
+                    func.array_agg(
+                        distinct(
+                            case(
+                                (
+                                    func.concat(Lead.first_name, ' ', Lead.last_name) != func.concat(Employee.first_name, ' ', Employee.last_name),
+                                    func.concat(Lead.first_name, ' ', Lead.last_name)
+                                ),
+                                else_=None
+                            )
+                        )
+                    ).label("project_lead_names")
+                )
+                .join(
+                    Project,
+                    ProjectAllocationHistory.project_id == Project.project_id
+                )
+                .join(
+                    Lead,
+                    Project.lead_by == Lead.employee_id
+                )
+                .join(
+                    Employee,
+                    ProjectAllocationHistory.employee_id == Employee.employee_id
+                )
+                .filter(
+                    ProjectAllocationHistory.modified_on >= three_months_ago,
+                    Project.lead_by.isnot(None)
+                )
+                .group_by(ProjectAllocationHistory.employee_id)
+            ).subquery()
+
             # Main query
             results = db.session.query(
                 Employee.employee_id,
@@ -177,13 +262,21 @@ class EmployeeReviewService:
                 Employee.employment_status,
                 Employee.date_of_joining,
                 last_completed.c.last_reviewed_date,
-                next_pending.c.next_pending_date
+                next_pending.c.next_pending_date,
+                team_leads.c.team_lead_names,
+                project_leads.c.project_lead_names
             ).outerjoin(
                 last_completed,
                 Employee.employee_id == last_completed.c.employee_id
             ).outerjoin(
                 next_pending,
                 Employee.employee_id == next_pending.c.employee_id
+            ).outerjoin(
+                team_leads,
+                Employee.employee_id == team_leads.c.employee_id
+            ).outerjoin(
+                project_leads,
+                Employee.employee_id == project_leads.c.employee_id
             ).filter(
                 Employee.employment_status.notin_(ActiveEmployees.STATUS_NOT_IN_FOR_REVIEW),
                 Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS)
@@ -239,6 +332,12 @@ class EmployeeReviewService:
                     else:
                         next_schedule = 'N/A'
 
+                # Process project leads array
+                project_lead_names = []
+                if r.project_lead_names:
+                    # Filter out None values and deduplicate
+                    project_lead_names = list(set([name for name in r.project_lead_names if name]))
+
                 summaries.append({
                     'employeeId': r.employee_id,
                     'employeeName': r.employeeName,
@@ -247,7 +346,9 @@ class EmployeeReviewService:
                     'lastReviewDate': r.last_reviewed_date.isoformat() if r.last_reviewed_date else None,
                     'timeSince': time_since,
                     'nextSchedule': next_schedule,
-                    'scheduledPending': r.next_pending_date.isoformat() if r.next_pending_date else None
+                    'scheduledPending': r.next_pending_date.isoformat() if r.next_pending_date else None,
+                    'teamLeadName': ', '.join(r.team_lead_names) if r.team_lead_names else '-',
+                    'projectLeadNames': ', '.join(project_lead_names) if project_lead_names else '-'
                 })
 
             return summaries
