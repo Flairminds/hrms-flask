@@ -6,6 +6,7 @@ import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import EmployeeAllocations from './EmployeeAllocations.jsx';
 import MyProjectsTeam from './MyProjectsTeam.jsx';
+import { convertDate } from '../../util/helperFunctions.jsx';
 
 const Projects = () => {
     const { user } = useAuth();
@@ -127,30 +128,30 @@ const Projects = () => {
             title: 'Dates',
             render: (_, record) => (
                 <small>
-                    Start: {record.start_date || 'N/A'} <br />
-                    End: {record.end_date || 'N/A'}
+                    Start: {record.start_date ? convertDate(record.start_date) : 'N/A'} <br />
+                    End: {record.end_date ? convertDate(record.end_date) : 'N/A'}
                 </small>
             )
         },
+        // {
+        //     title: 'Description',
+        //     dataIndex: 'description',
+        //     ellipsis: true,
+        // },
         {
-            title: 'Description',
-            dataIndex: 'description',
-            ellipsis: true,
-        },
-        {
-            title: 'Total Allocation',
+            title: <span>Total<br/>Allocation</span>,
             dataIndex: 'total_allocation',
-            render: (total) => <>{total / 100 || 0}</>,
+            render: (total, record) => <span style={{color: total / 100 > record.contractual_allocation ? 'red' : 'black'}}>{total / 100 || 0}</span>,
             sorter: (a, b) => (a.total_allocation || 0) - (b.total_allocation || 0),
         },
         {
-            title: 'Billable Allocation',
+            title: <span>Billable<br/>Allocation</span>,
             dataIndex: 'billable_allocation',
             render: (total) => <>{total / 100 || 0}</>,
             sorter: (a, b) => (a.billable_allocation || 0) - (b.billable_allocation || 0),
         },
         {
-            title: 'Contractual Allocation',
+            title: <span>Contractual<br/>Allocation</span>,
             dataIndex: 'contractual_allocation',
             render: (val) => <>{val || 0}</>,
             sorter: (a, b) => (a.contractual_allocation || 0) - (b.contractual_allocation || 0),
@@ -191,60 +192,9 @@ const Projects = () => {
             <Tabs defaultActiveKey="1">
                 <Tabs.TabPane tab="Projects" key="1">
 
-                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                        <Col xs={24} sm={24} md={10}>
-                            <Card bordered={false}>
-                                <Row gutter={16}>
-                                    <Col span={8}>
-                                        <Statistic
-                                            title="Allocation"
-                                            value={stats.total_allocation}
-                                            precision={1}
-                                            suffix={`/ ${stats.total_employees}`}
-                                            prefix={<TeamOutlined />}
-                                        />
-                                        <Progress
-                                            percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
-                                            size="small"
-                                            status="active"
-                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                        />
-                                    </Col>
-                                    <Col span={8}>
-                                        <Statistic
-                                            title="Billable"
-                                            value={stats.billable_allocation}
-                                            precision={1}
-                                            suffix={`/ ${stats.total_allocation}`}
-                                            prefix={<TeamOutlined />}
-                                        />
-                                        <Progress
-                                            percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
-                                            size="small"
-                                            status="active"
-                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                        />
-                                    </Col>
-                                    <Col span={8}>
-                                        <Statistic
-                                            title="Billable (total)"
-                                            value={stats.billable_allocation}
-                                            precision={1}
-                                            suffix={`/ ${stats.total_employees}`}
-                                            prefix={<TeamOutlined />}
-                                        />
-                                        <Progress
-                                            percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
-                                            size="small"
-                                            status="active"
-                                            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                        />
-                                    </Col>
-                                </Row>
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24, alignItems: 'center' }}>
+                        <Col xs={24} sm={4} md={4}>
+                            <Card bordered={false} size='small'>
                                 <Statistic
                                     title="Active Projects"
                                     value={stats.active_projects}
@@ -253,8 +203,8 @@ const Projects = () => {
                                 />
                             </Card>
                         </Col>
-                        <Col xs={24} sm={8} md={5}>
-                            <Card bordered={false}>
+                        <Col xs={24} sm={4} md={4}>
+                            <Card bordered={false} size='small'>
                                 <Statistic
                                     title="Prospective Projects"
                                     value={stats.prospective_projects}
@@ -302,7 +252,7 @@ const Projects = () => {
                     />
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Employee Allocations" key="2">
-                    <EmployeeAllocations />
+                    <EmployeeAllocations stats={stats} />
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="My Projects & Team" key="3">
                     <MyProjectsTeam />

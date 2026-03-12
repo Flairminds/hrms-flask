@@ -1309,6 +1309,9 @@ export const deleteEmployeeReview = (reviewId) =>
 export const getAllEmployees = () =>
   axiosInstance.get(`${API_BASE_URL}/hr/get-all-employees`);
 
+export const getReviewSummaries = () =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/employee-review/summaries`);
+
 // ── Capability Groups ──────────────────────────────────────────────
 // Master groups — HR/Admin only
 export const getCapabilityGroups = () =>

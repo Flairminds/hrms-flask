@@ -18,3 +18,7 @@ def update_review(review_id):
 @employee_review_bp.route('/<int:review_id>', methods=['DELETE'])
 def delete_review(review_id):
     return EmployeeReviewController.delete_review(review_id)
+
+@employee_review_bp.route('/summaries', methods=['GET'])
+def get_review_summaries():
+    return EmployeeReviewController.get_review_summaries()

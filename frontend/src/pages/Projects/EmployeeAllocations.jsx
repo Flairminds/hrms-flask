@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip } from 'antd';
-import { SearchOutlined, CopyOutlined } from '@ant-design/icons';
+import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress } from 'antd';
+import { SearchOutlined, CopyOutlined, TeamOutlined } from '@ant-design/icons';
 import { getEmployeeAllocations } from '../../services/api';
 
-const EmployeeAllocations = () => {
+const EmployeeAllocations = ({ stats }) => {
     const [employeeAllocations, setEmployeeAllocations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [employeeSearchText, setEmployeeSearchText] = useState('');
     const [allocationFilter, setAllocationFilter] = useState(null);
+    const [billableAllocationFilter, setBillableAllocationFilter] = useState(null);
 
     useEffect(() => {
         fetchEmployeeAllocations();
@@ -27,8 +28,9 @@ const EmployeeAllocations = () => {
 
     const filteredData = employeeAllocations.filter(emp => {
         const matchesName = !employeeSearchText || emp.employee_name.toLowerCase().includes(employeeSearchText.toLowerCase());
-        const matchesAllocation = allocationFilter === null || emp.total_allocation < allocationFilter;
-        return matchesName && matchesAllocation;
+        const matchesAllocation = allocationFilter === null || emp.total_allocation <= allocationFilter;
+        const matchesBillableAllocation = billableAllocationFilter === null || emp.billable_allocation <= billableAllocationFilter;
+        return matchesName && matchesAllocation && matchesBillableAllocation;
     });
 
     const columns = [
@@ -105,8 +107,61 @@ const EmployeeAllocations = () => {
     return (
         <div>
             {/* <h2 style={{ marginBottom: 24 }}>Employee Allocations Overview</h2> */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={24} md={10}>
+                    <Card bordered={false} size='small'>
+                        <Row gutter={16}>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Allocation"
+                                    value={stats.total_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_employees}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                />
+                            </Col>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Billable"
+                                    value={stats.billable_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_allocation}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                />
+                            </Col>
+                            <Col span={8}>
+                                <Statistic
+                                    title="Billable (total)"
+                                    value={stats.billable_allocation}
+                                    precision={1}
+                                    suffix={`/ ${stats.total_employees}`}
+                                    prefix={<TeamOutlined />}
+                                />
+                                <Progress
+                                    percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
+                                    size="small"
+                                    status="active"
+                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                />
+                            </Col>
+                        </Row>
+                    </Card>
+                </Col>
+            </Row>
             <Card>
-                <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Input
                         placeholder="Search by employee name..."
                         prefix={<SearchOutlined />}
@@ -114,13 +169,22 @@ const EmployeeAllocations = () => {
                         onChange={e => setEmployeeSearchText(e.target.value)}
                         style={{ width: '100%', maxWidth: 300 }}
                     />
+                    <div>Filter:</div>
                     <Button
                         type={allocationFilter === 0.5 ? 'primary' : 'default'}
                         onClick={() => setAllocationFilter(allocationFilter === 0.5 ? null : 0.5)}
                     >
-                        Show allocations less than 0.5
+                        {`Total allocation <= 0.5`}
+                    </Button>
+                    <Button
+                        type={billableAllocationFilter === 0.5 ? 'primary' : 'default'}
+                        onClick={() => setBillableAllocationFilter(billableAllocationFilter === 0.5 ? null : 0.5)}
+                    >
+                        {`Billable allocation <= 0.5`}
                     </Button>
                 </div>
+
+                {filteredData.length} employees
 
                 <Table
                     columns={columns}
