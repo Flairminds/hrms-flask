@@ -4,6 +4,7 @@ import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOu
 import WidgetCard from '../../components/common/WidgetCard';
 import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
 import { convertDate, filterUpcomingHolidays } from '../../util/helperFunctions';
+import { fetchNotifications, fetchEvents } from '../../services/googleSheets';
 
 const { Title, Text } = Typography;
 
@@ -30,6 +31,14 @@ export const Dashboard = () => {
   // State for people on leave
   const [peopleOnLeave, setPeopleOnLeave] = useState([]);
   const [loadingPeopleOnLeave, setLoadingPeopleOnLeave] = useState(true);
+
+  // State for notifications (from Google Sheets)
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
+
+  // State for upcoming events (from Google Sheets)
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -99,10 +108,42 @@ export const Dashboard = () => {
       }
     };
 
+    const fetchNotificationsData = async () => {
+      try {
+        setLoadingNotifications(true);
+        const result = await fetchNotifications();
+        setNotifications(result.data);
+        if (!result.success) {
+          console.warn('Notifications fetch warning:', result.message);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    const fetchEventsData = async () => {
+      try {
+        setLoadingEvents(true);
+        const result = await fetchEvents();
+        setEvents(result.data);
+        if (!result.success) {
+          console.warn('Events fetch warning:', result.message);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+
     fetchNewJoinees();
     fetchHolidayData();
     fetchBirthdayData();
     fetchPeopleOnLeave();
+    fetchNotificationsData();
+    fetchEventsData();
   }, []);
 
   // Helper function to format date from DD-MM-YYYY to readable format
@@ -137,30 +178,17 @@ export const Dashboard = () => {
     return `Celebrating on ${dateStr}`;
   };
 
-  const recentNotifications = [{
-    title: 'Inviting creative ideas for Annual Day celebration',
-    date: '2026-03-10',
-    desc: `We are excited to announce the upcoming Annual Day celebration! We invite all employees to share their creative ideas for making this year's event a memorable one.`
-  }, {
-    title: 'New HRMS version',
-    date: '2026-03-05',
-    desc: `New HRMS version deployed. Contact HR for any issues.`
-  }];
-  const upcomingEvents = [{
-    title: 'Annual Day',
-    date: '2026-04-01',
-    type: 'Work'
-  }];
   const myGoals = [];
 
   return (
     <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
       <Row gutter={[16, 16]}>
-        {/* Recent Notifications */}
+        {/* Recent Notifications (Google Sheets) */}
         <Col xs={24} lg={16} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
           <WidgetCard title="Recent Notifications" icon={<BellOutlined />} iconColor="#f5222d">
             <List
-              dataSource={recentNotifications}
+              loading={loadingNotifications}
+              dataSource={notifications}
               locale={{ emptyText: 'No recent notifications' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto', padding: '0 5px' }}
               renderItem={item => (
@@ -178,11 +206,12 @@ export const Dashboard = () => {
           </WidgetCard>
         </Col>
 
-        {/* Upcoming Events */}
+        {/* Upcoming Events (Google Sheets) */}
         <Col xs={24} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
           <WidgetCard title="Upcoming Events" icon={<CalendarOutlined />} iconColor="#1890ff">
             <List
-              dataSource={upcomingEvents}
+              loading={loadingEvents}
+              dataSource={events}
               locale={{ emptyText: 'No upcoming events' }}
               style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
               renderItem={item => (
