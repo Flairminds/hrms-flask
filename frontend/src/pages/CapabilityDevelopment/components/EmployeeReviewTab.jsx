@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Button, Modal, Form, Input, DatePicker, Select, Space,
-    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty, Row, Col
+    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty, Row, Col, Card, Statistic
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
@@ -13,8 +13,11 @@ import {
     getAllEmployees
 } from '../../../services/api';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
 import ReviewSummaryModal from './ReviewSummaryModal';
 import { convertDate } from '../../../util/helperFunctions';
+
+dayjs.extend(isBetween);
 
 const { Text, Title, Link } = Typography;
 const { Option } = Select;
@@ -125,17 +128,6 @@ const EmployeeReviewTab = () => {
         if (!search.trim()) return reviews;
         const q = search.toLowerCase();
         return reviews.filter(r => {
-            // Find employee name from employees list if available, or use cached name if provided by backend (backend provides ID usually)
-            // Backend response has employee_id. We need name.
-            // Wait, backend response: 
-            // 'employee_id': r.employee_id
-            // It doesn't fetch name eagerly unless implementation changed. 
-            // employee list matches ID to name.
-
-            // For employee view, they know their name.
-            // For HR view, we need names.
-
-            // Let's assume we map ID to name using `employees` list.
             return (
                 r.employee_name.toLowerCase().includes(q) ||
                 (r.review_comment && r.review_comment.toLowerCase().includes(q)) ||
@@ -143,6 +135,30 @@ const EmployeeReviewTab = () => {
             );
         });
     }, [reviews, search, employees]);
+
+    // Calculate monthly stats
+    const monthlyStats = useMemo(() => {
+        const currentMonth = dayjs().startOf('month');
+        const currentMonthEnd = dayjs().endOf('month');
+
+        const pending = reviews.filter(r => 
+            r.status === 'Pending' && 
+            dayjs(r.review_date).isBetween(currentMonth, currentMonthEnd, null, '[]')
+        ).length;
+
+        const scheduled = reviews.filter(r => 
+            r.status === 'Scheduled' && 
+            dayjs(r.review_date).isBetween(currentMonth, currentMonthEnd, null, '[]')
+        ).length;
+
+        const completed = reviews.filter(r => 
+            r.status === 'Reviewed' && 
+            r.reviewed_date && 
+            dayjs(r.reviewed_date).isBetween(currentMonth, currentMonthEnd, null, '[]')
+        ).length;
+
+        return { pending, scheduled, completed };
+    }, [reviews]);
 
     // Columns
     const columns = [
@@ -188,7 +204,13 @@ const EmployeeReviewTab = () => {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: status => <Tag color={STATUS_COLOR[status] || 'default'}>{status}</Tag>
+            render: status => <Tag color={STATUS_COLOR[status] || 'default'}>{status}</Tag>,
+            filters: [...new Set(reviews.map(e => e.status).filter(Boolean))].map(s => ({ text: s, value: s })),
+            onFilter: (value, record) => {
+                const emp = reviews.find(e => e.status === record.status);
+                return emp?.status === value;
+            },
+            defaultFilteredValue: ['Pending']
         },
         {
             title: 'Comments',
@@ -242,15 +264,22 @@ const EmployeeReviewTab = () => {
             <p>
                 Reviews to be done monthly for Interns and Probationers, and quarterly for Confirmed employees.
             </p>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 <Space>
-                    <Input
+                    {/* <Input
                         placeholder="Search..."
                         prefix={<SearchOutlined />}
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         style={{ width: '100%', maxWidth: 250 }}
-                    />
+                    /> */}
+                    <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
+                        <div>This month:</div>
+                        <div style={{background: 'white', padding: '12px', borderRadius: '12px'}}><span style={{fontSize: 'larger', fontWeight: '600', color: 'red'}}>{monthlyStats.pending}</span> pending</div>
+                        <div style={{background: 'white', padding: '12px', borderRadius: '12px'}}><span style={{fontSize: 'larger', fontWeight: '600', color: 'orange'}}>{monthlyStats.scheduled}</span> scheduled</div>
+                        <div style={{background: 'white', padding: '12px', borderRadius: '12px'}}><span style={{fontSize: 'larger', fontWeight: '600', color: 'green'}}>{monthlyStats.completed}</span> completed</div>
+                    </div>
                 </Space>
                 {canManage && (
                     <Space>
