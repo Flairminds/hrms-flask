@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Card, message, Tag, Tooltip } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { getMyProjectsTeam } from '../../services/api';
+import { convertDate } from '../../util/helperFunctions';
 
 const MyProjectsTeam = () => {
     const [projects, setProjects] = useState([]);
@@ -71,10 +72,24 @@ const MyProjectsTeam = () => {
             },
             { title: 'Role', dataIndex: 'role', key: 'role' },
             {
+                title: 'Start Date',
+                dataIndex: 'start_date',
+                key: 'start_date',
+                render: (val) => convertDate(val),
+                sorter: (a, b) => new Date(a.start_date) - new Date(b.start_date),
+                defaultSortOrder: 'ascend',
+            },
+            {
                 title: 'Allocation %',
                 dataIndex: 'allocation',
                 key: 'allocation',
                 render: (val) => `${val}%`
+            },
+            {
+                title: 'Billing',
+                dataIndex: 'is_billing',
+                key: 'is_billing',
+                render: (val) => val ? <Tag color="green">Yes</Tag> : <Tag color="red">No</Tag>
             }
         ];
 
