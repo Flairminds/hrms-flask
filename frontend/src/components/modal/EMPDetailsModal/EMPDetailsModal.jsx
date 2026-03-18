@@ -146,6 +146,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         employmentStatus: personalEmployeeDetails.employmentStatus,
         internshipEndDate: personalEmployeeDetails.internshipEndDate ? dayjs(personalEmployeeDetails.internshipEndDate, 'DD MMM YYYY') : null,
         probationEndDate: personalEmployeeDetails.probationEndDate ? dayjs(personalEmployeeDetails.probationEndDate, 'DD MMM YYYY') : null,
+        lwd: personalEmployeeDetails.lwd ? dayjs(personalEmployeeDetails.lwd, 'DD MMM YYYY') : null,
         teamLeadId: personalEmployeeDetails.teamLeadId,
         emergencyContactPerson: personalEmployeeDetails.emergencyContactPerson,
         emergencyContactRelation: personalEmployeeDetails.emergencyContactRelation,
@@ -227,6 +228,14 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+
+      // Validate: lwd is required when status is Relieved or Absconding
+      const status = values.employmentStatus;
+      if ((status === 'Relieved' || status === 'Absconding') && !values.lwd) {
+        message.error('Last Working Date is required when Employment Status is Relieved or Absconding.');
+        return;
+      }
+
       setSaving(true);
 
       const payload = {
@@ -236,6 +245,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         dateOfJoining: values.dateOfJoining ? values.dateOfJoining.format('YYYY-MM-DD') : null,
         internship_end_date: values.internshipEndDate ? values.internshipEndDate.format('YYYY-MM-DD') : null,
         probation_end_date: values.probationEndDate ? values.probationEndDate.format('YYYY-MM-DD') : null,
+        lwd: values.lwd ? values.lwd.format('YYYY-MM-DD') : null,
         addresses: values.addresses ? [
           {
             address_type: values.addresses.residential_address_type || 'Residential',
@@ -448,7 +458,11 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                     </Select>
                   </Form.Item>
                 </Col>
-                {/* Period End Date — visible only for Intern / Probation */}
+                <Col span={12}>
+                  <Form.Item name="lwd" label="Last Working Date">
+                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
                 <Form.Item noStyle shouldUpdate={(prev, curr) => prev.employmentStatus !== curr.employmentStatus}>
                   {({ getFieldValue }) => {
                     const status = getFieldValue('employmentStatus');
