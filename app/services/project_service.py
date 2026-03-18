@@ -189,7 +189,7 @@ class ProjectService:
                 func.concat(Employee.first_name, ' ', Employee.last_name).label('employee_name'),
                 Employee.email
             ).filter(
-                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
                 Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
             ).order_by(
                 Employee.first_name
@@ -321,7 +321,7 @@ class ProjectService:
             
             # Total Employees (Capacity)
             total_employees = Employee.query.filter(
-                Employee.employment_status.notin_(['Relieved', 'Absconding']),
+                Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
                 Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
             ).count()
 
