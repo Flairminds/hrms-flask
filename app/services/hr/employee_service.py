@@ -573,7 +573,7 @@ class EmployeeService:
                 Employee.date_of_resignation,
                 Employee.internship_end_date,
                 Employee.probation_end_date,
-                Employee.last_working_date.label('lwd'),
+                Employee.lwd.label('lwd'),
                 Employee.lwp,
                 Employee.lob_lead.label('lob_lead_id'),
                 MasterSubRole.sub_role_name.label('role'),

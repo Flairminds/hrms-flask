@@ -136,7 +136,7 @@ class ProjectService:
         try:
             allocations = db.session.query(
                 ProjectAllocation,
-                func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('emp_name')
+                func.concat(Employee.first_name, ' ', Employee.last_name).label('emp_name')
             ).join(
                 Employee, ProjectAllocation.employee_id == Employee.employee_id
             ).filter(
@@ -268,10 +268,12 @@ class ProjectService:
                 # Get all team members for this project
                 team_members = db.session.query(
                     ProjectAllocation.employee_id,
-                    func.concat(Employee.first_name, ' ', func.coalesce(Employee.middle_name, ''), ' ', Employee.last_name).label('employee_name'),
+                    func.concat(Employee.first_name, ' ', Employee.last_name).label('employee_name'),
                     Employee.email,
                     ProjectAllocation.employee_role,
-                    ProjectAllocation.project_allocation
+                    ProjectAllocation.project_allocation,
+                    ProjectAllocation.start_date,
+                    ProjectAllocation.is_billing
                 ).join(
                     Employee, ProjectAllocation.employee_id == Employee.employee_id
                 ).filter(
@@ -291,7 +293,9 @@ class ProjectService:
                             'employee_name': ' '.join(tm.employee_name.split()),
                             'email': tm.email,
                             'role': tm.employee_role,
-                            'allocation': float(tm.project_allocation)
+                            'allocation': float(tm.project_allocation),
+                            'start_date': tm.start_date.strftime('%Y-%m-%d') if tm.start_date else None,
+                            'is_billing': tm.is_billing
                         } for tm in team_members
                     ]
                 })

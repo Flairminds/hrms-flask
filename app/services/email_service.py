@@ -1591,6 +1591,256 @@ class EmailService:
             Logger.critical("Unexpected error sending review status alert", error=str(e))
             return False
 
+    # ==================================================================
+    # WEEKLY LEAVE REMINDER (Friday Pending-Leave Alert)
+    # ==================================================================
+
+    @staticmethod
+    def send_pending_leave_reminder() -> int:
+        """
+        Sends weekly reminder emails to leave approvers for leaves that are
+        still Pending or Partially Approved.
+
+        Logic:
+        - Pending leaves  → email sent to the first approver (approver_id).
+        - Partially Approved leaves → email sent to the second approver
+          (second_approval_by), because the first approval is already done.
+
+        One consolidated email is sent per approver, listing all leaves
+        awaiting their action. CC list follows EmailConfig.LEAVE_NOTIFICATION_CC.
+
+        Returns:
+            Number of reminder emails successfully sent.
+        """
+        Logger.info("Starting weekly pending-leave reminder job")
+
+        try:
+            from ..models.hr import Employee as Emp
+
+            # Aliases for joining employee records
+            FirstApprover = db.aliased(Emp, name='first_approver')
+            LeaveApplicant = db.aliased(Emp, name='leave_applicant')
+
+            # Only remind for leaves whose from_date is within the last 2 months
+            two_months_ago = (datetime.now() - timedelta(days=60)).date()
+
+            # ── Pending leaves (need first-approver action) ──────────────
+            pending_rows = (
+                db.session.query(
+                    LeaveTransaction,
+                    LeaveApplicant,
+                    FirstApprover,
+                    MasterLeaveTypes.leave_name,
+                )
+                .join(LeaveApplicant, LeaveTransaction.applied_by == LeaveApplicant.employee_id)
+                .join(FirstApprover, LeaveTransaction.approver_id == FirstApprover.employee_id)
+                .join(MasterLeaveTypes, LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id)
+                .filter(
+                    LeaveTransaction.leave_status == LeaveStatus.PENDING,
+                    LeaveTransaction.from_date >= two_months_ago,
+                )
+                .all()
+            )
+
+            # ── Partially-approved leaves (second approver = SECONDARY_LEAVE_APPROVER_EMAIL) ──
+            # The second approver is a fixed HR/management address, not a per-transaction employee.
+            partial_rows = (
+                db.session.query(
+                    LeaveTransaction,
+                    LeaveApplicant,
+                    MasterLeaveTypes.leave_name,
+                )
+                .join(LeaveApplicant, LeaveTransaction.applied_by == LeaveApplicant.employee_id)
+                .join(MasterLeaveTypes, LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id)
+                .filter(
+                    LeaveTransaction.leave_status == LeaveStatus.PARTIAL_APPROVED,
+                    LeaveTransaction.from_date >= two_months_ago,
+                )
+                .all()
+            )
+
+            Logger.info(
+                "Pending-leave reminder: leaves found",
+                pending=len(pending_rows),
+                partial=len(partial_rows),
+            )
+
+            if not pending_rows and not partial_rows:
+                Logger.info("No pending or partially-approved leaves – skipping reminder")
+                return 0
+
+            # ── Group by approver email ──────────────────────────────────
+            # approver_email -> {name, leaves: [{...}]}
+            approver_map: dict = {}
+
+            def _bucket(approver_email, approver_name, leave_txn, applicant_emp, leave_name, label):
+                """Insert a leave entry into the per-approver bucket."""
+                if not approver_email:
+                    Logger.warning("Approver email is empty – skipping entry", label=label)
+                    return
+                if approver_email not in approver_map:
+                    approver_map[approver_email] = {
+                        "name": approver_name,
+                        "leaves": [],
+                    }
+                approver_map[approver_email]["leaves"].append(
+                    {
+                        "employee": f"{applicant_emp.first_name} {applicant_emp.last_name}".strip(),
+                        "leave_type": leave_name,
+                        "from_date": EmailService._format_date(leave_txn.from_date),
+                        "to_date": EmailService._format_date(leave_txn.to_date),
+                        "no_of_days": float(leave_txn.no_of_days) if leave_txn.no_of_days else "N/A",
+                        "applied_on": EmailService._format_date(leave_txn.application_date),
+                        "status": leave_txn.leave_status,
+                        "pending_with": label,
+                    }
+                )
+
+            # Pending → first approver email comes from the Employee record
+            for leave_txn, applicant_emp, approver_emp, leave_name in pending_rows:
+                _bucket(
+                    approver_emp.email,
+                    f"{approver_emp.first_name} {approver_emp.last_name}".strip(),
+                    leave_txn, applicant_emp, leave_name,
+                    "You (1st Approver)",
+                )
+
+            # Partially Approved → second approver is the fixed SECONDARY_LEAVE_APPROVER_EMAIL
+            secondary_email = EmailConfig.SECONDARY_LEAVE_APPROVER_EMAIL
+            for leave_txn, applicant_emp, leave_name in partial_rows:
+                _bucket(
+                    secondary_email,
+                    "Second Approver",
+                    leave_txn, applicant_emp, leave_name,
+                    "You (2nd Approver)",
+                )
+
+            # ── Send one email per approver ──────────────────────────────
+            from_address = current_app.config.get("MAIL_USERNAME")
+            from_password = current_app.config.get("MAIL_PASSWORD")
+
+            if not from_address or not from_password:
+                Logger.error("SMTP credentials not configured for pending-leave reminder")
+                return 0
+
+            server = smtplib.SMTP(
+                current_app.config.get("MAIL_SERVER", "smtp.gmail.com"),
+                current_app.config.get("MAIL_PORT", 587),
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+
+            cc_addresses = getattr(EmailConfig, "LEAVE_NOTIFICATION_CC", [])
+            sent_count = 0
+
+            styles = EmailService._get_common_styles()
+            footer = EmailService._get_email_footer()
+
+            for approver_email, data in approver_map.items():
+                try:
+                    approver_name = data["name"]
+                    leaves = data["leaves"]
+
+                    # Build table rows
+                    rows_html = ""
+                    for lv in leaves:
+                        status_color = (
+                            "#fd7e14"
+                            if lv["status"] == LeaveStatus.PARTIAL_APPROVED
+                            else "#e67e22"
+                        )
+                        rows_html += f"""
+                            <tr>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['employee']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['leave_type']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['from_date']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['to_date']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['no_of_days']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['applied_on']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;color:{status_color};font-weight:bold;">{lv['status']}</td>
+                                <td style="padding:8px;border:1px solid #ddd;">{lv['pending_with']}</td>
+                            </tr>
+                        """
+
+                    header = EmailService._get_email_header("\u23f3 Leave Approval Reminder")
+
+                    body_content = f"""
+                        <div class="content">
+                            <p>Dear {approver_name},</p>
+                            <p>This is a friendly weekly reminder that the following leave request(s) are
+                            <strong>awaiting your approval</strong> in the HRMS system. Please review and
+                            take action at the earliest.</p>
+
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;margin:15px 0;">
+                                <thead>
+                                    <tr style="background-color:#f0f4f8;">
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Employee</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Leave Type</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">From</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">To</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Days</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Applied On</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Status</th>
+                                        <th style="padding:10px;border:1px solid #ddd;text-align:left;">Pending With</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows_html}
+                                </tbody>
+                            </table>
+
+                            <div style="text-align:center;">
+                                <a href="https://hrms.flairminds.com/login" class="button">Review in HRMS</a>
+                            </div>
+                        </div>
+                    """
+
+                    body = (
+                        f"<html><head>{styles}</head>"
+                        f"<body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+                    )
+
+                    msg = MIMEMultipart()
+                    msg["From"] = EmailService._get_from_string(from_address)
+                    msg["To"] = approver_email
+                    if cc_addresses:
+                        msg["Cc"] = ", ".join(cc_addresses)
+                    msg["Subject"] = f"Action Required: {len(leaves)} Leave(s) Pending Your Approval"
+                    msg.attach(MIMEText(body, "html"))
+
+                    all_recipients = [approver_email] + list(cc_addresses)
+                    server.sendmail(from_address, all_recipients, msg.as_string())
+                    sent_count += 1
+
+                    Logger.info(
+                        "Pending-leave reminder sent",
+                        approver_email=approver_email,
+                        leave_count=len(leaves),
+                    )
+
+                except Exception as e:
+                    Logger.error(
+                        "Error sending reminder to approver",
+                        approver_email=approver_email,
+                        error=str(e),
+                    )
+
+            server.quit()
+            Logger.info(
+                "Weekly pending-leave reminder job completed",
+                emails_sent=sent_count,
+                approvers_notified=len(approver_map),
+            )
+            return sent_count
+
+        except SQLAlchemyError as e:
+            Logger.error("Database error in pending-leave reminder job", error=str(e))
+            return 0
+        except Exception as e:
+            Logger.critical("Unexpected error in pending-leave reminder job", error=str(e))
+            return 0
+
+
 # ==================================================================
 # LEGACY FUNCTIONS (Backward Compatibility)
 # ==================================================================
@@ -1609,6 +1859,7 @@ def process_leave_email() -> bool:
     """
     Logger.debug("Legacy process_leave_email() called - redirecting to EmailService")
     return EmailService.send_leave_report()
+
 
 
 def process_office_attendance_email() -> bool:

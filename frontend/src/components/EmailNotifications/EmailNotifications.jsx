@@ -112,6 +112,28 @@ const EmailNotifications = () => {
             </>,
             trigger: 'Immediate (On Approver Assignment/Change)',
         },
+        {
+            key: '10',
+            type: 'Weekly Leave Approval Reminder (Friday)',
+            recipients: <>
+                <div><strong>Pending leaves →</strong> 1st Approver (employee's leave approver)</div>
+                <div><strong>Partial Approved leaves →</strong> 2nd / Fixed HR Approver</div>
+                <div style={{ fontSize: '12px', color: '#888', marginTop: 4 }}>
+                    One consolidated email per approver listing all leaves awaiting their action.
+                </div>
+                <br />
+                <div>CC: hr@flairminds.com; priyanka.mandale@flairminds.com</div>
+            </>,
+            trigger: (
+                <>
+                    <div>Every <strong>Friday</strong> (weekly cron)</div>
+                    <div style={{ fontSize: '12px', color: '#888', marginTop: 4 }}>
+                        Only leaves with <code>from_date</code> within last <strong>2 months</strong> are included.
+                        Skipped if no pending / partial-approved leaves exist.
+                    </div>
+                </>
+            ),
+        },
     ];
 
     return (
