@@ -87,6 +87,21 @@ def register_jobs(app):
                 db.session.rollback()
                 Logger.error("Error in monthly leave allocation job", error=str(e))
 
+    @scheduler.task('cron', id='weekly_pending_leave_reminder', day_of_week=4, hour=9, minute=0, timezone='Asia/Kolkata')
+    def weekly_pending_leave_reminder():
+        """Every Friday at 9:00 AM IST – reminds approvers of leaves awaiting action.
+
+        - Pending leaves    → email sent to the first approver.
+        - Partially Approved leaves → email sent to the second approver.
+        """
+        with app.app_context():
+            Logger.info("Running weekly pending-leave reminder job (Friday)")
+            try:
+                sent = EmailService.send_pending_leave_reminder()
+                Logger.info("Weekly pending-leave reminder job completed", emails_sent=sent)
+            except Exception as e:
+                Logger.error("Error in weekly pending-leave reminder job", error=str(e))
+
     @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
     def monthly_leave_deduction():
         """Automatically deducts monthly WFH leaves on the 1st of every month."""
