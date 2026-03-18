@@ -146,6 +146,8 @@ class HRController:
                 'skills': data.get('skills', []),
                 'internship_end_date': data.get('internship_end_date'),
                 'probation_end_date': data.get('probation_end_date'),
+                'lwd': data.get('lwd'),
+                'date_of_resignation': data.get('dateOfResignation'),
             }
             
             result = EmployeeService.update_employee_details(update_data)

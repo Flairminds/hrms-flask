@@ -147,6 +147,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         internshipEndDate: personalEmployeeDetails.internshipEndDate ? dayjs(personalEmployeeDetails.internshipEndDate, 'DD MMM YYYY') : null,
         probationEndDate: personalEmployeeDetails.probationEndDate ? dayjs(personalEmployeeDetails.probationEndDate, 'DD MMM YYYY') : null,
         lwd: personalEmployeeDetails.lwd ? dayjs(personalEmployeeDetails.lwd, 'DD MMM YYYY') : null,
+        dateOfResignation: personalEmployeeDetails.dateOfResignation ? dayjs(personalEmployeeDetails.dateOfResignation, 'DD MMM YYYY') : null,
         teamLeadId: personalEmployeeDetails.teamLeadId,
         emergencyContactPerson: personalEmployeeDetails.emergencyContactPerson,
         emergencyContactRelation: personalEmployeeDetails.emergencyContactRelation,
@@ -235,6 +236,11 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         message.error('Last Working Date is required when Employment Status is Relieved or Absconding.');
         return;
       }
+      // Validate: date_of_resignation is required when status is Resigned
+      if (status === 'Resigned' && !values.dateOfResignation) {
+        message.error('Date of Resignation is required when Employment Status is Resigned.');
+        return;
+      }
 
       setSaving(true);
 
@@ -246,6 +252,7 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
         internship_end_date: values.internshipEndDate ? values.internshipEndDate.format('YYYY-MM-DD') : null,
         probation_end_date: values.probationEndDate ? values.probationEndDate.format('YYYY-MM-DD') : null,
         lwd: values.lwd ? values.lwd.format('YYYY-MM-DD') : null,
+        dateOfResignation: values.dateOfResignation ? values.dateOfResignation.format('YYYY-MM-DD') : null,
         addresses: values.addresses ? [
           {
             address_type: values.addresses.residential_address_type || 'Residential',
@@ -460,6 +467,11 @@ export const EMPDetailsModal = ({ detailsModal, setDetailsModal, personalEmploye
                 </Col>
                 <Col span={12}>
                   <Form.Item name="lwd" label="Last Working Date">
+                    <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="dateOfResignation" label="Date of Resignation">
                     <DatePicker format="DD-MM-YYYY" disabled={!isEditMode} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
