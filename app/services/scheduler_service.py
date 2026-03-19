@@ -130,6 +130,25 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in daily stale-resume reminder job", error=str(e))
 
+    @scheduler.task('cron', id='daily_document_verification_alert', hour=9, minute=5, timezone='Asia/Kolkata')
+    def daily_document_verification_alert():
+        """Daily job at 9:15 AM IST – alerts HR about documents pending verification.
+
+        Sends a single digest email to HR with a table of all employee documents
+        that have been uploaded but not yet verified (is_verified IS NULL).
+        """
+        with app.app_context():
+            Logger.info("Running daily document verification alert job")
+            try:
+                sent = EmailService.send_document_verification_alert()
+                if sent:
+                    Logger.info("Daily document verification alert sent to HR")
+                else:
+                    Logger.info("Daily document verification alert skipped — no pending documents")
+            except Exception as e:
+                Logger.error("Error in daily document verification alert job", error=str(e))
+
+
 
     @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
     def monthly_leave_deduction():

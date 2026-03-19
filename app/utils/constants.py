@@ -98,6 +98,7 @@ class EmailConfig:
     LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
     REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com']
+    DOCUMENT_VERIFICATION_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
 class IgnoreEmployees:
     IGNORE_FOR_ATTENDANCE = [
