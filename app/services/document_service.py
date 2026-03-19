@@ -269,11 +269,16 @@ class DocumentService:
                 uploaded_at_iso = uploaded_at.isoformat()
                 is_verified = resume_doc.is_verified  # True / False / None
 
-                if is_verified is not True:
+                if is_verified is None:
                     # Not yet verified (pending or rejected) — HR needs to review
                     resume_status = 'Need Review'
                     need_update = True
                     under_review = True
+                elif is_verified is False:
+                    # Not yet verified (pending or rejected) — HR needs to review
+                    resume_status = 'Rejected'
+                    need_update = True
+                    under_review = False
                 elif days_since > STALE_DAYS:
                     # Verified but stale
                     resume_status = 'Need To Update'

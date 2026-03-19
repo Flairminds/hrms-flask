@@ -1895,7 +1895,7 @@ class EmailService:
 
                 try:
                     docs = BlobDocumentService.list_employee_documents(emp.employee_id)
-                    uploaded = {d['doc_type'] for d in docs}
+                    uploaded = {d['doc_type'] for d in docs if d['is_verified'] is not False}
                 except Exception as e:
                     Logger.error(
                         "Failed to fetch documents for employee",
@@ -1937,7 +1937,7 @@ class EmailService:
                         <p>Dear {emp_name},</p>
                         <p>
                             Our records indicate that the following <strong>required
-                            documents</strong> are missing from your profile. Please upload
+                            documents</strong> are missing/rejected from your profile. Please upload
                             them at the earliest to keep your HRMS profile complete.
                         </p>
                         <div class="checklist">
