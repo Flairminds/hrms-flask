@@ -21,6 +21,7 @@ from ...models.documents import EmployeeDocument
 from ...services.azure_blob_service import AzureBlobService
 from ...utils.blob_utils import BlobUtils
 from ...utils.logger import Logger
+from ...utils.constants import IgnoreEmployees
 
 
 class BlobDocumentService:
@@ -523,7 +524,10 @@ class BlobDocumentService:
             from ...models.hr import Employee
             
             # Get all employees
-            employees = Employee.query.filter(Employee.employment_status.notin_(['Relieved', 'Absconding'])).order_by(Employee.first_name).all()
+            employees = Employee.query.filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_DOCUMENTS)
+            ).order_by(Employee.first_name).all()
             stats_list = []
             
             for emp in employees:

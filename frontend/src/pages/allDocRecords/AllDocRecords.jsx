@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Table, Input, message, Button, Space, Tag, Popconfirm, Tabs } from "antd";
-import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { getAllEmployeeDocuments, getDocuments, verifyDocument, getEmployeeDocumentStats } from "../../services/api";
 import { convertDate } from "../../util/helperFunctions";
 
@@ -113,11 +113,16 @@ export const AllDocRecords = () => {
     }
   };
 
-  const handleVerify = async (empId, docType, currentStatus) => {
+  const handleVerify = async (empId, docType, currentStatus, requestType) => {
     try {
       // If already verified (true), we're unverifying (set to null)
+      // If already verified (true), we're unverifying (set to null)
       // If not verified (null or false), we're verifying (set to true)
-      const newStatus = currentStatus === true ? null : true;
+      let newStatus = currentStatus === true ? null : true;
+
+      if (requestType === 'reject') {
+        newStatus = false;
+      }
 
       const response = await verifyDocument(empId, docType, newStatus);
 
@@ -275,6 +280,26 @@ export const AllDocRecords = () => {
               }}
             >
               {record.is_verified === true ? "Verified" : "Verify"}
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title={"Reject this document?"}
+            description={"This will reject the document."}
+            onConfirm={() => handleVerify(record.emp_id, record.doc_type, record.is_verified, 'reject')}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="primary"
+              icon={<CloseCircleOutlined />}
+              size="small"
+              style={{
+                backgroundColor: "#eb3c3cff",
+                borderColor: "#eb3c3cff",
+                color: "#fff"
+              }}
+            >
+              {record.is_verified === false ? "Rejected" : "Reject"}
             </Button>
           </Popconfirm>
         </Space>
