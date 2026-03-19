@@ -124,3 +124,12 @@ class IgnoreEmployees:
         'priyanka.mandale@flairminds.com',
         'shishir.nigam@flairminds.com'
     ]
+
+    IGNORE_FOR_DOCUMENTS = [
+        'hr@flairminds.com', 
+        'hasmukh@flairminds.com', 
+        'barun.sharma@flairminds.com', 
+        'yogesh.amritkar@flairminds.com',
+        'shrinivas.sarmane@flairminds.com',
+        'shishir.nigam@flairminds.com'
+    ]

@@ -3,6 +3,7 @@ from werkzeug.datastructures import FileStorage
 
 from .document import RelievingLetterService
 from .document.blob_document_service import BlobDocumentService
+from ..utils.constants import IgnoreEmployees
 
 class DocumentService:
     """
@@ -245,10 +246,11 @@ class DocumentService:
         from ..models.documents import EmployeeDocument
 
         STALE_DAYS = 60
-        INACTIVE_STATUSES = {'Relieved', 'Absconding'}
+        INACTIVE_STATUSES = {'Relieved', 'Absconding', 'Leave Without Pay'}
 
         active_employees = Employee.query.filter(
-            Employee.employment_status.notin_(INACTIVE_STATUSES)
+            Employee.employment_status.notin_(INACTIVE_STATUSES),
+            Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_DOCUMENTS)
         ).all()
 
         now = datetime.now(timezone.utc)
@@ -271,20 +273,24 @@ class DocumentService:
                     # Not yet verified (pending or rejected) — HR needs to review
                     resume_status = 'Need Review'
                     need_update = True
+                    under_review = True
                 elif days_since > STALE_DAYS:
                     # Verified but stale
                     resume_status = 'Need To Update'
                     need_update = True
+                    under_review = False
                 else:
                     # Verified and fresh
                     resume_status = 'Up To Date'
                     need_update = False
+                    under_review = False
             else:
                 days_since = None
                 uploaded_at_iso = None
                 is_verified = None
                 resume_status = 'Need Update'
                 need_update = True
+                under_review = False
 
             results.append({
                 'employee_id': emp.employee_id,
@@ -296,6 +302,7 @@ class DocumentService:
                 'resume_is_verified': is_verified,
                 'resume_status': resume_status,
                 'need_resume_update': need_update,
+                'under_review': under_review
             })
 
         return results

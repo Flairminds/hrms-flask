@@ -1840,6 +1840,280 @@ class EmailService:
             Logger.critical("Unexpected error in pending-leave reminder job", error=str(e))
             return 0
 
+    # ==================================================================
+    # DOCUMENT REMINDER EMAILS
+    # ==================================================================
+
+    @staticmethod
+    def send_document_reminder() -> int:
+        """
+        Sends individual daily email reminders to active employees who are
+        missing any of the following required documents:
+          - Resume
+          - PAN card
+          - At least one education certificate (12th or Graduation)
+
+        Returns:
+            Number of reminder emails successfully sent.
+        """
+        from ..models.hr import Employee
+        from .document.blob_document_service import BlobDocumentService
+
+        Logger.info("Running document reminder job")
+
+        INACTIVE_STATUSES = {'Relieved', 'Absconding', 'Leave Without Pay'}
+        REQUIRED_DOCS = {
+            'resume': 'Resume',
+            'pan':    'PAN Card',
+        }
+
+        from_address = current_app.config.get('MAIL_USERNAME')
+        from_password = current_app.config.get('MAIL_PASSWORD')
+
+        if not from_address or not from_password:
+            Logger.error("SMTP credentials not configured for document reminder")
+            return 0
+
+        active_employees = Employee.query.filter(
+            Employee.employment_status.notin_(INACTIVE_STATUSES),
+            Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_DOCUMENTS)
+        ).all()
+
+        sent_count = 0
+
+        try:
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587),
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+
+            for emp in active_employees:
+                if not emp.email:
+                    continue
+
+                try:
+                    docs = BlobDocumentService.list_employee_documents(emp.employee_id)
+                    uploaded = {d['doc_type'] for d in docs}
+                except Exception as e:
+                    Logger.error(
+                        "Failed to fetch documents for employee",
+                        employee_id=emp.employee_id,
+                        error=str(e),
+                    )
+                    continue
+
+                missing = []
+
+                # Check resume and PAN  
+                for doc_type, label in REQUIRED_DOCS.items():
+                    if doc_type not in uploaded:
+                        missing.append(label)
+
+                # Check education: need at least one of 12th or Graduation
+                has_twelve = 'twelve' in uploaded
+                has_grad   = 'grad'   in uploaded
+                if not has_twelve and not has_grad:
+                    missing.append("Education Certificate (12th or Graduation)")
+
+                if not missing:
+                    continue
+
+                # Build email
+                emp_name = f"{emp.first_name or ''} {emp.last_name or ''}".strip()
+                missing_items_html = "".join(
+                    f"<li style='padding: 6px 0; border-bottom: 1px dashed #eee;'>"
+                    f"&#10060; {item}</li>"
+                    for item in missing
+                )
+
+                styles = EmailService._get_common_styles()
+                header = EmailService._get_email_header("Action Required: Upload Your Documents")
+                footer = EmailService._get_email_footer()
+
+                body_content = f"""
+                    <div class="content">
+                        <p>Dear {emp_name},</p>
+                        <p>
+                            Our records indicate that the following <strong>required
+                            documents</strong> are missing from your profile. Please upload
+                            them at the earliest to keep your HRMS profile complete.
+                        </p>
+                        <div class="checklist">
+                            <h4>Missing Documents</h4>
+                            <ul>{missing_items_html}</ul>
+                        </div>
+                        <div style="text-align: center; margin-top: 24px;">
+                            <a href="https://hrms.flairminds.com/login" class="button">
+                                Upload Documents in HRMS
+                            </a>
+                        </div>
+                        <p style="margin-top: 20px; font-size: 13px; color: #666;">
+                            If you have already uploaded these documents, please allow a few
+                            hours for the system to update. Contact HR if the issue persists.
+                        </p>
+                    </div>
+                """
+
+                body = (
+                    f"<html><head>{styles}</head>"
+                    f"<body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+                )
+
+                msg = MIMEMultipart()
+                msg['From']    = EmailService._get_from_string(from_address)
+                msg['To']      = emp.email
+                msg['Subject'] = "HRMS Reminder: Please Upload Your Required Documents"
+                msg.attach(MIMEText(body, 'html'))
+
+                try:
+                    server.sendmail(from_address, [emp.email], msg.as_string())
+                    sent_count += 1
+                    Logger.debug(
+                        "Document reminder sent",
+                        employee_id=emp.employee_id,
+                        missing_count=len(missing),
+                    )
+                except smtplib.SMTPException as e:
+                    Logger.error(
+                        "SMTP error sending document reminder",
+                        employee_id=emp.employee_id,
+                        error=str(e),
+                    )
+
+            server.quit()
+            Logger.info("Document reminder job completed", emails_sent=sent_count)
+            return sent_count
+
+        except Exception as e:
+            Logger.critical("Unexpected error in document reminder job", error=str(e))
+            return 0
+
+    @staticmethod
+    def send_stale_resume_reminder() -> int:
+        """
+        Sends individual daily email reminders to active employees whose
+        uploaded resume is older than 60 days and needs to be updated.
+
+        Employees without a resume at all are covered by send_document_reminder;
+        this method targets only those whose resume exists but is stale.
+
+        Returns:
+            Number of reminder emails successfully sent.
+        """
+        from .document_service import DocumentService
+
+        Logger.info("Running stale-resume reminder job")
+
+        from_address = current_app.config.get('MAIL_USERNAME')
+        from_password = current_app.config.get('MAIL_PASSWORD')
+
+        if not from_address or not from_password:
+            Logger.error("SMTP credentials not configured for stale-resume reminder")
+            return 0
+
+        try:
+            report = DocumentService.get_resume_staleness_report()
+        except Exception as e:
+            Logger.error("Failed to fetch resume staleness report", error=str(e))
+            return 0
+
+        # Only employees whose resume EXISTS but is stale (> 60 days)
+        stale_employees = [
+            r for r in report
+            if (r.get('need_resume_update') and not r.get('under_review')) and r.get('days_since_upload') is not None
+        ]
+
+        if not stale_employees:
+            Logger.info("No employees with stale resumes — skipping")
+            return 0
+
+        sent_count = 0
+
+        try:
+            server = smtplib.SMTP(
+                current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+                current_app.config.get('MAIL_PORT', 587),
+            )
+            server.starttls()
+            server.login(from_address, from_password)
+
+            for record in stale_employees:
+                emp_email = record.get('email')
+                if not emp_email:
+                    continue
+
+                emp_name        = record.get('name', 'Employee')
+                days_since      = record.get('days_since_upload', 0)
+                uploaded_at_iso = record.get('resume_uploaded_at', '')
+
+                # Format upload date for display
+                try:
+                    uploaded_date_str = datetime.fromisoformat(uploaded_at_iso).strftime('%d-%b-%Y')
+                except Exception:
+                    uploaded_date_str = uploaded_at_iso or 'N/A'
+
+                styles = EmailService._get_common_styles()
+                header = EmailService._get_email_header("Action Required: Update Your Resume")
+                footer = EmailService._get_email_footer()
+
+                body_content = f"""
+                    <div class="content">
+                        <p>Dear {emp_name},</p>
+                        <p>
+                            Your resume on HRMS was last uploaded on
+                            <strong>{uploaded_date_str}</strong> — that's
+                            <strong>{days_since} days ago</strong>.
+                        </p>
+                        <p>
+                            We recommend keeping your resume up to date (at least every
+                            <strong>60 days</strong>) to reflect your latest skills and
+                            experience. Please upload an updated version at your earliest
+                            convenience.
+                        </p>
+                        <div style="text-align: center; margin-top: 24px;">
+                            <a href="https://hrms.flairminds.com/login" class="button">
+                                Update Resume in HRMS
+                            </a>
+                        </div>
+                    </div>
+                """
+
+                body = (
+                    f"<html><head>{styles}</head>"
+                    f"<body><div class='container'>{header}{body_content}{footer}</div></body></html>"
+                )
+
+                msg = MIMEMultipart()
+                msg['From']    = EmailService._get_from_string(from_address)
+                msg['To']      = emp_email
+                msg['Subject'] = "HRMS Reminder: Please Update Your Resume"
+                msg.attach(MIMEText(body, 'html'))
+
+                try:
+                    server.sendmail(from_address, [emp_email], msg.as_string())
+                    sent_count += 1
+                    Logger.debug(
+                        "Stale-resume reminder sent",
+                        employee_id=record.get('employee_id'),
+                        days_since=days_since,
+                    )
+                except smtplib.SMTPException as e:
+                    Logger.error(
+                        "SMTP error sending stale-resume reminder",
+                        employee_id=record.get('employee_id'),
+                        error=str(e),
+                    )
+
+            server.quit()
+            Logger.info("Stale-resume reminder job completed", emails_sent=sent_count)
+            return sent_count
+
+        except Exception as e:
+            Logger.critical("Unexpected error in stale-resume reminder job", error=str(e))
+            return 0
+
 
 # ==================================================================
 # LEGACY FUNCTIONS (Backward Compatibility)

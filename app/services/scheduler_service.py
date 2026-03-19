@@ -102,6 +102,35 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in weekly pending-leave reminder job", error=str(e))
 
+    @scheduler.task('cron', id='daily_document_reminder', hour=9, minute=5, timezone='Asia/Kolkata')
+    def daily_document_reminder():
+        """Daily job at 9:05 AM IST – emails employees missing required documents.
+
+        Sends reminder to employees who have not uploaded:
+          - Resume
+          - PAN card
+          - At least one education certificate (12th or Graduation)
+        """
+        with app.app_context():
+            Logger.info("Running daily document reminder job")
+            try:
+                sent = EmailService.send_document_reminder()
+                Logger.info("Daily document reminder job completed", emails_sent=sent)
+            except Exception as e:
+                Logger.error("Error in daily document reminder job", error=str(e))
+
+    @scheduler.task('cron', id='daily_stale_resume_reminder', hour=9, minute=10, timezone='Asia/Kolkata')
+    def daily_stale_resume_reminder():
+        """Daily job at 9:10 AM IST – emails employees whose resume is older than 60 days."""
+        with app.app_context():
+            Logger.info("Running daily stale-resume reminder job")
+            try:
+                sent = EmailService.send_stale_resume_reminder()
+                Logger.info("Daily stale-resume reminder job completed", emails_sent=sent)
+            except Exception as e:
+                Logger.error("Error in daily stale-resume reminder job", error=str(e))
+
+
     @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
     def monthly_leave_deduction():
         """Automatically deducts monthly WFH leaves on the 1st of every month."""
