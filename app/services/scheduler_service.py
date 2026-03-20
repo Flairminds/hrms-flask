@@ -33,7 +33,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in scheduled attendance report job", error=str(e))
 
-    @scheduler.task('cron', id='period_end_date_alert', hour=9, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='period_end_date_alert', hour=8, minute=45, timezone='Asia/Kolkata')
     def daily_period_end_alert():
         """Sends daily alert for interns/probationers with end date in next 5 days or past."""
         with app.app_context():
@@ -47,7 +47,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in period end date alert job", error=str(e))
 
-    @scheduler.task('cron', id='daily_review_alert', hour=9, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='daily_review_alert', hour=8, minute=30, timezone='Asia/Kolkata')
     def daily_review_alert():
         """Sends daily digest of employee review statuses requiring attention."""
         with app.app_context():
@@ -87,7 +87,7 @@ def register_jobs(app):
                 db.session.rollback()
                 Logger.error("Error in monthly leave allocation job", error=str(e))
 
-    @scheduler.task('cron', id='weekly_pending_leave_reminder', day_of_week=4, hour=9, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='weekly_pending_leave_reminder', day_of_week=4, hour=10, minute=5, timezone='Asia/Kolkata')
     def weekly_pending_leave_reminder():
         """Every Friday at 9:00 AM IST – reminds approvers of leaves awaiting action.
 
@@ -102,7 +102,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in weekly pending-leave reminder job", error=str(e))
 
-    @scheduler.task('cron', id='daily_document_reminder', hour=9, minute=5, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='daily_document_reminder', hour=9, minute=10, timezone='Asia/Kolkata')
     def daily_document_reminder():
         """Daily job at 9:05 AM IST – emails employees missing required documents.
 
@@ -119,7 +119,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in daily document reminder job", error=str(e))
 
-    @scheduler.task('cron', id='daily_stale_resume_reminder', hour=9, minute=10, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='daily_stale_resume_reminder', hour=8, minute=5, timezone='Asia/Kolkata')
     def daily_stale_resume_reminder():
         """Daily job at 9:10 AM IST – emails employees whose resume is older than 60 days."""
         with app.app_context():
@@ -130,7 +130,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in daily stale-resume reminder job", error=str(e))
 
-    @scheduler.task('cron', id='daily_document_verification_alert', hour=9, minute=5, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='daily_document_verification_alert', hour=9, minute=0, timezone='Asia/Kolkata')
     def daily_document_verification_alert():
         """Daily job at 9:15 AM IST – alerts HR about documents pending verification.
 
