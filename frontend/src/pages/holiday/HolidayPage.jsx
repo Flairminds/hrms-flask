@@ -214,9 +214,12 @@ function HolidayPage() {
     <WidgetCard title="Company Holiday List" icon={<PushpinOutlined />} iconColor="#1890ff">
       <div style={{ marginBottom: 16 }}>
         <Text type="secondary" italic>
-          *The following holiday list is applicable only for associates who are not allocated to any
+          The following holiday list is applicable only for associates who are not allocated to any
           particular project. Those who are allocated to projects need to follow customer holidays.
-          Please refer to leave policy.*
+          Please refer to leave policy.
+        </Text><br />
+        <Text type="secondary" italic>
+          The holiday list is for current financial year, i.e. Apr - Mar.
         </Text>
       </div>
 
