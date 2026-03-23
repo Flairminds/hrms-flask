@@ -1,11 +1,12 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from sqlalchemy import extract, or_
+from sqlalchemy import extract, and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ... import db
 from ...models.leave import Holiday
 from ...utils.logger import Logger
+from .leave_utils import LeaveUtils
 
 class LeaveConfigService:
     @staticmethod
@@ -16,19 +17,18 @@ class LeaveConfigService:
         try:
             now = datetime.now()
             current_year = now.year
-            three_months_later = now + timedelta(days=92)  # Approximately 3 months
-            
+            current_month = now.month
+            two_months_later = now + timedelta(days=60)  # Approximately 2 months
+            start_date, end_date = LeaveUtils.get_financial_year_dates(current_year, current_month)
             holidays = Holiday.query.filter(
                 Holiday.is_deleted == False,
-                or_(
-                    extract('year', Holiday.holiday_date) == current_year,
-                    Holiday.holiday_date <= three_months_later
+                and_(
+                    Holiday.holiday_date >= start_date,
+                    or_(
+                        Holiday.holiday_date <= end_date,
+                        # Holiday.holiday_date <= two_months_later
+                    )
                 )
-            ).filter(
-                # Ensure we don't fetch extremely old holidays unless they are in the current year
-                # Actually, the requirement "this year only" was just updated to "this year + 3 months"
-                # so we should probably keep holidays from the start of the current year.
-                Holiday.holiday_date >= datetime(current_year, 1, 1)
             ).order_by(Holiday.holiday_date.asc()).all()
             return holidays
         except Exception as e:
