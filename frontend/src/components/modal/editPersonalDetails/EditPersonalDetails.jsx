@@ -252,13 +252,13 @@ export const EditPersonalDetails = ({ isEditModal, setIsEditModal, employeeData,
 
   const beforeUpload = (file, docType) => {
     const allowedTypes = [
-      "application/pdf",
+      // "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
       "application/msword" // .doc (legacy)
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      message.error("Only PDF and DOCX files are allowed!");
+      message.error("Only DOCX files are allowed!");
       return false;
     }
 
