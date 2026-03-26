@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Table, Input, message, Button, Space, Tag, Popconfirm, Tabs } from "antd";
+import { Table, Input, message, Button, Space, Tag, Popconfirm, Tabs, Select } from "antd";
 import { EyeOutlined, DownloadOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 import { getAllEmployeeDocuments, getDocuments, verifyDocument, getEmployeeDocumentStats } from "../../services/api";
 import { convertDate } from "../../util/helperFunctions";
 
@@ -11,6 +13,9 @@ export const AllDocRecords = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statsSearch, setStatsSearch] = useState("");
+  const [selectedDocType, setSelectedDocType] = useState(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -110,6 +115,68 @@ export const AllDocRecords = () => {
       } else {
         message.error("Network error or server is down");
       }
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    if (!selectedDocType || selectedRowKeys.length === 0) {
+      message.warning("Please select a document type and at least one employee.");
+      return;
+    }
+
+    setDownloadingZip(true);
+    const zip = new JSZip();
+    const folderName = `${selectedDocType}_documents`;
+    const folder = zip.folder(folderName);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    const hideLoading = message.loading(`Downloading ${selectedRowKeys.length} documents...`, 0);
+
+    try {
+      for (const empId of selectedRowKeys) {
+        try {
+          const response = await getDocuments(empId, selectedDocType);
+          if (response.status === 200) {
+            const docInfo = documents.find(d => d.emp_id === empId && d.doc_type === selectedDocType);
+            const ext = docInfo && docInfo.file_name && docInfo.file_name.includes('.')
+              ? docInfo.file_name.split('.').pop()
+              : "pdf";
+
+            // Generate a clean filename: empId_FirstName_LastName_DocType.ext (if names available)
+            const empNameStr = docInfo && docInfo.employee_name ? docInfo.employee_name.replace(/\s+/g, '') : "";
+            const fileName = `${empId}_${empNameStr}_${selectedDocType}.${ext}`;
+
+            // getDocuments returns arraybuffer if axois responseType: 'blob' or 'arraybuffer'
+            // Let's ensure it handles it correctly: response.data is added as blob.
+            const blob = new Blob([response.data]);
+            folder.file(fileName, blob);
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          console.error(`Error downloading ${selectedDocType} for ${empId}:`, err);
+          failCount++;
+        }
+      }
+
+      if (successCount === 0) {
+        throw new Error("Failed to download any documents.");
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `${folderName}.zip`);
+      message.success(`Downloaded ${successCount} documents successfully.` + (failCount > 0 ? ` Failed: ${failCount}` : ""));
+
+    } catch (error) {
+      console.error("Error bulk downloading:", error);
+      message.error("Error during bulk ZIP download.");
+    } finally {
+      hideLoading();
+      setDownloadingZip(false);
+      setSelectedRowKeys([]);
     }
   };
 
@@ -482,6 +549,71 @@ export const AllDocRecords = () => {
           />
         </>
       ),
+    },
+    {
+      key: '3',
+      label: 'Bulk Download',
+      children: (
+        <div style={{ padding: '16px 0' }}>
+          <Space style={{ marginBottom: 16 }}>
+            <span style={{ fontWeight: 'bold' }}>Document Type:</span>
+            <Select
+              style={{ width: 200 }}
+              placeholder="Select Document Type"
+              value={selectedDocType}
+              onChange={(value) => {
+                setSelectedDocType(value);
+                setSelectedRowKeys([]);
+              }}
+              options={[
+                { label: '10th', value: 'tenth' },
+                { label: '12th', value: 'twelve' },
+                { label: 'PAN', value: 'pan' },
+                { label: 'Aadhaar', value: 'adhar' },
+                { label: 'Graduation', value: 'grad' },
+                { label: 'Resume', value: 'resume' },
+              ]}
+            />
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleBulkDownload}
+              loading={downloadingZip}
+              disabled={!selectedDocType || selectedRowKeys.length === 0}
+            >
+              Download Selected as ZIP
+            </Button>
+            {selectedRowKeys.length > 0 && (
+              <span style={{ marginLeft: 8 }}>{selectedRowKeys.length} selected</span>
+            )}
+          </Space>
+
+          {selectedDocType && (
+            <Table
+              rowSelection={{
+                selectedRowKeys,
+                onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+                // selections: [
+                //   Table.SELECTION_ALL,
+                //   Table.SELECTION_INVERT,
+                //   Table.SELECTION_NONE,
+                // ]
+              }}
+              columns={[
+                { title: 'Employee ID', dataIndex: 'emp_id', key: 'emp_id', sorter: (a, b) => a.emp_id.localeCompare(b.emp_id) },
+                { title: 'Employee Name', dataIndex: 'employee_name', key: 'employee_name', sorter: (a, b) => a.employee_name.localeCompare(b.employee_name) },
+                { title: 'Uploaded Date', dataIndex: 'uploaded_at', key: 'uploaded_at', render: (date) => formatDate(date), sorter: (a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at) },
+                { title: 'Verification Status', dataIndex: 'is_verified', key: 'is_verified', render: (isVerified) => getVerificationStatusTag(isVerified) },
+              ]}
+              dataSource={documents.filter(doc => doc.doc_type === selectedDocType)}
+              rowKey="emp_id"
+              pagination={{ pageSize: 50, showSizeChanger: true }}
+              scroll={{ x: 800 }}
+              size="middle"
+            />
+          )}
+        </div>
+      )
     },
   ];
 
