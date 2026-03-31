@@ -1,4 +1,4 @@
-import { Calendar, Empty, Select, theme, Modal, Button, Row, Col, Space, Typography } from 'antd';
+import { Calendar, Empty, Select, theme, Modal, Button, Row, Col, Space, Typography, Pagination } from 'antd';
 import React, { useState, useEffect } from 'react';
 import styles from "./LeaveTable.module.css";
 import { getLeaveDetails, cancelLeave, getLeaveCards } from '../../services/api';
@@ -34,7 +34,11 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [leaveToCancel, setLeaveToCancel] = useState(null);
   const [selectedLeaveDetails, setSelectedLeaveDetails] = useState(null);
-  const [loader, setLoader] = useState(false)
+  const [loader, setLoader] = useState(false);
+  const [paginationConfig, setPaginationConfig] = useState({
+    current: 1,
+    pageSize: 5,
+  });
 
   const yearRanges = Array.from({ length: new Date().getFullYear() - 2021 + 1 }, (_, i) => new Date().getFullYear() - i);
   const [selectedRange, setSelectedRange] = useState(new Date().getFullYear());
@@ -180,6 +184,24 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
     (selectedStatus.length === 0 || selectedStatus.includes(emp.leaveStatus))
   );
 
+  const { current, pageSize } = paginationConfig;
+  const paginatedData = filteredEmployeeData?.slice((current - 1) * pageSize, current * pageSize);
+
+  const handlePaginationChange = (page, size) => {
+    setPaginationConfig({ current: page, pageSize: size });
+  };
+
+  // Reset to page 1 whenever filters change
+  const handleLeaveChangeWithReset = (value) => {
+    handleLeaveChange(value);
+    setPaginationConfig(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleStatusChangeWithReset = (value) => {
+    handleStatusChange(value);
+    setPaginationConfig(prev => ({ ...prev, current: 1 }));
+  };
+  console.log(filteredEmployeeData, selectedStatus, "filteredEmployeeData");
 
   const handleLeaveChange = (value) => {
     setSelectedLeave(value);
@@ -262,7 +284,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                 <Select
                   mode="multiple"
                   placeholder="Select leave types"
-                  onChange={handleLeaveChange}
+                  onChange={handleLeaveChangeWithReset}
                   style={{ width: '100%' }}
                   options={leaveOptions}
                   allowClear
@@ -275,14 +297,14 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                 <Select
                   mode="multiple"
                   placeholder="Select status"
-                  onChange={handleStatusChange}
+                  onChange={handleStatusChangeWithReset}
                   style={{ width: '100%' }}
                   options={leaveStatusOptions}
                   allowClear
                 />
               </Space>
             </Col>
-            <Col xs={24} md={8}>
+            {/* <Col xs={24} md={8}>
               <Space direction="vertical" size={4} style={{ width: '100%' }}>
                 <Text type="secondary" style={{ fontSize: '13px' }}>Year</Text>
                 <Select
@@ -298,7 +320,7 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                   ))}
                 </Select>
               </Space>
-            </Col>
+            </Col> */}
           </Row>
 
           {/* Table Section */}
@@ -316,8 +338,8 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEmployeeData && filteredEmployeeData.length > 0 ? (
-                    filteredEmployeeData.map((employee, index) => (
+                  {paginatedData && paginatedData.length > 0 ? (
+                    paginatedData.map((employee, index) => (
                       <tr key={index} onClick={() => handleRowClick(employee)}>
                         {tableHeaders?.map((header, subIndex) => (
                           <td key={subIndex}>
@@ -365,6 +387,21 @@ export const LeaveTable = ({ employeeId: propEmployeeId, setLeaveCardData, leave
               </table>
             )}
           </div>
+
+          {/* Pagination */}
+          {filteredEmployeeData && filteredEmployeeData.length > pageSize && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <Pagination
+                current={current}
+                pageSize={pageSize}
+                total={filteredEmployeeData.length}
+                onChange={handlePaginationChange}
+                showSizeChanger={false}
+                pageSizeOptions={['5', '10', '20']}
+                showTotal={(total, range) => `${range[0]}–${range[1]} of ${total} records`}
+              />
+            </div>
+          )}
         </Space>
       </WidgetCard>
       <Modal

@@ -330,8 +330,8 @@ export const employmentStatusOptions = [
 export const leaveStatusOptions = [
     { value: "Pending", label: "Pending" },
     { value: "Approved", label: "Approved" },
-    { value: "Cancel", label: "Cancelled" },
-    { value: "Reject", label: "Rejected" },
+    { value: "Cancelled", label: "Cancelled" },
+    { value: "Rejected", label: "Rejected" },
     { value: 'Partially Approved', label: 'Partially Approved' },
 ];
 
