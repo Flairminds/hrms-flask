@@ -304,7 +304,7 @@ class LeaveQueryService:
                 LeaveTransaction.approver_id == Approver.employee_id
             ).filter(
                 Employee.employee_id == employee_id,
-                LeaveTransaction.from_date.between(start_date, end_date),
+                # LeaveTransaction.from_date.between(start_date, end_date),
                 LeaveTransaction.applied_by.isnot(None)
             ).order_by(
                 LeaveTransaction.from_date.desc()
