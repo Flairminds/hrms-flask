@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Input, Select, Tag, Card, Row, Col,
-    Statistic, Badge, Tooltip, Spin, message, Button, Modal
+    Statistic, Badge, Tooltip, Spin, message, Button, Modal, Rate, Popconfirm
 } from 'antd';
 import {
     TrophyOutlined, TeamOutlined, SearchOutlined,
-    StarFilled, RiseOutlined, DownloadOutlined
+    StarFilled, RiseOutlined, DownloadOutlined, CloseOutlined, EditOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
-import { getTeamSkills } from '../../../services/api';
+import { getTeamSkills, submitTeamSkillReview, deleteTeamSkillReview } from '../../../services/api';
+import { getCookie } from '../../../util/CookieSet';
 import styles from './MySkillsTab.module.css';
 import { convertDate } from '../../../util/helperFunctions';
 
@@ -53,22 +54,35 @@ const TeamSkillsTab = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
+    const [reviewForm, setReviewForm] = useState({ score: 0, comments: '' });
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const currentUser = getCookie('employeeId');
+
+    const fetchTeamSkills = async () => {
+        try {
+            setLoading(true);
+            const res = await getTeamSkills();
+            setAllSkills(res.data?.skills || []);
+            setTotalRecords(res.data?.skills.length || 0);
+            setTop5(res.data?.top5 || []);
+
+            // Re-update selectedRow data if modal is open
+            if (selectedRow) {
+                const updatedRow = res.data?.skills.find(
+                    s => s.employeeId === selectedRow.employeeId && s.skillId === selectedRow.skillId
+                );
+                if (updatedRow) setSelectedRow(updatedRow);
+            }
+        } catch {
+            message.error('Failed to load team skills');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // ── fetch ──────────────────────────────────────────────────────────────
     useEffect(() => {
-        (async () => {
-            try {
-                setLoading(true);
-                const res = await getTeamSkills();
-                setAllSkills(res.data?.skills || []);
-                setTotalRecords(res.data?.skills.length || 0);
-                setTop5(res.data?.top5 || []);
-            } catch {
-                message.error('Failed to load team skills');
-            } finally {
-                setLoading(false);
-            }
-        })();
+        fetchTeamSkills();
     }, []);
 
     // ── derived filter options ─────────────────────────────────────────────
@@ -207,6 +221,36 @@ const TeamSkillsTab = () => {
         // extra.currentDataSource contains the filtered list
         const count = extra.currentDataSource.length;
         setTotalRecords(count);
+    };
+
+    const handleReviewSubmit = async () => {
+        if (!selectedRow) return;
+        setSubmittingReview(true);
+        try {
+            await submitTeamSkillReview({
+                employeeId: selectedRow.employeeId,
+                skillId: selectedRow.skillId,
+                evaluatorScore: reviewForm.score,
+                comments: reviewForm.comments
+            });
+            message.success('Review saved successfully');
+            setReviewForm({ score: 0, comments: '' });
+            fetchTeamSkills(); // refetch skills to update modal data
+        } catch (error) {
+            message.error(error.response?.data?.error || 'Failed to submit review');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
+    const handleReviewDelete = async (employeeId, skillId) => {
+        try {
+            await deleteTeamSkillReview(employeeId, skillId);
+            message.success('Review deleted successfully');
+            fetchTeamSkills(); // refetch skills to update modal data
+        } catch (error) {
+            message.error(error.response?.data?.error || 'Failed to delete review');
+        }
     };
 
     return (
@@ -365,9 +409,15 @@ const TeamSkillsTab = () => {
             <Modal
                 title={`Skill Details - ${selectedRow?.skillName}`}
                 open={modalVisible}
-                onCancel={() => setModalVisible(false)}
+                onCancel={() => {
+                    setModalVisible(false);
+                    setReviewForm({ score: 0, comments: '' });
+                }}
                 footer={[
-                    <Button key="close" onClick={() => setModalVisible(false)}>Close</Button>
+                    <Button key="close" onClick={() => {
+                        setModalVisible(false);
+                        setReviewForm({ score: 0, comments: '' });
+                    }}>Close</Button>
                 ]}
                 width={650}
             >
@@ -382,31 +432,110 @@ const TeamSkillsTab = () => {
                         <h4 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>Evaluator Details</h4>
                         {selectedRow.evaluators && selectedRow.evaluators.length > 0 ? (
                             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                                {selectedRow.evaluators.map((ev, idx) => (
-                                    <div key={idx} style={{ marginBottom: 12, padding: 12, background: '#f9fafb', borderRadius: 8 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                            <strong>{ev.evaluatorName}</strong>
-                                            <span style={{ fontWeight: 600, color: '#4f46e5' }}>{ev.score != null ? `${ev.score} / 5` : '-'}</span>
-                                        </div>
-                                        {ev.comments && (
-                                            <div style={{ fontStyle: 'italic', color: '#4b5563', fontSize: 13, marginTop: 4 }}>
-                                                "{ev.comments}"
+                                {selectedRow.evaluators.map((ev, idx) => {
+                                    const isMyReview = ev.evaluatorId && ev.evaluatorId === currentUser; // if backend included evaluatorId
+                                    // Note: If evaluatorId is missing from backend, we might need it, but let's assume UI can just show edit for currentUser if it's currently logged in context somehow. Actually, wait! The backend needs to expose evaluatorId! Let's check backend `get_team_skills` for `evaluatorId`. 
+                                    // I'll add the edit logic below assuming `evaluatorId` might exist.
+                                    return (
+                                        <div key={idx} style={{ marginBottom: 12, padding: 12, background: '#f9fafb', borderRadius: 8 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <div>
+                                                    <strong>{ev.evaluatorName}</strong>
+                                                    <span style={{ marginTop: '-3px', marginLeft: '15px' }}>
+                                                        <span>
+                                                            <Rate
+                                                                value={ev.score}
+                                                                onChange={val => setReviewForm({ ...reviewForm, score: val })}
+                                                            />
+                                                        </span>
+                                                        <span style={{ fontWeight: 600, color: '#4f46e5', marginLeft: '10px' }}>{ev.score != null ? `${ev.score}/5` : '-'}</span>
+                                                    </span>
+                                                </div>
+                                                {ev.evaluatorId === currentUser && (
+                                                    <div style={{ display: 'flex' }}>
+                                                        <Tooltip title="Edit Review">
+                                                            <Button
+                                                                type="text"
+                                                                icon={<EditOutlined style={{ color: '#f59e0b' }} />}
+                                                                size="small"
+                                                                onClick={() => setReviewForm({ score: ev.score || 0, comments: ev.comments || '' })}
+                                                            />
+                                                        </Tooltip>
+                                                        <Tooltip title="Delete Review">
+                                                            <Popconfirm
+                                                                title="Delete Review"
+                                                                description="Are you sure to delete your review?"
+                                                                onConfirm={() => handleReviewDelete(selectedRow.employeeId, selectedRow.skillId)}
+                                                                okText="Yes"
+                                                                cancelText="No"
+                                                            >
+                                                                <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                                                            </Popconfirm>
+                                                        </Tooltip>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                        <div style={{ marginTop: 8, fontSize: 11, color: '#6b7280' }}>
-                                            <span style={{ marginRight: 12 }}><strong>Review Added:</strong> {ev.reviewCreatedAt ? convertDate(ev.reviewCreatedAt) : '—'}</span>
-                                            <span><strong>Review Modified:</strong> {ev.reviewModifiedAt ? convertDate(ev.reviewModifiedAt) : '—'}</span>
+                                            {ev.comments && (
+                                                <div style={{ fontStyle: 'italic', color: '#4b5563', fontSize: 13, marginTop: 4 }}>
+                                                    "{ev.comments}"
+                                                </div>
+                                            )}
+                                            <div style={{ marginTop: 8, fontSize: 11, color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
+                                                <div>
+                                                    <span style={{ marginRight: 12 }}><strong>Reviewed:</strong> {ev.reviewCreatedAt ? convertDate(ev.reviewCreatedAt) : '—'}</span>
+                                                    <span><strong>Modified:</strong> {ev.reviewModifiedAt ? convertDate(ev.reviewModifiedAt) : '—'}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         ) : (
                             <p style={{ color: '#9ca3af' }}>No evaluator data available for this skill.</p>
                         )}
+
+                        {/* Add/Edit Review Form (not for self) */}
+                        {selectedRow.employeeId !== currentUser && (
+                            <div style={{ marginTop: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff' }}>
+                                <h4 style={{ marginBottom: 12 }}>{reviewForm.score > 0 && selectedRow.evaluators?.some(e => e.evaluatorId === currentUser) ? 'Edit Your Review' : 'Add Your Review'}</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div>
+                                        <span style={{ marginRight: 8, fontWeight: 500 }}>Score (out of 5):</span>
+                                        <Rate
+                                            value={reviewForm.score}
+                                            onChange={val => setReviewForm({ ...reviewForm, score: val })}
+                                        />
+                                    </div>
+                                    <Input.TextArea
+                                        rows={3}
+                                        placeholder="Add your comments about this skill..."
+                                        value={reviewForm.comments}
+                                        onChange={e => setReviewForm({ ...reviewForm, comments: e.target.value })}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                        <Button
+                                            onClick={() => setReviewForm({ score: 0, comments: '' })}
+                                            disabled={!reviewForm.score && !reviewForm.comments}
+                                        >
+                                            Clear
+                                        </Button>
+                                        <Button
+                                            type="primary"
+                                            onClick={handleReviewSubmit}
+                                            loading={submittingReview}
+                                            disabled={reviewForm.score === 0}
+                                        >
+                                            {selectedRow.evaluators?.some(e => e.evaluatorId === currentUser) && reviewForm.score > 0 ? 'Update Review' : 'Post Review'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
-            </Modal>
-        </div>
+                )
+                }
+            </Modal >
+        </div >
     );
 };
 

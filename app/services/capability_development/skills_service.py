@@ -5,6 +5,7 @@ Handles all My Skills business logic for the Capability Development module.
 Migrated from app/services/skills_service.py
 """
 
+import uuid
 from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -240,6 +241,7 @@ class SkillsService:
                     EmployeeSkill.modified_at,
                     EmployeeSkillReview.evaluator_score,
                     EmployeeSkillReview.comments,
+                    EmployeeSkillReview.evaluator_id.label('evaluator_id_alias'),
                     Evaluator.first_name.label('evaluator_first_name'),
                     Evaluator.last_name.label('evaluator_last_name'),
                     EmployeeSkillReview.created_at.label('review_created_at'),
@@ -307,6 +309,7 @@ class SkillsService:
 
                 if r.evaluator_first_name is not None:
                     flat_dict[key]["evaluators"].append({
+                        "evaluatorId": r.evaluator_id_alias,
                         "evaluatorName": f"{r.evaluator_first_name} {r.evaluator_last_name}".strip(),
                         "score": float(r.evaluator_score) if r.evaluator_score else None,
                         "comments": r.comments,
@@ -341,3 +344,93 @@ class SkillsService:
         except Exception as e:
             Logger.error("Error retrieving team skills", error=str(e))
             raise
+
+    @staticmethod
+    def add_or_update_team_skill_review(employee_id: str, skill_id: int, evaluator_id: str, evaluator_score: float, comments: str) -> dict:
+        """
+        Add or update a skill review by an evaluator for a specific employee.
+        """
+        if employee_id == evaluator_id:
+            raise ValueError("You cannot review your own skills.")
+
+        try:
+            # Check if EmployeeSkill exists
+            emp_skill = EmployeeSkill.query.filter_by(employee_id=employee_id, skill_id=skill_id).first()
+            if not emp_skill:
+                # Or create it implicitly with a zero self_evaluation? usually it's there if they review it.
+                # But if they don't have it, we should create it
+                emp_skill = EmployeeSkill(
+                    employee_id=employee_id,
+                    skill_id=skill_id,
+                    is_ready=False
+                )
+                db.session.add(emp_skill)
+
+            existing_review = EmployeeSkillReview.query.filter_by(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id
+            ).first()
+
+            if existing_review:
+                existing_review.evaluator_score = evaluator_score
+                existing_review.comments = comments
+                existing_review.status = 'Reviewed'
+                existing_review.review_date = datetime.now()
+                review_id = existing_review.review_id
+            else:
+                review_id = str(uuid.uuid4())
+                new_review = EmployeeSkillReview(
+                    review_id=review_id,
+                    employee_id=employee_id,
+                    skill_id=skill_id,
+                    evaluator_id=evaluator_id,
+                    evaluator_score=evaluator_score,
+                    comments=comments,
+                    status='Reviewed',
+                    review_date=datetime.now(),
+                    is_new=False
+                )
+                db.session.add(new_review)
+
+            db.session.commit()
+            return {"reviewId": review_id, "message": "Review saved successfully"}
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            Logger.error("DB error saving team skill review", error=str(e))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error saving team skill review", error=str(e))
+            raise
+
+    @staticmethod
+    def delete_team_skill_review(employee_id: str, skill_id: int, evaluator_id: str) -> None:
+        """
+        Delete a skill review by an evaluator for a specific employee.
+        """
+        try:
+            review = EmployeeSkillReview.query.filter_by(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id
+            ).first()
+
+            if not review:
+                raise ValueError("Review not found.")
+
+            db.session.delete(review)
+            db.session.commit()
+
+        except ValueError:
+            raise
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            Logger.error("DB error deleting team skill review", error=str(e))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting team skill review", error=str(e))
+            raise
+

@@ -605,6 +605,14 @@ export const addMasterSkill = (payload) =>
 export const getTeamSkills = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/skills/team-skills`);
 
+// [Capability Dev] Add/update an evaluator review for an employee's skill
+export const submitTeamSkillReview = (payload) =>
+  axiosInstance.post(`${API_BASE_URL}/capability-dev/skills/team-skills/review`, payload);
+
+// [Capability Dev] Delete an evaluator review for an employee's skill
+export const deleteTeamSkillReview = (employeeId, skillId) =>
+  axiosInstance.delete(`${API_BASE_URL}/capability-dev/skills/team-skills/review/${employeeId}/${skillId}`);
+
 // [Capability Dev] Get all active employees' goals
 export const getTeamGoals = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/goals/team-goals`);
