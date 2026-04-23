@@ -40,3 +40,15 @@ def add_master_skill():
 def get_team_skills():
     """Get all active employees' skills with leaderboard."""
     return SkillsController.get_team_skills()
+
+
+@capability_dev_skills_bp.route("/team-skills/review", methods=["POST"])
+def add_or_update_team_skill_review():
+    """Add or update an evaluator review for an employee's skill."""
+    return SkillsController.add_or_update_team_skill_review()
+
+
+@capability_dev_skills_bp.route("/team-skills/review/<employee_id>/<skill_id>", methods=["DELETE"])
+def delete_team_skill_review(employee_id, skill_id):
+    """Delete an evaluator review for an employee's skill."""
+    return SkillsController.delete_team_skill_review(employee_id, skill_id)

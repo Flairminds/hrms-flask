@@ -532,7 +532,7 @@ class EmployeeSkillReview(BaseModel):
     is_new = db.Column(db.Boolean, nullable=False, default=False)
     
     __table_args__ = (
-        db.UniqueConstraint('employee_id', 'skill_id', name='uq_employee_skill_evaluator'),
+        db.UniqueConstraint('employee_id', 'skill_id', 'evaluator_id', name='uq_employee_skill_evaluator'),
         db.ForeignKeyConstraint(['employee_id'], ['employee.employee_id']),
         db.ForeignKeyConstraint(['evaluator_id'], ['employee.employee_id']),
         db.ForeignKeyConstraint(['skill_id', 'employee_id'], ['employee_skill.skill_id', 'employee_skill.employee_id']),

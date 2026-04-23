@@ -5,12 +5,15 @@ Handles all My Skills business logic for the Capability Development module.
 Migrated from app/services/skills_service.py
 """
 
+import uuid
 from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from sqlalchemy.orm import aliased
+
 from ... import db
-from ...models.hr import Employee, EmployeeSkill, MasterSkill
+from ...models.hr import Employee, EmployeeSkill, MasterSkill, EmployeeSkillReview
 from ...utils.logger import Logger
 
 
@@ -221,6 +224,8 @@ class SkillsService:
         LEVEL_WEIGHT = {"Beginner": 1, "Intermediate": 2, "Expert": 3}
 
         try:
+            Evaluator = aliased(Employee)
+
             rows = (
                 db.session.query(
                     Employee.employee_id,
@@ -232,52 +237,87 @@ class SkillsService:
                     EmployeeSkill.skill_category,
                     EmployeeSkill.self_evaluation,
                     MasterSkill.skill_name,
+                    EmployeeSkill.created_at,
+                    EmployeeSkill.modified_at,
+                    EmployeeSkillReview.evaluator_score,
+                    EmployeeSkillReview.comments,
+                    EmployeeSkillReview.evaluator_id.label('evaluator_id_alias'),
+                    Evaluator.first_name.label('evaluator_first_name'),
+                    Evaluator.last_name.label('evaluator_last_name'),
+                    EmployeeSkillReview.created_at.label('review_created_at'),
+                    EmployeeSkillReview.modified_at.label('review_modified_at')
                 )
                 .join(EmployeeSkill, Employee.employee_id == EmployeeSkill.employee_id)
                 .join(MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id)
+                .outerjoin(
+                    EmployeeSkillReview,
+                    (EmployeeSkill.employee_id == EmployeeSkillReview.employee_id) &
+                    (EmployeeSkill.skill_id == EmployeeSkillReview.skill_id)
+                )
+                .outerjoin(
+                    Evaluator,
+                    EmployeeSkillReview.evaluator_id == Evaluator.employee_id
+                )
                 .filter(Employee.employment_status.notin_(['Relieved', 'Absconding']))
                 .order_by(Employee.first_name, MasterSkill.skill_name)
                 .all()
             )
 
             skill_stats: dict = {}   # skill_id -> {name, count, total_weight, total_eval}
-            flat: list = []
+            flat_dict: dict = {}
 
             for r in rows:
-                s_level = r.skill_level
-                s_category = r.skill_category
-                # backwards-compat
-                if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
-                    s_category = s_level
-                    s_level = None
+                key = (r.employee_id, r.skill_id)
+                if key not in flat_dict:
+                    s_level = r.skill_level
+                    s_category = r.skill_category
+                    # backwards-compat
+                    if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
+                        s_category = s_level
+                        s_level = None
 
-                flat.append({
-                    "employeeId": r.employee_id,
-                    "employeeName": f"{r.first_name} {r.last_name}".strip(),
-                    "skillId": r.skill_id,
-                    "skillName": r.skill_name,
-                    "skillCategory": s_category,
-                    "skillLevel": s_level,
-                    "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
-                })
-
-                # accumulate stats for leaderboard
-                if r.skill_id not in skill_stats:
-                    skill_stats[r.skill_id] = {
+                    flat_dict[key] = {
+                        "employeeId": r.employee_id,
+                        "employeeName": f"{r.first_name} {r.last_name}".strip(),
                         "skillId": r.skill_id,
                         "skillName": r.skill_name,
-                        "count": 0,
-                        "totalWeight": 0,
-                        "totalEval": 0,
-                        "evalCount": 0,
+                        "skillCategory": s_category,
+                        "skillLevel": s_level,
+                        "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
+                        "added": r.created_at,
+                        "modified": r.modified_at,
+                        "evaluators": []
                     }
-                stat = skill_stats[r.skill_id]
-                weight = LEVEL_WEIGHT.get(s_level, 1)
-                eval_val = float(r.self_evaluation) if r.self_evaluation else 0
-                stat["count"] += 1
-                stat["totalWeight"] += weight
-                stat["totalEval"] += eval_val
-                stat["evalCount"] += 1 if r.self_evaluation else 0
+
+                    # accumulate stats for leaderboard
+                    if r.skill_id not in skill_stats:
+                        skill_stats[r.skill_id] = {
+                            "skillId": r.skill_id,
+                            "skillName": r.skill_name,
+                            "count": 0,
+                            "totalWeight": 0,
+                            "totalEval": 0,
+                            "evalCount": 0,
+                        }
+                    stat = skill_stats[r.skill_id]
+                    weight = LEVEL_WEIGHT.get(s_level, 1)
+                    eval_val = float(r.self_evaluation) if r.self_evaluation else 0
+                    stat["count"] += 1
+                    stat["totalWeight"] += weight
+                    stat["totalEval"] += eval_val
+                    stat["evalCount"] += 1 if r.self_evaluation else 0
+
+                if r.evaluator_first_name is not None:
+                    flat_dict[key]["evaluators"].append({
+                        "evaluatorId": r.evaluator_id_alias,
+                        "evaluatorName": f"{r.evaluator_first_name} {r.evaluator_last_name}".strip(),
+                        "score": float(r.evaluator_score) if r.evaluator_score else None,
+                        "comments": r.comments,
+                        "reviewCreatedAt": r.review_created_at,
+                        "reviewModifiedAt": r.review_modified_at
+                    })
+
+            flat = list(flat_dict.values())
 
             # compute score = count * avg_weight * avg_eval
             leaderboard = []
@@ -304,3 +344,93 @@ class SkillsService:
         except Exception as e:
             Logger.error("Error retrieving team skills", error=str(e))
             raise
+
+    @staticmethod
+    def add_or_update_team_skill_review(employee_id: str, skill_id: int, evaluator_id: str, evaluator_score: float, comments: str) -> dict:
+        """
+        Add or update a skill review by an evaluator for a specific employee.
+        """
+        if employee_id == evaluator_id:
+            raise ValueError("You cannot review your own skills.")
+
+        try:
+            # Check if EmployeeSkill exists
+            emp_skill = EmployeeSkill.query.filter_by(employee_id=employee_id, skill_id=skill_id).first()
+            if not emp_skill:
+                # Or create it implicitly with a zero self_evaluation? usually it's there if they review it.
+                # But if they don't have it, we should create it
+                emp_skill = EmployeeSkill(
+                    employee_id=employee_id,
+                    skill_id=skill_id,
+                    is_ready=False
+                )
+                db.session.add(emp_skill)
+
+            existing_review = EmployeeSkillReview.query.filter_by(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id
+            ).first()
+
+            if existing_review:
+                existing_review.evaluator_score = evaluator_score
+                existing_review.comments = comments
+                existing_review.status = 'Reviewed'
+                existing_review.review_date = datetime.now()
+                review_id = existing_review.review_id
+            else:
+                review_id = str(uuid.uuid4())
+                new_review = EmployeeSkillReview(
+                    review_id=review_id,
+                    employee_id=employee_id,
+                    skill_id=skill_id,
+                    evaluator_id=evaluator_id,
+                    evaluator_score=evaluator_score,
+                    comments=comments,
+                    status='Reviewed',
+                    review_date=datetime.now(),
+                    is_new=False
+                )
+                db.session.add(new_review)
+
+            db.session.commit()
+            return {"reviewId": review_id, "message": "Review saved successfully"}
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            Logger.error("DB error saving team skill review", error=str(e))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error saving team skill review", error=str(e))
+            raise
+
+    @staticmethod
+    def delete_team_skill_review(employee_id: str, skill_id: int, evaluator_id: str) -> None:
+        """
+        Delete a skill review by an evaluator for a specific employee.
+        """
+        try:
+            review = EmployeeSkillReview.query.filter_by(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id
+            ).first()
+
+            if not review:
+                raise ValueError("Review not found.")
+
+            db.session.delete(review)
+            db.session.commit()
+
+        except ValueError:
+            raise
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            Logger.error("DB error deleting team skill review", error=str(e))
+            raise
+        except Exception as e:
+            db.session.rollback()
+            Logger.error("Error deleting team skill review", error=str(e))
+            raise
+

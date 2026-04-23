@@ -78,3 +78,52 @@ class SkillsController:
         except Exception as e:
             Logger.error("Error in get_team_skills", error=str(e))
             return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
+    def add_or_update_team_skill_review():
+        """POST /api/capability-dev/skills/team-skills/review"""
+        try:
+            evaluator_id = get_jwt_identity()
+            payload = request.get_json() or {}
+            
+            employee_id = payload.get('employeeId')
+            skill_id = payload.get('skillId')
+            evaluator_score = payload.get('evaluatorScore')
+            comments = payload.get('comments', '')
+
+            if not all([employee_id, skill_id, evaluator_score]):
+                return jsonify({"error": "Missing required fields: employeeId, skillId, evaluatorScore"}), 400
+
+            result = SkillsService.add_or_update_team_skill_review(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id,
+                evaluator_score=evaluator_score,
+                comments=comments
+            )
+            return jsonify(result), 200
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            Logger.error("Error in add_or_update_team_skill_review", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    @jwt_required()
+    def delete_team_skill_review(employee_id, skill_id):
+        """DELETE /api/capability-dev/skills/team-skills/review/<employee_id>/<skill_id>"""
+        try:
+            evaluator_id = get_jwt_identity()
+            SkillsService.delete_team_skill_review(
+                employee_id=employee_id,
+                skill_id=skill_id,
+                evaluator_id=evaluator_id
+            )
+            return jsonify({"message": "Review deleted successfully"}), 200
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            Logger.error("Error in delete_team_skill_review", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
