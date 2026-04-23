@@ -232,6 +232,8 @@ class SkillsService:
                     EmployeeSkill.skill_category,
                     EmployeeSkill.self_evaluation,
                     MasterSkill.skill_name,
+                    EmployeeSkill.created_at,
+                    EmployeeSkill.modified_at
                 )
                 .join(EmployeeSkill, Employee.employee_id == EmployeeSkill.employee_id)
                 .join(MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id)
@@ -259,6 +261,8 @@ class SkillsService:
                     "skillCategory": s_category,
                     "skillLevel": s_level,
                     "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
+                    "added": r.created_at,
+                    "modified": r.modified_at
                 })
 
                 # accumulate stats for leaderboard

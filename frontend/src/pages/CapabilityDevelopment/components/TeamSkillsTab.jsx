@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Input, Select, Tag, Card, Row, Col,
-    Statistic, Badge, Tooltip, Spin, message
+    Statistic, Badge, Tooltip, Spin, message, Button
 } from 'antd';
 import {
     TrophyOutlined, TeamOutlined, SearchOutlined,
-    StarFilled, RiseOutlined
+    StarFilled, RiseOutlined, DownloadOutlined
 } from '@ant-design/icons';
+import * as XLSX from 'xlsx';
 import { getTeamSkills } from '../../../services/api';
 import styles from './MySkillsTab.module.css';
+import { convertDate } from '../../../util/helperFunctions';
 
 const { Option } = Select;
 
@@ -48,6 +50,7 @@ const TeamSkillsTab = () => {
     const [filterSkill, setFilterSkill] = useState(null);
     const [filterCategory, setFilterCategory] = useState(null);
     const [filterLevel, setFilterLevel] = useState(null);
+    const [totalRecords, setTotalRecords] = useState(0);
 
     // ── fetch ──────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -56,6 +59,7 @@ const TeamSkillsTab = () => {
                 setLoading(true);
                 const res = await getTeamSkills();
                 setAllSkills(res.data?.skills || []);
+                setTotalRecords(res.data?.skills.length || 0);
                 setTop5(res.data?.top5 || []);
             } catch {
                 message.error('Failed to load team skills');
@@ -85,6 +89,28 @@ const TeamSkillsTab = () => {
         });
     }, [allSkills, search, filterSkill, filterCategory, filterLevel]);
 
+    // ── export to excel ────────────────────────────────────────────────────
+    const downloadExcel = () => {
+        if (!filtered.length) {
+            message.warning('No data to export');
+            return;
+        }
+
+        const dataToExport = filtered.map(row => ({
+            'Employee ID': row.employeeId,
+            'Employee Name': row.employeeName,
+            'Skill': row.skillName,
+            'Category': row.skillCategory,
+            'Level': row.skillLevel,
+            'Self Eval': row.selfEvaluation != null ? row.selfEvaluation : '—'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Team Skills');
+        XLSX.writeFile(workbook, 'Team_Skills.xlsx');
+    };
+
     // ── table columns ──────────────────────────────────────────────────────
     const columns = [
         {
@@ -97,13 +123,19 @@ const TeamSkillsTab = () => {
         {
             title: 'Employee Name',
             dataIndex: 'employeeName',
-            sorter: (a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''),
+            // sorter: (a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''),
+            filters: [...new Set(filtered.map(c => c.employeeName).filter(Boolean))].map(name => ({ text: name, value: name })),
+            onFilter: (val, rec) => rec.employeeName === val,
+            filterSearch: true,
             render: name => <b>{name}</b>,
         },
         {
             title: 'Skill',
             dataIndex: 'skillName',
-            sorter: (a, b) => (a.skillName || '').localeCompare(b.skillName || ''),
+            // sorter: (a, b) => (a.skillName || '').localeCompare(b.skillName || ''),
+            filters: [...new Set(allSkills.map(c => c.skillName).filter(Boolean))].map(name => ({ text: name, value: name })),
+            onFilter: (val, rec) => rec.skillName === val,
+            filterSearch: true,
         },
         {
             title: 'Category',
@@ -128,7 +160,31 @@ const TeamSkillsTab = () => {
                 ? <span style={{ fontWeight: 600 }}>{val}<span style={{ color: '#9ca3af', fontSize: 12 }}>/5</span></span>
                 : <span style={{ color: '#9ca3af' }}>—</span>,
         },
+        {
+            title: 'Added',
+            dataIndex: 'added',
+            width: 110,
+            sorter: (a, b) => (a.added || 0) - (b.added || 0),
+            render: val => val != null
+                ? <span>{convertDate(val)}</span>
+                : <span style={{ color: '#9ca3af' }}>—</span>,
+        },
+        {
+            title: 'Modified',
+            dataIndex: 'modified',
+            width: 110,
+            sorter: (a, b) => (a.modified || 0) - (b.modified || 0),
+            render: val => val != null
+                ? <span>{convertDate(val)}</span>
+                : <span style={{ color: '#9ca3af' }}>—</span>,
+        },
     ];
+
+    const handleTableChange = (pagination, filters, sorter, extra) => {
+        // extra.currentDataSource contains the filtered list
+        const count = extra.currentDataSource.length;
+        setTotalRecords(count);
+    };
 
     return (
         <div style={{ padding: '0 4px' }}>
@@ -200,7 +256,7 @@ const TeamSkillsTab = () => {
 
             {/* ── Filters ──────────────────────────────────────────────────── */}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                <Input
+                {/* <Input
                     prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
                     placeholder="Search employee or skill…"
                     value={search}
@@ -219,7 +275,7 @@ const TeamSkillsTab = () => {
                     style={{ width: 220 }}
                 >
                     {skillOptions.map(s => <Option key={s} value={s}>{s}</Option>)}
-                </Select>
+                </Select> */}
                 {/* <Select
                     placeholder="Filter by Category"
                     allowClear
@@ -242,12 +298,22 @@ const TeamSkillsTab = () => {
                         <Option key={l} value={l}>{l}</Option>
                     ))}
                 </Select> */}
-                <Statistic
-                    value={filtered.length}
-                    suffix={`/ ${allSkills.length} entries`}
-                    style={{ lineHeight: 1, marginLeft: 'auto', paddingTop: 2 }}
-                    valueStyle={{ fontSize: 14, color: '#4f46e5' }}
-                />
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <Statistic
+                        value={totalRecords}
+                        suffix={`/ ${allSkills.length} entries`}
+                        style={{ lineHeight: 1, paddingTop: 2 }}
+                        valueStyle={{ fontSize: 14, color: '#4f46e5' }}
+                    />
+                    <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        onClick={downloadExcel}
+                        disabled={filtered.length === 0}
+                    >
+                        Export Excel
+                    </Button>
+                </div>
             </div>
 
             {/* ── Table ────────────────────────────────────────────────────── */}
@@ -257,9 +323,10 @@ const TeamSkillsTab = () => {
                     columns={columns}
                     rowKey={(r, i) => `${r.employeeId}-${r.skillId}-${i}`}
                     size="middle"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 12, showSizeChanger: false }}
                     scroll={{ x: 700 }}
                     locale={{ emptyText: loading ? ' ' : 'No skills found' }}
+                    onChange={handleTableChange}
                 />
             </Spin>
         </div>
