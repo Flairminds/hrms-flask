@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Input, Select, Tag, Card, Row, Col,
-    Statistic, Badge, Tooltip, Spin, message, Button
+    Statistic, Badge, Tooltip, Spin, message, Button, Modal
 } from 'antd';
 import {
     TrophyOutlined, TeamOutlined, SearchOutlined,
@@ -51,6 +51,8 @@ const TeamSkillsTab = () => {
     const [filterCategory, setFilterCategory] = useState(null);
     const [filterLevel, setFilterLevel] = useState(null);
     const [totalRecords, setTotalRecords] = useState(0);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
 
     // ── fetch ──────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -159,6 +161,27 @@ const TeamSkillsTab = () => {
             render: val => val != null
                 ? <span style={{ fontWeight: 600 }}>{val}<span style={{ color: '#9ca3af', fontSize: 12 }}>/5</span></span>
                 : <span style={{ color: '#9ca3af' }}>—</span>,
+        },
+        {
+            title: 'Review Eval',
+            dataIndex: 'evaluators',
+            width: 110,
+            sorter: (a, b) => {
+                const getAvg = (evs) => {
+                    if (!evs || evs.length === 0) return 0;
+                    const scores = evs.filter(e => e.score != null);
+                    if (scores.length === 0) return 0;
+                    return scores.reduce((sum, e) => sum + e.score, 0) / scores.length;
+                };
+                return getAvg(a.evaluators) - getAvg(b.evaluators);
+            },
+            render: evaluators => {
+                if (!evaluators || evaluators.length === 0) return <span style={{ color: '#9ca3af' }}>—</span>;
+                const evaluatedScores = evaluators.filter(e => e.score != null);
+                if (evaluatedScores.length === 0) return <span style={{ color: '#9ca3af' }}>—</span>;
+                const avgScore = (evaluatedScores.reduce((sum, e) => sum + e.score, 0) / evaluatedScores.length).toFixed(1);
+                return <span style={{ fontWeight: 600 }}>{avgScore}<span style={{ color: '#9ca3af', fontSize: 12 }}>/5</span></span>;
+            }
         },
         {
             title: 'Added',
@@ -327,8 +350,62 @@ const TeamSkillsTab = () => {
                     scroll={{ x: 700 }}
                     locale={{ emptyText: loading ? ' ' : 'No skills found' }}
                     onChange={handleTableChange}
+                    onRow={(record) => {
+                        return {
+                            onClick: () => {
+                                setSelectedRow(record);
+                                setModalVisible(true);
+                            },
+                        };
+                    }}
+                    rowClassName={() => 'clickable-table-row'}
                 />
             </Spin>
+
+            <Modal
+                title={`Skill Details - ${selectedRow?.skillName}`}
+                open={modalVisible}
+                onCancel={() => setModalVisible(false)}
+                footer={[
+                    <Button key="close" onClick={() => setModalVisible(false)}>Close</Button>
+                ]}
+                width={650}
+            >
+                {selectedRow && (
+                    <div style={{ padding: '10px 0' }}>
+                        <div style={{ marginBottom: 16 }}>
+                            <p><strong>Employee:</strong> {selectedRow.employeeName} ({selectedRow.employeeId})</p>
+                            <p><strong>Skill Level:</strong> {selectedRow.skillLevel || '—'} &nbsp;|&nbsp; <strong>Category:</strong> {selectedRow.skillCategory || '—'}</p>
+                            <p><strong>Self Evaluation:</strong> {selectedRow.selfEvaluation ? `${selectedRow.selfEvaluation} / 5` : '—'}</p>
+                        </div>
+
+                        <h4 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>Evaluator Details</h4>
+                        {selectedRow.evaluators && selectedRow.evaluators.length > 0 ? (
+                            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                                {selectedRow.evaluators.map((ev, idx) => (
+                                    <div key={idx} style={{ marginBottom: 12, padding: 12, background: '#f9fafb', borderRadius: 8 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                            <strong>{ev.evaluatorName}</strong>
+                                            <span style={{ fontWeight: 600, color: '#4f46e5' }}>{ev.score != null ? `${ev.score} / 5` : '-'}</span>
+                                        </div>
+                                        {ev.comments && (
+                                            <div style={{ fontStyle: 'italic', color: '#4b5563', fontSize: 13, marginTop: 4 }}>
+                                                "{ev.comments}"
+                                            </div>
+                                        )}
+                                        <div style={{ marginTop: 8, fontSize: 11, color: '#6b7280' }}>
+                                            <span style={{ marginRight: 12 }}><strong>Review Added:</strong> {ev.reviewCreatedAt ? convertDate(ev.reviewCreatedAt) : '—'}</span>
+                                            <span><strong>Review Modified:</strong> {ev.reviewModifiedAt ? convertDate(ev.reviewModifiedAt) : '—'}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ color: '#9ca3af' }}>No evaluator data available for this skill.</p>
+                        )}
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

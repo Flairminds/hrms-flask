@@ -9,8 +9,10 @@ from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from sqlalchemy.orm import aliased
+
 from ... import db
-from ...models.hr import Employee, EmployeeSkill, MasterSkill
+from ...models.hr import Employee, EmployeeSkill, MasterSkill, EmployeeSkillReview
 from ...utils.logger import Logger
 
 
@@ -221,6 +223,8 @@ class SkillsService:
         LEVEL_WEIGHT = {"Beginner": 1, "Intermediate": 2, "Expert": 3}
 
         try:
+            Evaluator = aliased(Employee)
+
             rows = (
                 db.session.query(
                     Employee.employee_id,
@@ -233,55 +237,84 @@ class SkillsService:
                     EmployeeSkill.self_evaluation,
                     MasterSkill.skill_name,
                     EmployeeSkill.created_at,
-                    EmployeeSkill.modified_at
+                    EmployeeSkill.modified_at,
+                    EmployeeSkillReview.evaluator_score,
+                    EmployeeSkillReview.comments,
+                    Evaluator.first_name.label('evaluator_first_name'),
+                    Evaluator.last_name.label('evaluator_last_name'),
+                    EmployeeSkillReview.created_at.label('review_created_at'),
+                    EmployeeSkillReview.modified_at.label('review_modified_at')
                 )
                 .join(EmployeeSkill, Employee.employee_id == EmployeeSkill.employee_id)
                 .join(MasterSkill, EmployeeSkill.skill_id == MasterSkill.skill_id)
+                .outerjoin(
+                    EmployeeSkillReview,
+                    (EmployeeSkill.employee_id == EmployeeSkillReview.employee_id) &
+                    (EmployeeSkill.skill_id == EmployeeSkillReview.skill_id)
+                )
+                .outerjoin(
+                    Evaluator,
+                    EmployeeSkillReview.evaluator_id == Evaluator.employee_id
+                )
                 .filter(Employee.employment_status.notin_(['Relieved', 'Absconding']))
                 .order_by(Employee.first_name, MasterSkill.skill_name)
                 .all()
             )
 
             skill_stats: dict = {}   # skill_id -> {name, count, total_weight, total_eval}
-            flat: list = []
+            flat_dict: dict = {}
 
             for r in rows:
-                s_level = r.skill_level
-                s_category = r.skill_category
-                # backwards-compat
-                if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
-                    s_category = s_level
-                    s_level = None
+                key = (r.employee_id, r.skill_id)
+                if key not in flat_dict:
+                    s_level = r.skill_level
+                    s_category = r.skill_category
+                    # backwards-compat
+                    if not s_category and s_level in ["Primary", "Secondary", "Cross Tech Skill"]:
+                        s_category = s_level
+                        s_level = None
 
-                flat.append({
-                    "employeeId": r.employee_id,
-                    "employeeName": f"{r.first_name} {r.last_name}".strip(),
-                    "skillId": r.skill_id,
-                    "skillName": r.skill_name,
-                    "skillCategory": s_category,
-                    "skillLevel": s_level,
-                    "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
-                    "added": r.created_at,
-                    "modified": r.modified_at
-                })
-
-                # accumulate stats for leaderboard
-                if r.skill_id not in skill_stats:
-                    skill_stats[r.skill_id] = {
+                    flat_dict[key] = {
+                        "employeeId": r.employee_id,
+                        "employeeName": f"{r.first_name} {r.last_name}".strip(),
                         "skillId": r.skill_id,
                         "skillName": r.skill_name,
-                        "count": 0,
-                        "totalWeight": 0,
-                        "totalEval": 0,
-                        "evalCount": 0,
+                        "skillCategory": s_category,
+                        "skillLevel": s_level,
+                        "selfEvaluation": float(r.self_evaluation) if r.self_evaluation else None,
+                        "added": r.created_at,
+                        "modified": r.modified_at,
+                        "evaluators": []
                     }
-                stat = skill_stats[r.skill_id]
-                weight = LEVEL_WEIGHT.get(s_level, 1)
-                eval_val = float(r.self_evaluation) if r.self_evaluation else 0
-                stat["count"] += 1
-                stat["totalWeight"] += weight
-                stat["totalEval"] += eval_val
-                stat["evalCount"] += 1 if r.self_evaluation else 0
+
+                    # accumulate stats for leaderboard
+                    if r.skill_id not in skill_stats:
+                        skill_stats[r.skill_id] = {
+                            "skillId": r.skill_id,
+                            "skillName": r.skill_name,
+                            "count": 0,
+                            "totalWeight": 0,
+                            "totalEval": 0,
+                            "evalCount": 0,
+                        }
+                    stat = skill_stats[r.skill_id]
+                    weight = LEVEL_WEIGHT.get(s_level, 1)
+                    eval_val = float(r.self_evaluation) if r.self_evaluation else 0
+                    stat["count"] += 1
+                    stat["totalWeight"] += weight
+                    stat["totalEval"] += eval_val
+                    stat["evalCount"] += 1 if r.self_evaluation else 0
+
+                if r.evaluator_first_name is not None:
+                    flat_dict[key]["evaluators"].append({
+                        "evaluatorName": f"{r.evaluator_first_name} {r.evaluator_last_name}".strip(),
+                        "score": float(r.evaluator_score) if r.evaluator_score else None,
+                        "comments": r.comments,
+                        "reviewCreatedAt": r.review_created_at,
+                        "reviewModifiedAt": r.review_modified_at
+                    })
+
+            flat = list(flat_dict.values())
 
             # compute score = count * avg_weight * avg_eval
             leaderboard = []
