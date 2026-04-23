@@ -151,13 +151,9 @@ const MySkillsTab = () => {
             key: 'actions',
             render: (_, record) => (
                 <Tooltip title="Edit Skill Details">
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleEditSkill(record)}
-                    >
-                        Edit
-                    </Button>
+                    <div style={{ cursor: "pointer", color: 'blue', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => handleEditSkill(record)}>
+                        <EditOutlined /> Edit
+                    </div>
                 </Tooltip>
             )
         }
@@ -200,6 +196,7 @@ const MySkillsTab = () => {
                 loading={loading}
                 pagination={{ pageSize: 10 }}
                 bordered
+                size='middle'
             />
 
             <AddEditSkillModal
