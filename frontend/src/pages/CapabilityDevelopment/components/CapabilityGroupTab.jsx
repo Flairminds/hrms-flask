@@ -226,7 +226,7 @@ const CapabilityGroupTab = () => {
             title: 'Capability Group', dataIndex: 'group_name', key: 'group_name',
             render: g => <Tag color="blue">{g}</Tag>
         },
-        { title: 'Assigned By', dataIndex: 'assigned_by', key: 'assigned_by' },
+        { title: 'Assigned By', dataIndex: 'assigned_by_name', key: 'assigned_by_name' },
         {
             title: 'Assigned On', dataIndex: 'assigned_on', key: 'assigned_on',
             render: d => d ? dayjs(d).format('DD MMM YYYY') : '—',
@@ -330,7 +330,7 @@ const CapabilityGroupTab = () => {
         },
         {
             key: 'assignments',
-            label: 'Employee Assignments',
+            label: 'Employee CG Assignments',
             children: (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
@@ -361,45 +361,45 @@ const CapabilityGroupTab = () => {
                 </div>
             )
         },
-        {
-            key: 'history',
-            label: 'Assignment History',
-            children: (
-                <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                        <div>
-                            {/* <Title level={5} style={{ margin: 0 }}>History</Title> */}
-                            <Text type="secondary" style={{ fontSize: 12 }}>{history.length} records</Text>
-                        </div>
-                        <Select
-                            placeholder="Filter by Employee"
-                            allowClear
-                            showSearch
-                            style={{ width: '100%', maxWidth: 260 }}
-                            options={employeeOptions}
-                            onChange={val => {
-                                setHistoryEmpFilter(val || null);
-                                fetchHistory(val || null);
-                            }}
-                            filterOption={(input, option) =>
-                                option.label.toLowerCase().includes(input.toLowerCase())
-                            }
-                        />
-                    </div>
-                    <Spin spinning={loadingHistory}>
-                        <Table
-                            dataSource={history}
-                            columns={historyColumns}
-                            rowKey="id"
-                            size="small"
-                            pagination={{ pageSize: 10 }}
-                            style={{ border: '1px solid #eee', borderRadius: 8 }}
-                            scroll={{ x: 'max-content' }}
-                        />
-                    </Spin>
-                </div>
-            )
-        }
+        // {
+        //     key: 'history',
+        //     label: 'CG Assignment History',
+        //     children: (
+        //         <div>
+        //             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        //                 <div>
+        //                     {/* <Title level={5} style={{ margin: 0 }}>History</Title> */}
+        //                     <Text type="secondary" style={{ fontSize: 12 }}>{history.length} records</Text>
+        //                 </div>
+        //                 <Select
+        //                     placeholder="Filter by Employee"
+        //                     allowClear
+        //                     showSearch
+        //                     style={{ width: '100%', maxWidth: 260 }}
+        //                     options={employeeOptions}
+        //                     onChange={val => {
+        //                         setHistoryEmpFilter(val || null);
+        //                         fetchHistory(val || null);
+        //                     }}
+        //                     filterOption={(input, option) =>
+        //                         option.label.toLowerCase().includes(input.toLowerCase())
+        //                     }
+        //                 />
+        //             </div>
+        //             <Spin spinning={loadingHistory}>
+        //                 <Table
+        //                     dataSource={history}
+        //                     columns={historyColumns}
+        //                     rowKey="id"
+        //                     size="small"
+        //                     pagination={{ pageSize: 10 }}
+        //                     style={{ border: '1px solid #eee', borderRadius: 8 }}
+        //                     scroll={{ x: 'max-content' }}
+        //                 />
+        //             </Spin>
+        //         </div>
+        //     )
+        // }
     ];
 
     return (
