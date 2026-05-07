@@ -1,5 +1,4 @@
-from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask import request, jsonify, g
 from ...services.capability_development.capability_group_service import CapabilityGroupService
 import logging
 
@@ -48,7 +47,6 @@ class CapabilityGroupController:
     # ── Master Groups ──────────────────────────────────────────────────
 
     @staticmethod
-    @jwt_required()
     def get_groups():
         try:
             groups = CapabilityGroupService.get_all_groups()
@@ -58,11 +56,7 @@ class CapabilityGroupController:
             return jsonify({'message': 'Error fetching groups'}), 500
 
     @staticmethod
-    @jwt_required()
     def create_group():
-        claims = get_jwt()
-        if claims.get('role', '').lower() not in ['admin', 'hr']:
-            return jsonify({'message': 'Unauthorized'}), 403
         data = request.json or {}
         if not data.get('group_name'):
             return jsonify({'message': 'group_name is required'}), 400
@@ -74,11 +68,7 @@ class CapabilityGroupController:
             return jsonify({'message': str(e)}), 500
 
     @staticmethod
-    @jwt_required()
     def update_group(group_id):
-        claims = get_jwt()
-        if claims.get('role', '').lower() not in ['admin', 'hr']:
-            return jsonify({'message': 'Unauthorized'}), 403
         data = request.json or {}
         try:
             group = CapabilityGroupService.update_group(group_id, data)
@@ -90,11 +80,7 @@ class CapabilityGroupController:
             return jsonify({'message': str(e)}), 500
 
     @staticmethod
-    @jwt_required()
     def delete_group(group_id):
-        claims = get_jwt()
-        if claims.get('role', '').lower() not in ['admin', 'hr']:
-            return jsonify({'message': 'Unauthorized'}), 403
         try:
             if CapabilityGroupService.delete_group(group_id):
                 return jsonify({'message': 'Group deactivated'}), 200
@@ -106,14 +92,12 @@ class CapabilityGroupController:
     # ── Assignments ────────────────────────────────────────────────────
 
     @staticmethod
-    @jwt_required()
     def get_assignments():
         """All roles can call this. Employees see only their own assignment."""
-        claims = get_jwt()
-        caller_role = claims.get('role', '').lower()
-        caller_id = get_jwt_identity()
+        caller_role = g.user_role.lower()
+        caller_id = g.employee_id
         # Scope to own employee_id if caller is an employee
-        filter_id = caller_id if caller_role == 'employee' else None
+        filter_id = caller_id if caller_role not in ["hr", "admin"] else None
         try:
             rows = CapabilityGroupService.get_all_assignments(employee_id=filter_id)
             return jsonify([_serialize_assignment(a, e, g) for a, e, g in rows]), 200
@@ -122,10 +106,9 @@ class CapabilityGroupController:
             return jsonify({'message': 'Error fetching assignments'}), 500
 
     @staticmethod
-    @jwt_required()
     def get_my_group():
         """Any authenticated employee can view their own capability group."""
-        current_user_id = get_jwt_identity()
+        current_user_id = getattr(g, 'employee_id', None)
         try:
             result = CapabilityGroupService.get_my_assignment(current_user_id)
             if not result:
@@ -145,29 +128,21 @@ class CapabilityGroupController:
             return jsonify({'message': 'Error fetching your capability group'}), 500
 
     @staticmethod
-    @jwt_required()
     def assign_group():
-        claims = get_jwt()
-        if claims.get('role', '').lower() not in ['admin', 'hr']:
-            return jsonify({'message': 'Unauthorized'}), 403
         data = request.json or {}
         if not data.get('employee_id') or not data.get('group_id'):
             return jsonify({'message': 'employee_id and group_id are required'}), 400
         try:
-            assignment = CapabilityGroupService.assign_group(data, get_jwt_identity())
+            assignment = CapabilityGroupService.assign_group(data, getattr(g, 'employee_id', None))
             return jsonify({'message': 'Group assigned', 'id': assignment.id}), 201
         except Exception as e:
             logger.error(f"assign_group error: {e}")
             return jsonify({'message': str(e)}), 500
 
     @staticmethod
-    @jwt_required()
     def remove_assignment(employee_id):
-        claims = get_jwt()
-        if claims.get('role', '').lower() not in ['admin', 'hr']:
-            return jsonify({'message': 'Unauthorized'}), 403
         try:
-            if CapabilityGroupService.remove_assignment(employee_id, get_jwt_identity()):
+            if CapabilityGroupService.remove_assignment(employee_id, getattr(g, 'employee_id', None)):
                 return jsonify({'message': 'Assignment removed'}), 200
             return jsonify({'message': 'Assignment not found'}), 404
         except Exception as e:
@@ -177,14 +152,12 @@ class CapabilityGroupController:
     # ── History ────────────────────────────────────────────────────────
 
     @staticmethod
-    @jwt_required()
     def get_history():
         """All roles can call this. Employees see only their own history."""
-        claims = get_jwt()
-        caller_role = claims.get('role', '').lower()
-        caller_id = get_jwt_identity()
+        caller_role = getattr(g, 'user_role', '').lower() if getattr(g, 'user_role', '') else ''
+        caller_id = getattr(g, 'employee_id', None)
         # HR/Admin can also filter by an arbitrary employee_id via query param
-        if caller_role == 'employee':
+        if caller_role not in ["hr", "admin"]:
             employee_id = caller_id
         else:
             employee_id = request.args.get('employee_id')

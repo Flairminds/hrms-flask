@@ -136,7 +136,16 @@ ROLE_PERMISSIONS = {
         "get_assigned_capability_leads": ["Admin", "HR"],
         "create_capability_assignment": ["Admin", "HR"],
         "update_capability_assignment": ["Admin", "HR"],
-        "delete_capability_assignment": ["Admin", "HR"]
+        "delete_capability_assignment": ["Admin", "HR"],
+        "get_groups": ["Admin", "HR", "Lead", "Employee"],
+        "create_group": ["Admin", "HR"],
+        "update_group": ["Admin", "HR"],
+        "delete_group": ["Admin", "HR"],
+        "get_assignments": ["Admin", "HR", "Lead", "Employee"],
+        "assign_group": ["Admin", "HR"],
+        "remove_assignment": ["Admin", "HR"],
+        "get_my_group": ["Admin", "HR", "Lead", "Employee"],
+        "get_history": ["Admin", "HR", "Lead", "Employee"]
     },
     
     # ===========================
