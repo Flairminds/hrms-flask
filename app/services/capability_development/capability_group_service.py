@@ -5,6 +5,7 @@ from ...models.capability_development import (
     EmployeeCapabilityGroup,
     EmployeeCapabilityGroupHistory,
 )
+from sqlalchemy.orm import aliased
 from ...models.hr import Employee
 
 
@@ -57,10 +58,12 @@ class CapabilityGroupService:
     def get_all_assignments(employee_id=None):
         """Return current assignments joined with employee and group names.
         If employee_id is provided, filter to that employee only."""
+        AssignedByEmployee = aliased(Employee)
         query = (
-            db.session.query(EmployeeCapabilityGroup, Employee, MasterCapabilityGroup)
+            db.session.query(EmployeeCapabilityGroup, Employee, MasterCapabilityGroup, AssignedByEmployee)
             .join(Employee, Employee.employee_id == EmployeeCapabilityGroup.employee_id)
             .join(MasterCapabilityGroup, MasterCapabilityGroup.group_id == EmployeeCapabilityGroup.group_id)
+            .outerjoin(AssignedByEmployee, AssignedByEmployee.employee_id == EmployeeCapabilityGroup.assigned_by)
         )
         if employee_id:
             query = query.filter(EmployeeCapabilityGroup.employee_id == employee_id)
@@ -137,10 +140,12 @@ class CapabilityGroupService:
 
     @staticmethod
     def get_history(employee_id=None):
+        AssignedByEmployee = aliased(Employee)
         query = (
-            db.session.query(EmployeeCapabilityGroupHistory, Employee, MasterCapabilityGroup)
+            db.session.query(EmployeeCapabilityGroupHistory, Employee, MasterCapabilityGroup, AssignedByEmployee)
             .join(Employee, Employee.employee_id == EmployeeCapabilityGroupHistory.employee_id)
             .join(MasterCapabilityGroup, MasterCapabilityGroup.group_id == EmployeeCapabilityGroupHistory.group_id)
+            .outerjoin(AssignedByEmployee, AssignedByEmployee.employee_id == EmployeeCapabilityGroupHistory.assigned_by)
         )
         if employee_id:
             query = query.filter(EmployeeCapabilityGroupHistory.employee_id == employee_id)

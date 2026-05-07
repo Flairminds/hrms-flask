@@ -15,7 +15,10 @@ def _serialize_group(g):
     }
 
 
-def _serialize_assignment(assignment, employee, group):
+def _serialize_assignment(assignment, employee, group, assigned_by_emp=None):
+    assigned_by_name = (f"{assigned_by_emp.first_name} {assigned_by_emp.last_name}"
+                        if assigned_by_emp and hasattr(assigned_by_emp, 'first_name')
+                        else assignment.assigned_by)
     return {
         'id': assignment.id,
         'employee_id': assignment.employee_id,
@@ -23,12 +26,16 @@ def _serialize_assignment(assignment, employee, group):
         'group_id': assignment.group_id,
         'group_name': group.group_name,
         'assigned_by': assignment.assigned_by,
+        'assigned_by_name': assigned_by_name,
         'assigned_on': assignment.assigned_on.isoformat() if assignment.assigned_on else None,
         'notes': assignment.notes,
     }
 
 
-def _serialize_history(h, employee, group):
+def _serialize_history(h, employee, group, assigned_by_emp=None):
+    assigned_by_name = (f"{assigned_by_emp.first_name} {assigned_by_emp.last_name}"
+                        if assigned_by_emp and hasattr(assigned_by_emp, 'first_name')
+                        else h.assigned_by)
     return {
         'id': h.id,
         'employee_id': h.employee_id,
@@ -36,6 +43,7 @@ def _serialize_history(h, employee, group):
         'group_id': h.group_id,
         'group_name': group.group_name,
         'assigned_by': h.assigned_by,
+        'assigned_by_name': assigned_by_name,
         'assigned_on': h.assigned_on.isoformat() if h.assigned_on else None,
         'removed_on': h.removed_on.isoformat() if h.removed_on else None,
         'notes': h.notes,
@@ -100,7 +108,7 @@ class CapabilityGroupController:
         filter_id = caller_id if caller_role not in ["hr", "admin"] else None
         try:
             rows = CapabilityGroupService.get_all_assignments(employee_id=filter_id)
-            return jsonify([_serialize_assignment(a, e, g) for a, e, g in rows]), 200
+            return jsonify([_serialize_assignment(a, e, g, ab) for a, e, g, ab in rows]), 200
         except Exception as e:
             logger.error(f"get_assignments error: {e}")
             return jsonify({'message': 'Error fetching assignments'}), 500
@@ -163,7 +171,7 @@ class CapabilityGroupController:
             employee_id = request.args.get('employee_id')
         try:
             rows = CapabilityGroupService.get_history(employee_id)
-            return jsonify([_serialize_history(h, e, g) for h, e, g in rows]), 200
+            return jsonify([_serialize_history(h, e, g, ab) for h, e, g, ab in rows]), 200
         except Exception as e:
             logger.error(f"get_history error: {e}")
             return jsonify({'message': 'Error fetching history'}), 500
