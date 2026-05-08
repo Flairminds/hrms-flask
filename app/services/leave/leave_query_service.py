@@ -1008,7 +1008,7 @@ class LeaveQueryService:
                     'reasonForWorkingLate': row.reason_for_working_late or '',
                     'compOffDate': row.comp_off_date,
                     'workedDate': row.worked_date,
-                    'noOfDays': int(row.no_of_days),
+                    'noOfDays': float(row.no_of_days) if row.no_of_days else 0.0,
                     'compOffTransactions': comp_off_map.get(row.leave_tran_id, []),
                     'approverName': row.approver_name or 'N/A'
                 })
