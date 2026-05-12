@@ -182,12 +182,17 @@ class ProjectService:
     @staticmethod
     def get_employee_allocations():
         """Retrieves all employees with their project allocations aggregated."""
+        from sqlalchemy.orm import aliased
         try:
-            # Get all employees with their allocations
+            TeamLead = aliased(Employee)
+            # Get all employees with their allocations and leave approver (team lead)
             employees_data = db.session.query(
                 Employee.employee_id,
                 func.concat(Employee.first_name, ' ', Employee.last_name).label('employee_name'),
-                Employee.email
+                Employee.email,
+                func.concat(TeamLead.first_name, ' ', TeamLead.last_name).label('manager_name')
+            ).outerjoin(
+                TeamLead, Employee.team_lead_id == TeamLead.employee_id
             ).filter(
                 Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
                 Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
@@ -233,6 +238,7 @@ class ProjectService:
                     'employee_id': emp.employee_id,
                     'employee_name': ' '.join(emp.employee_name.split()),
                     'email': emp.email,
+                    'manager_name': ' '.join(emp.manager_name.split()) if emp.manager_name and emp.manager_name.strip() else '',
                     'total_allocation': float(total_allocation / 100) if total_allocation else 0.0,  # Convert to 0-1 scale
                     'billable_allocation': float(billable_allocation / 100) if billable_allocation else 0.0,  # Convert to 0-1 scale
                     'projects': projects

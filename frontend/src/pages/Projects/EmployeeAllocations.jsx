@@ -70,6 +70,7 @@ const EmployeeAllocations = ({ stats }) => {
             return {
                 employeeName: emp.employee_name,
                 employeeId: emp.employee_id,
+                managerName: emp.manager_name || '',
                 totalAllocation: Number((emp.total_allocation * 100).toFixed(2)),
                 totalBillable: Number(billableAlloc.toFixed(2)),
                 projectCount: projects.length
@@ -86,7 +87,7 @@ const EmployeeAllocations = ({ stats }) => {
         };
 
         // Build header row manually
-        const s2Headers = ['Employee Name', 'Employee ID', 'Total Allocation (%)', 'Total Billable Allocation (%)', 'No. of Projects Assigned'];
+        const s2Headers = ['Employee Name', 'Employee ID', 'Manager (Leave Approver)', 'Total Allocation (%)', 'Total Billable Allocation (%)', 'No. of Projects Assigned'];
         const headerStyle = {
             font: { bold: true },
             fill: { fgColor: { rgb: 'FFD3D3D3' } },
@@ -108,6 +109,7 @@ const EmployeeAllocations = ({ stats }) => {
             const rowValues = [
                 row.employeeName,
                 row.employeeId,
+                row.managerName,
                 row.totalAllocation,
                 row.totalBillable,
                 row.projectCount
@@ -124,8 +126,8 @@ const EmployeeAllocations = ({ stats }) => {
                     cellStyle.fill = { fgColor: { rgb: rowBgRgb } };
                 }
 
-                if (ci === 2 && rowBgRgb) {
-                    // Make the Total Allocation cell bold for emphasis
+                if (ci === 3 && rowBgRgb) {
+                    // Make the Total Allocation cell bold for emphasis (now at index 3)
                     cellStyle.font = { bold: true };
                 }
 
@@ -134,7 +136,7 @@ const EmployeeAllocations = ({ stats }) => {
         });
 
         ws2['!ref'] = XLSXStyle.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheet2Data.length, c: s2Headers.length - 1 } });
-        ws2['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 22 }, { wch: 28 }, { wch: 24 }];
+        ws2['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 26 }, { wch: 22 }, { wch: 28 }, { wch: 24 }];
         XLSXStyle.utils.book_append_sheet(wb, ws2, 'Employee Summary');
 
         // ── Sheet 3: Company-level summary ──
