@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress } from 'antd';
-import { SearchOutlined, CopyOutlined, TeamOutlined } from '@ant-design/icons';
+import { SearchOutlined, CopyOutlined, TeamOutlined, DownloadOutlined } from '@ant-design/icons';
 import { getEmployeeAllocations } from '../../services/api';
+import XLSXStyle from 'xlsx-js-style';
 
 const EmployeeAllocations = ({ stats }) => {
     const [employeeAllocations, setEmployeeAllocations] = useState([]);
@@ -24,6 +25,147 @@ const EmployeeAllocations = ({ stats }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const downloadExcel = () => {
+        const wb = XLSXStyle.utils.book_new();
+
+        // ── Sheet 1: Allocation Details (one row per employee-project) ──
+        const sheet1Rows = [];
+        employeeAllocations.forEach(emp => {
+            if (emp.projects && emp.projects.length > 0) {
+                emp.projects.forEach(proj => {
+                    sheet1Rows.push({
+                        'Employee Name': emp.employee_name,
+                        'Employee ID': emp.employee_id,
+                        'Project Name': proj.project_name,
+                        'Allocation (%)': proj.allocation,
+                        'Billable': proj.is_billing ? 'Yes' : 'No',
+                        'Role': proj.role || '',
+                        'Lead': proj.lead_name || ''
+                    });
+                });
+            } else {
+                sheet1Rows.push({
+                    'Employee Name': emp.employee_name,
+                    'Employee ID': emp.employee_id,
+                    'Project Name': '—',
+                    'Allocation (%)': 0,
+                    'Billable': '—',
+                    'Role': '—',
+                    'Lead': '—'
+                });
+            }
+        });
+        const ws1 = XLSXStyle.utils.json_to_sheet(sheet1Rows);
+        ws1['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 18 }, { wch: 22 }];
+        XLSXStyle.utils.book_append_sheet(wb, ws1, 'Allocation Details');
+
+        // ── Sheet 2: Employee-level aggregation with conditional cell coloring ──
+        const sheet2Data = employeeAllocations.map(emp => {
+            const projects = emp.projects || [];
+            const billableAlloc = projects
+                .filter(p => p.is_billing)
+                .reduce((sum, p) => sum + (p.allocation || 0), 0);
+            return {
+                employeeName: emp.employee_name,
+                employeeId: emp.employee_id,
+                totalAllocation: Number((emp.total_allocation * 100).toFixed(2)),
+                totalBillable: Number(billableAlloc.toFixed(2)),
+                projectCount: projects.length
+            };
+        });
+
+        // Helper: determine ROW background color based on Total Allocation (%)
+        // Returns light red for <=50 or empty, light orange for 50<val<100, null for 100%
+        const getRowBgColor = (val) => {
+            if (val === null || val === undefined || val === '') return 'FFFFE6E6'; // light red
+            if (val <= 50) return 'FFFFE6E6';  // light red
+            if (val < 100) return 'FFFFF3E0'; // light orange
+            return null; // no fill for 100%
+        };
+
+        // Build header row manually
+        const s2Headers = ['Employee Name', 'Employee ID', 'Total Allocation (%)', 'Total Billable Allocation (%)', 'No. of Projects Assigned'];
+        const headerStyle = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'FFD3D3D3' } },
+            border: {
+                top: { style: 'thin' }, bottom: { style: 'thin' },
+                left: { style: 'thin' }, right: { style: 'thin' }
+            }
+        };
+
+        const ws2 = {};
+        // Write header
+        s2Headers.forEach((h, ci) => {
+            const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: ci });
+            ws2[cellRef] = { v: h, t: 's', s: headerStyle };
+        });
+
+        // Write data rows — entire row gets the row color; Total Allocation cell also gets bold
+        sheet2Data.forEach((row, ri) => {
+            const rowValues = [
+                row.employeeName,
+                row.employeeId,
+                row.totalAllocation,
+                row.totalBillable,
+                row.projectCount
+            ];
+            const rowBgRgb = getRowBgColor(row.totalAllocation);
+
+            rowValues.forEach((val, ci) => {
+                const cellRef = XLSXStyle.utils.encode_cell({ r: ri + 1, c: ci });
+                const cellType = typeof val === 'number' ? 'n' : 's';
+                const cellStyle = {};
+
+                if (rowBgRgb) {
+                    // Apply light row highlight to all columns
+                    cellStyle.fill = { fgColor: { rgb: rowBgRgb } };
+                }
+
+                if (ci === 2 && rowBgRgb) {
+                    // Make the Total Allocation cell bold for emphasis
+                    cellStyle.font = { bold: true };
+                }
+
+                ws2[cellRef] = { v: val, t: cellType, s: Object.keys(cellStyle).length ? cellStyle : undefined };
+            });
+        });
+
+        ws2['!ref'] = XLSXStyle.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheet2Data.length, c: s2Headers.length - 1 } });
+        ws2['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 22 }, { wch: 28 }, { wch: 24 }];
+        XLSXStyle.utils.book_append_sheet(wb, ws2, 'Employee Summary');
+
+        // ── Sheet 3: Company-level summary ──
+        const totalActiveEmployees = employeeAllocations.length;
+        const totalAllocation = employeeAllocations.reduce((sum, emp) => sum + (emp.total_allocation || 0), 0);
+        const totalBillable = employeeAllocations.reduce((sum, emp) => sum + (emp.billable_allocation || 0), 0);
+        const sheet3Rows = [
+            {
+                'Metric': 'Total Active Employees',
+                'Value': totalActiveEmployees
+            },
+            {
+                'Metric': 'Total Allocation (sum across employees)',
+                'Value': Number(totalAllocation.toFixed(2))
+            },
+            {
+                'Metric': 'Total Billable Allocation (sum across employees)',
+                'Value': Number(totalBillable.toFixed(2))
+            }
+        ];
+        const ws3 = XLSXStyle.utils.json_to_sheet(sheet3Rows);
+        ws3['!cols'] = [{ wch: 48 }, { wch: 16 }];
+        XLSXStyle.utils.book_append_sheet(wb, ws3, 'Company Summary');
+
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mmm = now.toLocaleString('en-GB', { month: 'short' });
+        const yy = String(now.getFullYear()).slice(-2);
+        const dateSuffix = `${dd}-${mmm}-${yy}`;
+        XLSXStyle.writeFile(wb, `Employee_Allocations_${dateSuffix}.xlsx`);
+        message.success('Excel downloaded successfully!');
     };
 
     const filteredData = employeeAllocations.filter(emp => {
@@ -181,6 +323,14 @@ const EmployeeAllocations = ({ stats }) => {
                         onClick={() => setBillableAllocationFilter(billableAllocationFilter === 0.5 ? null : 0.5)}
                     >
                         {`Billable allocation <= 0.5`}
+                    </Button>
+                    <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        onClick={downloadExcel}
+                        style={{ marginLeft: 'auto' }}
+                    >
+                        Download Excel
                     </Button>
                 </div>
 
