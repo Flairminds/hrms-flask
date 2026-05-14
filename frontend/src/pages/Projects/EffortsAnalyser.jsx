@@ -18,7 +18,7 @@ const { Dragger } = Upload;
 const { TabPane } = Tabs;
 
 // ── constants ──────────────────────────────────────────────────────────────
-const DONE_STATES = ['done', 'completed', 'complete', 'closed', 'resolved'];
+const DONE_STATES = ['done', 'completed', 'complete', 'closed', 'resolved', 'canceled'];
 
 // No greens in this palette — green is reserved for "Planned Remaining" bars
 const PERIOD_COLORS = [
@@ -38,6 +38,46 @@ const PERIOD_COLORS = [
     '#006d75', // dark teal
     '#d4b106', // dark gold
 ];
+
+// ── Project name mapping ───────────────────────────────────────────────────
+// Maps Excel project names → HRMS project names.
+// Keys   = exact project name as it appears in the Excel sheet (case-insensitive match).
+// Values = exact project name as it appears in HRMS.
+// Add one entry per mismatched project. Leave empty ({}) if names already match.
+const PROJECT_NAME_MAP = {
+    // 'Excel Project Name':  'HRMS Project Name',
+    // 'ClientX Portal':      'Client X Portal',
+    // 'website-redesign':    'Website Redesign',
+    '2 OnPepper Leverage Modelling & Hummingbird': 'Onpepper',
+    '2 BNYM': 'BNY-M'
+};
+
+// Resolves an Excel project name to its HRMS equivalent (or returns it unchanged).
+const resolveProjectName = (excelName) => {
+    if (!excelName) return excelName;
+    const key = Object.keys(PROJECT_NAME_MAP).find(
+        k => k.toLowerCase().trim() === excelName.toLowerCase().trim()
+    );
+    return key ? PROJECT_NAME_MAP[key] : excelName;
+};
+
+// ── Employee name mapping ───────────────────────────────────────────────────
+// Maps Excel assignee names → HRMS employee names.
+// Keys   = exact name as it appears in the "Primary Assignee" column (case-insensitive).
+// Values = exact employee name as it appears in HRMS.
+const EMPLOYEE_NAME_MAP = {
+    // 'Excel Name':   'HRMS Name',
+    // 'J. Smith':     'John Smith',
+};
+
+// Resolves an Excel assignee name to its HRMS equivalent (or returns it unchanged).
+const resolveEmployeeName = (excelName) => {
+    if (!excelName) return excelName;
+    const key = Object.keys(EMPLOYEE_NAME_MAP).find(
+        k => k.toLowerCase().trim() === excelName.toLowerCase().trim()
+    );
+    return key ? EMPLOYEE_NAME_MAP[key] : excelName;
+};
 
 // ── date helpers ───────────────────────────────────────────────────────────
 const parseExcelDate = (val) => {
@@ -279,16 +319,16 @@ const CustomXTick = ({ x, y, payload }) => {
 };
 
 // ── Health checks modal ──────────────────────────────────────────────────────────────────
-const runHealthChecks = (rows) => {
+const runHealthChecks = (rows, allocationMap) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const overHours    = [];  // rule 1: estimate or logged > 40 hrs
-    const loggedOverEst = []; // rule 2: logged > estimated
-    const overdueOpen  = [];  // rule 3: past end date but not done
+    const overHours     = [];  // rule 1: estimate or logged > 40 hrs
+    const loggedOverEst = [];  // rule 2: logged > estimated
+    const overdueOpen   = [];  // rule 3: past end date but not done
 
     rows.forEach((r, i) => {
-        const rowNum = i + 2; // Excel row (1-indexed header + 1)
+        const rowNum = i + 2;
         if (r.estimateEffort > 40 || r.loggedTime > 40) {
             overHours.push({ ...r, rowNum,
                 issue: `Estimate: ${r.estimateEffort.toFixed(2)} hrs, Logged: ${r.loggedTime.toFixed(2)} hrs` });
@@ -303,7 +343,27 @@ const runHealthChecks = (rows) => {
         }
     });
 
-    return { overHours, loggedOverEst, overdueOpen };
+    // ── Mapping diagnostics: find Excel names with no HRMS allocation match ─────
+    const excelProjects  = [...new Set(rows.map(r => r.project))].sort();
+    const excelEmployees = [...new Set(rows.map(r => r.assignee))].sort();
+
+    // All HRMS employee keys and project keys available in the allocation map
+    const hrmsEmployeeKeys = new Set(Object.keys(allocationMap));
+    const hrmsProjKeys     = new Set(
+        Object.values(allocationMap).flatMap(projMap => Object.keys(projMap))
+    );
+
+    const unmappedProjects = excelProjects.filter(p => {
+        const resolved = resolveProjectName(p).toLowerCase().trim();
+        return !hrmsProjKeys.has(resolved);
+    });
+
+    const unmappedEmployees = excelEmployees.filter(e => {
+        const resolved = resolveEmployeeName(e).toLowerCase().trim();
+        return !hrmsEmployeeKeys.has(resolved);
+    });
+
+    return { overHours, loggedOverEst, overdueOpen, unmappedProjects, unmappedEmployees };
 };
 
 const CHECK_COLUMNS = [
@@ -321,8 +381,9 @@ const CHECK_COLUMNS = [
 
 const HealthChecksModal = ({ checks, onClose }) => {
     if (!checks) return null;
-    const { overHours, loggedOverEst, overdueOpen } = checks;
+    const { overHours, loggedOverEst, overdueOpen, unmappedProjects, unmappedEmployees } = checks;
     const total = overHours.length + loggedOverEst.length + overdueOpen.length;
+    const unmappedTotal = unmappedProjects.length + unmappedEmployees.length;
 
     const Section = ({ title, color, icon, rows, description }) => (
         rows.length === 0 ? (
@@ -362,11 +423,11 @@ const HealthChecksModal = ({ checks, onClose }) => {
             styles={{ body: { maxHeight: '72vh', overflowY: 'auto', padding: '16px 24px' } }}
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <WarningOutlined style={{ color: total === 0 ? '#52c41a' : '#fa8c16', fontSize: 17 }} />
+                    <WarningOutlined style={{ color: (total + unmappedTotal) === 0 ? '#52c41a' : '#fa8c16', fontSize: 17 }} />
                     <span style={{ fontWeight: 700, fontSize: 15 }}>Data Health Checks</span>
-                    {total === 0
+                    {(total + unmappedTotal) === 0
                         ? <Tag color="success">All checks passed</Tag>
-                        : <Tag color="warning">{total} issue{total !== 1 ? 's' : ''} found</Tag>
+                        : <Tag color="warning">{total} issue{total !== 1 ? 's' : ''} · {unmappedTotal} unmapped</Tag>
                     }
                 </div>
             }
@@ -393,6 +454,57 @@ const HealthChecksModal = ({ checks, onClose }) => {
                 rows={overdueOpen}
                 description="End date is in the past but the task state is not Done/Completed. Needs follow-up."
             />
+
+            {/* Mapping diagnostics */}
+            <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 8, paddingTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 15 }}>🔗</span>
+                    <span style={{ fontWeight: 700, color: '#333', fontSize: 13 }}>Mapping Diagnostics</span>
+                    <Tag color={unmappedTotal === 0 ? 'success' : 'orange'} style={{ fontSize: 11 }}>
+                        {unmappedTotal === 0 ? 'All mapped' : `${unmappedTotal} unmatched`}
+                    </Tag>
+                </div>
+                <p style={{ fontSize: 11, color: '#888', margin: '-4px 0 12px' }}>
+                    Names below exist in the Excel sheet but have <b>no matching entry in HRMS allocation data</b>.
+                    Bars for these entities show raw hours instead of %. Fix by adding them to
+                    <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 3, margin: '0 4px' }}>PROJECT_NAME_MAP</code>
+                    or
+                    <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 3, margin: '0 4px' }}>EMPLOYEE_NAME_MAP</code>
+                    in the source file.
+                </p>
+                <Row gutter={[16, 0]}>
+                    <Col span={12}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: '#4f8ef7', marginBottom: 6 }}>
+                            🗒 Unmatched Projects ({unmappedProjects.length})
+                        </div>
+                        {unmappedProjects.length === 0
+                            ? <div style={{ fontSize: 11, color: '#52c41a' }}>✔ All projects matched</div>
+                            : unmappedProjects.map(p => (
+                                <div key={p} style={{ fontFamily: 'monospace', fontSize: 11,
+                                    background: '#fff2e8', border: '1px solid #ffbb96',
+                                    borderRadius: 4, padding: '3px 8px', marginBottom: 4, color: '#d4380d' }}>
+                                    {p}
+                                </div>
+                            ))
+                        }
+                    </Col>
+                    <Col span={12}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: '#722ed1', marginBottom: 6 }}>
+                            👥 Unmatched Employees ({unmappedEmployees.length})
+                        </div>
+                        {unmappedEmployees.length === 0
+                            ? <div style={{ fontSize: 11, color: '#52c41a' }}>✔ All employees matched</div>
+                            : unmappedEmployees.map(e => (
+                                <div key={e} style={{ fontFamily: 'monospace', fontSize: 11,
+                                    background: '#f9f0ff', border: '1px solid #d3adf7',
+                                    borderRadius: 4, padding: '3px 8px', marginBottom: 4, color: '#531dab' }}>
+                                    {e}
+                                </div>
+                            ))
+                        }
+                    </Col>
+                </Row>
+            </div>
         </Modal>
     );
 };
@@ -510,28 +622,53 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                             const color = PERIOD_COLORS[idx % PERIOD_COLORS.length];
                             return [
                                 // Done segment — bottom, period color
+                                // Carries the label when planned = 0 (it is the topmost segment)
                                 <Bar key={`${period}__done`} dataKey={`${period}__done`}
                                     name={`${period} Done`} stackId={period}
-                                    fill={color} maxBarSize={BAR_WIDTH} legendType="none" />,
-                                // Planned segment — top, always green
-                                <Bar key={`${period}__planned`} dataKey={`${period}__planned`}
-                                    name={`${period} Planned`} stackId={period}
-                                    fill="#52c41a" maxBarSize={BAR_WIDTH} legendType="none"
-                                    radius={[3, 3, 0, 0]}>
+                                    fill={color} maxBarSize={BAR_WIDTH} legendType="none"
+                                    isAnimationActive={false}>
                                     <LabelList
-                                        content={({ x, y, width, value, index }) => {
-                                            const doneVal  = data[index]?.[`${period}__done`] || 0;
-                                            const total    = doneVal + (value || 0);
-                                            const totalPct = data[index]?.[`${period}__totalPct`];
-                                            if (total <= 0) return null;
-                                            const pctColor = totalPct == null ? '#666'
-                                                : totalPct >= 90 ? '#096dd9'
-                                                : totalPct >= 60 ? '#d46b08' : '#cf1322';
+                                        dataKey={`${period}__label_done`}
+                                        position="top"
+                                        content={({ x, y, width, value }) => {
+                                            if (!value) return null;
+                                            const isPercent = String(value).endsWith('%');
+                                            const pct = isPercent ? parseInt(value) : null;
+                                            const pctColor = pct == null ? '#666'
+                                                : pct >= 90 ? '#096dd9'
+                                                : pct >= 60 ? '#d46b08' : '#cf1322';
                                             return (
                                                 <text x={x + width / 2} y={y - 3}
                                                     textAnchor="middle" fill={pctColor}
                                                     fontSize={9} fontWeight={700}>
-                                                    {totalPct != null ? `${totalPct}%` : total.toFixed(0)}
+                                                    {value}
+                                                </text>
+                                            );
+                                        }}
+                                    />
+                                </Bar>,
+                                // Planned segment — top, always green
+                                // Carries the label when planned > 0 (it is the topmost segment)
+                                <Bar key={`${period}__planned`} dataKey={`${period}__planned`}
+                                    name={`${period} Planned`} stackId={period}
+                                    fill="#52c41a" maxBarSize={BAR_WIDTH} legendType="none"
+                                    isAnimationActive={false}
+                                    radius={[3, 3, 0, 0]}>
+                                    <LabelList
+                                        dataKey={`${period}__label_planned`}
+                                        position="top"
+                                        content={({ x, y, width, value }) => {
+                                            if (!value) return null;
+                                            const isPercent = String(value).endsWith('%');
+                                            const pct = isPercent ? parseInt(value) : null;
+                                            const pctColor = pct == null ? '#666'
+                                                : pct >= 90 ? '#096dd9'
+                                                : pct >= 60 ? '#d46b08' : '#cf1322';
+                                            return (
+                                                <text x={x + width / 2} y={y - 3}
+                                                    textAnchor="middle" fill={pctColor}
+                                                    fontSize={9} fontWeight={700}>
+                                                    {value}
                                                 </text>
                                             );
                                         }}
@@ -708,7 +845,10 @@ const EffortsAnalyser = () => {
 
     const WEEKS_PER_MONTH = 4.33;
     const getAllocHrs = useCallback((assignee, project) => {
-        const pct = allocationMap[assignee?.toLowerCase().trim()]?.[project?.toLowerCase().trim()] ?? null;
+        // Resolve both Excel names to their HRMS equivalents before lookup
+        const hrmsEmployee = resolveEmployeeName(assignee);
+        const hrmsProject  = resolveProjectName(project);
+        const pct = allocationMap[hrmsEmployee?.toLowerCase().trim()]?.[hrmsProject?.toLowerCase().trim()] ?? null;
         if (pct === null) return null;
         const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
         return (pct / 100) * 40 * weeks;
@@ -754,6 +894,17 @@ const EffortsAnalyser = () => {
                 entry[`${period}__donePct`]    = donePct;
                 entry[`${period}__plannedPct`] = plannedPct;
                 entry[`${period}__totalPct`]   = totalPct;
+
+                // Pre-computed top-of-bar labels — split so each bar only shows
+                // the label when it is the topmost segment.
+                const total = done + planned;
+                const labelText = total <= 0 ? ''
+                    : totalPct != null ? `${totalPct}%`
+                    : total.toFixed(0);
+                // done bar carries the label only when there is no planned bar on top
+                entry[`${period}__label_done`]    = (total > 0 && planned === 0) ? labelText : '';
+                // planned bar carries the label when it is the topmost segment
+                entry[`${period}__label_planned`] = (total > 0 && planned > 0)  ? labelText : '';
             });
             return entry;
         }),
@@ -930,7 +1081,7 @@ const EffortsAnalyser = () => {
                         <Col>
                             <Button size="small" icon={<WarningOutlined />}
                                 style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
-                                onClick={() => setHealthChecks(runHealthChecks(rawRows))}>
+                                onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap))}>
                                 Run Checks
                             </Button>
                         </Col>
