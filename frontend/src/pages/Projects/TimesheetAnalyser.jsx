@@ -58,13 +58,19 @@ const getWeekRangeString = (dateObj) => {
     return `${fmt(start)} \u2013 ${fmt(end)}`;
 };
 
+const getMonthString = (dateObj) => {
+    if (!dateObj || isNaN(dateObj.getTime())) return 'Invalid Date';
+    return dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+};
+
 const REQUIRED_COLS = ['Primary Assignee', 'Project', 'Time', 'Date'];
 
-const TimesheetAnalyser = () => {
+const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
     const [viewMode, setViewMode] = useState('employee'); // 'employee' or 'project'
+    const [periodType, setPeriodType] = useState('week'); // 'week' or 'month'
     const [displayType, setDisplayType] = useState('table'); // 'table' or 'chart'
     const [hrmsProjects, setHrmsProjects] = useState([]);
     const [holidays, setHolidays] = useState([]);
@@ -170,13 +176,13 @@ const TimesheetAnalyser = () => {
         return false;
     }, []);
 
-    const { employeeData, projectData, allWeeks, timesheetRange } = useMemo(() => {
-        if (!rawRows.length) return { employeeData: [], projectData: [], allWeeks: [], timesheetRange: null };
+    const { employeeData, projectData, allPeriods, timesheetRange } = useMemo(() => {
+        if (!rawRows.length) return { employeeData: [], projectData: [], allPeriods: [], timesheetRange: null };
 
         const empMap = {};
         const projMap = {};
-        const weekSet = new Set();
-        const weekStartDates = {};
+        const periodSet = new Set();
+        const periodStartDates = {};
         let actualMinTime = Infinity;
         let actualMaxTime = -Infinity;
 
@@ -205,21 +211,26 @@ const TimesheetAnalyser = () => {
             if (t < actualMinTime) actualMinTime = t;
             if (t > actualMaxTime) actualMaxTime = t;
             
-            const weekStr = getWeekRangeString(d);
-            weekSet.add(weekStr);
+            const periodStr = periodType === 'week' ? getWeekRangeString(d) : getMonthString(d);
+            periodSet.add(periodStr);
             
-            if (!weekStartDates[weekStr]) {
-                const day = d.getDay() || 7;
-                const start = new Date(d);
-                start.setDate(d.getDate() - (day - 1));
-                weekStartDates[weekStr] = start.getTime();
+            if (!periodStartDates[periodStr]) {
+                if (periodType === 'week') {
+                    const day = d.getDay() || 7;
+                    const start = new Date(d);
+                    start.setDate(d.getDate() - (day - 1));
+                    periodStartDates[periodStr] = start.getTime();
+                } else {
+                    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+                    periodStartDates[periodStr] = start.getTime();
+                }
             }
 
             if (!empMap[empName]) empMap[empName] = { name: empName, targetHours: {} };
-            empMap[empName][weekStr] = (empMap[empName][weekStr] || 0) + timeHrs;
+            empMap[empName][periodStr] = (empMap[empName][periodStr] || 0) + timeHrs;
 
             if (!projMap[projName]) projMap[projName] = { name: projName, rawName: projName };
-            projMap[projName][weekStr] = (projMap[projName][weekStr] || 0) + timeHrs;
+            projMap[projName][periodStr] = (projMap[projName][periodStr] || 0) + timeHrs;
         });
 
         // Add all employees from HRMS who have active project allocations
@@ -254,32 +265,39 @@ const TimesheetAnalyser = () => {
                 return nameMatch(name, emp.name) && isPrivilegeOrSick && isApproved;
             });
             
-            Object.keys(weekStartDates).forEach(w => {
-                const wStart = new Date(weekStartDates[w]);
+            Object.keys(periodStartDates).forEach(p => {
+                const pStart = new Date(periodStartDates[p]);
                 let holidaysCount = 0;
                 let leavesCount = 0;
                 let outOfBoundsCount = 0;
+                let targetBase = 0;
                 
-                // Iterate through Monday to Friday (5 days)
-                for (let i = 0; i < 5; i++) {
-                    const currentDay = new Date(wStart);
-                    currentDay.setDate(wStart.getDate() + i);
+                let daysInPeriod = 7;
+                if (periodType === 'month') {
+                    const endOfMonth = new Date(pStart.getFullYear(), pStart.getMonth() + 1, 0);
+                    daysInPeriod = endOfMonth.getDate();
+                }
+
+                for (let i = 0; i < daysInPeriod; i++) {
+                    const currentDay = new Date(pStart);
+                    currentDay.setDate(pStart.getDate() + i);
+                    
+                    // Skip weekends
+                    const dayOfWeek = currentDay.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+                    targetBase += 8;
+
                     const currentDayStr = fmtDate(currentDay);
                     const currentDayTime = currentDay.getTime();
 
-                    // Check if the day is outside the bounds of the dataset
-                    if (currentDayTime < minDatasetT || currentDayTime > maxDatasetT) {
-                        outOfBoundsCount++;
-                        continue;
-                    }
-
-                    // Check if it's a holiday
+                    // Check if it's a holiday FIRST
                     if (holidays.some(h => h.dateStr === currentDayStr)) {
                         holidaysCount++;
                         continue;
                     }
                     
-                    // Check if employee is on leave
+                    // Check if employee is on leave SECOND
                     const isOnLeave = empLeaves.some(l => {
                         const sVal = l.fromDate || l.from_date;
                         const eVal = l.toDate || l.to_date;
@@ -295,11 +313,18 @@ const TimesheetAnalyser = () => {
                             emp.leaveDates.push(currentDayStr);
                         }
                         leavesCount++;
+                        continue;
+                    }
+
+                    // Check if the day is outside the bounds of the dataset LAST
+                    if (currentDayTime < minDatasetT || currentDayTime > maxDatasetT) {
+                        outOfBoundsCount++;
+                        continue;
                     }
                 }
                 
                 const deduction = (holidaysCount + leavesCount + outOfBoundsCount) * 8;
-                emp.targetHours[w] = Math.max(0, 40 - deduction);
+                emp.targetHours[p] = Math.max(0, targetBase - deduction);
                 emp.totalHolidays = (emp.totalHolidays || 0) + holidaysCount;
                 emp.totalLeaves = (emp.totalLeaves || 0) + leavesCount;
             });
@@ -316,49 +341,49 @@ const TimesheetAnalyser = () => {
             p.allocation = match && match.total_allocation != null ? Number(match.total_allocation) / 100 : 0;
         });
 
-        // Sort weeks chronologically
-        const sortedWeeks = Array.from(weekSet).sort((a, b) => weekStartDates[a] - weekStartDates[b]);
+        // Sort periods chronologically
+        const sortedPeriods = Array.from(periodSet).sort((a, b) => periodStartDates[a] - periodStartDates[b]);
 
         const formatData = (map) => {
             return Object.values(map).map(item => {
                 let total = 0;
-                sortedWeeks.forEach(w => {
-                    if (item[w]) item[w] = Number(item[w].toFixed(2));
-                    total += (item[w] || 0);
+                sortedPeriods.forEach(p => {
+                    if (item[p]) item[p] = Number(item[p].toFixed(2));
+                    total += (item[p] || 0);
                 });
                 item.Total = Number(total.toFixed(2));
                 return item;
             }).sort((a, b) => b.Total - a.Total);
         };
 
-        const allStarts = Object.values(weekStartDates);
+        const allStarts = Object.values(periodStartDates);
         const minTime = actualMinTime !== Infinity ? actualMinTime : Math.min(...allStarts);
         const maxTime = actualMaxTime !== -Infinity ? actualMaxTime : Math.max(...allStarts) + 6 * 24 * 60 * 60 * 1000;
 
         return { 
             employeeData: formatData(empMap), 
             projectData: formatData(projMap), 
-            allWeeks: sortedWeeks,
+            allPeriods: sortedPeriods,
             timesheetRange: { min: minTime, max: maxTime }
         };
-    }, [rawRows, hrmsProjects, leaves, holidays, allocations]);
+    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType]);
 
     const tableColumns = useMemo(() => {
-        if (!allWeeks.length) return [];
+        if (!allPeriods.length) return [];
         const base = [{
             title: viewMode === 'employee' ? 'Employee' : 'Project',
             dataIndex: 'name',
             key: 'name',
             fixed: 'left',
-            width: 250,
-            sorter: (a, b) => a.name.localeCompare(b.name)
+            width: 200,
+            render: (text) => <b>{text}</b>
         }];
-        
-        allWeeks.forEach(w => {
+
+        allPeriods.forEach(p => {
             base.push({
-                title: w,
-                dataIndex: w,
-                key: w,
+                title: p,
+                dataIndex: p,
+                key: p,
                 width: 140,
                 align: 'right',
                 render: (val, record) => {
@@ -368,7 +393,7 @@ const TimesheetAnalyser = () => {
                     let isLow = false;
                     let target = 40;
                     if (viewMode === 'employee') {
-                        target = record.targetHours?.[w] ?? 40;
+                        target = record.targetHours?.[p] ?? 40;
                         isLow = num < target;
                     } else if (viewMode === 'project' && record.allocation > 0) {
                         target = 40 * record.allocation;
@@ -418,15 +443,14 @@ const TimesheetAnalyser = () => {
         });
 
         return base;
-    }, [allWeeks, viewMode]);
+    }, [allPeriods, viewMode]);
 
     // Build Chart Data for Recharts
-    // We want a structure like [{ name: 'Week 1', 'Employee A': 10, 'Employee B': 15 }]
     const chartData = useMemo(() => {
         const source = viewMode === 'employee' ? employeeData : projectData;
         const res = [];
-        allWeeks.forEach(w => {
-            const point = { week: w };
+        allPeriods.forEach(w => {
+            const point = { name: w };
             source.forEach(entry => {
                 if (entry[w]) {
                     point[entry.name] = entry[w];
@@ -435,37 +459,81 @@ const TimesheetAnalyser = () => {
             res.push(point);
         });
         return res;
-    }, [employeeData, projectData, allWeeks, viewMode]);
+    }, [employeeData, projectData, allPeriods, viewMode]);
 
-    // Generate random but consistent colors for chart bars
-    const getBarColor = (index) => {
-        const colors = ['#5b8ff9', '#5ad8a6', '#5d7092', '#f6bd16', '#e8684a', '#6dc8ec', '#9270ca', '#ff9d4d', '#269a99', '#ff99c3'];
-        return colors[index % colors.length];
+    const CHART_COLORS = ['#5b8ff9', '#5ad8a6', '#5d7092', '#f6bd16', '#e8684a', '#6dc8ec', '#9270ca', '#ff9d4d', '#269a99', '#ff99c3'];
+
+    const renderChart = () => {
+        const data = viewMode === 'employee' ? employeeData : projectData;
+        
+        return (
+            <div style={{ height: 600, width: '100%', padding: '20px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={data.slice(0, 15)}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={100}
+                            interval={0}
+                            tick={{ fontSize: 11 }}
+                        />
+                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: -10 }} />
+                        <Tooltip 
+                            formatter={(value) => [`${Number(value).toFixed(2)} h`, '']}
+                            cursor={{ fill: '#f5f5f5' }}
+                        />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        {allPeriods.map((p, idx) => (
+                            <Bar 
+                                key={p} 
+                                dataKey={p} 
+                                name={p}
+                                stackId="a" 
+                                fill={CHART_COLORS[idx % CHART_COLORS.length]} 
+                                maxBarSize={40}
+                            />
+                        ))}
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        );
     };
 
-    const handleDownload = () => {
-        if (!employeeData.length) return;
+    const buildTimesheetWorkbook = () => {
+        if (!employeeData.length) return null;
 
         const wb = XLSXStyle.utils.book_new();
 
         const buildSheet = (data, entityName) => {
             const rows = [];
-            // Header
-            const headers = entityName === 'Employee' 
-                ? [entityName, ...allWeeks, 'Holidays (days)', 'Leaves (days)', 'Total (hrs)']
-                : [entityName, ...allWeeks, 'Total (hrs)'];
-            rows.push(headers);
+            const header1 = [''];
+            const header2 = [entityName === 'Employee' ? 'Employee Name' : 'Project Name'];
+            
+            allPeriods.forEach(p => {
+                if (entityName === 'Employee') {
+                    header1.push(p, '');
+                    header2.push('Logged', 'Target');
+                } else {
+                    header1.push(p);
+                    header2.push('');
+                }
+            });
+            header1.push('Total');
+            header2.push('(hrs)');
+            rows.push(header1, header2);
 
             // Data
             data.forEach(item => {
                 const row = [item.name];
-                allWeeks.forEach(w => {
-                    row.push(item[w] || 0);
+                allPeriods.forEach(p => {
+                    row.push(item[p] || 0);
+                    if (entityName === 'Employee') row.push(item.targetHours?.[p] || 0);
                 });
-                if (entityName === 'Employee') {
-                    row.push(item.totalHolidays || 0);
-                    row.push(item.totalLeaves || 0);
-                }
                 row.push(item.Total || 0);
                 rows.push(row);
             });
@@ -474,7 +542,10 @@ const TimesheetAnalyser = () => {
             for (let i = 0; i < 5; i++) rows.push([]);
             const notesStartRow = rows.length;
             rows.push(['Notes:']);
-            rows.push(['• Base expectation per week is 40 hours for full-time employees.']);
+            
+            const expectedBaseStr = periodType === 'week' ? "40" : "based on working days";
+            const titleText = periodType === 'week' ? 'week' : 'month';
+            rows.push([`• Base expectation per ${titleText} is ${expectedBaseStr} hours for full-time employees.`]);
             rows.push(['• Public holidays automatically deduct 8 hours from this expected target.']);
             rows.push(['• Approved leaves automatically deduct 8 hours from this expected target.']);
             rows.push(['• Cells are highlighted in red if logged hours fall below this dynamically calculated target.']);
@@ -524,25 +595,28 @@ const TimesheetAnalyser = () => {
             }
             
             // Basic styling for header
-            headers.forEach((h, i) => {
-                const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: i });
-                if (ws[cellRef]) {
-                    ws[cellRef].s = {
-                        font: { bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
-                        alignment: { horizontal: 'center' }
-                    };
-                }
-            });
+            for(let i = 0; i < header1.length; i++) {
+                [0, 1].forEach(r => {
+                    const cellRef = XLSXStyle.utils.encode_cell({ r: r, c: i });
+                    if (ws[cellRef]) {
+                        ws[cellRef].s = {
+                            font: { bold: true, color: { rgb: 'FFFFFF' } },
+                            fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
+                            alignment: { horizontal: 'center' }
+                        };
+                    }
+                });
+            }
 
             // Conditional styling
             if (entityName === 'Employee') {
                 data.forEach((item, rIdx) => {
-                    allWeeks.forEach((w, cIdx) => {
-                        const val = item[w] || 0;
-                        const target = item.targetHours?.[w] ?? 40;
+                    allPeriods.forEach((p, cIdx) => {
+                        const val = item[p] || 0;
+                        const target = item.targetHours?.[p] ?? 40;
                         if (val < target) {
-                            const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx + 1, c: cIdx + 1 });
+                            // Column index for logged value is 1 + cIdx * 2
+                            const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx + 2, c: 1 + cIdx * 2 });
                             if (ws[cellRef]) {
                                 ws[cellRef].s = {
                                     fill: { fgColor: { rgb: 'FFFFE6E6' } }, // light red
@@ -555,10 +629,10 @@ const TimesheetAnalyser = () => {
             } else if (entityName === 'Project') {
                 data.forEach((item, rIdx) => {
                     if (item.allocation > 0) {
-                        allWeeks.forEach((w, cIdx) => {
-                            const val = item[w] || 0;
+                        allPeriods.forEach((p, cIdx) => {
+                            const val = item[p] || 0;
                             if (val < (40 * item.allocation)) {
-                                const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx + 1, c: cIdx + 1 });
+                                const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx + 2, c: cIdx + 1 });
                                 if (ws[cellRef]) {
                                     ws[cellRef].s = {
                                         fill: { fgColor: { rgb: 'FFFFE6E6' } },
@@ -573,25 +647,73 @@ const TimesheetAnalyser = () => {
 
             // Column widths
             const colWidths = [
-                { wch: 30 },
-                ...allWeeks.map(() => ({ wch: 15 }))
+                { wch: 30 }
             ];
-            if (entityName === 'Employee') {
-                colWidths.push({ wch: 15 }, { wch: 15 }); // Holidays and Leaves
-            }
+            allPeriods.forEach(() => {
+                if (entityName === 'Employee') {
+                    colWidths.push({ wch: 10 }, { wch: 10 }); // Logged, Target
+                } else {
+                    colWidths.push({ wch: 15 });
+                }
+            });
             colWidths.push({ wch: 15 }); // Total
             ws['!cols'] = colWidths;
 
             return ws;
         };
 
-        XLSXStyle.utils.book_append_sheet(wb, buildSheet(employeeData, 'Employee'), 'By Employee');
-        XLSXStyle.utils.book_append_sheet(wb, buildSheet(projectData, 'Project'), 'By Project');
+        XLSXStyle.utils.book_append_sheet(wb, buildSheet(employeeData, 'Employee'), 'Employee Weekly Time Log');
+        XLSXStyle.utils.book_append_sheet(wb, buildSheet(projectData, 'Project'), 'Project Weekly Time Log');
+        
+        // Add 3rd sheet with original data
+        if (rawRows && rawRows.length > 0) {
+            const rawWs = XLSXStyle.utils.json_to_sheet(rawRows);
+            XLSXStyle.utils.book_append_sheet(wb, rawWs, 'Timesheet data');
+        }
+
+        return wb;
+    };
+
+    const handleDownload = () => {
+        const wb = buildTimesheetWorkbook();
+        if (!wb) return;
 
         const baseName = (fileName || 'timesheet').replace(/\.[^.]+$/, '');
         const today = new Date();
         const stamp = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
         XLSXStyle.writeFile(wb, `${baseName}_summary_${stamp}.xlsx`);
+    };
+
+    const handleCombinedDownload = () => {
+        if (!effortsExportRef || !effortsExportRef.current) return;
+        
+        try {
+            const effortsWb = effortsExportRef.current();
+            const timesheetWb = buildTimesheetWorkbook();
+            
+            if (!effortsWb || !timesheetWb) return;
+
+            const combinedWb = XLSXStyle.utils.book_new();
+            
+            // Append Efforts sheets first
+            effortsWb.SheetNames.forEach(sheetName => {
+                XLSXStyle.utils.book_append_sheet(combinedWb, effortsWb.Sheets[sheetName], sheetName);
+            });
+
+            // Append Timesheet sheets next
+            timesheetWb.SheetNames.forEach(sheetName => {
+                XLSXStyle.utils.book_append_sheet(combinedWb, timesheetWb.Sheets[sheetName], sheetName);
+            });
+
+            const baseName = 'Combined_Efforts_Timesheet';
+            const today = new Date();
+            const stamp = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+            XLSXStyle.writeFile(combinedWb, `${baseName}_summary_${stamp}.xlsx`);
+            message.success("Combined report downloaded successfully");
+        } catch (e) {
+            console.error("Failed to generate combined report", e);
+            message.error("Failed to generate combined report");
+        }
     };
 
     if (rawRows.length === 0) {
@@ -622,6 +744,15 @@ const TimesheetAnalyser = () => {
             <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
                 <Col>
                     <Space size="large">
+                        <Space>
+                            <b>Group By:</b>
+                            <Switch 
+                                checkedChildren="Month" 
+                                unCheckedChildren="Week" 
+                                checked={periodType === 'month'} 
+                                onChange={v => setPeriodType(v ? 'month' : 'week')}
+                            />
+                        </Space>
                         <Space>
                             <b>View:</b>
                             <Switch 
@@ -655,6 +786,16 @@ const TimesheetAnalyser = () => {
                 <Col>
                     <Space>
                         <span style={{ color: '#888' }}>{fileName}</span>
+                        {hasEffortsData && (
+                            <Button 
+                                type="primary"
+                                icon={<DownloadOutlined />} 
+                                onClick={handleCombinedDownload}
+                                style={{ background: '#1890ff', borderColor: '#1890ff' }}
+                            >
+                                Download Combined Report
+                            </Button>
+                        )}
                         <Button 
                             type="primary"
                             icon={<DownloadOutlined />} 
@@ -687,18 +828,7 @@ const TimesheetAnalyser = () => {
                 ) : (
                     <div style={{ height: 600, padding: 24 }}>
                         {chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="week" angle={-45} textAnchor="end" height={60} />
-                                    <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
-                                    <RechartsTooltip formatter={(value) => `${value.toFixed(2)} hrs`} />
-                                    <Legend verticalAlign="top" height={36} />
-                                    {(viewMode === 'employee' ? employeeData : projectData).map((entry, idx) => (
-                                        <Bar key={entry.name} dataKey={entry.name} stackId="a" fill={getBarColor(idx)} />
-                                    ))}
-                                </BarChart>
-                            </ResponsiveContainer>
+                            renderChart()
                         ) : (
                             <div style={{ textAlign: 'center', marginTop: 100 }}>No data for chart</div>
                         )}
@@ -723,17 +853,17 @@ const TimesheetAnalyser = () => {
                                 const t = new Date(h.dateStr).getTime();
                                 return t >= timesheetRange.min && t <= timesheetRange.max;
                             });
+                            const titleText = periodType === 'week' ? 'week' : 'month';
+                            const expectedBaseStr = periodType === 'week' ? "40" : "based on working days";
                             if (relevantHols.length > 0) {
                                 return (
                                     <>
-                                        <b style={{ color: '#333', display: 'block', marginTop: 12 }}>Public Holidays in Period:</b>
-                                        <ul style={{ margin: 0, paddingLeft: 20, marginTop: 4 }}>
-                                            {relevantHols.map((h, i) => <li key={i}>{h.name} ({h.dateStr})</li>)}
-                                        </ul>
+                                        <p style={{ margin: 0 }}>* Base expectation per {titleText} is {expectedBaseStr} hours for full-time employees. Target hours are automatically reduced by 8 hours for each holiday or approved privilege/sick leave day.</p>
+                                        <p style={{ margin: '4px 0 0' }}>* Holidays accounted for in this dataset: <strong>{relevantHols.map(h => `${h.name} (${h.dateStr})`).join(', ')}</strong></p>
                                     </>
                                 );
                             }
-                            return null;
+                            return <p style={{ margin: 0 }}>* Base expectation per {titleText} is {expectedBaseStr} hours for full-time employees. Target hours are automatically reduced by 8 hours for each holiday or approved privilege/sick leave day.</p>;
                         })()}
 
                         {(() => {
