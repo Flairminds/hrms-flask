@@ -6,6 +6,7 @@ import ProjectModal from '../../components/modal/ProjectModal/ProjectModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import EmployeeAllocations from './EmployeeAllocations.jsx';
 import MyProjectsTeam from './MyProjectsTeam.jsx';
+import EffortsAnalyser from './EffortsAnalyser.jsx';
 import { convertDate } from '../../util/helperFunctions.jsx';
 
 const Projects = () => {
@@ -256,6 +257,13 @@ const Projects = () => {
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="My Projects & Team" key="3">
                     <MyProjectsTeam />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Planned Efforts Analyser" key="5">
+                    <EffortsAnalyser />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Tasks Analyser" key="6">
+                    {/* <EffortsAnalyser /> */}
+                    <span>To be developed</span>
                 </Tabs.TabPane>
             </Tabs>
         </div>
