@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Card, Tabs, Upload, Button, Radio, message, Empty, Spin,
-    Row, Col, Statistic, Tag, Table, Input, Badge, Modal, Alert
+    Row, Col, Statistic, Tag, Table, Input, Badge, Modal, Alert, Select
 } from 'antd';
 import {
     InboxOutlined, UploadOutlined,
@@ -815,6 +815,7 @@ const EffortsAnalyser = () => {
     const [validationErrors, setValidationErrors] = useState(null);
     const [drillDown, setDrillDown] = useState(null);
     const [healthChecks, setHealthChecks] = useState(null);
+    const [empProjectFilter, setEmpProjectFilter] = useState(null); // null = all projects
 
     // Fetch HRMS data once on mount
     useEffect(() => {
@@ -1003,15 +1004,17 @@ const EffortsAnalyser = () => {
     const allEmployees = useMemo(() => [...new Set(rawRows.map(r => r.assignee))].sort(), [rawRows]);
 
     // ── chart data builders ────────────────────────────────────────────
-    const buildChartData = useCallback((entities, getKey, getAllocForEntity) =>
+    // rowFilter: optional (row) => bool applied on top of the entity filter
+    const buildChartData = useCallback((entities, getKey, getAllocForEntity, rowFilter = null) =>
         entities.map(entity => {
             const entry = { name: entity };
+            const filteredDone    = rowFilter ? doneRows.filter(rowFilter)    : doneRows;
+            const filteredPlanned = rowFilter ? plannedRows.filter(rowFilter) : plannedRows;
             allPeriods.forEach(period => {
-                const done = doneRows
+                const done = filteredDone
                     .filter(r => getKey(r) === entity && getPeriod(r) === period)
                     .reduce((s, r) => s + r.loggedTime, 0);
-                // Planned: use estimateEffort directly (not max(0, est - logged))
-                const planned = plannedRows
+                const planned = filteredPlanned
                     .filter(r => getKey(r) === entity && getPeriod(r) === period)
                     .reduce((s, r) => s + r.estimateEffort, 0);
                 const allocated = getAllocForEntity(entity);
@@ -1027,15 +1030,11 @@ const EffortsAnalyser = () => {
                 entry[`${period}__plannedPct`] = plannedPct;
                 entry[`${period}__totalPct`]   = totalPct;
 
-                // Pre-computed top-of-bar labels — split so each bar only shows
-                // the label when it is the topmost segment.
                 const total = done + planned;
                 const labelText = total <= 0 ? ''
                     : totalPct != null ? `${totalPct}%`
                     : total.toFixed(0);
-                // done bar carries the label only when there is no planned bar on top
                 entry[`${period}__label_done`]    = (total > 0 && planned === 0) ? labelText : '';
-                // planned bar carries the label when it is the topmost segment
                 entry[`${period}__label_planned`] = (total > 0 && planned > 0)  ? labelText : '';
             });
             return entry;
@@ -1048,7 +1047,7 @@ const EffortsAnalyser = () => {
         (proj) => getProjectAllocHrs(proj) ?? 0
     ), [buildChartData, allProjects, getProjectAllocHrs]);
 
-    // Employee chart: allocated = sum of per-employee allocations across all projects
+    // Employee chart — full (all projects)
     const employeeChartData = useMemo(() => buildChartData(
         allEmployees, r => r.assignee,
         (emp) => {
@@ -1056,6 +1055,30 @@ const EffortsAnalyser = () => {
             return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
         }
     ), [buildChartData, allEmployees, rawRows, getAllocHrs]);
+
+    // Employee chart — filtered by selected project
+    const filteredEmployees = useMemo(() => {
+        if (!empProjectFilter) return allEmployees;
+        return [...new Set(rawRows.filter(r => r.project === empProjectFilter).map(r => r.assignee))].sort();
+    }, [rawRows, empProjectFilter, allEmployees]);
+
+    const filteredEmployeeChartData = useMemo(() => {
+        const rowFilter = empProjectFilter ? (r => r.project === empProjectFilter) : null;
+        return buildChartData(
+            filteredEmployees,
+            r => r.assignee,
+            (emp) => {
+                if (empProjectFilter) {
+                    // Allocation for this specific project only
+                    const h = getAllocHrs(emp, empProjectFilter);
+                    return h !== null ? h : 0;
+                }
+                const projects = [...new Set(rawRows.filter(r => r.assignee === emp).map(r => r.project))];
+                return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
+            },
+            rowFilter
+        );
+    }, [buildChartData, filteredEmployees, rawRows, getAllocHrs, empProjectFilter]);
 
     // ── summary ────────────────────────────────────────────────────────
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
@@ -1295,19 +1318,39 @@ const EffortsAnalyser = () => {
                             <Card bordered={false}
                                 style={{ borderRadius: 10, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
                                 title={
-                                    <span style={{ fontWeight: 700, color: '#333', fontSize: 14 }}>
-                                        Hours by Employee
-                                        <span style={{ fontWeight: 400, color: '#888', fontSize: 12, marginLeft: 8 }}>
-                                            — {periodMode === 'weekly' ? 'week' : 'month'}-wise · % label = % of allocation
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                        <span style={{ fontWeight: 700, color: '#333', fontSize: 14 }}>
+                                            Hours by Employee
+                                            <span style={{ fontWeight: 400, color: '#888', fontSize: 12, marginLeft: 8 }}>
+                                                — {periodMode === 'weekly' ? 'week' : 'month'}-wise · % label = % of allocation
+                                            </span>
                                         </span>
-                                    </span>
+                                        <Select
+                                            allowClear
+                                            showSearch
+                                            placeholder="Filter by project…"
+                                            style={{ minWidth: 220, fontSize: 12 }}
+                                            size="small"
+                                            value={empProjectFilter}
+                                            onChange={v => setEmpProjectFilter(v ?? null)}
+                                            options={allProjects.map(p => ({ value: p, label: p }))}
+                                        />
+                                        {empProjectFilter && (
+                                            <Tag color="blue" style={{ fontSize: 11 }}>
+                                                {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''}
+                                            </Tag>
+                                        )}
+                                    </div>
                                 }
                                 extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a bar to inspect rows</span>}
-                                >
-                                <GroupedBarChart data={employeeChartData} periods={allPeriods}
+                            >
+                                <GroupedBarChart data={filteredEmployeeChartData} periods={allPeriods}
                                     onBarClick={(name) => setDrillDown({
                                         type: 'employee', name,
-                                        rows: rawRows.filter(r => r.assignee === name),
+                                        rows: (empProjectFilter
+                                            ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                            : rawRows.filter(r => r.assignee === name)
+                                        ),
                                     })} />
                             </Card>
                         </TabPane>
