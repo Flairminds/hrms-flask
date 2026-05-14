@@ -12,7 +12,7 @@ import {
     Legend, ResponsiveContainer, LabelList
 } from 'recharts';
 import * as XLSX from 'xlsx';
-import { getEmployeeAllocations } from '../../services/api';
+import { getEmployeeAllocations, getProjects } from '../../services/api';
 
 const { Dragger } = Upload;
 const { TabPane } = Tabs;
@@ -49,7 +49,9 @@ const PROJECT_NAME_MAP = {
     // 'ClientX Portal':      'Client X Portal',
     // 'website-redesign':    'Website Redesign',
     '2 OnPepper Leverage Modelling & Hummingbird': 'Onpepper',
-    '2 BNYM': 'BNY-M'
+    '2 BNYM': 'BNY-M',
+    '2 XMPro 10': 'XMPS-2000',
+    'Bridge Platform': 'Bridge Connect'
 };
 
 // Resolves an Excel project name to its HRMS equivalent (or returns it unchanged).
@@ -319,13 +321,15 @@ const CustomXTick = ({ x, y, payload }) => {
 };
 
 // ── Health checks modal ──────────────────────────────────────────────────────────────────
-const runHealthChecks = (rows, allocationMap) => {
+const runHealthChecks = (rows, allocationMap, projectAllocMap) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const overHours     = [];  // rule 1: estimate or logged > 40 hrs
-    const loggedOverEst = [];  // rule 2: logged > estimated
-    const overdueOpen   = [];  // rule 3: past end date but not done
+    const overHours        = [];  // rule 1: estimate or logged > 40 hrs
+    const loggedOverEst    = [];  // rule 2: logged > estimated
+    const overdueOpen      = [];  // rule 3: past end date but not done
+    const noAssignee       = [];  // rule 4: assignee is None / empty
+    const noEstimateOpen   = [];  // rule 5: not done and no estimate
 
     rows.forEach((r, i) => {
         const rowNum = i + 2;
@@ -341,13 +345,52 @@ const runHealthChecks = (rows, allocationMap) => {
             overdueOpen.push({ ...r, rowNum,
                 issue: `End date ${fmtDate(r.endDate)} is past, state is "${r.state}"` });
         }
+        // Rule 4: primary assignee is None / blank
+        const assigneeStr = String(r.assignee || '').trim().toLowerCase();
+        if (!assigneeStr || assigneeStr === 'none') {
+            noAssignee.push({ ...r, rowNum, issue: 'Primary Assignee is None or empty' });
+        }
+        // Rule 5: task is not done and has no estimate
+        if (!isDone(r.state) && (!r.estimateEffort || r.estimateEffort <= 0)) {
+            noEstimateOpen.push({ ...r, rowNum,
+                issue: `State is "${r.state}" but Estimate Effort is 0 or missing` });
+        }
+    });
+
+    // ── Rule 6: project remaining < 25% of project-level total allocation ───────
+    // "remaining" = sum of estimateEffort for non-done tasks on that project
+    // "total allocation" = project FTE × 40 hrs × WEEKS_PER_MONTH (from Projects module)
+    const lowRemainingProjects = [];
+    const projects = [...new Set(rows.map(r => r.project))];
+    const WEEKS_PER_MONTH = 4.33;
+
+    projects.forEach(proj => {
+        const projRows = rows.filter(r => r.project === proj);
+        const remaining = projRows
+            .filter(r => !isDone(r.state))
+            .reduce((s, r) => s + r.estimateEffort, 0);
+
+        // Look up project-level FTE from HRMS Projects module
+        const hrmsProj = resolveProjectName(proj).toLowerCase().trim();
+        const fte = projectAllocMap?.[hrmsProj] ?? null;
+        if (fte === null || fte <= 0) return; // no allocation data, skip
+        const totalAlloc = fte * 40 * WEEKS_PER_MONTH;
+
+        if (remaining < totalAlloc * 0.25) {
+            lowRemainingProjects.push({
+                project: proj,
+                remaining: remaining.toFixed(2),
+                totalAlloc: totalAlloc.toFixed(2),
+                pct: Math.round(remaining / totalAlloc * 100),
+                issue: `Remaining ${remaining.toFixed(2)} hrs is ${Math.round(remaining / totalAlloc * 100)}% of allocation ${totalAlloc.toFixed(2)} hrs (FTE: ${fte.toFixed(2)}, threshold: 25%)`,
+            });
+        }
     });
 
     // ── Mapping diagnostics: find Excel names with no HRMS allocation match ─────
     const excelProjects  = [...new Set(rows.map(r => r.project))].sort();
     const excelEmployees = [...new Set(rows.map(r => r.assignee))].sort();
 
-    // All HRMS employee keys and project keys available in the allocation map
     const hrmsEmployeeKeys = new Set(Object.keys(allocationMap));
     const hrmsProjKeys     = new Set(
         Object.values(allocationMap).flatMap(projMap => Object.keys(projMap))
@@ -363,7 +406,11 @@ const runHealthChecks = (rows, allocationMap) => {
         return !hrmsEmployeeKeys.has(resolved);
     });
 
-    return { overHours, loggedOverEst, overdueOpen, unmappedProjects, unmappedEmployees };
+    return {
+        overHours, loggedOverEst, overdueOpen,
+        noAssignee, noEstimateOpen, lowRemainingProjects,
+        unmappedProjects, unmappedEmployees,
+    };
 };
 
 const CHECK_COLUMNS = [
@@ -381,8 +428,13 @@ const CHECK_COLUMNS = [
 
 const HealthChecksModal = ({ checks, onClose }) => {
     if (!checks) return null;
-    const { overHours, loggedOverEst, overdueOpen, unmappedProjects, unmappedEmployees } = checks;
-    const total = overHours.length + loggedOverEst.length + overdueOpen.length;
+    const {
+        overHours, loggedOverEst, overdueOpen,
+        noAssignee, noEstimateOpen, lowRemainingProjects,
+        unmappedProjects, unmappedEmployees,
+    } = checks;
+    const total = overHours.length + loggedOverEst.length + overdueOpen.length
+        + noAssignee.length + noEstimateOpen.length + lowRemainingProjects.length;
     const unmappedTotal = unmappedProjects.length + unmappedEmployees.length;
 
     const Section = ({ title, color, icon, rows, description }) => (
@@ -454,6 +506,58 @@ const HealthChecksModal = ({ checks, onClose }) => {
                 rows={overdueOpen}
                 description="End date is in the past but the task state is not Done/Completed. Needs follow-up."
             />
+            <Section
+                title="Tasks with no assignee (None)"
+                color="#cf1322" icon="👤"
+                rows={noAssignee}
+                description="Primary Assignee is missing or set to None. These tasks cannot be tracked against any employee."
+            />
+            <Section
+                title="Open tasks with no estimate"
+                color="#fa8c16" icon="❓"
+                rows={noEstimateOpen}
+                description="Task is not completed but Estimate Effort is 0 or missing. Planned hours cannot be calculated for these tasks."
+            />
+
+            {/* Rule 6: low remaining at project level */}
+            {lowRemainingProjects.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0',
+                    color: '#52c41a', fontSize: 12, marginBottom: 8 }}>
+                    <CheckCircleOutlined />
+                    <span><b>Project remaining vs allocation</b> — No issues found ✔</span>
+                </div>
+            ) : (<>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 15 }}>📊</span>
+                    <span style={{ fontWeight: 700, color: '#722ed1', fontSize: 13 }}>Low remaining effort vs allocation</span>
+                    <Tag color="purple" style={{ fontSize: 11 }}>
+                        {lowRemainingProjects.length} project{lowRemainingProjects.length !== 1 ? 's' : ''}
+                    </Tag>
+                </div>
+                <p style={{ fontSize: 11, color: '#888', margin: '-2px 0 8px 24px' }}>
+                    Total remaining (open tasks estimate) is less than 25% of the total HRMS allocation for the project. May indicate the project is nearly done or tasks are not logged.
+                </p>
+                <Table
+                    dataSource={lowRemainingProjects}
+                    rowKey="project"
+                    size="small"
+                    pagination={{ pageSize: 6, size: 'small', showSizeChanger: false }}
+                    scroll={{ x: 'max-content' }}
+                    style={{ marginBottom: 16 }}
+                    columns={[
+                        { title: 'Project', dataIndex: 'project', key: 'project', ellipsis: true,
+                            render: v => <b style={{ fontSize: 11 }}>{v}</b> },
+                        { title: 'Remaining (hrs)', dataIndex: 'remaining', key: 'remaining', width: 120,
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+                        { title: 'Allocation (hrs)', dataIndex: 'totalAlloc', key: 'totalAlloc', width: 120,
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{v}</span> },
+                        { title: '% Remaining', dataIndex: 'pct', key: 'pct', width: 100,
+                            render: v => <Tag color="purple" style={{ fontSize: 11 }}>{v}%</Tag> },
+                        { title: 'Issue', dataIndex: 'issue', key: 'issue', ellipsis: true,
+                            render: v => <span style={{ fontSize: 11, color: '#722ed1' }}>{v}</span> },
+                    ]}
+                />
+            </>)}
 
             {/* Mapping diagnostics */}
             <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 8, paddingTop: 16 }}>
@@ -703,19 +807,26 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
 // ── main component ─────────────────────────────────────────────────────────
 const EffortsAnalyser = () => {
     const [rawRows, setRawRows] = useState([]);
-    const [allocations, setAllocations] = useState([]);
+    const [allocations, setAllocations] = useState([]);      // per-employee allocations
+    const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
     const [uploading, setUploading] = useState(false);
     const [periodMode, setPeriodMode] = useState('monthly');
     const [fileName, setFileName] = useState('');
-    const [validationErrors, setValidationErrors] = useState(null); // null = closed
-    const [drillDown, setDrillDown] = useState(null);     // { type, name, rows }
-    const [healthChecks, setHealthChecks] = useState(null); // null = closed
+    const [validationErrors, setValidationErrors] = useState(null);
+    const [drillDown, setDrillDown] = useState(null);
+    const [healthChecks, setHealthChecks] = useState(null);
 
-    // Fetch HRMS employee allocations once on mount
+    // Fetch HRMS data once on mount
     useEffect(() => {
         getEmployeeAllocations()
             .then(res => setAllocations(res.data || []))
-            .catch(e => console.error('Failed to load allocations', e));
+            .catch(e => console.error('Failed to load employee allocations', e));
+        getProjects()
+            .then(res => {
+                const data = Array.isArray(res.data) ? res.data : (res.data?.projects || []);
+                setHrmsProjects(data);
+            })
+            .catch(e => console.error('Failed to load projects', e));
     }, []);
 
     // ── upload validation ──────────────────────────────────────────────
@@ -843,9 +954,30 @@ const EffortsAnalyser = () => {
         return map;
     }, [allocations]);
 
+    // ── Project-level allocation map: hrmsName_lower → FTE (total_allocation / 100) ──
+    // total_allocation in HRMS is stored ×100 (e.g. 335 = 3.35 FTE)
+    const projectAllocMap = useMemo(() => {
+        const map = {};
+        hrmsProjects.forEach(p => {
+            const key = p.project_name?.toLowerCase().trim();
+            if (key) map[key] = (p.total_allocation || 0) / 100; // convert to FTE
+        });
+        return map;
+    }, [hrmsProjects]);
+
     const WEEKS_PER_MONTH = 4.33;
+
+    // Per-project allocation: FTE from Projects module → hours
+    const getProjectAllocHrs = useCallback((excelProjName) => {
+        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        const fte = projectAllocMap[hrmsProj] ?? null;
+        if (fte === null) return null;
+        const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
+        return fte * 40 * weeks;
+    }, [projectAllocMap, periodMode]);
+
+    // Per-employee allocation: used only for the Employee chart
     const getAllocHrs = useCallback((assignee, project) => {
-        // Resolve both Excel names to their HRMS equivalents before lookup
         const hrmsEmployee = resolveEmployeeName(assignee);
         const hrmsProject  = resolveProjectName(project);
         const pct = allocationMap[hrmsEmployee?.toLowerCase().trim()]?.[hrmsProject?.toLowerCase().trim()] ?? null;
@@ -910,16 +1042,13 @@ const EffortsAnalyser = () => {
         }),
     [doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
 
-    // Project chart: allocated = sum of all assignees on that project
+    // Project chart: allocated = project-level FTE from HRMS Projects module → hours
     const projectChartData = useMemo(() => buildChartData(
         allProjects, r => r.project,
-        (proj) => {
-            const assignees = [...new Set(rawRows.filter(r => r.project === proj).map(r => r.assignee))];
-            return assignees.reduce((s, a) => { const h = getAllocHrs(a, proj); return h !== null ? s + h : s; }, 0);
-        }
-    ), [buildChartData, allProjects, rawRows, getAllocHrs]);
+        (proj) => getProjectAllocHrs(proj) ?? 0
+    ), [buildChartData, allProjects, getProjectAllocHrs]);
 
-    // Employee chart: allocated = sum across all projects of that employee
+    // Employee chart: allocated = sum of per-employee allocations across all projects
     const employeeChartData = useMemo(() => buildChartData(
         allEmployees, r => r.assignee,
         (emp) => {
@@ -1081,7 +1210,7 @@ const EffortsAnalyser = () => {
                         <Col>
                             <Button size="small" icon={<WarningOutlined />}
                                 style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
-                                onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap))}>
+                                onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
                                 Run Checks
                             </Button>
                         </Col>

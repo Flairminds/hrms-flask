@@ -258,9 +258,6 @@ const Projects = () => {
                 <Tabs.TabPane tab="My Projects & Team" key="3">
                     <MyProjectsTeam />
                 </Tabs.TabPane>
-                <Tabs.TabPane tab="Timesheet Analyser" key="4">
-                    <span>To be developed</span>
-                </Tabs.TabPane>
                 <Tabs.TabPane tab="Planned Efforts Analyser" key="5">
                     <EffortsAnalyser />
                 </Tabs.TabPane>
