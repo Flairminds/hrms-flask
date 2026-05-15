@@ -265,12 +265,12 @@ const Projects = () => {
                 <Tabs.TabPane tab="Planned Efforts Analyser" key="5">
                     <EffortsAnalyser exportRef={effortsExportRef} setHasEffortsData={setHasEffortsData} />
                 </Tabs.TabPane>
+                <Tabs.TabPane tab="Timesheet Analyzer" key="7">
+                    <TimesheetAnalyser effortsExportRef={effortsExportRef} hasEffortsData={hasEffortsData} />
+                </Tabs.TabPane>
                 <Tabs.TabPane tab="Tasks Analyser" key="6">
                     {/* <EffortsAnalyser /> */}
                     <span>To be developed</span>
-                </Tabs.TabPane>
-                <Tabs.TabPane tab="Timesheet Analyzer" key="7">
-                    <TimesheetAnalyser effortsExportRef={effortsExportRef} hasEffortsData={hasEffortsData} />
                 </Tabs.TabPane>
             </Tabs>
         </div>

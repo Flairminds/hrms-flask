@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Switch } from 'antd';
-import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Switch, Badge, Tag } from 'antd';
+import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     Legend, ResponsiveContainer
 } from 'recharts';
 import Cookies from 'js-cookie';
@@ -71,7 +71,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [uploading, setUploading] = useState(false);
     const [viewMode, setViewMode] = useState('employee'); // 'employee' or 'project'
     const [periodType, setPeriodType] = useState('week'); // 'week' or 'month'
-    const [displayType, setDisplayType] = useState('table'); // 'table' or 'chart'
+    const [displayType, setDisplayType] = useState('table'); // 'table', 'chart', or 'gaps'
     const [hrmsProjects, setHrmsProjects] = useState([]);
     const [holidays, setHolidays] = useState([]);
     const [leaves, setLeaves] = useState([]);
@@ -186,6 +186,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         let actualMinTime = Infinity;
         let actualMaxTime = -Infinity;
 
+        const loggedDatesPerEmployee = {}; // { empName: Set(dateStrings) }
+        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
         rawRows.forEach(row => {
             const rawEmp = row['Primary Assignee'];
             const rawProj = row['Project'];
@@ -213,6 +216,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             
             const periodStr = periodType === 'week' ? getWeekRangeString(d) : getMonthString(d);
             periodSet.add(periodStr);
+
+            const dStr = fmt(d);
+            if (!loggedDatesPerEmployee[empName]) loggedDatesPerEmployee[empName] = new Set();
+            loggedDatesPerEmployee[empName].add(dStr);
             
             if (!periodStartDates[periodStr]) {
                 if (periodType === 'week') {
@@ -226,7 +233,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 }
             }
 
-            if (!empMap[empName]) empMap[empName] = { name: empName, targetHours: {} };
+            if (!empMap[empName]) empMap[empName] = { name: empName, targetHours: {}, missingLogs: [] };
             empMap[empName][periodStr] = (empMap[empName][periodStr] || 0) + timeHrs;
 
             if (!projMap[projName]) projMap[projName] = { name: projName, rawName: projName };
@@ -237,7 +244,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         allocations.forEach(alloc => {
             if (alloc.projects && alloc.projects.length > 0) {
                 const empName = resolveEmployeeName(alloc.employee_name);
-                if (!empMap[empName]) empMap[empName] = { name: empName, targetHours: {} };
+                if (!empMap[empName]) empMap[empName] = { name: empName, targetHours: {}, missingLogs: [] };
             }
         });
 
@@ -253,9 +260,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const maxDatasetT = maxDatasetTime.getTime();
 
         Object.values(empMap).forEach(emp => {
-            // Find all leaves for this employee
+            // Find all approved leaves for this employee
             const empLeaves = leaves.filter(l => {
-                const name = l.EmployeeName || l.employeeName || l.appliedByName || l.applied_by_name || '';
+                const name = l.EmployeeName || l.employeeName || l.empName || l.appliedByName || '';
                 const type = l.LeaveType || l.leaveType || '';
                 const status = l.LeaveStatus || l.leaveStatus || l.leave_status || '';
                 
@@ -320,6 +327,15 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     if (currentDayTime < minDatasetT || currentDayTime > maxDatasetT) {
                         outOfBoundsCount++;
                         continue;
+                    }
+
+                    // If we are here, it's a working day within bounds, not holiday, not on leave.
+                    // Check if they logged time.
+                    const hasLog = loggedDatesPerEmployee[emp.name]?.has(currentDayStr);
+                    if (!hasLog) {
+                        if (!emp.missingLogs.includes(currentDayStr)) {
+                            emp.missingLogs.push(currentDayStr);
+                        }
                     }
                 }
                 
@@ -665,6 +681,26 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         XLSXStyle.utils.book_append_sheet(wb, buildSheet(employeeData, 'Employee'), 'Employee Weekly Time Log');
         XLSXStyle.utils.book_append_sheet(wb, buildSheet(projectData, 'Project'), 'Project Weekly Time Log');
         
+        // Add Missing Logs sheet
+        const missingRows = [['Employee', 'Missing Date', 'Reason']];
+        employeeData.forEach(emp => {
+            if (emp.missingLogs && emp.missingLogs.length > 0) {
+                emp.missingLogs.forEach(d => {
+                    missingRows.push([emp.name, d, 'No time log, leave or holiday found']);
+                });
+            }
+        });
+        if (missingRows.length > 1) {
+            const missingWs = XLSXStyle.utils.aoa_to_sheet(missingRows);
+            // style header
+            for(let i=0; i<3; i++) {
+                const cell = XLSXStyle.utils.encode_cell({r:0, c:i});
+                if(missingWs[cell]) missingWs[cell].s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } } };
+            }
+            missingWs['!cols'] = [{wch: 30}, {wch: 15}, {wch: 40}];
+            XLSXStyle.utils.book_append_sheet(wb, missingWs, 'Missing Time Logs');
+        }
+
         // Add 3rd sheet with original data
         if (rawRows && rawRows.length > 0) {
             const rawWs = XLSXStyle.utils.json_to_sheet(rawRows);
@@ -779,6 +815,13 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 >
                                     Chart
                                 </Button>
+                                <Button 
+                                    type={displayType === 'gaps' ? 'primary' : 'default'} 
+                                    icon={<WarningOutlined />} 
+                                    onClick={() => setDisplayType('gaps')}
+                                >
+                                    Missing Logs
+                                </Button>
                             </Button.Group>
                         </Space>
                     </Space>
@@ -825,13 +868,51 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         size="small"
                         bordered
                     />
-                ) : (
+                ) : displayType === 'chart' ? (
                     <div style={{ height: 600, padding: 24 }}>
                         {chartData.length > 0 ? (
                             renderChart()
                         ) : (
                             <div style={{ textAlign: 'center', marginTop: 100 }}>No data for chart</div>
                         )}
+                    </div>
+                ) : (
+                    <div style={{ padding: 24 }}>
+                        <Alert 
+                            message="Missing Time Logs Report"
+                            description="Showing working days where no time log was found and employee was not on approved leave or public holiday."
+                            type="warning"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+                        <Table 
+                            size="small"
+                            dataSource={employeeData.filter(e => e.missingLogs && e.missingLogs.length > 0)}
+                            rowKey="name"
+                            columns={[
+                                { title: 'Employee', dataIndex: 'name', key: 'name', width: 200, render: v => <b>{v}</b> },
+                                { 
+                                    title: 'Missing Dates', 
+                                    dataIndex: 'missingLogs', 
+                                    key: 'missingLogs',
+                                    render: (dates) => (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                            {dates.sort().map(d => <Tag key={d} color="orange">{d}</Tag>)}
+                                        </div>
+                                    )
+                                },
+                                { 
+                                    title: 'Count', 
+                                    dataIndex: 'missingLogs', 
+                                    key: 'count', 
+                                    width: 100, 
+                                    align: 'right',
+                                    render: v => <Badge count={v.length} style={{ backgroundColor: '#fa8c16' }} />,
+                                    sorter: (a, b) => a.missingLogs.length - b.missingLogs.length
+                                }
+                            ]}
+                            pagination={{ pageSize: 20 }}
+                        />
                     </div>
                 )}
             </Card>
