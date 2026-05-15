@@ -4,7 +4,7 @@ import {
     Row, Col, Statistic, Tag, Table, Input, Badge, Modal, Alert, Select
 } from 'antd';
 import {
-    InboxOutlined, UploadOutlined,
+    InboxOutlined, UploadOutlined, DownloadOutlined,
     TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined
 } from '@ant-design/icons';
 import {
@@ -12,6 +12,7 @@ import {
     Legend, ResponsiveContainer, LabelList
 } from 'recharts';
 import * as XLSX from 'xlsx';
+import XLSXStyle from 'xlsx-js-style';
 import { getEmployeeAllocations, getProjects } from '../../services/api';
 
 const { Dragger } = Upload;
@@ -160,6 +161,7 @@ const makeTooltip = (chartData, periods) => ({ active, payload, label }) => {
         donePct:    row[`${period}__donePct`]    ?? null,
         plannedPct: row[`${period}__plannedPct`] ?? null,
         totalPct:   row[`${period}__totalPct`]   ?? null,
+        efficiency: row[`${period}__efficiency`] ?? null,
     })).filter(e => e.done > 0 || e.planned > 0);
 
     const grandTotal = entries.reduce((s, e) => s + e.done + e.planned, 0);
@@ -195,6 +197,13 @@ const makeTooltip = (chartData, periods) => ({ active, payload, label }) => {
                             <div style={{ marginTop: 2, paddingTop: 2, borderTop: '1px dashed #f0f0f0' }}>
                                 <span style={{ color: '#666' }}>Total vs Allocation: </span>
                                 {pctBadge(e.totalPct)}
+                            </div>
+                        )}
+                        {e.efficiency !== null && (
+                            <div style={{ marginTop: 2, color: e.efficiency >= 100 ? '#52c41a' : '#d46b08' }}>
+                                <ClockCircleOutlined style={{ fontSize: 10, marginRight: 4 }} />
+                                <span>Efficiency: </span>
+                                <b style={{ fontWeight: 700 }}>{e.efficiency}%</b>
                             </div>
                         )}
                     </div>
@@ -258,6 +267,15 @@ const RawDataTable = ({ rows }) => {
             title: 'Logged (hrs)', dataIndex: 'loggedTime', key: 'loggedTime', width: 105,
             sorter: (a, b) => a.loggedTime - b.loggedTime,
             render: v => <span style={{ fontFamily: 'monospace', fontWeight: 600, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v?.toFixed(1)}</span>,
+        },
+        {
+            title: 'Eff (%)', key: 'efficiency', width: 80,
+            render: (_, r) => {
+                if (!isDone(r.state) || r.loggedTime <= 0) return <span style={{ color: '#ccc' }}>—</span>;
+                const eff = Math.round((r.estimateEffort / r.loggedTime) * 100);
+                const color = eff >= 100 ? '#52c41a' : eff >= 80 ? '#faad14' : '#f5222d';
+                return <span style={{ fontFamily: 'monospace', fontWeight: 700, color }}>{eff}%</span>;
+            },
         },
     ];
 
@@ -641,6 +659,8 @@ const DrillDownModal = ({ drillDown, onClose }) => {
     const doneRows    = rows.filter(r => isDone(r.state));
     const pendingRows = rows.filter(r => !isDone(r.state));
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
+    const totalEstimateDone = doneRows.reduce((s, r) => s + r.estimateEffort, 0);
+    const efficiency = totalLogged > 0 ? Math.round((totalEstimateDone / totalLogged) * 100) : null;
     const totalEstimate = pendingRows.reduce((s, r) => s + r.estimateEffort, 0);
 
     return (
@@ -665,6 +685,11 @@ const DrillDownModal = ({ drillDown, onClose }) => {
             <div style={{ display: 'flex', gap: 16, padding: '0 16px 12px', flexWrap: 'wrap' }}>
                 <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#389e0d' }}>
                     ✅ <b>{doneRows.length}</b> completed &nbsp;·&nbsp; Logged: <b>{totalLogged.toFixed(2)} hrs</b>
+                    {efficiency !== null && (
+                        <>
+                            &nbsp;·&nbsp; Efficiency: <b style={{ color: efficiency >= 100 ? '#389e0d' : '#d46b08' }}>{efficiency}%</b>
+                        </>
+                    )}
                 </div>
                 <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#d46b08' }}>
                     🕐 <b>{pendingRows.length}</b> in-progress &nbsp;·&nbsp; Estimate: <b>{totalEstimate.toFixed(2)} hrs</b>
@@ -703,7 +728,7 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
             <div style={{ minWidth: chartWidth, height: 420 + bottomMargin }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 24, right: 16, left: 8, bottom: bottomMargin }}
+                    <BarChart data={data} margin={{ top: 32, right: 16, left: 8, bottom: bottomMargin }}
                         barCategoryGap="22%" barGap={2}
                         style={{ cursor: onBarClick ? 'pointer' : 'default' }}
                         onClick={onBarClick ? (chartData) => {
@@ -734,18 +759,25 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                                     <LabelList
                                         dataKey={`${period}__label_done`}
                                         position="top"
-                                        content={({ x, y, width, value }) => {
+                                        content={({ x, y, width, value, index }) => {
                                             if (!value) return null;
+                                            const row = data[index];
+                                            const eff = row?.[`${period}__efficiency`] ?? null;
                                             const isPercent = String(value).endsWith('%');
                                             const pct = isPercent ? parseInt(value) : null;
                                             const pctColor = pct == null ? '#666'
                                                 : pct >= 90 ? '#096dd9'
                                                 : pct >= 60 ? '#d46b08' : '#cf1322';
                                             return (
-                                                <text x={x + width / 2} y={y - 3}
-                                                    textAnchor="middle" fill={pctColor}
-                                                    fontSize={9} fontWeight={700}>
-                                                    {value}
+                                                <text x={x + width / 2} y={y - 8} textAnchor="middle" fontWeight={500} fontSize={6}>
+                                                    <tspan x={x + width / 2} dy={eff !== null ? "-0.6em" : "0"} fill={pctColor}>
+                                                        {value.includes('%') ? value : `${value} h`}
+                                                    </tspan>
+                                                    {/* {eff !== null && (
+                                                        <tspan x={x + width / 2} dy="1.1em" fill={eff >= 100 ? pctColor : '#d46b08'} fontSize={2}>
+                                                            {`e: ${eff}%`}
+                                                        </tspan>
+                                                    )} */}
                                                 </text>
                                             );
                                         }}
@@ -761,18 +793,25 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                                     <LabelList
                                         dataKey={`${period}__label_planned`}
                                         position="top"
-                                        content={({ x, y, width, value }) => {
+                                        content={({ x, y, width, value, index }) => {
                                             if (!value) return null;
+                                            const row = data[index];
+                                            const eff = row?.[`${period}__efficiency`] ?? null;
                                             const isPercent = String(value).endsWith('%');
                                             const pct = isPercent ? parseInt(value) : null;
                                             const pctColor = pct == null ? '#666'
                                                 : pct >= 90 ? '#096dd9'
                                                 : pct >= 60 ? '#d46b08' : '#cf1322';
                                             return (
-                                                <text x={x + width / 2} y={y - 3}
-                                                    textAnchor="middle" fill={pctColor}
-                                                    fontSize={9} fontWeight={700}>
-                                                    {value}
+                                                <text x={x + width / 2} y={y - 8} textAnchor="middle" fontWeight={500} fontSize={6}>
+                                                    <tspan x={x + width / 2} dy={eff !== null ? "-0.6em" : "0"} fill={pctColor}>
+                                                        {value.includes('%') ? value : `${value} h`}
+                                                    </tspan>
+                                                    {/* {eff !== null && (
+                                                        <tspan x={x + width / 2} dy="1.1em" fill={eff >= 100 ? pctColor : '#d46b08'} fontSize={2}>
+                                                            {`e: ${eff}%`}
+                                                        </tspan>
+                                                    )} */}
                                                 </text>
                                             );
                                         }}
@@ -804,8 +843,610 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
     );
 };
 
+// ── Excel export helper (xlsx-js-style for cell styling) ─────────────────
+/**
+ * Builds and downloads a .xlsx file with two sheets:
+ *  1. "Employee Summary" — month-wise Done/Planned hrs + Allocation + Total vs Alloc % per employee
+ *  2. "Project Summary"  — same breakdown per project
+ *
+ * Rows where aggregate Total vs Alloc % < 75% are highlighted in light red.
+ */
+const buildSummaryWorkbook = (employeeData, projectData, periods, fileName, periodMode, allocations, employeeProjectData, hrmsProjects, rawRows) => {
+    // ── Styles ────────────────────────────────────────────────────────────
+    const STYLE_HEADER = {
+        font:      { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+        fill:      { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+            bottom: { style: 'thin', color: { rgb: '2F75B6' } },
+            right:  { style: 'thin', color: { rgb: '2F75B6' } },
+        },
+    };
+    const STYLE_HEADER_ENTITY = {
+        ...STYLE_HEADER,
+        alignment: { horizontal: 'left', vertical: 'center' },
+    };
+    const STYLE_LOW_PCT = {
+        fill: { patternType: 'solid', fgColor: { rgb: 'FFD7D7' } },
+    };
+    const STYLE_LOW_PCT_BOLD = {
+        fill: { patternType: 'solid', fgColor: { rgb: 'FFD7D7' } },
+        font: { bold: true },
+    };
+    const STYLE_PCT_CELL = {
+        alignment: { horizontal: 'center' },
+    };
+    const STYLE_PCT_RED = {
+        fill: { patternType: 'solid', fgColor: { rgb: 'FFD7D7' } },
+        alignment: { horizontal: 'center' },
+        font: { color: { rgb: 'CF1322' }, bold: true },
+    };
+
+    // Cols per period: Done (hrs) | Planned (hrs) | Allocated (hrs) | Total vs Alloc %
+    const COLS_PER_PERIOD = 4;
+
+    // ── helper: build AOA rows + track which data rows need highlight ──────
+    // entityKeys:    array of entry keys used as leading columns, e.g. ['name'] or ['name','project']
+    // extraColumns:  optional static columns inserted after entity cols, before period cols
+    //                each item: { header: string, getValue: (entry) => value }
+    const buildSheetData = (data, entityKeys, entityLabels, extraColumns = []) => {
+        const header = [...entityLabels, ...extraColumns.map(c => c.header)];
+        periods.forEach(p => {
+            header.push(
+                `${p} – Done (hrs)`,
+                `${p} – Planned (hrs)`,
+                `${p} – Allocated (hrs)`,
+                `${p} – Total vs Alloc %`,
+            );
+        });
+
+        const rows = [header];
+        const highlightRowIndices = [];   // 0-based row indices (excluding header)
+
+        data.forEach((entry, idx) => {
+            const row = [
+                ...entityKeys.map(k => entry[k]),
+                ...extraColumns.map(c => c.getValue(entry)),
+            ];
+            let aggDone = 0, aggPlanned = 0, aggAlloc = 0;
+
+            periods.forEach(p => {
+                const done      = entry[`${p}__done`]      ?? 0;
+                const planned   = entry[`${p}__planned`]   ?? 0;
+                const allocated = entry[`${p}__allocated`] ?? 0;
+                const totalPct  = entry[`${p}__totalPct`]  ?? '';
+
+                aggDone    += done;
+                aggPlanned += planned;
+                aggAlloc   += allocated;
+
+                row.push(
+                    parseFloat(done.toFixed(2)),
+                    parseFloat(planned.toFixed(2)),
+                    allocated > 0 ? parseFloat(allocated.toFixed(2)) : '',
+                    totalPct !== '' ? totalPct : '',
+                );
+            });
+
+            // Aggregate % across all periods: if < 75% → flag for highlight
+            const aggPct = aggAlloc > 0
+                ? Math.round((aggDone + aggPlanned) / aggAlloc * 100)
+                : null;
+            if (aggPct !== null && aggPct < 75) {
+                highlightRowIndices.push(idx);
+            }
+
+            rows.push(row);
+        });
+
+        return { rows, highlightRowIndices, entityColCount: entityKeys.length + extraColumns.length };
+    };
+
+    // ── helper: convert AOA to styled worksheet ───────────────────────────
+    // entityColCount: number of leading entity columns (1 for employee/project, 2 for employee+project)
+    const buildStyledWorksheet = (aoa, highlightRowIndices, entityColCount = 1) => {
+        const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
+        const totalColsLocal = entityColCount + periods.length * COLS_PER_PERIOD;
+        const highlightSet = new Set(highlightRowIndices);
+
+        for (let r = 0; r < aoa.length; r++) {
+            for (let c = 0; c < totalColsLocal; c++) {
+                const addr = XLSXStyle.utils.encode_cell({ r, c });
+                if (!ws[addr]) continue;
+
+                if (r === 0) {
+                    // Header row
+                    ws[addr].s = c < entityColCount ? STYLE_HEADER_ENTITY : STYLE_HEADER;
+                } else {
+                    const dataRowIdx = r - 1; // 0-based data row
+                    const isLow = highlightSet.has(dataRowIdx);
+
+                    if (isLow) {
+                        const colWithinPeriod = (c - entityColCount) % COLS_PER_PERIOD;
+                        const isTotalPctCol = c >= entityColCount && colWithinPeriod === 3;
+                        ws[addr].s = isTotalPctCol ? STYLE_PCT_RED
+                            : c < entityColCount ? STYLE_LOW_PCT_BOLD
+                            : STYLE_LOW_PCT;
+                    } else {
+                        const colWithinPeriod = (c - entityColCount) % COLS_PER_PERIOD;
+                        if (c >= entityColCount && colWithinPeriod === 3) {
+                            ws[addr].s = STYLE_PCT_CELL;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Column widths
+        ws['!cols'] = [
+            ...Array(entityColCount).fill({ wch: 26 }),
+            ...periods.flatMap(() => [
+                { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
+            ]),
+        ];
+
+        // Freeze header + entity columns
+        ws['!freeze'] = { xSplit: entityColCount, ySplit: 1 };
+
+        return ws;
+    };
+
+    // ── build sheets ──────────────────────────────────────────────────────
+    // Allocation lookup: (empName_lower + \x00 + projName_lower) → alloc data
+    const allocLookup = {};
+    (allocations || []).forEach(emp => {
+        (emp.projects || []).forEach(proj => {
+            const key = `${(emp.employee_name || '').toLowerCase().trim()}\x00${(proj.project_name || '').toLowerCase().trim()}`;
+            allocLookup[key] = {
+                allocation: proj.allocation ?? '',
+                is_billing: proj.is_billing,
+                role:       proj.role || '',
+                lead:       proj.lead_name || '',
+            };
+        });
+    });
+    const getAllocMeta = (empName, projName) => {
+        const resolvedEmp  = resolveEmployeeName(empName  || '');
+        const resolvedProj = resolveProjectName(projName || '');
+        return allocLookup[`${resolvedEmp.toLowerCase().trim()}\x00${resolvedProj.toLowerCase().trim()}`] ?? null;
+    };
+
+    // Project metadata lookup: hrmsName_lower → { lead_name, total_allocation (FTE), billable_allocation (FTE), contractual_allocation, start_date }
+    const projMetaLookup = {};
+    (hrmsProjects || []).forEach(p => {
+        const key = (p.project_name || '').toLowerCase().trim();
+        if (key) {
+            projMetaLookup[key] = {
+                lead:            p.lead_name || '',
+                totalAlloc:      p.total_allocation != null ? Number((p.total_allocation / 100).toFixed(2)) : '',
+                billableAlloc:   p.billable_allocation != null ? Number((p.billable_allocation / 100).toFixed(2)) : '',
+                contractualAlloc: p.contractual_allocation != null ? Number(p.contractual_allocation) : '',
+                startDate:       p.start_date || '',
+            };
+        }
+    });
+    const getProjMeta = (excelProjName) => {
+        const hrmsName = resolveProjectName(excelProjName || '').toLowerCase().trim();
+        return projMetaLookup[hrmsName] ?? null;
+    };
+
+    // Employee by Project — enriched with allocation metadata, sorted by project then employee
+    const sortedEmpProjData = [...(employeeProjectData || [])]
+        .sort((a, b) => a.project.localeCompare(b.project) || a.name.localeCompare(b.name));
+
+    const { rows: empProjRows, highlightRowIndices: empProjHighlight, entityColCount: empProjEntityCols } =
+        buildSheetData(
+            sortedEmpProjData,
+            ['name', 'project'],
+            ['Employee', 'Project'],
+            [
+                { header: 'Allocation (%)', getValue: e => getAllocMeta(e.name, e.project)?.allocation ?? '' },
+                { header: 'Billable',       getValue: e => { const m = getAllocMeta(e.name, e.project); return m ? (m.is_billing ? 'Yes' : 'No') : ''; } },
+                { header: 'Role',           getValue: e => getAllocMeta(e.name, e.project)?.role ?? '' },
+                { header: 'Lead',           getValue: e => getAllocMeta(e.name, e.project)?.lead ?? '' },
+            ]
+        );
+
+    // Project summary — enriched with project metadata
+    const { rows: projRows, highlightRowIndices: projHighlight, entityColCount: projEntityCols } =
+        buildSheetData(
+            projectData, ['name'], ['Project'],
+            [
+                { header: 'Project Lead',             getValue: e => getProjMeta(e.name)?.lead            ?? '' },
+                { header: 'Total Allocation (FTE)',   getValue: e => getProjMeta(e.name)?.totalAlloc      ?? '' },
+                { header: 'Billable Allocation (FTE)',getValue: e => getProjMeta(e.name)?.billableAlloc   ?? '' },
+                { header: 'Contractual Allocation',   getValue: e => getProjMeta(e.name)?.contractualAlloc ?? '' },
+                { header: 'Start Date',               getValue: e => getProjMeta(e.name)?.startDate       ?? '' },
+            ]
+        );
+
+    const wsEmpProj = buildStyledWorksheet(empProjRows, empProjHighlight, empProjEntityCols);
+    const wsProj    = buildStyledWorksheet(projRows,    projHighlight,    projEntityCols);
+
+    // Custom col widths for Employee by Project
+    wsEmpProj['!cols'] = [
+        { wch: 28 }, { wch: 26 },                     // Employee, Project
+        { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 22 }, // Alloc%, Billable, Role, Lead
+        ...periods.flatMap(() => [{ wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }]),
+    ];
+    // Custom col widths for Project Summary
+    wsProj['!cols'] = [
+        { wch: 30 },                                   // Project
+        { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, // metadata
+        ...periods.flatMap(() => [{ wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }]),
+    ];
+
+    // ── Employee Summary + Company Summary built below inside allocation block ──
+    let wsEmpAlloc = null;
+    let wsCompany  = null;
+
+    // ── Employee Summary sheet (allocation + period-wise efforts) ─────────────
+    if (allocations && allocations.length > 0) {
+        // Lookup from employeeData by resolved HRMS name
+        const empEffortsMap = {};
+        (employeeData || []).forEach(entry => {
+            const hrmsName = resolveEmployeeName(entry.name || '').toLowerCase().trim();
+            empEffortsMap[hrmsName] = entry;
+        });
+
+
+
+        // Header style (dark grey)
+        const empAllocHeaderStyle = {
+            font: { bold: true, color: { rgb: '000000' } },
+            fill: { fgColor: { rgb: 'FFD3D3D3' } },
+            border: {
+                top: { style: 'thin' }, bottom: { style: 'thin' },
+                left: { style: 'thin' }, right: { style: 'thin' },
+            },
+        };
+        // Navy header style for period columns (matches other sheets)
+        const periodHeaderStyle = {
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+            fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            border: {
+                bottom: { style: 'thin', color: { rgb: '2F75B6' } },
+                right:  { style: 'thin', color: { rgb: '2F75B6' } },
+            },
+        };
+
+        const staticHeaders = [
+            'Employee Name', 'Employee ID', 'Manager (Leave Approver)',
+            'Total Allocation (%)', 'Total Billable Allocation (%)', 'No. of Projects Assigned',
+            'More than 40 hours work planned',
+        ];
+        const periodHeaders = [];
+        periods.forEach(p => {
+            periodHeaders.push(`${p} \u2013 Done (hrs)`, `${p} \u2013 Planned (hrs)`, `${p} \u2013 Total vs Alloc %`);
+        });
+        const allHeaders = [...staticHeaders, ...periodHeaders, 'Comments'];
+
+        const _wsEmpAlloc = {};
+
+        // Write headers
+        allHeaders.forEach((h, ci) => {
+            const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: ci });
+            let style = ci < staticHeaders.length ? empAllocHeaderStyle : periodHeaderStyle;
+            if (h === 'Comments') style = empAllocHeaderStyle;
+            _wsEmpAlloc[cellRef] = {
+                v: h, t: 's',
+                s: style,
+            };
+        });
+
+        const parsePeriodForCheck = (p) => {
+            const wm = p.match(/^W(\d+)-(\d+)$/);
+            if (wm) return parseInt(wm[2]) * 100 + parseInt(wm[1]);
+            const mm = p.match(/^(\w{3})-(\d+)$/);
+            if (mm) {
+                const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return parseInt(mm[2]) * 100 + M.indexOf(mm[1]);
+            }
+            return 0;
+        };
+        const exportDate = new Date();
+        const currentPeriodStr = periodMode === 'weekly' ? getWeekLabel(exportDate) : getMonthLabel(exportDate);
+        const currentPeriodVal = parsePeriodForCheck(currentPeriodStr);
+
+        let employeesLessThan40Planned = 0;
+        const employeesLessThan40List = [];
+        const employeesFreeBandwidthList = [];
+
+        // Write data rows
+        allocations.forEach((emp, ri) => {
+            const projects = emp.projects || [];
+            const billableAlloc = projects
+                .filter(p => p.is_billing)
+                .reduce((sum, p) => sum + (p.allocation || 0), 0);
+            const totalAllocation = Number((emp.total_allocation * 100).toFixed(2));
+
+            const hrmsName = (emp.employee_name || '').toLowerCase().trim();
+            const effortsEntry = empEffortsMap[hrmsName] || null;
+
+            let totalPlannedForEmp = 0;
+            let anyMonthEffLow = false;
+            if (effortsEntry) {
+                periods.forEach(p => {
+                    totalPlannedForEmp += (effortsEntry[`${p}__planned`] ?? 0);
+                    
+                    const pVal = parsePeriodForCheck(p);
+                    if (pVal > 0 && pVal < currentPeriodVal) {
+                        const tPct = effortsEntry[`${p}__totalPct`];
+                        if (tPct !== undefined && tPct !== '' && tPct !== null && tPct < 100) {
+                            anyMonthEffLow = true;
+                        }
+                    }
+                });
+            }
+
+            if ((emp.total_allocation || 0) < 1) {
+                employeesFreeBandwidthList.push({
+                    name: emp.employee_name,
+                    freeAllocation: `${((1 - (emp.total_allocation || 0)) * 100).toFixed(2)}%`
+                });
+            }
+
+            const moreThan40Planned = totalPlannedForEmp > 40 ? 'Yes' : 'No';
+            if (moreThan40Planned === 'No') {
+                employeesLessThan40Planned++;
+                employeesLessThan40List.push(emp.employee_name);
+            }
+
+            const comments = [];
+            if (anyMonthEffLow) comments.push(`Total vs alloc < 100% (past ${periodMode === 'weekly' ? 'week' : 'month'})`);
+            if ((emp.total_allocation || 0) < 1) comments.push("Total alloc < 100%");
+            if (moreThan40Planned === 'No') comments.push("Planned <= 40 hrs");
+
+            const rowBgRgb = comments.length > 0 ? 'FFFFE6E6' : null;
+            const commentText = comments.join('; ');
+
+            const staticValues = [
+                emp.employee_name,
+                emp.employee_id,
+                emp.manager_name || '',
+                totalAllocation,
+                Number(billableAlloc.toFixed(2)),
+                projects.length,
+                moreThan40Planned,
+            ];
+
+            // Write static columns
+            staticValues.forEach((val, ci) => {
+                const cellRef = XLSXStyle.utils.encode_cell({ r: ri + 1, c: ci });
+                const cellType = typeof val === 'number' ? 'n' : 's';
+                const cellStyle = {};
+                if (rowBgRgb) cellStyle.fill = { fgColor: { rgb: rowBgRgb } };
+                if (ci === 3 && rowBgRgb) cellStyle.font = { bold: true };
+                _wsEmpAlloc[cellRef] = {
+                    v: val, t: cellType,
+                    s: Object.keys(cellStyle).length ? cellStyle : undefined,
+                };
+            });
+
+            // Write period columns from efforts data
+            let ci = staticHeaders.length;
+            let aggDone = 0, aggPlanned = 0, aggAlloc = 0;
+            periods.forEach(p => {
+                const done      = effortsEntry ? (effortsEntry[`${p}__done`]      ?? 0) : 0;
+                const planned   = effortsEntry ? (effortsEntry[`${p}__planned`]   ?? 0) : 0;
+                const allocated = effortsEntry ? (effortsEntry[`${p}__allocated`] ?? 0) : 0;
+                const totalPct  = effortsEntry ? (effortsEntry[`${p}__totalPct`]  ?? '') : '';
+                aggDone    += done;
+                aggPlanned += planned;
+                aggAlloc   += allocated;
+
+                const isTotalPctCol = (ci - staticHeaders.length) % 3 === 2;
+                const periodCellStyle = rowBgRgb
+                    ? isTotalPctCol
+                        ? { fill: { fgColor: { rgb: rowBgRgb } }, font: { bold: true }, alignment: { horizontal: 'center' } }
+                        : { fill: { fgColor: { rgb: rowBgRgb } } }
+                    : isTotalPctCol
+                        ? { alignment: { horizontal: 'center' } }
+                        : undefined;
+
+                const periodValues = [
+                    parseFloat(done.toFixed(2)),
+                    parseFloat(planned.toFixed(2)),
+                    totalPct !== '' ? totalPct : '',
+                ];
+                periodValues.forEach(val => {
+                    const cellRef = XLSXStyle.utils.encode_cell({ r: ri + 1, c: ci });
+                    const cellType = typeof val === 'number' ? 'n' : 's';
+                    _wsEmpAlloc[cellRef] = {
+                        v: val === '' ? '' : val, t: cellType,
+                        s: periodCellStyle,
+                    };
+                    ci++;
+                });
+            });
+
+            // Write Comments column at the end
+            const commentRef = XLSXStyle.utils.encode_cell({ r: ri + 1, c: ci });
+            const commentStyle = {};
+            if (rowBgRgb) {
+                commentStyle.fill = { fgColor: { rgb: rowBgRgb } };
+                commentStyle.font = { color: { rgb: 'FFCF1322' }, bold: true }; // dark red text for emphasis
+            }
+            _wsEmpAlloc[commentRef] = {
+                v: commentText, t: 's',
+                s: Object.keys(commentStyle).length ? commentStyle : undefined,
+            };
+        });
+
+        _wsEmpAlloc['!ref'] = XLSXStyle.utils.encode_range({
+            s: { r: 0, c: 0 },
+            e: { r: allocations.length, c: allHeaders.length - 1 },
+        });
+        _wsEmpAlloc['!cols'] = [
+            { wch: 28 }, { wch: 14 }, { wch: 26 },  // Name, ID, Manager
+            { wch: 20 }, { wch: 24 }, { wch: 22 },  // Alloc%, Billable%, Projects
+            { wch: 32 },                            // More than 40 hours planned
+            ...periods.flatMap(() => [{ wch: 14 }, { wch: 14 }, { wch: 16 }]),
+            { wch: 45 },                            // Comments
+        ];
+        _wsEmpAlloc['!freeze'] = { xSplit: staticHeaders.length, ySplit: 1 };
+        wsEmpAlloc = _wsEmpAlloc;
+
+        // Company-level summary
+        const totalActiveEmployees = allocations.length;
+        const totalAllocSum    = allocations.reduce((s, e) => s + (e.total_allocation    || 0), 0);
+        const totalBillableSum = allocations.reduce((s, e) => s + (e.billable_allocation || 0), 0);
+        const employeesLessThan100 = allocations.filter(e => (e.total_allocation || 0) < 1).length;
+
+        let activeProjects = 0, onHoldProjects = 0, closedProjects = 0;
+        let totalContractualAlloc = 0, exceedingContractualAlloc = 0;
+
+        (hrmsProjects || []).forEach(p => {
+            if (p.project_status === 'Active') activeProjects++;
+            else if (p.project_status === 'On-Hold') onHoldProjects++;
+            else if (p.project_status === 'Closed') closedProjects++;
+
+            const contractual = p.contractual_allocation ? Number(p.contractual_allocation) : 0;
+            const totalAlloc = p.total_allocation != null ? Number(p.total_allocation) / 100 : 0;
+            
+            totalContractualAlloc += contractual;
+            if (contractual > 0 && totalAlloc > contractual) {
+                exceedingContractualAlloc++;
+            }
+        });
+
+        const utilisationRate = totalContractualAlloc > 0 
+            ? ((totalAllocSum / totalContractualAlloc) * 100).toFixed(2) + '%' 
+            : 'N/A';
+
+        const periodStr = periods && periods.length > 0 
+            ? `${periods[0]} \u2192 ${periods[periods.length - 1]}` 
+            : 'N/A';
+
+        let grandDone = 0, grandPlanned = 0, grandAlloc = 0;
+        const lowEfficiencyEmployees = [];
+        
+        (employeeData || []).forEach(entry => {
+            let empDone = 0, empPlanned = 0, empAlloc = 0;
+            periods.forEach(p => {
+                empDone += entry[`${p}__done`] ?? 0;
+                empPlanned += entry[`${p}__planned`] ?? 0;
+                empAlloc += entry[`${p}__allocated`] ?? 0;
+            });
+            grandDone += empDone;
+            grandPlanned += empPlanned;
+            grandAlloc += empAlloc;
+
+            const eff = empAlloc > 0 ? Math.round((empDone + empPlanned) / empAlloc * 100) : null;
+            if (eff !== null && eff < 75) {
+                lowEfficiencyEmployees.push(entry.name);
+            }
+        });
+
+        const lowEfficiencyProjects = [];
+        (projectData || []).forEach(entry => {
+            let projDone = 0, projPlanned = 0, projAlloc = 0;
+            periods.forEach(p => {
+                projDone += entry[`${p}__done`] ?? 0;
+                projPlanned += entry[`${p}__planned`] ?? 0;
+                projAlloc += entry[`${p}__allocated`] ?? 0;
+            });
+            const eff = projAlloc > 0 ? Math.round((projDone + projPlanned) / projAlloc * 100) : null;
+            if (eff !== null && eff < 75) {
+                lowEfficiencyProjects.push(entry.name);
+            }
+        });
+
+        const overallEfficiency = grandAlloc > 0 
+            ? Math.round((grandDone + grandPlanned) / grandAlloc * 100) + '%' 
+            : 'N/A';
+
+        const companyRows = [
+            { 'Metric': 'Report period (From \u2192 To)',                  'Value': periodStr },
+            { 'Metric': '', 'Value': '' },
+            { 'Metric': 'WORKFORCE METRICS',                              'Value': '' },
+            { 'Metric': 'Total Active Employees',                          'Value': totalActiveEmployees },
+            { 'Metric': 'Employees with free bandwidth',                   'Value': employeesLessThan100 },
+            { 'Metric': 'Total Allocation (sum across employees)',          'Value': Number(totalAllocSum.toFixed(2)) },
+            { 'Metric': 'Total Billable Allocation (sum across employees)', 'Value': Number(totalBillableSum.toFixed(2)) },
+            { 'Metric': '', 'Value': '' },
+            { 'Metric': 'PROJECT PORTFOLIO METRICS',                       'Value': '' },
+            { 'Metric': 'Total Active Projects',                           'Value': activeProjects },
+            { 'Metric': 'Total On-Hold Projects',                          'Value': onHoldProjects },
+            { 'Metric': 'Total Closed Projects',                           'Value': closedProjects },
+            { 'Metric': 'Total Contractual Allocation (FTE)',              'Value': Number(totalContractualAlloc.toFixed(2)) },
+            { 'Metric': 'Utilisation Rate (Total Alloc / Contractual)',    'Value': utilisationRate },
+            { 'Metric': 'Projects exceeding contractual allocation',       'Value': exceedingContractualAlloc },
+            { 'Metric': '', 'Value': '' },
+            { 'Metric': 'EFFORTS & EFFICIENCY METRICS',                    'Value': '' },
+            { 'Metric': 'Total Done hours (across all employees)',         'Value': Number(grandDone.toFixed(2)) },
+            { 'Metric': 'Total Planned hours',                             'Value': Number(grandPlanned.toFixed(2)) },
+            { 'Metric': 'Employees with less than 40 hours work planned',  'Value': employeesLessThan40Planned },
+            { 'Metric': 'Overall Total vs Allocation %',                   'Value': overallEfficiency },
+            // { 'Metric': 'Employees below 75% work log',                  'Value': lowEfficiencyEmployees.length > 0 ? lowEfficiencyEmployees.join(', ') : 'None' },
+            // { 'Metric': 'Projects below 75% work log',                   'Value': lowEfficiencyProjects.length > 0 ? lowEfficiencyProjects.join(', ') : 'None' },
+        ];
+
+        companyRows.push({ 'Metric': '', 'Value': '' });
+        companyRows.push({ 'Metric': 'EMPLOYEES WITH LESS THAN 40 HOURS WORK PLANNED', 'Value': '' });
+        if (employeesLessThan40List.length > 0) {
+            employeesLessThan40List.forEach(name => {
+                companyRows.push({ 'Metric': name, 'Value': '' });
+            });
+        } else {
+            companyRows.push({ 'Metric': 'None', 'Value': '' });
+        }
+
+        companyRows.push({ 'Metric': '', 'Value': '' });
+        companyRows.push({ 'Metric': 'EMPLOYEES WITH FREE BANDWIDTH', 'Value': 'Free Allocation' });
+        if (employeesFreeBandwidthList.length > 0) {
+            employeesFreeBandwidthList.forEach(item => {
+                companyRows.push({ 'Metric': item.name, 'Value': item.freeAllocation });
+            });
+        } else {
+            companyRows.push({ 'Metric': 'None', 'Value': '' });
+        }
+        
+        wsCompany = XLSXStyle.utils.json_to_sheet(companyRows);
+        wsCompany['!cols'] = [{ wch: 60 }, { wch: 40 }];
+        
+        // Bold the section headers dynamically
+        const boldRowIndices = [];
+        companyRows.forEach((row, i) => {
+            if (row.Metric && row.Metric === row.Metric.toUpperCase() && row.Metric.length > 5) {
+                boldRowIndices.push(i + 1); // +1 because row 0 is headers in excel
+            }
+        });
+        
+        boldRowIndices.forEach(rIdx => {
+            const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx, c: 0 });
+            if (wsCompany[cellRef]) wsCompany[cellRef].s = { font: { bold: true } };
+            const cellRefVal = XLSXStyle.utils.encode_cell({ r: rIdx, c: 1 });
+            if (wsCompany[cellRefVal]) wsCompany[cellRefVal].s = { font: { bold: true } };
+        });
+    }
+
+    // ── Assemble workbook in requested order ──────────────────────────────
+    const wb = XLSXStyle.utils.book_new();
+    if (wsCompany)  XLSXStyle.utils.book_append_sheet(wb, wsCompany,  'Company Efforts Metrics');
+                    XLSXStyle.utils.book_append_sheet(wb, wsProj,     'Project Metrics');
+    if (wsEmpAlloc) XLSXStyle.utils.book_append_sheet(wb, wsEmpAlloc, 'Emp Efforts Metrics');
+                    XLSXStyle.utils.book_append_sheet(wb, wsEmpProj,  'Emp-Project Metrics');
+
+    if (rawRows && rawRows.length > 0) {
+        const rawWs = XLSXStyle.utils.json_to_sheet(rawRows);
+        XLSXStyle.utils.book_append_sheet(wb, rawWs, 'Emp-Project Tasks Details');
+    }
+
+    return wb;
+};
+
+const downloadSummaryExcel = (employeeData, projectData, periods, fileName, periodMode, allocations, employeeProjectData, hrmsProjects, rawRows) => {
+    const wb = buildSummaryWorkbook(employeeData, projectData, periods, fileName, periodMode, allocations, employeeProjectData, hrmsProjects, rawRows);
+    const baseName = (fileName || 'efforts').replace(/\.[^.]+$/, '');
+    const today    = new Date();
+    const stamp    = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+    XLSXStyle.writeFile(wb, `${baseName}_summary_${stamp}.xlsx`);
+};
+
 // ── main component ─────────────────────────────────────────────────────────
-const EffortsAnalyser = () => {
+const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
     const [allocations, setAllocations] = useState([]);      // per-employee allocations
     const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
@@ -816,6 +1457,25 @@ const EffortsAnalyser = () => {
     const [drillDown, setDrillDown] = useState(null);
     const [healthChecks, setHealthChecks] = useState(null);
     const [empProjectFilter, setEmpProjectFilter] = useState(null); // null = all projects
+
+    useEffect(() => {
+        if (exportRef) {
+            exportRef.current = () => buildSummaryWorkbook(
+                filteredEmployeeChartData,
+                projectChartData,
+                allPeriods,
+                fileName,
+                periodMode,
+                allocations,
+                employeeProjectChartData,
+                hrmsProjects,
+                rawRows
+            );
+        }
+        if (setHasEffortsData) {
+            setHasEffortsData(rawRows && rawRows.length > 0);
+        }
+    });
 
     // Fetch HRMS data once on mount
     useEffect(() => {
@@ -1011,17 +1671,21 @@ const EffortsAnalyser = () => {
             const filteredDone    = rowFilter ? doneRows.filter(rowFilter)    : doneRows;
             const filteredPlanned = rowFilter ? plannedRows.filter(rowFilter) : plannedRows;
             allPeriods.forEach(period => {
-                const done = filteredDone
-                    .filter(r => getKey(r) === entity && getPeriod(r) === period)
-                    .reduce((s, r) => s + r.loggedTime, 0);
-                const planned = filteredPlanned
-                    .filter(r => getKey(r) === entity && getPeriod(r) === period)
-                    .reduce((s, r) => s + r.estimateEffort, 0);
+                const doneTasks = filteredDone
+                    .filter(r => getKey(r) === entity && getPeriod(r) === period);
+                const done = doneTasks.reduce((s, r) => s + r.loggedTime, 0);
+                const doneEst = doneTasks.reduce((s, r) => s + r.estimateEffort, 0);
+
+                const filteredPlannedForPeriod = filteredPlanned
+                    .filter(r => getKey(r) === entity && getPeriod(r) === period);
+                const planned = filteredPlannedForPeriod.reduce((s, r) => s + r.estimateEffort, 0);
                 const allocated = getAllocForEntity(entity);
 
                 const donePct    = allocated > 0 ? Math.round(done    / allocated * 100) : null;
                 const plannedPct = allocated > 0 ? Math.round(planned / allocated * 100) : null;
                 const totalPct   = allocated > 0 ? Math.round((done + planned) / allocated * 100) : null;
+
+                const efficiency = done > 0 ? Math.round((doneEst / done) * 100) : null;
 
                 entry[`${period}__done`]       = parseFloat(done.toFixed(1));
                 entry[`${period}__planned`]    = parseFloat(planned.toFixed(1));
@@ -1029,6 +1693,7 @@ const EffortsAnalyser = () => {
                 entry[`${period}__donePct`]    = donePct;
                 entry[`${period}__plannedPct`] = plannedPct;
                 entry[`${period}__totalPct`]   = totalPct;
+                entry[`${period}__efficiency`] = efficiency;
 
                 const total = done + planned;
                 const labelText = total <= 0 ? ''
@@ -1079,6 +1744,36 @@ const EffortsAnalyser = () => {
             rowFilter
         );
     }, [buildChartData, filteredEmployees, rawRows, getAllocHrs, empProjectFilter]);
+
+    // Employee-by-project breakdown — for the Excel "Employee by Project" sheet
+    // One entry per unique (employee, project) pair, with same period structure
+    const employeeProjectChartData = useMemo(() => {
+        const pairs = [...new Set(
+            rawRows.map(r => `${r.assignee}\x00${r.project}`)
+        )].sort();
+
+        return pairs.map(pair => {
+            const [emp, proj] = pair.split('\x00');
+            const entry = { name: emp, project: proj };
+
+            allPeriods.forEach(period => {
+                const done = doneRows
+                    .filter(r => r.assignee === emp && r.project === proj && getPeriod(r) === period)
+                    .reduce((s, r) => s + r.loggedTime, 0);
+                const planned = plannedRows
+                    .filter(r => r.assignee === emp && r.project === proj && getPeriod(r) === period)
+                    .reduce((s, r) => s + r.estimateEffort, 0);
+                const allocated = getAllocHrs(emp, proj) ?? 0;
+                const totalPct  = allocated > 0 ? Math.round((done + planned) / allocated * 100) : null;
+
+                entry[`${period}__done`]      = parseFloat(done.toFixed(1));
+                entry[`${period}__planned`]   = parseFloat(planned.toFixed(1));
+                entry[`${period}__allocated`] = allocated > 0 ? parseFloat(allocated.toFixed(1)) : 0;
+                entry[`${period}__totalPct`]  = totalPct;
+            });
+            return entry;
+        });
+    }, [rawRows, doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
 
     // ── summary ────────────────────────────────────────────────────────
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
@@ -1235,6 +1930,27 @@ const EffortsAnalyser = () => {
                                 style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
                                 onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
                                 Run Checks
+                            </Button>
+                        </Col>
+                        <Col>
+                            <Button
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                type="primary"
+                                style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                                onClick={() => downloadSummaryExcel(
+                                    filteredEmployeeChartData,
+                                    projectChartData,
+                                    allPeriods,
+                                    fileName,
+                                    periodMode,
+                                    allocations,
+                                    employeeProjectChartData,
+                                    hrmsProjects,
+                                    rawRows
+                                )}
+                            >
+                                Download Summary
                             </Button>
                         </Col>
                         <Col>

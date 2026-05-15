@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table, Button, Input, message, Popconfirm, Tooltip, Card, Tag, Row, Col, Statistic, Progress, Tabs } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ProjectOutlined, TeamOutlined, RiseOutlined } from '@ant-design/icons';
 import { getProjects, deleteProject, getProjectStats } from '../../services/api';
@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import EmployeeAllocations from './EmployeeAllocations.jsx';
 import MyProjectsTeam from './MyProjectsTeam.jsx';
 import EffortsAnalyser from './EffortsAnalyser.jsx';
+import TimesheetAnalyser from './TimesheetAnalyser.jsx';
 import { convertDate } from '../../util/helperFunctions.jsx';
 
 const Projects = () => {
@@ -24,6 +25,9 @@ const Projects = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
+    
+    const effortsExportRef = useRef(null);
+    const [hasEffortsData, setHasEffortsData] = useState(false);
 
     const isHRorAdmin = user?.roleName === 'HR' || user?.roleName === 'Admin';
 
@@ -259,7 +263,10 @@ const Projects = () => {
                     <MyProjectsTeam />
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Planned Efforts Analyser" key="5">
-                    <EffortsAnalyser />
+                    <EffortsAnalyser exportRef={effortsExportRef} setHasEffortsData={setHasEffortsData} />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Timesheet Analyzer" key="7">
+                    <TimesheetAnalyser effortsExportRef={effortsExportRef} hasEffortsData={hasEffortsData} />
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Tasks Analyser" key="6">
                     {/* <EffortsAnalyser /> */}

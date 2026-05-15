@@ -725,7 +725,6 @@ class LeaveQueryService:
                 LeaveTransaction.duration,
                 LeaveTransaction.hand_over_comments,
                 (AppliedByEmployee.first_name + ' ' + 
-                 func.coalesce(AppliedByEmployee.middle_name, '') + ' ' + 
                  AppliedByEmployee.last_name).label('applied_by_name'),
                 LeaveTransaction.application_date,
                 LeaveTransaction.approved_by,
@@ -882,7 +881,6 @@ class LeaveQueryService:
                 LeaveTransaction.duration,
                 LeaveTransaction.hand_over_comments,
                 (AppliedByEmployee.first_name + ' ' + 
-                 func.coalesce(AppliedByEmployee.middle_name, '') + ' ' + 
                  AppliedByEmployee.last_name).label('applied_by_name'),
                 LeaveTransaction.application_date,
                 case(
