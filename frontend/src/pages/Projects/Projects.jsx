@@ -8,6 +8,7 @@ import EmployeeAllocations from './EmployeeAllocations.jsx';
 import MyProjectsTeam from './MyProjectsTeam.jsx';
 import EffortsAnalyser from './EffortsAnalyser.jsx';
 import TimesheetAnalyser from './TimesheetAnalyser.jsx';
+import OrganizationStructure from './OrganizationStructure.jsx';
 import { convertDate } from '../../util/helperFunctions.jsx';
 
 const Projects = () => {
@@ -267,6 +268,9 @@ const Projects = () => {
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Timesheet Analyzer" key="7">
                     <TimesheetAnalyser effortsExportRef={effortsExportRef} hasEffortsData={hasEffortsData} />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Organization Structure" key="8">
+                    <OrganizationStructure />
                 </Tabs.TabPane>
                 <Tabs.TabPane tab="Tasks Analyser" key="6">
                     {/* <EffortsAnalyser /> */}
