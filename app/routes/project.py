@@ -50,3 +50,7 @@ def get_employee_allocations():
 @jwt_required()
 def get_my_projects_team():
     return ProjectController.get_my_projects_team()
+
+@project_bp.route('/projects/structure', methods=['GET'])
+def get_project_structure():
+    return ProjectController.get_project_structure()

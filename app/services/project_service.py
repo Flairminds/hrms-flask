@@ -441,4 +441,152 @@ class ProjectService:
             Logger.error("Error deleting project", project_id=project_id, error=str(e))
             raise
 
+    @staticmethod
+    def get_project_structure():
+        """Retrieves active projects, their leads, and active allocated team members for hierarchical tree display."""
+        try:
+            from ..services.profile_service import ProfileService
+            from ..models.hr import EmployeeDesignation, MasterDesignation, MasterSubRole, EmployeeRole, MasterRole
+
+            Logger.info("Fetching project structure data")
+
+            # 1. Fetch active or prospective projects
+            projects = db.session.query(
+                Project.project_id,
+                Project.project_name,
+                Project.description,
+                Project.client,
+                Project.start_date,
+                Project.end_date,
+                Project.project_status,
+                Project.lead_by
+            ).filter(
+                Project.project_status.in_(['Active', 'Future Prospect'])
+            ).all()
+
+            # 2. Fetch allocations with active employee details
+            allocations = db.session.query(
+                ProjectAllocation.project_id,
+                ProjectAllocation.employee_id,
+                ProjectAllocation.project_allocation,
+                ProjectAllocation.employee_role,
+                Employee.first_name,
+                Employee.middle_name,
+                Employee.last_name,
+                Employee.employment_status,
+                Employee.email,
+                MasterRole.role_name,
+                MasterSubRole.sub_role_name,
+                MasterDesignation.designation_name
+            ).join(
+                Employee, ProjectAllocation.employee_id == Employee.employee_id
+            ).outerjoin(
+                EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
+            ).outerjoin(
+                MasterRole, EmployeeRole.role_id == MasterRole.role_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+            ).outerjoin(
+                EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+            ).outerjoin(
+                MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
+            ).filter(
+                Employee.employment_status.notin_(['Relieved', 'Absconding', 'Resigned', 'Leave Without Pay'])
+            ).all()
+
+            # 3. Fetch details for project leads
+            lead_ids = {p.lead_by for p in projects if p.lead_by}
+            leads_details = []
+            if lead_ids:
+                leads_details = db.session.query(
+                    Employee.employee_id,
+                    Employee.first_name,
+                    Employee.middle_name,
+                    Employee.last_name,
+                    Employee.employment_status,
+                    Employee.email,
+                    MasterRole.role_name,
+                    MasterSubRole.sub_role_name,
+                    MasterDesignation.designation_name
+                ).outerjoin(
+                    EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
+                ).outerjoin(
+                    MasterRole, EmployeeRole.role_id == MasterRole.role_id
+                ).outerjoin(
+                    MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+                ).outerjoin(
+                    EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+                ).outerjoin(
+                    MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
+                ).filter(
+                    Employee.employee_id.in_(lead_ids)
+                ).all()
+
+            # 4. Bulk pre-fetch profile completions in a single pass
+            all_emp_ids = list({a.employee_id for a in allocations} | lead_ids)
+            profile_completion_map = {}
+            if all_emp_ids:
+                profile_completion_map = ProfileService.get_bulk_profile_completion(all_emp_ids)
+
+            # Map lead profiles
+            lead_map = {}
+            for l in leads_details:
+                lead_map[l.employee_id] = {
+                    "employeeId": l.employee_id,
+                    "employeeName": f"{l.first_name} {l.middle_name or ''} {l.last_name}".replace("  ", " "),
+                    "employeeDisplayName": f"{l.first_name} {l.last_name}".replace("  ", " "),
+                    "roleName": l.role_name,
+                    "subRoleName": l.sub_role_name,
+                    "designationName": l.designation_name,
+                    "employmentStatus": l.employment_status,
+                    "email": l.email,
+                    "profileCompletion": profile_completion_map.get(
+                        l.employee_id,
+                        {"completion_percentage": 0, "missing_fields": []}
+                    )
+                }
+
+            # Map allocated members
+            project_members_map = {}
+            for a in allocations:
+                if a.project_id not in project_members_map:
+                    project_members_map[a.project_id] = []
+                
+                project_members_map[a.project_id].append({
+                    "employeeId": a.employee_id,
+                    "employeeName": f"{a.first_name} {a.middle_name or ''} {a.last_name}".replace("  ", " "),
+                    "employeeDisplayName": f"{a.first_name} {a.last_name}".replace("  ", " "),
+                    "roleName": a.role_name,
+                    "subRoleName": a.sub_role_name,
+                    "designationName": a.designation_name,
+                    "employmentStatus": a.employment_status,
+                    "email": a.email,
+                    "projectAllocation": float(a.project_allocation) if a.project_allocation else 0.0,
+                    "employeeRole": a.employee_role,
+                    "profileCompletion": profile_completion_map.get(
+                        a.employee_id,
+                        {"completion_percentage": 0, "missing_fields": []}
+                    )
+                })
+
+            # Format final structured array
+            result = []
+            for p in projects:
+                result.append({
+                    "projectId": p.project_id,
+                    "projectName": p.project_name,
+                    "client": p.client,
+                    "description": p.description,
+                    "startDate": p.start_date.strftime('%Y-%m-%d') if p.start_date else None,
+                    "endDate": p.end_date.strftime('%Y-%m-%d') if p.end_date else None,
+                    "projectStatus": p.project_status,
+                    "lead": lead_map.get(p.lead_by),
+                    "members": project_members_map.get(p.project_id, [])
+                })
+
+            return result
+        except Exception as e:
+            Logger.error("Error generating project structure data", error=str(e))
+            return []
+
 

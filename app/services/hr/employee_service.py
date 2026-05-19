@@ -34,11 +34,19 @@ class EmployeeService:
                 Employee.date_of_joining,
                 Employee.team_lead_id,
                 Employee.email,
-                MasterRole.role_name
+                MasterRole.role_name,
+                MasterSubRole.sub_role_name,
+                MasterDesignation.designation_name
             ).outerjoin(
                 EmployeeRole, Employee.employee_id == EmployeeRole.employee_id
             ).outerjoin(
                 MasterRole, EmployeeRole.role_id == MasterRole.role_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+            ).outerjoin(
+                EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+            ).outerjoin(
+                MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
             ).order_by(
                 Employee.first_name.asc()
             ).all()
@@ -64,11 +72,15 @@ class EmployeeService:
                 {
                     "employeeId": e.employee_id,
                     "employeeName": f"{e.first_name} {e.middle_name or ''} {e.last_name}".replace("  ", " "),
+                    "employeeDisplayName": f"{e.first_name} {e.last_name}".replace("  ", " "),
                     "roleName": e.role_name,
+                    "subRoleName": e.sub_role_name,
+                    "designationName": e.designation_name,
                     "employmentStatus": e.employment_status,
                     "joiningDate": e.date_of_joining.isoformat() if e.date_of_joining else None,
                     "leaveApprover": approver_name_map.get(e.team_lead_id, "None"),
                     "teamLeadName": approver_name_map.get(e.team_lead_id, "None"),
+                    "teamLeadId": e.team_lead_id,
                     "email": e.email,
                     "profileCompletion": profile_completion_map.get(
                         e.employee_id,
