@@ -34,6 +34,8 @@ class EmployeeService:
                 Employee.date_of_joining,
                 Employee.team_lead_id,
                 Employee.email,
+                Employee.profile_image,
+                Employee.profile_image_type,
                 MasterRole.role_name,
                 MasterSubRole.sub_role_name,
                 MasterDesignation.designation_name
@@ -86,6 +88,7 @@ class EmployeeService:
                         e.employee_id,
                         {"completion_percentage": 0, "missing_fields": []}
                     ),
+                    "profileImage": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None,
                 } for e in employees
             ]
         except Exception as e:

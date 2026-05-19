@@ -18,10 +18,10 @@ import { getAllEmployeesList } from '../../services/api';
 import styles from './OrganizationStructure.module.css';
 
 // Dimensions configuration for tree layout
-const CARD_WIDTH = 240;
-const CARD_HEIGHT = 100;
-const SIBLING_SPACING = 50;
-const LEVEL_SPACING = 110;
+const CARD_WIDTH = 200;
+const CARD_HEIGHT = 270;
+const SIBLING_SPACING = 40;
+const LEVEL_SPACING = 90;
 
 const OrganizationStructure = () => {
     const [employees, setEmployees] = useState([]);
@@ -33,6 +33,7 @@ const OrganizationStructure = () => {
     const dragStart = useRef({ x: 0, y: 0 });
     const canvasRef = useRef(null);
     const viewportRef = useRef(null);
+    const lastSizeRef = useRef({ width: 0, height: 0 });
 
     // Collapsed nodes state (Set of employeeIds)
     const [collapsedNodes, setCollapsedNodes] = useState(new Set());
@@ -260,21 +261,16 @@ const OrganizationStructure = () => {
         const mouseY = e.clientY - rect.top;
 
         const zoomFactor = e.deltaY < 0 ? (1 + zoomIntensity) : (1 - zoomIntensity);
-        const nextZoom = Math.min(2.0, Math.max(0.15, transform.zoom * zoomFactor));
 
-        console.log("Org Chart Wheel Scroll Zooming:", {
-            deltaY: e.deltaY,
-            nextZoom,
-            mouseX,
-            mouseY
+        // Center zoom on mouse point using functional update to avoid stale closures
+        setTransform(prev => {
+            const nextZoom = Math.min(2.0, Math.max(0.15, prev.zoom * zoomFactor));
+            return {
+                zoom: nextZoom,
+                x: mouseX - (mouseX - prev.x) * (nextZoom / prev.zoom),
+                y: mouseY - (mouseY - prev.y) * (nextZoom / prev.zoom)
+            };
         });
-
-        // Center zoom on mouse point
-        setTransform(prev => ({
-            zoom: nextZoom,
-            x: mouseX - (mouseX - prev.x) * (nextZoom / prev.zoom),
-            y: mouseY - (mouseY - prev.y) * (nextZoom / prev.zoom)
-        }));
     };
 
     // Canvas adjustment helper utilities
@@ -287,13 +283,13 @@ const OrganizationStructure = () => {
     };
 
     const handleReset = () => {
-        setTransform({ x: 100, y: 80, zoom: 0.85 });
+        setTransform({ x: 100, y: 80, zoom: 0.55 });
     };
 
     const fitToScreen = (customList) => {
         const listToUse = customList || nodesList;
         if (listToUse.length === 0) return;
-
+ 
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
 
@@ -311,7 +307,7 @@ const OrganizationStructure = () => {
 
         const zoomX = viewportW / (treeW + 150);
         const zoomY = viewportH / (treeH + 150);
-        const fitZoom = Math.min(1.2, Math.max(0.3, Math.min(zoomX, zoomY)));
+        const fitZoom = Math.min(0.55, Math.max(0.15, Math.min(zoomX, zoomY)));
 
         // Center coordinates
         const xOffset = (viewportW - treeW * fitZoom) / 2 - minX * fitZoom;
@@ -430,12 +426,53 @@ const OrganizationStructure = () => {
         }
     };
 
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'Confirmed':
+            case 'Active':
+                return '#10b981'; // emerald green
+            case 'Probation':
+                return '#f59e0b'; // amber orange
+            case 'Intern':
+                return '#8b5cf6'; // purple
+            case 'Leave Without Pay':
+            case 'Resigned':
+                return '#ef4444'; // red
+            default:
+                return '#3b82f6'; // blue
+        }
+    };
+
     const getAvatarInitials = (name) => {
         if (!name) return '';
         const parts = name.trim().split(' ');
         if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
+
+    // ResizeObserver to handle tab visibility changes and dynamically fit canvas to screen size!
+    useEffect(() => {
+        if (!viewportRef.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                const { width, height } = entry.contentRect;
+                if (width > 0 && height > 0) {
+                    const sizeChanged = width !== lastSizeRef.current.width || height !== lastSizeRef.current.height;
+                    if (sizeChanged && employees.length > 0) {
+                        lastSizeRef.current = { width, height };
+                        fitToScreen();
+                    }
+                }
+            }
+        });
+
+        resizeObserver.observe(viewportRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [employees]);
 
     return (
         <div className={styles.container}>
@@ -547,25 +584,44 @@ const OrganizationStructure = () => {
                                     onClick={() => handleCardClick(node)}
                                 >
                                     <div className={styles.employeeCard}>
-                                        <div className={styles.cardHeader}>
-                                            <Avatar 
-                                                size={40}
-                                                style={{ background: avatarGrad, fontWeight: 'bold' }}
-                                            >
-                                                {getAvatarInitials(node.employeeDisplayName)}
-                                            </Avatar>
-                                            <div className={styles.empBrief}>
-                                                <h4 className={styles.empName}>{node.employeeDisplayName}</h4>
-                                                <span className={styles.empDesignation}>
-                                                    {node.designationName || node.subRoleName || node.roleName || 'Employee'}
+                                        {/* Large Profile Picture / Initials Block */}
+                                        <div className={styles.cardImageContainer}>
+                                            {node.profileImage ? (
+                                                <img 
+                                                    src={node.profileImage} 
+                                                    alt={node.employeeDisplayName} 
+                                                    className={styles.largeCardImage}
+                                                />
+                                            ) : (
+                                                <div 
+                                                    className={styles.largeCardInitials}
+                                                    style={{ background: avatarGrad }}
+                                                >
+                                                    {getAvatarInitials(node.employeeDisplayName)}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Brief details section */}
+                                        <div className={styles.cardBrief}>
+                                            <div className={styles.nameRow}>
+                                                <h4 className={styles.empName} title={node.employeeDisplayName}>
+                                                    {node.employeeDisplayName}
+                                                </h4>
+                                                <span 
+                                                    className={styles.statusDot} 
+                                                    style={{ backgroundColor: getStatusColor(node.employmentStatus) }}
+                                                    title={`Status: ${node.employmentStatus || 'Active'}`}
+                                                ></span>
+                                            </div>
+                                            <span className={styles.empDesignation} title={node.designationName || node.subRoleName || 'Employee'}>
+                                                {node.designationName || node.subRoleName || node.roleName || 'Employee'}
+                                            </span>
+                                            <div className={styles.statusRow}>
+                                                <span className={`${styles.statusBadge} ${styles[(node.employmentStatus || 'active').toLowerCase().replace(/\s+/g, '')]}`}>
+                                                    {node.employmentStatus || 'Active'}
                                                 </span>
                                             </div>
-                                        </div>
-                                        <div className={styles.cardFooter}>
-                                            <Tag color={getStatusTagColor(node.employmentStatus)} className={styles.statusTag}>
-                                                {node.employmentStatus}
-                                            </Tag>
-                                            <span className={styles.empId}>{node.employeeId}</span>
                                         </div>
                                     </div>
 
@@ -612,6 +668,7 @@ const OrganizationStructure = () => {
                         <div className={styles.drawerHeader}>
                             <Avatar
                                 size={76}
+                                src={selectedEmployee.profileImage}
                                 style={{ 
                                     background: getInitialsGradient(selectedEmployee.employeeDisplayName), 
                                     fontWeight: 'bold',
@@ -727,6 +784,7 @@ const OrganizationStructure = () => {
                                             >
                                                 <Avatar 
                                                     size="small" 
+                                                    src={child.profileImage}
                                                     style={{ background: getInitialsGradient(child.employeeDisplayName), marginRight: 8, fontSize: 10 }}
                                                 >
                                                     {getAvatarInitials(child.employeeDisplayName)}
