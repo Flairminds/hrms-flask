@@ -147,3 +147,13 @@ class ProjectController:
         except Exception as e:
             Logger.error("Error in get_my_projects_team", error=str(e))
             return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    def get_project_structure():
+        """Returns the project structure data for the interactive flow chart."""
+        try:
+            structure = ProjectService.get_project_structure()
+            return jsonify(structure), 200
+        except Exception as e:
+            Logger.error("Error in get_project_structure", error=str(e))
+            return jsonify({"error": str(e)}), 500

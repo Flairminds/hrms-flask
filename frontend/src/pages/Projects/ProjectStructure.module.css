@@ -1,0 +1,538 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100vh - 180px);
+    min-height: 500px;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #e2e8f0;
+}
+
+.controlsBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 10;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 320px;
+}
+
+.searchInput {
+    width: 100%;
+}
+
+.searchInput :global(.ant-select-selector) {
+    border-radius: 20px !important;
+    padding-right: 30px !important;
+}
+
+.clearSearchBtn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #bfbfbf;
+    font-size: 12px;
+    z-index: 5;
+}
+
+.btnGroup {
+    display: flex;
+    gap: 8px;
+}
+
+.btnGroup button {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.btnGroup button:hover {
+    transform: scale(1.08);
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background-color: #f1f5f9;
+    background-image: 
+        radial-gradient(#cbd5e1 1px, transparent 1px), 
+        radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+    user-select: none;
+}
+
+.loaderContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 15;
+}
+
+.canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 12000px;
+    height: 12000px;
+    transform-origin: 0 0;
+    /* Do NOT add CSS transitions to 'transform' here to ensure drag/scroll zoom runs seamlessly without locks */
+}
+
+.svgLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.connectorLine {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: all 0.3s ease;
+    opacity: 0.75;
+}
+
+.highlightedConnector {
+    stroke: #1890ff;
+    stroke-width: 4px;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.6));
+}
+
+.cardWrapper {
+    position: absolute;
+    z-index: 2;
+}
+
+.baseCard {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 15px rgba(148, 163, 184, 0.08);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.baseCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 22px rgba(148, 163, 184, 0.16);
+    border-color: #1890ff;
+}
+
+/* Custom Project Card Styling */
+.projCard {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
+    border-left: 5px solid #1890ff;
+}
+
+.projCard:hover {
+    border-color: #1890ff;
+}
+
+.projHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.projIcon {
+    font-size: 16px;
+    color: #1890ff;
+}
+
+.projStatusTag {
+    font-size: 10px;
+    padding: 0 6px;
+    line-height: 16px;
+    border-radius: 10px;
+    margin-right: 0;
+}
+
+.projName {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.projClient {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+.projBrief {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: auto;
+    font-weight: 500;
+}
+
+/* Custom Employee Card Styling */
+.empCard {
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.leadCardBorder {
+    border-top: 4px solid #10b981;
+}
+
+.leadTag {
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    background: #10b981;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.memberTag {
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    background: #64748b;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(100, 116, 139, 0.2);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.empBrief {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+.empName {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empDesignation {
+    font-size: 11px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+
+.allocationTag {
+    align-self: flex-start;
+    margin-top: 3px;
+    font-size: 9px;
+    padding: 0 6px;
+    line-height: 14px;
+    border-radius: 8px;
+}
+
+/* Highlighting searched cards */
+.highlightedCard .baseCard {
+    border-color: #1890ff !important;
+    animation: pulsingHighlight 1.5s infinite;
+}
+
+@keyframes pulsingHighlight {
+    0% {
+        box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(24, 144, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+    }
+}
+
+/* Branch Expand/Collapse circles */
+.collapseToggle {
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    z-index: 5;
+}
+
+.collapseToggle:hover {
+    background: #1890ff;
+    color: #ffffff;
+    border-color: #1890ff;
+    transform: translateX(-50%) scale(1.15);
+}
+
+/* Drawer specification details */
+.specDrawer :global(.ant-drawer-content) {
+    background: #f8fafc;
+}
+
+.drawerContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px;
+}
+
+.drawerHero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.drawerName {
+    margin: 12px 0 0 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.projDrawerName {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.completionSection {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.completionLabel {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.missingFieldsBox {
+    margin-top: 12px;
+    background: #fef2f2;
+    border: 1px dashed #fca5a5;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.missingLabel {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #dc2626;
+    margin-bottom: 4px;
+}
+
+.missingTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.specSection {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.sectionHeader {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px 0;
+}
+
+.sectionHeader span {
+    color: #1890ff;
+}
+
+.specGrid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 12px;
+    font-size: 13px;
+}
+
+.specLabel {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.specValue {
+    color: #1e293b;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.projDescText {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #334155;
+    margin: 0;
+}
+
+.leadDrawerRow {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.leadDrawerTitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    width: 90px;
+}
+
+.leadDrawerInfo {
+    display: flex;
+    align-items: center;
+}
+
+.leadDrawerName {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.membersList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.memberRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+
+.memberRow:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.reportRowInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.reportRowName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.reportRowDesig {
+    font-size: 10px;
+    color: #64748b;
+}
+
+.noReports {
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+}

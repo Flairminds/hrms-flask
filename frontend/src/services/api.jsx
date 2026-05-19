@@ -418,6 +418,10 @@ export const getAllEmployeesList = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/get-all-employees`);
 }
 
+export const getProjectStructureList = () => {
+  return axiosInstance.get(`${API_BASE_URL}/project/projects/structure`);
+}
+
 // Updates personal details for an employee (self-service).
 export const editPersonalDetails = (payload, employeeId) => {
   return axiosInstance.put(`${API_BASE_URL}/employees-details/update-employee-details-by-self/${employeeId}`, payload);
