@@ -31,8 +31,8 @@ import styles from './ProjectStructure.module.css';
 // Layout Constants
 const CARD_WIDTH = 250;
 const CARD_HEIGHT = 100;
-const LEVEL_SPACING = 110;  // Vertical space between levels
-const SIBLING_SPACING = 60; // Horizontal space between sibling subtrees
+const LEVEL_SPACING = 80;   // Horizontal gap between levels (from left to right)
+const SIBLING_SPACING = 20; // Tight vertical gap between stacked sibling cards
 
 export default function ProjectStructure() {
     const [loading, setLoading] = useState(true);
@@ -65,13 +65,15 @@ export default function ProjectStructure() {
             const data = res.data || [];
             setProjectData(data);
             
-            // Show all projects and leads collapsed by default
+            // Keep project cards expanded to show lead cards, but keep lead cards (hiding members) collapsed by default
             const initialCollapsed = new Set();
             data.forEach(proj => {
                 const projNodeId = `proj-${proj.projectId}`;
-                const hasMembers = (proj.members || []).length > 0;
                 const hasLead = !!proj.lead;
-                if (hasLead || hasMembers) {
+                const hasMembers = (proj.members || []).length > 0;
+
+                if (!hasLead && hasMembers) {
+                    // If no lead exists, collapse project node to hide direct members by default
                     initialCollapsed.add(projNodeId);
                 }
 
@@ -79,6 +81,7 @@ export default function ProjectStructure() {
                     const leadNodeId = `lead-${proj.lead.employeeId}-${proj.projectId}`;
                     const hasAllocatedMembers = (proj.members || []).some(m => m.employeeId !== proj.lead.employeeId);
                     if (hasAllocatedMembers) {
+                        // Collapse lead card to hide allocated members by default
                         initialCollapsed.add(leadNodeId);
                     }
                 }
@@ -207,26 +210,26 @@ export default function ProjectStructure() {
             });
         });
 
-        // 2. Measure subtree widths recursively
-        const calculateSubtreeWidth = (node) => {
+        // 2. Measure vertical subtree heights recursively (for layout calculation in left-to-right trees)
+        const calculateSubtreeHeight = (node) => {
             if (collapsedNodes.has(node.id) || node.children.length === 0) {
-                node.subtreeWidth = CARD_WIDTH;
-                return CARD_WIDTH;
+                node.subtreeHeight = CARD_HEIGHT;
+                return CARD_HEIGHT;
             }
             
-            let childrenWidth = 0;
+            let childrenHeight = 0;
             node.children.forEach(child => {
-                childrenWidth += calculateSubtreeWidth(child);
+                childrenHeight += calculateSubtreeHeight(child);
             });
-            childrenWidth += SIBLING_SPACING * (node.children.length - 1);
+            childrenHeight += SIBLING_SPACING * (node.children.length - 1);
             
-            node.subtreeWidth = Math.max(CARD_WIDTH, childrenWidth);
-            return node.subtreeWidth;
+            node.subtreeHeight = Math.max(CARD_HEIGHT, childrenHeight);
+            return node.subtreeHeight;
         };
 
-        roots.forEach(root => calculateSubtreeWidth(root));
+        roots.forEach(root => calculateSubtreeHeight(root));
 
-        // 3. Coordinate Assignment
+        // 3. Coordinate Assignment (horizontal pipeline growth from left to right)
         const assignCoords = (node, x, y, level) => {
             node.x = x;
             node.y = y;
@@ -234,30 +237,56 @@ export default function ProjectStructure() {
 
             if (collapsedNodes.has(node.id) || node.children.length === 0) return;
 
-            let totalChildrenWidth = 0;
+            let totalChildrenHeight = 0;
             node.children.forEach(child => {
-                totalChildrenWidth += child.subtreeWidth;
+                totalChildrenHeight += child.subtreeHeight;
             });
-            totalChildrenWidth += SIBLING_SPACING * (node.children.length - 1);
+            totalChildrenHeight += SIBLING_SPACING * (node.children.length - 1);
 
-            let startX = x - totalChildrenWidth / 2 + CARD_WIDTH / 2;
+            // Center child branches vertically on the right side of the parent card
+            let startY = y - totalChildrenHeight / 2 + CARD_HEIGHT / 2;
 
             node.children.forEach(child => {
-                const childX = startX + child.subtreeWidth / 2 - CARD_WIDTH / 2;
-                const childY = y + LEVEL_SPACING + CARD_HEIGHT;
+                const childX = x + CARD_WIDTH + LEVEL_SPACING;
+                const childY = startY + child.subtreeHeight / 2 - CARD_HEIGHT / 2;
                 assignCoords(child, childX, childY, level + 1);
-                startX += child.subtreeWidth + SIBLING_SPACING;
+                startY += child.subtreeHeight + SIBLING_SPACING;
             });
         };
 
-        // Arrange separate projects next to each other horizontally
-        let currentTreeX = 0;
+        // Stack separate project trees vertically
+        let currentY = 0;
+        const PROJECT_GAP = 70; // Vertical gap between separate project trees
+
         roots.forEach(root => {
-            assignCoords(root, currentTreeX + root.subtreeWidth / 2 - CARD_WIDTH / 2, 0, 0);
-            currentTreeX += root.subtreeWidth + SIBLING_SPACING * 3;
+            // Center root horizontally at x = 0, vertically starting at currentY
+            assignCoords(root, 0, currentY, 0);
+
+            // Measure actual y bounds reached by this tree (including children offsets)
+            let minY = Infinity;
+            let maxY = -Infinity;
+            const measureRange = (n) => {
+                if (n.y < minY) minY = n.y;
+                if (n.y > maxY) maxY = n.y;
+                if (collapsedNodes.has(n.id)) return;
+                n.children.forEach(measureRange);
+            };
+            measureRange(root);
+
+            // Offset the tree vertically so the highest child perfectly aligns with currentY
+            const shiftY = currentY - minY;
+            const applyShift = (n) => {
+                n.y += shiftY;
+                if (collapsedNodes.has(n.id)) return;
+                n.children.forEach(applyShift);
+            };
+            applyShift(root);
+
+            // Shift currentY to stack the next project under this tree's lowest bottom edge
+            currentY = (maxY + shiftY) + CARD_HEIGHT + PROJECT_GAP;
         });
 
-        // 4. Flatten nodes and establish curved reporting connections
+        // 4. Flatten nodes and establish curved horizontal reporting connections
         const nodesList = [];
         const connections = [];
 
@@ -266,13 +295,13 @@ export default function ProjectStructure() {
             if (collapsedNodes.has(node.id)) return;
 
             node.children.forEach(child => {
-                const parentBottomX = node.x + CARD_WIDTH / 2;
-                const parentBottomY = node.y + CARD_HEIGHT;
-                const childTopX = child.x + CARD_WIDTH / 2;
-                const childTopY = child.y;
+                const parentRightX = node.x + CARD_WIDTH;
+                const parentRightY = node.y + CARD_HEIGHT / 2;
+                const childLeftX = child.x;
+                const childLeftY = child.y + CARD_HEIGHT / 2;
 
-                const deltaY = LEVEL_SPACING / 2;
-                const pathData = `M ${parentBottomX} ${parentBottomY} C ${parentBottomX} ${parentBottomY + deltaY}, ${childTopX} ${childTopY - deltaY}, ${childTopX} ${childTopY}`;
+                const deltaX = LEVEL_SPACING / 2;
+                const pathData = `M ${parentRightX} ${parentRightY} C ${parentRightX + deltaX} ${parentRightY}, ${childLeftX - deltaX} ${childLeftY}, ${childLeftX} ${childLeftY}`;
 
                 connections.push({
                     id: `${node.id}-to-${child.id}`,
@@ -679,12 +708,12 @@ export default function ProjectStructure() {
                                     >
                                         <div className={`${styles.projCard} ${styles.baseCard}`}>
                                             <div className={styles.projHeader}>
-                                                <ProjectOutlined className={styles.projIcon} />
+                                                {/* <ProjectOutlined className={styles.projIcon} /> */}
+                                                <h4 className={styles.projName}>{node.projectName}</h4>
                                                 <Tag color={getStatusTagColor(node.projectStatus)} className={styles.projStatusTag}>
                                                     {node.projectStatus}
                                                 </Tag>
                                             </div>
-                                            <h4 className={styles.projName}>{node.projectName}</h4>
                                             <div className={styles.projClient}>Client: {node.client}</div>
                                             <div className={styles.projBrief}>
                                                 <span>Active Staff: {(projectData.find(p => p.projectId === node.projectId)?.members || []).length}</span>
