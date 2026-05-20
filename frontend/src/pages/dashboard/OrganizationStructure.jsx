@@ -283,7 +283,7 @@ const OrganizationStructure = () => {
     };
 
     const handleReset = () => {
-        setTransform({ x: 100, y: 80, zoom: 0.55 });
+        fitToScreen();
     };
 
     const fitToScreen = (customList) => {
