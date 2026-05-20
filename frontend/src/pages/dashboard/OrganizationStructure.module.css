@@ -2,8 +2,10 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: calc(100vh - 180px);
-    min-height: 500px;
+    max-width: 100%;
+    box-sizing: border-box;
+    height: 60vh;
+    min-height: 400px;
     background: #f8fafc;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
@@ -42,9 +44,11 @@
     gap: 8px;
 }
 
-/* Viewport and Canvas */
 .viewport {
     flex: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     position: relative;
     overflow: hidden;
     /* Dotted background pattern */
@@ -58,8 +62,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 10000px; /* large canvas */
-    height: 10000px;
+    width: 5000px;
+    height: 5000px;
     transform-origin: 0 0;
 }
 
@@ -85,6 +89,7 @@
     height: 100%;
     pointer-events: none;
     z-index: 1;
+    overflow: visible;
 }
 
 .connectorLine {
@@ -106,28 +111,149 @@
     position: absolute;
     z-index: 2;
     transition: left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow: hidden;
 }
 
 .employeeCard {
     width: 100%;
     height: 100%;
     background: #ffffff;
-    border-radius: 12px;
+    border-radius: 16px;
     border: 1px solid #e2e8f0;
-    padding: 12px 14px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    justify-content: flex-start;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease;
     user-select: none;
+    overflow: hidden;
 }
 
 .employeeCard:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(24, 144, 255, 0.08);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(24, 144, 255, 0.08);
     border-color: #1890ff;
+}
+
+.employeeCard:hover .largeCardImage {
+    transform: scale(1.04);
+}
+
+.cardImageContainer {
+    position: relative;
+    width: 100%;
+    height: 165px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #f8fafc;
+}
+
+.largeCardImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    transition: transform 0.3s ease;
+}
+
+.largeCardInitials {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+    border-radius: 12px;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.statusRow {
+    display: flex;
+    margin-top: 6px;
+    align-items: center;
+}
+
+.statusBadge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+/* Status colors dynamically mapped - Soft Google Material style chips */
+.statusBadge.confirmed,
+.statusBadge.active {
+    background-color: #e6f4ea; /* Soft green */
+    color: #137333;
+}
+
+.statusBadge.probation {
+    background-color: #fef7e0; /* Soft amber */
+    color: #b06000;
+}
+
+.statusBadge.intern {
+    background-color: #f3e8ff; /* Soft purple */
+    color: #6b21a8;
+}
+
+.statusBadge.leavewithoutpay,
+.statusBadge.lwp,
+.statusBadge.resigned {
+    background-color: #fce8e6; /* Soft red */
+    color: #c5221f;
+}
+
+.cardBrief {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+    padding: 0 4px;
+    overflow: hidden;
+}
+
+.nameRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+
+.empName {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex: 1;
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1.5px #ffffff, 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.empDesignation {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    margin-top: 3px;
 }
 
 /* Search Focus Highlight */
@@ -144,60 +270,6 @@
     100% {
         box-shadow: 0 0 0 8px rgba(24, 144, 255, 0.45);
     }
-}
-
-.cardHeader {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.empBrief {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.empName {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-}
-
-.empDesignation {
-    font-size: 11.5px;
-    color: #64748b;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    margin-top: 2px;
-}
-
-.cardFooter {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 6px;
-}
-
-.statusTag {
-    font-size: 9.5px;
-    line-height: 14px;
-    padding: 0 6px;
-    border-radius: 4px;
-    margin: 0;
-}
-
-.empId {
-    font-size: 10px;
-    font-weight: 500;
-    color: #94a3b8;
 }
 
 /* Expand/Collapse bubble under the node */
