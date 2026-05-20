@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, List, Typography, Progress, Badge, Avatar, message, Image } from 'antd';
-import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined } from '@ant-design/icons';
+import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
 import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
 import { convertDate, filterUpcomingHolidays } from '../../util/helperFunctions';
 import { fetchNotifications, fetchEvents } from '../../services/googleSheets';
+import OrganizationStructure from './OrganizationStructure.jsx';
 
 const { Title, Text } = Typography;
 
@@ -393,7 +394,18 @@ export const Dashboard = () => {
             </Row>
           </WidgetCard>
         </Col>
+        {/* Organization Structure Chart Section */}
+        <Col xs={24}>
+          <WidgetCard title="Team Structure" icon={<TeamOutlined />} iconColor="#722ed1">
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <OrganizationStructure />
+              </Col>
+            </Row>
+          </WidgetCard>
+        </Col>
       </Row>
+      
 
       {/* Hidden Image for Preview */}
       <div style={{ display: 'none' }}>
