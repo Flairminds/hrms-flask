@@ -172,7 +172,7 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
                 noOfDays: leaveDays,
                 comments,
                 handOverComments,
-                approvedBy: leaveOptions.approverId,
+                approvedBy: employees.find(e => e.employeeId == selectedEmployeeId)?.teamLeadId,
                 hr_leave_status: leaveStatus,
                 compOffTransactions: [],
                 cutsomerHolidays: { workedDate: null },
@@ -357,7 +357,7 @@ export function HRApplyLeaveModal({ open, onClose, onSuccess }) {
 
                     {/* Approver info */}
                     <div className={styles.approverDiv}>
-                        <span className={styles.heading}>Approver: {leaveOptions.approver || '—'}</span>
+                        <span className={styles.heading}>Approver: {selectedEmployeeId ? employees.find(e => e.employeeId == selectedEmployeeId)?.teamLeadName : '—'}</span>
                     </div>
 
                 </div>
