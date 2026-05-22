@@ -100,6 +100,15 @@ class EmailConfig:
     REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com']
     DOCUMENT_VERIFICATION_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
 
+    # Recipients for daily automated reports (leave report, attendance report, etc.)
+    # Add or remove addresses here to control who receives the daily digest emails.
+    DAILY_LEAVE_REPORT_RECIPIENTS = [
+        'hr@flairminds.com',
+        'priyanka.mandale@flairminds.com',
+        'hasmukh@flairminds.com',
+        'shishir.nigam@flairminds.com',
+    ]
+
 class IgnoreEmployees:
     IGNORE_FOR_ATTENDANCE = [
         'hr@flairminds.com', 

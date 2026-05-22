@@ -65,109 +65,209 @@ class EmailService:
     @staticmethod
     def send_leave_report() -> bool:
         """
-        Sends daily leave report for current/next business day.
-        
-        Generates HTML table of leaves active on report date (today or next
-        business day if weekend). Skips Saturdays and Sundays automatically.
-        
+        Sends an enhanced daily leave report covering today + the next 7 calendar days.
+
+        The report is a professionally styled HTML email that includes:
+        - Employee Name
+        - Leave Type
+        - Reason / Description (comments field)
+        - Start Date & End Date
+        - Leave Status (colour-coded)
+        - Approver Name
+
+        Weekend adjustment: if today is Saturday the report date shifts to Monday;
+        if Sunday, also shifts to Monday.
+
         Returns:
-            True if email sent successfully, False otherwise
-        
-        Example:
-            >>> if EmailService.send_leave_report():
-            ...     print("Leave report sent")
-        
+            True if email sent and delivered successfully, False otherwise.
+
         Note:
-            - Report date: Today if weekday, Monday if Saturday/Sunday
-            - Excludes cancelled leaves
-            - Recipient list from REPORT_TO_ADDRESSES config
-            - Requires MAIL_USERNAME and MAIL_PASSWORD in config
+            - Excludes Cancelled and Rejected leaves.
+            - Recipient list read from REPORT_TO_ADDRESSES config (comma-separated).
+            - Requires MAIL_USERNAME and MAIL_PASSWORD in config.
         """
-        Logger.info("Generating daily leave report")
-        
-        # Determine report date (skip weekends)
-        current_date = datetime.today()
-        if current_date.weekday() == 5:  # Saturday
-            current_date += timedelta(days=2)
+        Logger.info("Generating enhanced daily leave report")
+
+        # ── Determine report window ─────────────────────────────────────────
+        today = datetime.today()
+        if today.weekday() == 5:   # Saturday → shift to Monday
+            today += timedelta(days=2)
             Logger.debug("Report date adjusted - Saturday detected", adjusted_to="Monday")
-        elif current_date.weekday() == 6:  # Sunday
-            current_date += timedelta(days=1)
+        elif today.weekday() == 6:  # Sunday → shift to Monday
+            today += timedelta(days=1)
             Logger.debug("Report date adjusted - Sunday detected", adjusted_to="Monday")
-        
-        current_date_str = current_date.strftime('%Y-%m-%d')
-        
-        # Get email configuration
-        from_address = current_app.config.get('MAIL_USERNAME')
+
+        window_start = today.date()
+        window_start = window_start - timedelta(days=1)
+        window_end   = window_start + timedelta(days=15)
+        report_label = today.strftime('%d %b %Y')  # e.g. "22 May 2026"
+
+        # ── Email configuration ─────────────────────────────────────────────
+        from_address  = current_app.config.get('MAIL_USERNAME')
         from_password = current_app.config.get('MAIL_PASSWORD')
-        to_addresses_str = current_app.config.get('REPORT_TO_ADDRESSES', '')
-        to_addresses = [email.strip() for email in to_addresses_str.split(',') if email.strip()]
-        
+        to_addresses  = [e for e in EmailConfig.DAILY_LEAVE_REPORT_RECIPIENTS if e.strip()]
+
         if not to_addresses:
             Logger.warning("No recipient addresses configured for leave report")
             return False
-        
         if not from_address or not from_password:
             Logger.error("SMTP credentials not configured")
             return False
-        
-        Logger.debug("Fetching leaves for report", report_date=current_date_str)
-        
+
+        Logger.debug("Fetching upcoming leaves for report",
+                     window_start=str(window_start),
+                     window_end=str(window_end))
+
         try:
-            # Query leaves using ORM
+            # ── Aliases ─────────────────────────────────────────────────────
+            Approver = db.aliased(Employee)
+
+            # ── Query leaves that overlap the [window_start, window_end] range ──
             leaves = db.session.query(
                 LeaveTransaction.from_date,
                 LeaveTransaction.to_date,
-                Employee.first_name,
-                Employee.last_name,
                 LeaveTransaction.leave_status,
-                MasterLeaveTypes.leave_name
+                LeaveTransaction.comments.label('reason'),
+                (Employee.first_name + ' ' + Employee.last_name).label('employee_name'),
+                MasterLeaveTypes.leave_name,
+                (Approver.first_name + ' ' + Approver.last_name).label('approver_name'),
             ).join(
                 Employee,
-                LeaveTransaction.applied_by == Employee.employee_id
+                LeaveTransaction.employee_id == Employee.employee_id
             ).join(
                 MasterLeaveTypes,
-                LeaveTransaction.leave_type == MasterLeaveTypes.leave_type_id
+                LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
+            ).outerjoin(
+                Approver,
+                LeaveTransaction.approver_id == Approver.employee_id
             ).filter(
-                LeaveTransaction.from_date <= current_date_str,
-                LeaveTransaction.to_date >= current_date_str,
-                LeaveTransaction.leave_status != LeaveStatus.CANCELLED
+                # Overlap: transaction starts before window ends AND ends after window starts
+                LeaveTransaction.from_date <= str(window_end),
+                LeaveTransaction.to_date   >= str(window_start),
+                LeaveTransaction.leave_status.notin_([LeaveStatus.CANCELLED, LeaveStatus.REJECTED]),
+                Employee.is_deleted == False,
+            ).order_by(
+                LeaveTransaction.from_date.asc(),
+                Employee.first_name.asc(),
             ).all()
-            
-            Logger.debug("Leaves retrieved for report", count=len(leaves))
-            
-            # Build HTML table
-            leave_table = """
-                <table border='1' style='border-collapse: collapse; text-align: left;'>
-                    <tr>
-                        <th>From Date</th><th>To Date</th><th>Applied By</th><th>Status</th><th>Leave Type</th>
-                    </tr>
-            """
-            
-            for leave in leaves:
-                leave_table += f"""
-                    <tr>
-                        <td>{leave.from_date}</td>
-                        <td>{leave.to_date}</td>
-                        <td>{leave.first_name} {leave.last_name}</td>
-                        <td>{leave.leave_status}</td>
-                        <td>{leave.leave_name}</td>
-                    </tr>
-                """
-            
-            leave_table += "</table>"
-            
-            # Prepare email
-            msg = MIMEMultipart()
-            msg['From'] = EmailService._get_from_string(from_address)
-            msg['To'] = ", ".join(to_addresses)
-            msg['Subject'] = f"Leave Report - {current_date_str}"
-            msg.attach(MIMEText(f"<html><body>{leave_table}</body></html>", 'html'))
-            
-            # Send email
-            Logger.info("Sending leave report email", 
-                       recipients=len(to_addresses),
-                       leaves_count=len(leaves))
-            
+
+            Logger.debug("Upcoming leaves retrieved for report", count=len(leaves))
+
+            # ── Build HTML body ──────────────────────────────────────────────
+            year = today.year
+
+            # Status → badge colour mapping
+            def _status_color(status: str) -> str:
+                mapping = {
+                    'Approved':         ('#d4edda', '#155724'),
+                    'Pending':          ('#fff3cd', '#856404'),
+                    'Partial Approved': ('#fde8c8', '#8a4b00'),
+                    'Reject':           ('#f8d7da', '#721c24'),
+                }
+                return mapping.get(status, ('#e2e3e5', '#383d41'))
+
+            if leaves:
+                rows_html = ''
+                for idx, lv in enumerate(leaves):
+                    bg_color, txt_color = _status_color(lv.leave_status)
+                    row_bg = '#ffffff' if idx % 2 == 0 else '#f9f9f9'
+                    start_fmt = lv.from_date.strftime('%d %b %Y') if lv.from_date else '—'
+                    end_fmt   = lv.to_date.strftime('%d %b %Y')   if lv.to_date   else '—'
+                    reason    = (lv.reason or '').strip() or '—'
+                    approver  = (lv.approver_name or '').strip() or '—'
+                    rows_html += f"""
+                        <tr style="background:{row_bg};">
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;font-weight:600;color:#222;white-space:nowrap;">{lv.employee_name}</td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#444;white-space:nowrap;">{lv.leave_name}</td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#444;">{reason}</td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#444;white-space:nowrap;">{start_fmt}</td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#444;white-space:nowrap;">{end_fmt}</td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;">
+                            <span style="background:{bg_color};color:{txt_color};padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;">{lv.leave_status}</span>
+                          </td>
+                          <td style="padding:9px 12px;border-bottom:1px solid #e8e8e8;color:#444;white-space:nowrap;">{approver}</td>
+                        </tr>"""
+                table_body = rows_html
+                summary_line = f"{today.strftime('%d %b %Y')} · {len(leaves)} leave record{'s' if len(leaves) != 1 else ''}"
+            else:
+                table_body = '<tr><td colspan="7" style="padding:24px;text-align:center;color:#999;font-style:italic;">No upcoming leaves — everyone is in ✅</td></tr>'
+                summary_line = f"{today.strftime('%d %b %Y')} · No leaves"
+
+            html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Daily Leave Report</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;">
+    <tr><td align="center">
+      <table width="680" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;max-width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#2c3e50;padding:18px 24px;">
+            <span style="color:#fff;font-size:18px;font-weight:bold;">Daily Leave Report</span>
+            <span style="color:#aaa;font-size:13px;margin-left:12px;">{summary_line}</span>
+          </td>
+        </tr>
+
+        <!-- Description -->
+        <tr>
+          <td style="padding:10px 24px 4px;border-bottom:1px solid #f0f0f0;">
+            <span style="color:#888;font-size:12px;">This report includes all employee leaves from <strong style="color:#555;">{window_start.strftime('%d %b %Y')}</strong> (yesterday) through <strong style="color:#555;">{window_end.strftime('%d %b %Y')}</strong> (next 2 weeks). Cancelled and Rejected leaves are excluded.</span>
+          </td>
+        </tr>
+
+        <!-- Table -->
+        <tr>
+          <td style="padding:20px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="background:#2c3e50;color:#fff;">
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">Employee</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">Leave Type</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">Reason</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">From</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">To</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">Status</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;">Approver</th>
+                </tr>
+              </thead>
+              <tbody>
+                {table_body}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:14px 24px;border-top:1px solid #eee;background:#fafafa;text-align:center;">
+            <span style="font-size:12px;color:#999;">Automated report from HRMS &nbsp;·&nbsp; &copy; {year} Flairminds</span>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+
+</body>
+</html>"""
+
+            # ── Compose and send ─────────────────────────────────────────────
+            msg = MIMEMultipart('alternative')
+            msg['From']    = EmailService._get_from_string(from_address)
+            msg['To']      = ', '.join(to_addresses)
+            msg['Subject'] = f"Daily Leave Report - {report_label}"
+            msg.attach(MIMEText(html_body, 'html'))
+
+            Logger.info("Sending enhanced leave report email",
+                        recipients=len(to_addresses),
+                        leaves_count=len(leaves))
+
             server = smtplib.SMTP(
                 current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
                 current_app.config.get('MAIL_PORT', 587)
@@ -176,25 +276,23 @@ class EmailService:
             server.login(from_address, from_password)
             server.sendmail(from_address, to_addresses, msg.as_string())
             server.quit()
-            
-            Logger.info("Leave report sent successfully", 
-                       report_date=current_date_str,
-                       recipients=len(to_addresses))
+
+            Logger.info("Enhanced leave report sent successfully",
+                        report_label=report_label,
+                        recipients=len(to_addresses),
+                        leaves_count=len(leaves))
             return True
-            
+
         except smtplib.SMTPException as e:
-            Logger.error("SMTP error sending leave report", 
-                        error=str(e),
-                        error_type=type(e).__name__)
+            Logger.error("SMTP error sending leave report",
+                         error=str(e), error_type=type(e).__name__)
             return False
         except SQLAlchemyError as e:
-            Logger.error("Database error generating leave report", 
-                        error=str(e))
+            Logger.error("Database error generating leave report", error=str(e))
             return False
         except Exception as e:
-            Logger.critical("Unexpected error sending leave report", 
-                           error=str(e),
-                           error_type=type(e).__name__)
+            Logger.critical("Unexpected error sending leave report",
+                            error=str(e), error_type=type(e).__name__)
             return False
 
     @staticmethod
