@@ -13,7 +13,7 @@ scheduler = APScheduler()
 def register_jobs(app):
     """Registers standard HRMS scheduled jobs."""
     
-    @scheduler.task('cron', id='send_daily_leave_report', hour=9, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='send_daily_leave_report', hour=10, minute=15, timezone='Asia/Kolkata')
     def daily_leave_report():
         with app.app_context():
             Logger.info("Running scheduled leave report job")
