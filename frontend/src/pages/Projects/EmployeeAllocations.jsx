@@ -3,6 +3,7 @@ import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Ro
 import { SearchOutlined, CopyOutlined, TeamOutlined, DownloadOutlined } from '@ant-design/icons';
 import { getEmployeeAllocations } from '../../services/api';
 import XLSXStyle from 'xlsx-js-style';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const EmployeeAllocations = ({ stats }) => {
     const [employeeAllocations, setEmployeeAllocations] = useState([]);
@@ -248,59 +249,82 @@ const EmployeeAllocations = ({ stats }) => {
         );
     };
 
+    const billable = stats.billable_allocation || 0;
+    const nonBillable = Math.max(0, (stats.total_allocation || 0) - billable);
+    const notAllocated = Math.max(0, (stats.total_employees || 0) - (stats.total_allocation || 0));
+
+    const pieData = [
+        { name: 'Billable', value: Number(billable.toFixed(2)) },
+        { name: 'Non-billable', value: Number(nonBillable.toFixed(2)) },
+        { name: 'Not Allocated', value: Number(notAllocated.toFixed(2)) }
+    ];
+    const PIE_COLORS = ['#87d068', '#108ee9', '#ff4d4f'];
+
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, value }) => {
+        if (value === 0) return null;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+        return (
+            <text x={x} y={y} fill="black" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
+
+    const summaryColumns = [
+        { title: '', dataIndex: 'category', key: 'category', render: (text, record) => <span style={{ color: record.color, fontWeight: 'bold' }}>{text}</span> },
+        { title: 'Value', dataIndex: 'value', key: 'value', render: val => <b>{val}</b> }
+    ];
+
+    const summaryData = [
+        { key: '1', category: 'Total Active Employees', value: Number((stats.total_employees || 0).toFixed(2)), color: '#000' },
+        // { key: '1', category: 'Total Allocated', value: Number((stats.total_allocation || 0).toFixed(2)), color: '#000' },
+        { key: '2', category: 'Billable', value: Number(billable.toFixed(2)), color: PIE_COLORS[0] },
+        { key: '3', category: 'Non-billable', value: Number(nonBillable.toFixed(2)), color: PIE_COLORS[1] },
+        { key: '4', category: 'Not Allocated', value: Number(notAllocated.toFixed(2)), color: PIE_COLORS[2] }
+    ];
+
     return (
         <div>
             {/* <h2 style={{ marginBottom: 24 }}>Employee Allocations Overview</h2> */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={24} md={10}>
-                    <Card bordered={false} size='small'>
-                        <Row gutter={16}>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Allocation"
-                                    value={stats.total_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_employees}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.total_allocation / (stats.total_employees || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Billable"
-                                    value={stats.billable_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_allocation}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.billable_allocation / (stats.total_allocation || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <Statistic
-                                    title="Billable (total)"
-                                    value={stats.billable_allocation}
-                                    precision={1}
-                                    suffix={`/ ${stats.total_employees}`}
-                                    prefix={<TeamOutlined />}
-                                />
-                                <Progress
-                                    percent={Math.round((stats.billable_allocation / (stats.total_employees || 1)) * 100)}
-                                    size="small"
-                                    status="active"
-                                    strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
-                                />
-                            </Col>
-                        </Row>
+                <Col xs={24} sm={24} md={12} lg={10}>
+                    <Card bordered={false} size='small' title="Allocation Overview">
+                        <div style={{ height: 250 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={50}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        labelLine={false}
+                                        label={renderCustomizedLabel}
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <RechartsTooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={24} md={12} lg={14}>
+                    <Card bordered={false} size='small' title="Allocation Summary">
+                        <Table
+                            columns={summaryColumns}
+                            dataSource={summaryData}
+                            pagination={false}
+                            size="small"
+                        />
                     </Card>
                 </Col>
             </Row>
