@@ -1,4 +1,6 @@
 from datetime import datetime, date, timedelta
+import functools
+import pytz
 from flask_apscheduler import APScheduler
 from .email_service import process_leave_email, process_office_attendance_email, EmailService
 from ..utils.logger import Logger
@@ -10,10 +12,23 @@ from ..services.leave.leave_transaction_service import LeaveTransactionService
 
 scheduler = APScheduler()
 
+def weekday_only(func):
+    """Decorator to skip job execution on Saturday and Sunday."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        kolkata_tz = pytz.timezone('Asia/Kolkata')
+        now_kolkata = datetime.now(kolkata_tz)
+        if now_kolkata.weekday() in (5, 6): # 5 = Saturday, 6 = Sunday
+            Logger.info(f"Skipping scheduled job {func.__name__} because it is weekend (Saturday/Sunday)")
+            return
+        return func(*args, **kwargs)
+    return wrapper
+
 def register_jobs(app):
     """Registers standard HRMS scheduled jobs."""
     
     @scheduler.task('cron', id='send_daily_leave_report', hour=10, minute=15, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_leave_report():
         with app.app_context():
             Logger.info("Running scheduled leave report job")
@@ -24,6 +39,7 @@ def register_jobs(app):
                 Logger.error("Error in scheduled leave report job", error=str(e))
 
     @scheduler.task('cron', id='send_daily_attendance_report', hour=8, minute=0, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_attendance_report():
         with app.app_context():
             Logger.info("Running scheduled attendance report job")
@@ -34,6 +50,7 @@ def register_jobs(app):
                 Logger.error("Error in scheduled attendance report job", error=str(e))
 
     @scheduler.task('cron', id='period_end_date_alert', hour=8, minute=45, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_period_end_alert():
         """Sends daily alert for interns/probationers with end date in next 5 days or past."""
         with app.app_context():
@@ -48,6 +65,7 @@ def register_jobs(app):
                 Logger.error("Error in period end date alert job", error=str(e))
 
     @scheduler.task('cron', id='daily_review_alert', hour=8, minute=30, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_review_alert():
         """Sends daily digest of employee review statuses requiring attention."""
         with app.app_context():
@@ -58,6 +76,7 @@ def register_jobs(app):
                 Logger.error("Error in daily review alert job", error=str(e))
             
     @scheduler.task('cron', id='birthday_greetings', hour=0, minute=5, timezone='Asia/Kolkata')
+    @weekday_only
     def birthday_greetings_job():
         """Daily job for sending birthday wishes at 12:05 AM IST."""
         with app.app_context():
@@ -68,6 +87,7 @@ def register_jobs(app):
                 Logger.error("Error in birthday greetings job", error=str(e))
 
     @scheduler.task('cron', id='anniversary_greetings', hour=10, minute=0, timezone='Asia/Kolkata')
+    @weekday_only
     def anniversary_greetings_job():
         """Daily job for sending work anniversary greetings at 10:00 AM IST."""
         with app.app_context():
@@ -78,6 +98,7 @@ def register_jobs(app):
                 Logger.error("Error in anniversary greetings job", error=str(e))
 
     @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0, timezone='Asia/Kolkata')
+    @weekday_only
     def monthly_leave_allocation():
         """Automatically allocates leaves on the 1st of every month."""
         with app.app_context():
@@ -88,6 +109,7 @@ def register_jobs(app):
                 Logger.error("Error in monthly leave allocation job", error=str(e))
 
     @scheduler.task('cron', id='weekly_pending_leave_reminder', day_of_week=4, hour=10, minute=5, timezone='Asia/Kolkata')
+    @weekday_only
     def weekly_pending_leave_reminder():
         """Every Friday at 9:00 AM IST – reminds approvers of leaves awaiting action.
 
@@ -103,6 +125,7 @@ def register_jobs(app):
                 Logger.error("Error in weekly pending-leave reminder job", error=str(e))
 
     @scheduler.task('cron', id='daily_document_reminder', hour=9, minute=10, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_document_reminder():
         """Daily job at 9:05 AM IST – emails employees missing required documents.
 
@@ -120,6 +143,7 @@ def register_jobs(app):
                 Logger.error("Error in daily document reminder job", error=str(e))
 
     @scheduler.task('cron', id='daily_stale_resume_reminder', hour=8, minute=5, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_stale_resume_reminder():
         """Daily job at 9:10 AM IST – emails employees whose resume is older than 60 days."""
         with app.app_context():
@@ -131,6 +155,7 @@ def register_jobs(app):
                 Logger.error("Error in daily stale-resume reminder job", error=str(e))
 
     @scheduler.task('cron', id='daily_document_verification_alert', hour=9, minute=0, timezone='Asia/Kolkata')
+    @weekday_only
     def daily_document_verification_alert():
         """Daily job at 9:15 AM IST – alerts HR about documents pending verification.
 
@@ -151,6 +176,7 @@ def register_jobs(app):
 
 
     @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
+    @weekday_only
     def monthly_leave_deduction():
         """Automatically deducts monthly WFH leaves on the 1st of every month."""
         with app.app_context():
