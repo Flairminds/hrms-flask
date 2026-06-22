@@ -1132,6 +1132,11 @@ export const getUpcomingBirthdays = () => {
   return axiosInstance.get(`${API_BASE_URL}/hr/upcoming-birthdays`);
 };
 
+// Retrieves active employees whose work anniversary falls within the next 1 month
+export const getUpcomingWorkAnniversaries = () => {
+  return axiosInstance.get(`${API_BASE_URL}/hr/upcoming-work-anniversaries`);
+};
+
 // Retrieves leave balance cards for an employee
 export const getLeaveCards = () => {
   return axiosInstance.get(`${API_BASE_URL}/leave/get-leave-cards`);

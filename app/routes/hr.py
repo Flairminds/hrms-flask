@@ -65,6 +65,11 @@ def get_new_joinees():
 def get_upcoming_birthdays():
     return HRController.get_upcoming_birthdays()
 
+@hr_bp.route('/upcoming-work-anniversaries', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['hr']['get_upcoming_work_anniversaries'])
+def get_upcoming_work_anniversaries():
+    return HRController.get_upcoming_work_anniversaries()
+
 @hr_bp.route('/get-designations', methods=['GET'])
 @roles_required(*ROLE_PERMISSIONS['hr']['get_all_employees'])
 def get_designations():

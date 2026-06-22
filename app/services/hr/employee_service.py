@@ -1218,6 +1218,112 @@ class EmployeeService:
             return []
 
     @staticmethod
+    def get_upcoming_work_anniversaries() -> List[Dict[str, Any]]:
+        """Retrieves active employees whose work anniversary (date_of_joining) falls within the next 1 month,
+        and who have been employed for at least 1 year."""
+        try:
+            from dateutil.relativedelta import relativedelta
+            from sqlalchemy import extract
+
+            Logger.info("Fetching upcoming work anniversaries (next 1 month)")
+
+            today = datetime.now().date()
+            one_month_from_now = today + relativedelta(months=1)
+
+            # Extract month and day for comparison (same logic as birthdays)
+            m1, d1 = today.month, today.day
+            m2, d2 = one_month_from_now.month, one_month_from_now.day
+
+            # Employees must have joined at least 1 year ago
+            one_year_ago = today - relativedelta(years=1)
+
+            query = db.session.query(
+                Employee.employee_id,
+                Employee.first_name,
+                Employee.last_name,
+                Employee.date_of_joining,
+                Employee.profile_image,
+                Employee.profile_image_type,
+                MasterDesignation.designation_name.label('band'),
+                MasterSubRole.sub_role_name.label('sub_role')
+            ).outerjoin(
+                EmployeeDesignation, Employee.employee_id == EmployeeDesignation.employee_id
+            ).outerjoin(
+                MasterDesignation, EmployeeDesignation.designation_id == MasterDesignation.designation_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+            ).filter(
+                Employee.employment_status.notin_(['Relieved', 'Resigned', 'Absconding']),
+                Employee.date_of_joining != None,
+                Employee.date_of_joining <= one_year_ago  # at least 1 year tenure
+            )
+
+            # Filter by anniversary month/day window (wrap-around safe)
+            if m1 <= m2:
+                query = query.filter(
+                    (extract('month', Employee.date_of_joining) > m1) |
+                    ((extract('month', Employee.date_of_joining) == m1) & (extract('day', Employee.date_of_joining) >= d1))
+                ).filter(
+                    (extract('month', Employee.date_of_joining) < m2) |
+                    ((extract('month', Employee.date_of_joining) == m2) & (extract('day', Employee.date_of_joining) <= d2))
+                )
+            else:
+                # Wrap around (e.g., Dec -> Jan)
+                query = query.filter(
+                    ((extract('month', Employee.date_of_joining) > m1) |
+                     ((extract('month', Employee.date_of_joining) == m1) & (extract('day', Employee.date_of_joining) >= d1))) |
+                    ((extract('month', Employee.date_of_joining) < m2) |
+                     ((extract('month', Employee.date_of_joining) == m2) & (extract('day', Employee.date_of_joining) <= d2)))
+                )
+
+            employees = query.all()
+
+            results = []
+            for e in employees:
+                doj = e.date_of_joining
+                years = today.year - doj.year
+
+                # Anniversary date this year
+                try:
+                    anniversary_this_year = doj.replace(year=today.year)
+                except ValueError:
+                    # Edge case: Feb 29 in non-leap year
+                    anniversary_this_year = doj.replace(year=today.year, day=28)
+
+                if anniversary_this_year < today:
+                    try:
+                        anniversary_this_year = doj.replace(year=today.year + 1)
+                        years = (today.year + 1) - doj.year
+                    except ValueError:
+                        anniversary_this_year = doj.replace(year=today.year + 1, day=28)
+                        years = (today.year + 1) - doj.year
+
+                results.append({
+                    "employee_id": e.employee_id,
+                    "employee_name": f"{e.first_name} {e.last_name}".replace("  ", " ").strip(),
+                    "date_of_joining": doj.isoformat() if doj else None,
+                    "anniversary_date": doj.strftime("%d %b"),  # e.g. "15 Jun"
+                    "years": years,
+                    "band": e.band or "Not Assigned",
+                    "sub_role": e.sub_role or "Not Assigned",
+                    "sort_date": anniversary_this_year,
+                    "profile_image": f"data:{e.profile_image_type};base64,{base64.b64encode(e.profile_image).decode('utf-8')}" if e.profile_image else None
+                })
+
+            # Sort by upcoming anniversary date
+            results.sort(key=lambda x: x['sort_date'])
+
+            # Remove sort key before returning
+            for r in results:
+                r.pop('sort_date')
+
+            Logger.info(f"Found {len(results)} upcoming work anniversaries")
+            return results
+        except Exception as e:
+            Logger.error("Error fetching upcoming work anniversaries", error=str(e))
+            return []
+
+    @staticmethod
     def _trigger_lead_change_notifications(employee, old_team_lead_id, old_lob_lead, is_new=False):
         """Helper to check for lead changes and trigger emails."""
         from ..email_service import EmailService

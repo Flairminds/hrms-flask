@@ -41,6 +41,7 @@ ROLE_PERMISSIONS = {
         "employee_details": ["Admin", "HR", "Lead", "Employee"],  # GET /employee-details/<employee_id>
         "get_new_joinees": ["Admin", "HR", "Employee", "Lead"],  # New joinees widget
         "get_upcoming_birthdays": ["Admin", "HR", "Employee", "Lead"], # Upcoming birthdays widget
+        "get_upcoming_work_anniversaries": ["Admin", "HR", "Employee", "Lead"], # Work anniversaries widget
         "get_all_skills": ["Admin", "HR", "Employee", "Lead"] # For skills dropdown
     },
     
