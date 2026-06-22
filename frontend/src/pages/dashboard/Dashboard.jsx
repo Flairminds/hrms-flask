@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, List, Typography, Progress, Badge, Avatar, message, Image } from 'antd';
-import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
+import { CalendarOutlined, UserOutlined, GiftOutlined, PushpinOutlined, RocketOutlined, BellOutlined, UserAddOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons';
 import WidgetCard from '../../components/common/WidgetCard';
-import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave } from '../../services/api';
+import { getNewJoinees, holidayListData, getUpcomingBirthdays, getPeopleOnLeave, getUpcomingWorkAnniversaries } from '../../services/api';
 import { convertDate, filterUpcomingHolidays } from '../../util/helperFunctions';
 import { fetchNotifications, fetchEvents } from '../../services/googleSheets';
 import OrganizationStructure from './OrganizationStructure.jsx';
@@ -28,6 +28,10 @@ export const Dashboard = () => {
   // State for birthdays
   const [birthdayData, setBirthdayData] = useState([]);
   const [loadingBirthdays, setLoadingBirthdays] = useState(true);
+
+  // State for work anniversaries
+  const [anniversaryData, setAnniversaryData] = useState([]);
+  const [loadingAnniversaries, setLoadingAnniversaries] = useState(true);
 
   // State for people on leave
   const [peopleOnLeave, setPeopleOnLeave] = useState([]);
@@ -92,6 +96,23 @@ export const Dashboard = () => {
       }
     };
 
+    const fetchAnniversaryData = async () => {
+      try {
+        setLoadingAnniversaries(true);
+        const response = await getUpcomingWorkAnniversaries();
+        if (response.data.status === 'success') {
+          setAnniversaryData(response.data.data);
+        } else {
+          message.error('Failed to fetch work anniversaries');
+        }
+      } catch (error) {
+        console.error('Error fetching work anniversaries:', error);
+        message.error('Failed to fetch work anniversaries');
+      } finally {
+        setLoadingAnniversaries(false);
+      }
+    };
+
     const fetchPeopleOnLeave = async () => {
       try {
         setLoadingPeopleOnLeave(true);
@@ -142,6 +163,7 @@ export const Dashboard = () => {
     fetchNewJoinees();
     fetchHolidayData();
     fetchBirthdayData();
+    fetchAnniversaryData();
     fetchPeopleOnLeave();
     fetchNotificationsData();
     fetchEventsData();
@@ -177,6 +199,32 @@ export const Dashboard = () => {
     if (dateStr === formatDayMonth(today)) return 'Celebrating Today 🎉';
     if (dateStr === formatDayMonth(tomorrow)) return 'Celebrating Tomorrow';
     return `Celebrating on ${dateStr}`;
+  };
+
+  // Helper function for work anniversary badge text
+  const getAnniversaryText = (anniversaryDateStr, years) => {
+    if (!anniversaryDateStr) return '';
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const formatDayMonth = (d) => {
+      const day = d.getDate().toString().padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${day} ${months[d.getMonth()]}`;
+    };
+
+    const suffix = (n) => {
+      if (n === 1) return '1st';
+      if (n === 2) return '2nd';
+      if (n === 3) return '3rd';
+      return `${n}th`;
+    };
+
+    const yearLabel = `${suffix(years)} Work Anniversary`;
+    if (anniversaryDateStr === formatDayMonth(today)) return `🎊 Today - ${yearLabel}`;
+    if (anniversaryDateStr === formatDayMonth(tomorrow)) return `Tomorrow - ${yearLabel}`;
+    return `${anniversaryDateStr} - ${yearLabel}`;
   };
 
   const myGoals = [];
@@ -228,7 +276,7 @@ export const Dashboard = () => {
         </Col>
 
         {/* People on Leave */}
-        <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
+        <Col xs={24} sm={12} lg={6} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
           <WidgetCard title="People on Leave" icon={<UserOutlined />} iconColor="#52c41a">
             <List
               loading={loadingPeopleOnLeave}
@@ -268,8 +316,51 @@ export const Dashboard = () => {
           </WidgetCard>
         </Col>
 
+        {/* Upcoming Work Anniversaries */}
+        <Col xs={24} sm={12} lg={6} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
+          <WidgetCard title="Work Anniversaries" icon={<TrophyOutlined />} iconColor="#fa8c16">
+            <List
+              loading={loadingAnniversaries}
+              dataSource={anniversaryData}
+              locale={{ emptyText: 'No upcoming work anniversaries in the next 1 month' }}
+              style={{ maxHeight: WIDGET_LIST_MAX_HEIGHT, overflowY: 'auto' }}
+              renderItem={item => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={
+                      <div
+                        style={{ cursor: item?.profile_image ? 'pointer' : 'default' }}
+                        onClick={() => item?.profile_image && setPreviewImage(item.profile_image)}
+                      >
+                        <Avatar
+                          size={48}
+                          src={item?.profile_image}
+                          style={{
+                            backgroundColor: [1, 5, 10].includes(item.years) ? '#faad14' : '#722ed1',
+                            boxShadow: [1, 5, 10].includes(item.years) ? '0 0 0 2px #ffe58f' : 'none'
+                          }}
+                        >
+                          {item?.profile_image ? '' : item.employee_name?.charAt(0) || 'N'}
+                        </Avatar>
+                      </div>
+                    }
+                    title={<Text strong>{item.employee_name}</Text>}
+                    description={
+                      <div style={{ fontSize: '12px' }}>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          {getAnniversaryText(item.anniversary_date, item.years)}
+                        </Text>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </WidgetCard>
+        </Col>
+
         {/* Upcoming Birthdays */}
-        <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
+        <Col xs={24} sm={12} lg={6} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
           <WidgetCard title="Upcoming Birthdays" icon={<GiftOutlined />} iconColor="#eb2f96">
             <List
               loading={loadingBirthdays}
@@ -308,7 +399,7 @@ export const Dashboard = () => {
         </Col>
 
         {/* New Joinees */}
-        <Col xs={24} sm={12} lg={8} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
+        <Col xs={24} sm={12} lg={6} style={{ maxHeight: WIDGET_COL_MAX_HEIGHT }}>
           <WidgetCard title="New Joinees" icon={<UserAddOutlined />} iconColor="#13c2c2">
             <List
               loading={loadingJoinees}
@@ -405,7 +496,7 @@ export const Dashboard = () => {
           </WidgetCard>
         </Col>
       </Row>
-      
+
 
       {/* Hidden Image for Preview */}
       <div style={{ display: 'none' }}>

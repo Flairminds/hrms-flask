@@ -437,6 +437,27 @@ class HRController:
             }), 500
 
     @staticmethod
+    def get_upcoming_work_anniversaries():
+        """Retrieves active employees whose work anniversary falls within the next 1 month."""
+        Logger.info("Get upcoming work anniversaries request received")
+
+        try:
+            anniversaries = HRService.get_upcoming_work_anniversaries()
+
+            Logger.info("Upcoming work anniversaries retrieved successfully", count=len(anniversaries))
+
+            return jsonify({
+                'status': 'success',
+                'data': anniversaries
+            }), 200
+        except Exception as e:
+            Logger.error("Unexpected error in get_upcoming_work_anniversaries", error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': 'An unexpected error occurred while fetching upcoming work anniversaries.'
+            }), 500
+
+    @staticmethod
     def get_designations():
         """Retrieves all available designations/bands for dropdown population."""
         Logger.info("Get designations request received")

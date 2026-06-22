@@ -169,6 +169,10 @@ class HRService:
     def get_upcoming_birthdays():
         return EmployeeService.get_upcoming_birthdays()
 
+    @staticmethod
+    def get_upcoming_work_anniversaries():
+        return EmployeeService.get_upcoming_work_anniversaries()
+
     # Project related
     @staticmethod
     def add_project(name, description=None):
