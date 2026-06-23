@@ -5,7 +5,7 @@ import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, Exclamat
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { convertDate } from "../../util/helperFunctions";
+import { convertDate, getWeekDay } from "../../util/helperFunctions";
 import { LEAVE_STATUS } from "../../util/helper";
 
 const { confirm } = Modal;
@@ -145,7 +145,7 @@ const LeaveReportTab = () => {
             // { title: 'Approved on same date', dataIndex: 'Approved on same date', key: 'Approved on same date' },
             // { title: 'Status', dataIndex: 'Status', key: 'Status' },
             // { title: 'Swapped holiday date', dataIndex: 'Swapped holiday date', key: 'Swapped holiday date' },
-            { title: 'Unpaid Status', dataIndex: 'Unpaid Status', key: 'Unpaid Status', filters: [...new Set(data.map(a => a['Unpaid Status']))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record['Unpaid Status'] === value, }
+            { title: 'Unpaid Status', dataIndex: 'Unpaid Status', key: 'Unpaid Status', filters: [...new Set(data.map(a => a['Unpaid Status']))].filter(Boolean).map(name => ({ text: name, value: name })), onFilter: (value, record) => record['Unpaid Status'] === value, defaultFilteredValue: ['Paid'], render: (text) => <span>{text}</span> }
         ];
         setLeaveReportTableColumns(cols);
     };
@@ -265,7 +265,7 @@ const LeaveReportTab = () => {
                 rowKey={(record, index) => `${record.Employee_Id}-${index}`}
                 scroll={{ x: 'max-content' }}
                 className={styles.empTable}
-                pagination={{ pageSize: 7, showSizeChanger: false }}
+                pagination={{ pageSize: 10, showSizeChanger: false }}
                 loading={detailLoading}
             />
         </div>
@@ -509,10 +509,50 @@ const DoorEntryReportTab = () => {
     const [detailColumns, setDetailColumns] = useState([]);
     const [fileList, setFileList] = useState([]);
     const [uploading, setUploading] = useState(false);
+    const [summaryVisible, setSummaryVisible] = useState(false);
 
     // Month/Year for Upload
     const [genInMonth, setGenInMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
     const [genInYear, setGenInYear] = useState(new Date().getFullYear());
+
+    // Present statuses matching backend logic
+    const PRESENT_STATUSES = new Set(['P', 'HP', 'OP', 'WP']);
+
+    const getDoorEntrySummary = () => {
+        const empMap = {};
+        detailData.forEach(row => {
+            const id = row.employee_id || '';
+            if (!id) return;
+            if (!empMap[id]) {
+                empMap[id] = { employee_id: id, employee_name: row.employee_name || '', total: 0, present: 0, absent: 0, other: 0 };
+            }
+            const s = empMap[id];
+            const status = String(row.status || '').trim().toUpperCase();
+            s.total++;
+            if (PRESENT_STATUSES.has(status))  s.present++;
+            else if (status === 'A')            s.absent++;
+            else if (status !== '')             s.other++;
+        });
+        return Object.values(empMap).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
+    };
+
+    const summaryColumns = [
+        { title: 'Employee Code', dataIndex: 'employee_id',   key: 'employee_id',   width: 130, fixed: 'left' },
+        { title: 'Employee Name', dataIndex: 'employee_name', key: 'employee_name', width: 160 },
+        { title: 'Total Days',    dataIndex: 'total',         key: 'total',         width: 100, align: 'center' },
+        {
+            title: 'Present', dataIndex: 'present', key: 'present', width: 90, align: 'center',
+            // render: v => <Tag color="green">{v}</Tag>
+        },
+        {
+            title: 'Absent', dataIndex: 'absent', key: 'absent', width: 90, align: 'center',
+            render: v => <Tag color={v > 0 ? 'red' : 'default'}>{v}</Tag>
+        },
+        {
+            title: 'Other', dataIndex: 'other', key: 'other', width: 130, align: 'center',
+            render: v => <Tag color="orange">{v}</Tag>
+        },
+    ];
 
     useEffect(() => {
         if (viewMode === 'list') {
@@ -576,46 +616,46 @@ const DoorEntryReportTab = () => {
                 const data = Array.isArray(response.data.data) ? response.data.data : [];
                 setDetailData(data);
 
-                // Fixed ordered columns for door entry report
-                const doorEntryColumnOrder = [
-                    { key: 'No.', title: 'ID' },
-                    { key: 'Name', title: 'Name' },
-                    { key: 'Date', title: 'Date', render: (text) => convertDate(text) },
-                    // { key: 'Department', title: 'Department' },
-                    { key: 'AM In', title: 'AM In' },
-                    { key: 'AM Out', title: 'AM Out' },
-                    { key: 'PM In', title: 'PM In' },
-                    { key: 'PM Out', title: 'PM Out' },
-                    // { key: 'Late in (mm)', title: 'Late In (mm)' },
-                    // { key: 'Early Leave (mm)', title: 'Early Leave (mm)' },
-                    // { key: 'Total (mm)', title: 'Total (mm)' },
-                    // { key: 'Remark', title: 'Remark' },
+                // Status badge renderer
+                const statusColors = {
+                    P: 'green', A: 'red', L: 'blue', H: 'purple',
+                    HP: 'cyan', WO: 'orange', OP: 'geekblue', WP: 'gold', '': 'default'
+                };
+                const renderStatus = (val) => {
+                    const s = String(val ?? '').trim().toUpperCase();
+                    return <Tag color={statusColors[s] || 'default'}>{s || '-'}</Tag>;
+                };
+
+                const cols = [
+                    {
+                        title: 'Employee Code', dataIndex: 'employee_id', key: 'employee_id',
+                        fixed: 'left', width: 130,
+                        filters: [...new Set(data.map(r => r.employee_id))].filter(Boolean).map(v => ({ text: v, value: v })),
+                        onFilter: (value, record) => record.employee_id === value,
+                        filterSearch: true,
+                    },
+                    {
+                        title: 'Employee Name', dataIndex: 'employee_name', key: 'employee_name',
+                        width: 160,
+                        filters: [...new Set(data.map(r => r.employee_name))].filter(Boolean).map(v => ({ text: v, value: v })),
+                        onFilter: (value, record) => record.employee_name === value,
+                        filterSearch: true,
+                    },
+                    {
+                        title: 'Date', dataIndex: 'date', key: 'date', width: 110,
+                        filters: [...new Set(data.map(r => r.date))].filter(Boolean).map(v => ({ text: v, value: v })),
+                        onFilter: (value, record) => record.date === value,
+                        filterSearch: true
+                    },
+                    {
+                        title: 'Status', dataIndex: 'status', key: 'status', width: 90, align: 'center',
+                        filters: [...new Set(data.map(r => r.status))].filter(v => v !== '' && v !== null && v !== undefined).map(v => ({ text: v, value: v })),
+                        onFilter: (value, record) => record.status === value,
+                        render: renderStatus,
+                    },
                 ];
 
-                if (data.length > 0) {
-                    const dataKeys = new Set(Object.keys(data[0]));
-                    // Use fixed order for known columns, append any extra keys at the end
-                    const orderedCols = doorEntryColumnOrder
-                        .filter(col => dataKeys.has(col.key))
-                        .map(col => ({
-                            title: col.title,
-                            dataIndex: col.key,
-                            key: col.key,
-                            ...(col.render ? { render: col.render } : {}),
-                            filters: [...new Set(data.map(r => r[col.key]))].filter(Boolean).map(v => ({ text: v, value: v })),
-                            onFilter: (value, record) => record[col.key] === value,
-                        }));
-
-                    // Append any extra columns not in the fixed list
-                    // const knownKeys = new Set(doorEntryColumnOrder.map(c => c.key));
-                    // Object.keys(data[0]).forEach(k => {
-                    //     if (!knownKeys.has(k)) {
-                    //         orderedCols.push({ title: k, dataIndex: k, key: k });
-                    //     }
-                    // });
-
-                    setDetailColumns(orderedCols);
-                }
+                setDetailColumns(cols);
             } else {
                 toast.error("Failed to load report details");
                 setViewMode('list');
@@ -731,7 +771,8 @@ const DoorEntryReportTab = () => {
                             <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
                         </div>
                     </div>
-                    <p style={{ color: 'violet' }}>Data extracted from the 'Exceptional' Sheet from the monthly door entry excel file</p>
+                    <p style={{ color: '#7c3aed', marginTop: 8 }}
+                    >Format: <strong>Monthly Basic Attendance Report</strong> — Employee Code must match the system ID (e.g. EMP3). Status codes: P = Present, A = Absent, L = Leave, WO = Week Off, H = Holiday.</p>
                     <div style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #e8e8e8', borderRadius: '8px' }}>
                         <Table
                             columns={listColumns}
@@ -743,10 +784,6 @@ const DoorEntryReportTab = () => {
                         />
                     </div>
                 </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                    <DoorEntryStats />
-                </div>
             </div>
         );
     }
@@ -754,18 +791,47 @@ const DoorEntryReportTab = () => {
     // Detail View
     return (
         <div>
-            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button onClick={() => setViewMode('list')}>← Back to List</Button>
+                <Button
+                    type="default"
+                    onClick={() => setSummaryVisible(true)}
+                    disabled={detailData.length === 0}
+                >
+                    View Summary
+                </Button>
             </div>
+
+            {/* Day-by-day detail */}
             <Table
                 dataSource={detailData}
                 columns={detailColumns}
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
-                pagination={{ pageSize: 7, showSizeChanger: false }}
+                pagination={{ pageSize: 10, showSizeChanger: false }}
                 className={styles.empTable}
                 loading={detailLoading}
             />
+
+            {/* Summary Modal */}
+            <Modal
+                title="Attendance Summary"
+                open={summaryVisible}
+                onCancel={() => setSummaryVisible(false)}
+                footer={<></>}
+                width={1000}
+                style={{ top: 10 }}
+            >
+                <p>Total Employees: {getDoorEntrySummary().length}</p>
+                <Table
+                    dataSource={getDoorEntrySummary()}
+                    columns={summaryColumns}
+                    rowKey="employee_id"
+                    size="small"
+                    pagination={{ pageSize: 15, showSizeChanger: false }}
+                    scroll={{ x: 'max-content' }}
+                />
+            </Modal>
         </div>
     );
 };
@@ -879,7 +945,7 @@ const AttendanceReportTab = () => {
         // 'Entry Exempt',
         'Unpaid Status',
         'Remark',
-        'Entry in Time',
+        'Door Entry',
         // 'AM In',
         // 'AM Out',
         // 'PM In',
@@ -903,7 +969,7 @@ const AttendanceReportTab = () => {
         'Working Day': 'Working Day',
         'Status': 'Status',
         'Entry Exempt': 'Entry Exempt',
-        'Entry in Time': 'Entry in Time',
+        'Door Entry': 'Door Entry',
         'AM In': 'AM In',
         'AM Out': 'AM Out',
         'PM In': 'PM In',
@@ -1004,7 +1070,7 @@ const AttendanceReportTab = () => {
                     const toDisplayKeys = sortedKeys.filter(key => columnOrder.includes(key));
 
                     // Keys that should have dropdown filters
-                    const filterableKeys = new Set(['Employee ID', 'Employee Name', 'Date', 'Unpaid Status', 'Remark']);
+                    const filterableKeys = new Set(['Employee ID', 'Employee Name', 'Date', 'Unpaid Status', 'Remark', 'Door Entry']);
 
                     const cols = toDisplayKeys.map(key => {
                         const col = {
@@ -1012,6 +1078,11 @@ const AttendanceReportTab = () => {
                             dataIndex: key,
                             key: key,
                             render: (text) => {
+                                if (key === 'Door Entry') {
+                                    if (text === 'Yes') return <Tag color="green">Yes</Tag>;
+                                    if (text === 'No')  return <Tag color="red">No</Tag>;
+                                    return <span style={{ color: '#bbb' }}>—</span>;
+                                }
                                 // if (key === 'Date') return convertDate(text);
                                 if (typeof text === 'object' && text !== null) return JSON.stringify(text);
                                 return text ?? '';
@@ -1205,7 +1276,7 @@ const AttendanceReportTab = () => {
                 rowKey={(record, index) => index}
                 scroll={{ x: 'max-content' }}
                 loading={loading}
-                pagination={{ pageSize: 7, showSizeChanger: false }}
+                pagination={{ pageSize: 10, showSizeChanger: false }}
             />
 
             {/* Per-employee Summary Modal */}
@@ -1222,7 +1293,7 @@ const AttendanceReportTab = () => {
                     dataSource={getSummaryData()}
                     columns={summaryColumns}
                     rowKey="employeeName"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 15 }}
                     scroll={{ x: 'max-content' }}
                     size="small"
                 // summary={(data) => {

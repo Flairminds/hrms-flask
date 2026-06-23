@@ -271,57 +271,179 @@ class ReportService:
     @staticmethod
     def process_door_entry_report(file, month: int, year: int, user_id: str) -> Dict[str, Any]:
         """
-        Process uploaded Door Entry Report Excel file.
-        Extracts data from 'Exceptions' sheet (row 3 header) and saves both file and data.
+        Process uploaded Monthly Basic Attendance Report Excel file.
+
+        New format (as of Jun-2026):
+          - Rows 1-11: Title, date range, department info (skipped)
+          - Row 12 (0-indexed 11): Top-level headers — 'No', 'Employee Code', 'Employee Name',
+            date labels like '01-Jun', '02-Jun', ..., summary cols 'P', 'A', 'L', 'H', 'HP', 'WO', 'OP', 'WP'
+          - Row 13 (0-indexed 12): Sub-headers — day-of-week labels ('Mon', 'Tue', ...) for date cols;
+            blank/Unnamed for non-date cols
+          - Row 14+: One row per employee
+
+        Employee Code in the file matches the system employee_id directly (e.g. EMP3).
+        No name mapping is required.
+
+        Output stored (normalized, one dict per employee per date):
+          { employee_id, employee_name, date (DD-MM-YYYY), status (P/A/L/WO/H/...),
+            summary_P, summary_A, summary_L, summary_H, summary_HP, summary_WO, summary_OP, summary_WP }
         """
         import pandas as pd
+        import re
         import io
-        from datetime import date
+        from datetime import date as date_cls
         from ...models.hr import Reports
         from ...services.azure_blob_service import AzureBlobService
 
-        try:
-            # 1. Read Excel File
-            # Read 'Exceptions' sheet, header starts at row 2 (0-indexed) -> row 3 in Excel
-            # 1. Read Excel File
-            # Read 'Exceptional' sheet, headers are on row 3 and 4 (0-indexed 2 and 3)
-            # This handles the merged cells for AM/PM -> In/Out
-            try:
-                df = pd.read_excel(file, sheet_name='Exceptional', header=[2, 3])
-            except ValueError:
-                # Fallback
-                df = pd.read_excel(file, header=[2, 3])
+        # Status codes present as summary column names in the file
+        SUMMARY_COLS = {'P', 'A', 'L', 'H', 'HP', 'WO', 'OP', 'WP'}
+        # Regex: date column header starts with 1-2 digits followed by optional separator + letters
+        # e.g.  '01-Jun', '01-J', '1-J', '02-Jun'
+        DATE_COL_RE = re.compile(r'^(\d{1,2})[-\s]?[A-Za-z]*$')
 
-            # Flatten MultiIndex columns
-            # Example: ('AM', 'In') -> 'AM In', ('No.', 'Unnamed: 0_level_1') -> 'No.'
-            new_columns = []
-            for col in df.columns:
-                top, bottom = col
-                # If top level is Unnamed (rare if checking row 2), ignore it. 
-                # If bottom level is Unnamed (common for non-merged single columns), ignore it.
-                part1 = str(top) if not str(top).startswith('Unnamed') else ''
-                part2 = str(bottom) if not str(bottom).startswith('Unnamed') else ''
-                new_col = f"{part1} {part2}".strip()
-                new_columns.append(new_col)
-            
-            df.columns = new_columns
-            
-            # Robustly handle NaN/Inf
-            # Using object type ensures None is accepted
-            df = df.astype(object).where(pd.notnull(df), None)
-            
-            # Convert to list of dictionaries
-            report_data = df.to_dict(orient='records')
-            
-            # 2. Upload Original File to Azure Blob
-            # Reset file pointer to beginning before upload
+        try:
+            # ---------------------------------------------------------------
+            # 1. Read Excel — rows 12 & 13 are the two-level header
+            # ---------------------------------------------------------------
+            # Determine engine from file extension (.xls → xlrd, .xlsx → openpyxl)
+            filename = getattr(file, 'filename', '') or ''
+            engine = 'xlrd' if filename.lower().endswith('.xls') else 'openpyxl'
+
+            try:
+                df_raw = pd.read_excel(file, header=[11, 12], engine=engine)
+            except Exception:
+                # Fallback: try one row earlier in case the file has fewer title rows
+                file.seek(0)
+                df_raw = pd.read_excel(file, header=[10, 11], engine=engine)
+
+            # ---------------------------------------------------------------
+            # 2. Flatten MultiIndex columns AND track date column positions
+            # ---------------------------------------------------------------
+            # Problem: some date cells in row 12 are MERGED across the adjacent blank separator,
+            # so two DataFrame columns get the same flattened name (e.g. two cols both '03-Jun').
+            # Accessing by name then returns a Series, not a scalar.
+            # Fix: track the ORIGINAL POSITION of each date column so we can use iloc later.
+            #
+            # Summary cols (P, A, L, H, HP, WO, WOP) are intentionally excluded from output.
+            emp_code_col = 'Employee Code'
+            emp_name_col = 'Employee Name'
+            SKIP_COLS = {emp_code_col, emp_name_col, 'No', 'No.'}
+
+            flat_cols = []
+            date_col_info = []   # (original_position, day_number)
+            seen_day_nums = set()
+
+            for i, (top, bottom) in enumerate(df_raw.columns):
+                top_s = str(top).strip()
+                bottom_s = str(bottom).strip()
+                top_unnamed = top_s.startswith('Unnamed') or top_s == ''
+                bot_unnamed = bottom_s.startswith('Unnamed') or bottom_s == ''
+
+                if not top_unnamed:
+                    flat_name = top_s   # date cols and summary cols
+                elif not bot_unnamed:
+                    flat_name = bottom_s  # identity cols (Employee Code, Employee Name, No)
+                else:
+                    flat_name = '__drop__'
+
+                flat_cols.append(flat_name)
+
+                # Capture date column position (first occurrence only, ignore merged duplicates)
+                if flat_name != '__drop__' and flat_name not in SUMMARY_COLS and flat_name not in SKIP_COLS:
+                    m = DATE_COL_RE.match(flat_name)
+                    if m:
+                        try:
+                            day_num = int(m.group(1))
+                            if day_num not in seen_day_nums:
+                                seen_day_nums.add(day_num)
+                                date_col_info.append((i, day_num))
+                        except ValueError:
+                            pass
+
+            df_raw.columns = flat_cols
+
+            # ---------------------------------------------------------------
+            # 3. Drop unnamed/filler columns using positional selection
+            # ---------------------------------------------------------------
+            keep_positions = [i for i, c in enumerate(flat_cols) if c != '__drop__']
+            df_raw = df_raw.iloc[:, keep_positions]
+
+            # Remap date column original positions → new post-drop positions
+            orig_to_new = {orig: new for new, orig in enumerate(keep_positions)}
+            date_cols = [
+                (orig_to_new[orig_pos], day_num)
+                for orig_pos, day_num in date_col_info
+                if orig_pos in orig_to_new
+            ]   # list of (new_iloc_position, day_number)
+
+            # ---------------------------------------------------------------
+            # 4. Keep only valid employee rows
+            # ---------------------------------------------------------------
+            if emp_code_col not in df_raw.columns:
+                raise ValueError(
+                    f"Could not find '{emp_code_col}' column. "
+                    "Check that the Excel file matches the expected Monthly Basic Attendance Report format."
+                )
+
+            df_raw[emp_code_col] = df_raw[emp_code_col].astype(str).str.strip()
+            df_emp = df_raw[
+                df_raw[emp_code_col].notna() &
+                (df_raw[emp_code_col] != '') &
+                (df_raw[emp_code_col].str.lower() != 'nan') &
+                (~df_raw[emp_code_col].str.match(r'^\d+$'))   # skip pure-number rows (totals etc.)
+            ].copy()
+
+            # ---------------------------------------------------------------
+            # 5. Normalize: one dict per employee per date (no summary columns)
+            # ---------------------------------------------------------------
+            report_data = []
+            for _, row in df_emp.iterrows():
+                # Use .get() for identity cols — these are unique so no Series risk
+                emp_id   = str(row.get(emp_code_col, '')).strip()
+                emp_name = str(row.get(emp_name_col, '')).strip()
+                if not emp_id or emp_id.lower() == 'nan':
+                    continue
+
+                # Use iloc for date cols to avoid duplicate-name Series issue
+                for col_pos, day_num in date_cols:
+                    try:
+                        date_obj = datetime(year, month, day_num)
+                    except ValueError:
+                        continue   # day_num out of range for this month
+
+                    raw_status = row.iloc[col_pos]
+                    # Scalar check: if somehow still a Series, take first value
+                    if hasattr(raw_status, 'iloc'):
+                        raw_status = raw_status.iloc[0]
+
+                    status_s = str(raw_status).strip()
+                    status = '' if status_s.lower() in ('nan', 'none', '') else status_s
+
+                    entry = {
+                        'employee_id'  : emp_id,
+                        'employee_name': emp_name,
+                        'date'         : date_obj.strftime('%d-%m-%Y'),
+                        'status'       : status,
+                    }
+                    report_data.append(entry)
+
+            Logger.info(
+                "Door entry report parsed",
+                employee_count=df_emp.shape[0],
+                total_rows=len(report_data),
+                date_columns=len(date_cols)
+            )
+
+            # ---------------------------------------------------------------
+            # 6. Upload original file to Azure Blob
+            # ---------------------------------------------------------------
             file.seek(0)
             file_content = file.read()
-            
+
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            original_filename = file.filename if hasattr(file, 'filename') else 'door_entry_report.xlsx'
+            original_filename = getattr(file, 'filename', 'door_entry_report.xlsx')
             blob_path = f"reports/door_entry_reports/{original_filename}_{timestamp}"
-            
+
             blob_url = ""
             try:
                 blob_url = AzureBlobService.upload_blob(
@@ -331,16 +453,16 @@ class ReportService:
                 )
             except Exception as e:
                 Logger.error("Failed to upload door entry report to Azure", error=str(e))
-                # We continue even if upload fails, but maybe we should warn? 
-                # For now, we proceed as the data is extracted.
 
-            # 3. Save to Database
-            month_name = date(year, month, 1).strftime('%B')
+            # ---------------------------------------------------------------
+            # 7. Save to Database
+            # ---------------------------------------------------------------
+            month_name = date_cls(year, month, 1).strftime('%B')
             report_for_str = f"{month_name} {year}"
-            
+
             ist = pytz.timezone('Asia/Kolkata')
             generated_at_ist = datetime.now(ist)
-            
+
             new_report = Reports(
                 report_type='Monthly Door Entry Report',
                 report_frequency='Monthly',
@@ -351,19 +473,19 @@ class ReportService:
                 is_deleted=False,
                 generated_at=generated_at_ist
             )
-            
+
             db.session.add(new_report)
             db.session.commit()
-            
+
             Logger.info("Door entry report processed and saved", report_id=new_report.id)
-            
+
             return {
-                "id": new_report.id,
-                "report_type": new_report.report_type,
+                "id"              : new_report.id,
+                "report_type"     : new_report.report_type,
                 "report_frequency": new_report.report_frequency,
-                "report_for": new_report.report_for,
-                "generated_at": new_report.generated_at,
-                "blob_link": new_report.blob_link
+                "report_for"      : new_report.report_for,
+                "generated_at"    : new_report.generated_at,
+                "blob_link"       : new_report.blob_link
             }
 
         except Exception as e:
@@ -374,13 +496,29 @@ class ReportService:
     def generate_attendance_report(leave_report_id: int, door_report_id: int, user_id: str, month: int = None, year: int = None) -> Dict[str, Any]:
         """
         Merges a Monthly Leave Report and a Monthly Door Entry Report to create a Monthly Attendance Report.
-        Uses DoorEntryNamesMapping to link Employee IDs to Door System Names.
+
+        New door entry format (Jun-2026+):
+          Door report data rows: { employee_id, employee_name, date (DD-MM-YYYY), status (P/A/L/WO/H/…), summary_* }
+          Lookup key: (employee_id, date_str)  — no name mapping required.
+
+        Status mapping from door entry:
+          P   → Present / worked (Remark: Door Entry, Unpaid Status: Paid)
+          A   → Absent (Remark: No entry for this working day, Unpaid Status: Unpaid)
+          WO  → Week Off (skip — already handled by weekend check)
+          H   → Holiday (skip — already handled by holiday check)
+          L   → Leave (defer to leave report data)
+          HP  → Half-day Present (treated as present)
+          OP  → Optional/Off Present (treated as present)
+          WP  → Week Off Present (treated as present)
         """
-        from ...models.hr import Reports, DoorEntryNamesMapping
+        from ...models.hr import Reports
         from ...utils.helper_functions import normalize_date_str
         import pandas as pd
         import io
         from ...services.azure_blob_service import AzureBlobService
+
+        # Statuses that count as "present / worked"
+        PRESENT_STATUSES = {'P', 'HP', 'OP', 'WP'}
 
         try:
             # 1. Fetch Source Reports
@@ -389,26 +527,23 @@ class ReportService:
 
             if not leave_report or not door_report:
                 raise ValueError("One or more source reports not found")
-            
+
             if leave_report.report_type != 'Monthly Leave Report':
                 raise ValueError(f"Invalid Leave Report Type: {leave_report.report_type}")
-            
+
             if door_report.report_type != 'Monthly Door Entry Report':
                 raise ValueError(f"Invalid Door Entry Report Type: {door_report.report_type}")
 
-            # 2. Fetch employee → door name mappings
-            mappings = DoorEntryNamesMapping.query.all()
-            emp_to_door_map = {m.employee_id: m.door_system_name for m in mappings}
-
-            # Index door report data by (door_system_name, normalized_date)
+            # 2. Build door data map keyed by (employee_id, date)
+            #    New format: each door_row already has employee_id and date fields
             door_data_map = {}
             for door_row in door_report.data:
-                door_name = door_row.get('Name') or door_row.get('Person Name')
-                raw_date = door_row.get('Date')
-                if door_name and raw_date:
+                emp_id   = door_row.get('employee_id') or door_row.get('Employee Code')
+                raw_date = door_row.get('date') or door_row.get('Date')
+                if emp_id and raw_date:
                     norm_date = normalize_date_str(raw_date)
                     if norm_date:
-                        door_data_map[(str(door_name).strip(), norm_date)] = door_row
+                        door_data_map[(str(emp_id).strip(), norm_date)] = door_row
 
             # 3. Fetch holidays for the report month to exclude them from unpaid check
 
@@ -433,11 +568,29 @@ class ReportService:
                 Logger.warning("Could not fetch holidays for attendance report", error=str(e))
 
             # 4. Process Leave Report Data row by row
+            # If report is for the current month, cap at today (IST) to avoid marking
+            # future days as Unpaid.
+            ist = pytz.timezone('Asia/Kolkata')
+            today_ist = datetime.now(ist).date()
+            report_is_current_month = (
+                report_month == today_ist.month and report_year == today_ist.year
+            )
+            cutoff_date = today_ist if report_is_current_month else None
+
             attendance_data = []
             for row in leave_report.data:
                 emp_id = row.get('Employee ID') or row.get('Employee_Id')
                 date_str = row.get('Date')  # DD-MM-YYYY
                 leave_status = row.get('Leave Status', '')
+
+                # Skip future dates when generating a partial-month report
+                if cutoff_date and date_str:
+                    try:
+                        row_date_check = datetime.strptime(date_str, '%d-%m-%Y').date()
+                        if row_date_check > cutoff_date:
+                            continue
+                    except ValueError:
+                        pass
 
                 new_row = row.copy()
 
@@ -455,66 +608,42 @@ class ReportService:
 
                 # --- Priority 2: Weekend or Holiday — not a working day ---
                 if is_weekend or is_holiday:
-                    new_row['Entry in Time'] = ''
-                    new_row['AM In'] = ''
-                    new_row['AM Out'] = ''
-                    new_row['PM In'] = ''
-                    new_row['PM Out'] = ''
+                    new_row['Door Entry'] = ''
                     new_row['Remark'] = 'Holiday' if is_holiday else 'Weekend'
                     new_row['Unpaid Status'] = ''
                     attendance_data.append(new_row)
                     continue
                 
-                # --- Priority 1: Leave is approved (Approved / Partial Approved) ---
+                # --- Priority 1: Leave is approved ---
                 approved_statuses = [LeaveStatus.APPROVED]
                 if leave_status in approved_statuses:
-                    # Leave is covered — clear door entry fields, keep leave info
-                    new_row['Entry in Time'] = ''
-                    new_row['AM In'] = ''
-                    new_row['AM Out'] = ''
-                    new_row['PM In'] = ''
-                    new_row['PM Out'] = ''
+                    new_row['Door Entry'] = ''
                     new_row['Remark'] = 'Approved Leave'
                     attendance_data.append(new_row)
                     continue
 
-                # --- Priority 3: Check door entry record ---
-                mapped_name = emp_to_door_map.get(emp_id)
+                # --- Priority 3: Check door entry record (keyed by employee_id + date) ---
                 door_entry = None
-                if mapped_name and date_str:
+                if emp_id and date_str:
                     norm_date = normalize_date_str(date_str)
                     if norm_date:
-                        door_entry = door_data_map.get((mapped_name.strip(), norm_date))
+                        door_entry = door_data_map.get((str(emp_id).strip(), norm_date))
 
                 if door_entry:
-                    # Employee has a door entry — populate time fields
-                    new_row['AM In']        = door_entry.get('AM In', '')
-                    new_row['AM Out']       = door_entry.get('AM Out', '')
-                    new_row['PM In']        = door_entry.get('PM In', '')
-                    new_row['PM Out']       = door_entry.get('PM Out', '')
-                    entry_time = None
-                    if door_entry.get('AM In', ''):
-                        entry_time = door_entry.get('AM In', '')
-                    elif door_entry.get('AM Out', ''):
-                        entry_time = door_entry.get('AM Out', '')
-                    elif door_entry.get('PM In', ''):
-                        entry_time = door_entry.get('PM In', '')
-                    elif door_entry.get('PM Out', ''):
-                        entry_time = door_entry.get('Pm Out', '')
-                    new_row['Entry in Time'] = entry_time
-                    new_row['Remark']       = 'Door Entry'
-                    new_row['Unpaid Status'] = 'Paid'  # keep existing (e.g. Unpaid Leave type)
-                    attendance_data.append(new_row)
-                    continue
+                    door_status = str(door_entry.get('status', '')).strip().upper()
+                    if door_status in PRESENT_STATUSES:
+                        # Employee was present — mark as worked
+                        new_row['Door Entry']    = 'Yes'
+                        new_row['Remark']        = 'Door Entry'
+                        new_row['Unpaid Status'] = 'Paid'
+                        attendance_data.append(new_row)
+                        continue
+                    # else: status A/L/H/WO or unknown — fall through to Priority 4
 
                 # --- Priority 4: No leave, not weekend/holiday, no door entry → Unpaid ---
-                new_row['AM In']        = ''
-                new_row['AM Out']       = ''
-                new_row['PM In']        = ''
-                new_row['PM Out']       = ''
-                new_row['Entry in Time'] = ''
+                new_row['Door Entry']    = 'No'
                 new_row['Unpaid Status'] = 'Unpaid'
-                new_row['Remark']       = 'No entry for this working day'
+                new_row['Remark']        = 'No entry for this working day'
                 attendance_data.append(new_row)
 
             # 5. Generate Excel File & Upload
@@ -523,9 +652,54 @@ class ReportService:
                 # Convert to DataFrame
                 df = pd.DataFrame(attendance_data)
                 
+                # Compute per-employee summary
+                emp_map = {}
+                for r in attendance_data:
+                    emp_name = r.get('Employee Name') or 'Unknown'
+                    emp_id = r.get('Employee ID') or 'Unknown'
+                    if emp_id not in emp_map:
+                        emp_map[emp_id] = {
+                            'Employee ID': emp_id,
+                            'Employee Name': emp_name,
+                            'Total Days': 0,
+                            'Working Days': 0,
+                            'Weekends': 0,
+                            'Holidays': 0,
+                            'Worked Days': 0,
+                            'Paid Leaves': 0,
+                            'Unapproved Leaves': 0,
+                            'Unpaid Leaves': 0
+                        }
+                    
+                    s = emp_map[emp_id]
+                    remark = str(r.get('Remark') or '').strip()
+                    unpaid = str(r.get('Unpaid Status') or '').strip()
+                    leave_status = str(r.get('Leave Status') or '').strip()
+                    
+                    s['Total Days'] += 1
+                    if remark == 'Weekend':
+                        s['Weekends'] += 1
+                    elif remark == 'Holiday':
+                        s['Holidays'] += 1
+                    else:
+                        s['Working Days'] += 1
+                        if remark == 'Door Entry':
+                            s['Worked Days'] += 1
+                        elif remark == 'Approved Leave':
+                            s['Paid Leaves'] += 1
+                        elif unpaid == 'Unpaid':
+                            s['Unpaid Leaves'] += 1
+                            if leave_status in (LeaveStatus.PENDING, LeaveStatus.PARTIAL_APPROVED):
+                                s['Unapproved Leaves'] += 1
+                                
+                summary_list = list(emp_map.values())
+                summary_list.sort(key=lambda x: str(x['Employee Name']).lower())
+                df_summary = pd.DataFrame(summary_list)
+
                 # Create Excel in memory
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_summary.to_excel(writer, index=False, sheet_name='Summary')
                     df.to_excel(writer, index=False, sheet_name='Attendance Report')
                 
                 excel_content = output.getvalue()
