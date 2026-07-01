@@ -171,45 +171,51 @@ class LeaveQueryService:
                 MasterLeaveTypes.leave_cards_flag == True
             ).all()
             
-            # Separate query: WFH days used in the current calendar month only
-            month_start = today.replace(day=1)
-            month_end = (month_start.replace(month=month_start.month % 12 + 1, day=1)
-                         if month_start.month < 12
-                         else month_start.replace(year=month_start.year + 1, month=1, day=1))
-
-            wfh_this_month_rows = db.session.query(
-                func.coalesce(func.sum(LeaveTransaction.no_of_days), 0).label('used_this_month'),
-                LeaveTransaction.leave_type_id
+            # WFH charged-leave calculation: cumulate WFH days by month from FY start (April).
+            # Each month: if running cumulative > 3 then charged = cumulative - 3, else 0.
+            wfh_monthly_rows = db.session.query(
+                func.extract('year', LeaveTransaction.from_date).label('yr'),
+                func.extract('month', LeaveTransaction.from_date).label('mo'),
+                func.sum(LeaveTransaction.no_of_days).label('monthly_wfh')
             ).join(
                 MasterLeaveTypes,
                 LeaveTransaction.leave_type_id == MasterLeaveTypes.leave_type_id
             ).filter(
                 LeaveTransaction.employee_id == employee_id,
                 MasterLeaveTypes.leave_name == LeaveTypeName.WFH,
-                LeaveTransaction.from_date >= month_start,
+                LeaveTransaction.from_date >= start_date,
                 LeaveTransaction.from_date < end_date,
                 ~LeaveTransaction.leave_status.in_([LeaveStatus.REJECTED, LeaveStatus.CANCELLED])
             ).group_by(
-                LeaveTransaction.leave_type_id
+                func.extract('year', LeaveTransaction.from_date),
+                func.extract('month', LeaveTransaction.from_date)
             ).all()
 
-            wfh_used_this_month = float(wfh_this_month_rows[0].used_this_month) if wfh_this_month_rows else 0.0
+            cumulative_wfh = 0.0
+            wfh_charged_used = 0.0
+            wfh_this_month = 0.0
+            for m_row in sorted(wfh_monthly_rows, key=lambda r: (int(r.yr), int(r.mo))):
+                if int(m_row.yr) == today.year and int(m_row.mo) == today.month:
+                    wfh_this_month = float(m_row.monthly_wfh)
+                    continue
+                cumulative_wfh += float(m_row.monthly_wfh)
+                wfh_charged_used = max(0.0, cumulative_wfh - 3.0)
 
             result = []
             for row in query:
-
-                tal =  float(row.total_alloted_leaves) if row.total_alloted_leaves else 0.0
+                tal = float(row.total_alloted_leaves) if row.total_alloted_leaves else 0.0
                 used = abs(float(row.total_used_leaves))
 
-                if row.leave_name == LeaveTypeName.WFH and (used - wfh_used_this_month) < (LeaveConfiguration.WFH['default_allocation'] - tal):
-                    used = wfh_used_this_month
+                if row.leave_name == LeaveTypeName.WFH:
+                    used = wfh_charged_used + wfh_this_month
+
                 result.append({
                     'employee': row.employee,
                     'leave_type_id': str(row.leave_type_id),
                     'leave_name': row.leave_name,
                     'total_alloted_leaves': tal,
                     'total_used_leaves': used,
-                    'wfh_used_this_month': wfh_used_this_month if row.leave_name == LeaveTypeName.WFH else None,
+                    'wfh_used_this_month': wfh_this_month if row.leave_name == LeaveTypeName.WFH else None,
                     'leave_cards_flag': row.leave_cards_flag,
                     'date_of_joining': row.date_of_joining.strftime('%d %b %Y') if row.date_of_joining else ''
                 })
