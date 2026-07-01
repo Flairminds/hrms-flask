@@ -61,6 +61,7 @@ class ReportService:
 
             # --- DB CALL 3: Fetch all leave transactions for all employees in one query ---
             all_leave_transactions = db.session.query(
+                LeaveTransaction.leave_tran_id,
                 LeaveTransaction.employee_id,
                 LeaveTransaction.leave_type_id,
                 LeaveTransaction.application_date,
@@ -93,9 +94,14 @@ class ReportService:
             for emp in employees_query:
                 team_lead_name = team_leads_map.get(emp.team_lead_id, "")
                 
-                # Get pre-fetched leave transactions for this employee
-                leave_transactions = leaves_by_employee.get(emp.employee_id, [])
-                
+                # Get pre-fetched leave transactions for this employee, sorted oldest -> newest
+                # so that when multiple transactions cover the same date (e.g. a leave
+                # cancelled and re-applied for the same day), the latest one wins below.
+                leave_transactions = sorted(
+                    leaves_by_employee.get(emp.employee_id, []),
+                    key=lambda l: l.leave_tran_id
+                )
+
                 # Create a mapping of date to leave info
                 leave_by_date = {}
                 for leave in leave_transactions:
