@@ -173,7 +173,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
   const handleCommentsChange = (e) => {
     const value = e.target.value;
     setApproverComments(value);
-    if (value.length >= 5) {
+    if (value.length >= 1) {
       setIsCommentValid(true);
       setErrorMessage("");
     } else {
@@ -312,7 +312,7 @@ export const LeaveStatusPending = ({ setMyEmployeeData, setLoading, isLeaveAppro
         )}
 
         <div className={styles.textareaContainer}>
-          <div className={styles.heading}>Approver's Comments</div>
+          <div className={styles.heading}>Approver's Comments (required)</div>
           <Input.TextArea
             rows={2}
             placeholder={readOnly ? "No comments provided" : "Enter your comments here"}
