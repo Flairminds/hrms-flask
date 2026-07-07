@@ -643,22 +643,23 @@ class DocumentController:
             data = request.get_json() or {}
             emp_id = data.get("emp_id")
             doc_type = data.get("doc_type")
-            is_verified = data.get("is_verified")
-            
-            # Validate request
-            if emp_id is None or doc_type is None or is_verified is None:
-                missing = []
-                if emp_id is None:
-                    missing.append("emp_id")
-                if doc_type is None:
-                    missing.append("doc_type")
-                if is_verified is None:
-                    missing.append("is_verified")
-                
+
+            # Validate required fields (is_verified can be True, False, or None)
+            missing = []
+            if emp_id is None:
+                missing.append("emp_id")
+            if doc_type is None:
+                missing.append("doc_type")
+            if "is_verified" not in data:
+                missing.append("is_verified")
+
+            if missing:
                 Logger.warning("Verify document missing parameters", missing_params=missing)
                 return jsonify({
                     "error": f"Missing required parameters: {', '.join(missing)}"
                 }), 400
+
+            is_verified = data.get("is_verified")
             
             Logger.debug("Verifying document", 
                         employee_id=emp_id,

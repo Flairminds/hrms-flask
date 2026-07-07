@@ -381,8 +381,8 @@ export const AllDocRecords = () => {
               icon={<CheckCircleOutlined />}
               size="small"
               style={{
-                backgroundColor: record.is_verified === true ? "#52c41a" : undefined,
-                borderColor: record.is_verified === true ? "#52c41a" : undefined,
+                backgroundColor: record.is_verified === true ? "#77d14aff" : undefined,
+                borderColor: record.is_verified === true ? "#77d14aff" : undefined,
                 color: record.is_verified === true ? "#fff" : undefined
               }}
             >
@@ -397,13 +397,13 @@ export const AllDocRecords = () => {
             cancelText="No"
           >
             <Button
-              type="primary"
+              type={record.is_verified === false ? "default" : "primary"}
               icon={<CloseCircleOutlined />}
               size="small"
               style={{
-                backgroundColor: "#eb3c3cff",
-                borderColor: "#eb3c3cff",
-                color: "#fff"
+                backgroundColor: record.is_verified === false ? "#ef7171ff" : undefined,
+                borderColor: record.is_verified === false ? "#ef7171ff" : undefined,
+                color: record.is_verified === false ? "#fff" : undefined
               }}
             >
               {record.is_verified === false ? "Rejected" : "Reject"}
