@@ -6,6 +6,33 @@ import { saveAs } from "file-saver";
 import { getAllEmployeeDocuments, getDocuments, verifyDocument, getEmployeeDocumentStats } from "../../services/api";
 import { convertDate } from "../../util/helperFunctions";
 
+const getMimetypeFromFilename = (filename) => {
+  if (!filename) return "application/octet-stream";
+
+  const ext = filename.split('.').pop().toLowerCase();
+  const mimetypes = {
+    pdf: "application/pdf",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    doc: "application/msword",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    xls: "application/vnd.ms-excel",
+  };
+
+  return mimetypes[ext] || "application/octet-stream";
+};
+
+const supportsPreview = (filename) => {
+  if (!filename) return false;
+
+  const ext = filename.split('.').pop().toLowerCase();
+  const previewableFormats = ['pdf', 'jpg', 'jpeg', 'png', 'gif'];
+  return previewableFormats.includes(ext);
+};
+
 export const AllDocRecords = () => {
   const [documents, setDocuments] = useState([]);
   const [stats, setStats] = useState([]);
@@ -55,7 +82,7 @@ export const AllDocRecords = () => {
     }
   };
 
-  const handlePreview = async (empId, docType) => {
+  const handlePreview = async (empId, docType, fileName) => {
     try {
       const response = await getDocuments(empId, docType);
 
@@ -63,7 +90,8 @@ export const AllDocRecords = () => {
         throw new Error(`Failed to fetch document: ${response.statusText}`);
       }
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
+      const mimetype = getMimetypeFromFilename(fileName || `${docType}.pdf`);
+      const blob = new Blob([response.data], { type: mimetype });
       const fileURL = window.URL.createObjectURL(blob);
       window.open(fileURL, "_blank");
 
@@ -91,7 +119,8 @@ export const AllDocRecords = () => {
         throw new Error(`Failed to download: ${response.statusText}`);
       }
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
+      const mimetype = getMimetypeFromFilename(fileName || `${docType}.pdf`);
+      const blob = new Blob([response.data], { type: mimetype });
       const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
@@ -150,7 +179,8 @@ export const AllDocRecords = () => {
 
             // getDocuments returns arraybuffer if axois responseType: 'blob' or 'arraybuffer'
             // Let's ensure it handles it correctly: response.data is added as blob.
-            const blob = new Blob([response.data]);
+            const mimetype = getMimetypeFromFilename(fileName);
+            const blob = new Blob([response.data], { type: mimetype });
             folder.file(fileName, blob);
             successCount++;
           } else {
@@ -239,18 +269,21 @@ export const AllDocRecords = () => {
       title: 'Employee ID',
       dataIndex: 'emp_id',
       key: 'emp_id',
+      width: 70,
       sorter: (a, b) => a.emp_id.localeCompare(b.emp_id),
     },
     {
       title: 'Employee Name',
       dataIndex: 'employee_name',
       key: 'employee_name',
+      width: 120,
       sorter: (a, b) => a.employee_name.localeCompare(b.employee_name),
     },
     {
       title: 'Document Type',
       dataIndex: 'doc_type',
       key: 'doc_type',
+      width: 70,
       filters: [
         { text: '10th', value: 'tenth' },
         { text: '12th', value: 'twelve' },
@@ -272,12 +305,13 @@ export const AllDocRecords = () => {
         return labels[text] || text;
       }
     },
-    // {
-    //   title: 'File Name',
-    //   dataIndex: 'file_name',
-    //   key: 'file_name',
-    //   ellipsis: true,
-    // },
+    {
+      title: 'File Name',
+      dataIndex: 'file_name',
+      key: 'file_name',
+      width: 120,
+      ellipsis: true,
+    },
     // {
     //   title: 'File Size',
     //   dataIndex: 'file_size',
@@ -289,6 +323,7 @@ export const AllDocRecords = () => {
       title: 'Uploaded Date',
       dataIndex: 'uploaded_at',
       key: 'uploaded_at',
+      width: 80,
       render: (date) => formatDate(date),
       sorter: (a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at),
     },
@@ -296,6 +331,7 @@ export const AllDocRecords = () => {
       title: 'Verification Status',
       dataIndex: 'is_verified',
       key: 'is_verified',
+      width: 80,
       render: (isVerified) => getVerificationStatusTag(isVerified),
       filters: [
         { text: 'Verified', value: true },
@@ -312,16 +348,20 @@ export const AllDocRecords = () => {
     {
       title: 'Actions',
       key: 'actions',
+      width: 200,
+      // fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handlePreview(record.emp_id, record.doc_type)}
-          >
-            Preview
-          </Button>
+          {supportsPreview(record.file_name) && (
+            <Button
+              // type="primary"
+              icon={<EyeOutlined />}
+              size="small"
+              onClick={() => handlePreview(record.emp_id, record.doc_type, record.file_name)}
+            >
+              Preview
+            </Button>
+          )}
           <Button
             icon={<DownloadOutlined />}
             size="small"
@@ -379,24 +419,28 @@ export const AllDocRecords = () => {
       title: 'Employee ID',
       dataIndex: 'emp_id',
       key: 'emp_id',
+      width: 100,
       sorter: (a, b) => a.emp_id.localeCompare(b.emp_id),
     },
     {
       title: 'Employee Name',
       dataIndex: 'employee_name',
       key: 'employee_name',
+      width: 140,
       sorter: (a, b) => a.employee_name.localeCompare(b.employee_name),
     },
     {
       title: 'Total Expected',
       dataIndex: 'total_expected',
       key: 'total_expected',
+      width: 85,
       align: 'center',
     },
     {
       title: 'Uploaded',
       dataIndex: 'uploaded',
       key: 'uploaded',
+      width: 85,
       align: 'center',
       render: (count) => count > 0 ? <Tag color="blue">{count}</Tag> : <Tag color="red">0</Tag>,
     },
@@ -411,6 +455,7 @@ export const AllDocRecords = () => {
       title: 'Upload %',
       dataIndex: 'upload_percentage',
       key: 'upload_percentage',
+      width: 75,
       align: 'center',
       sorter: (a, b) => a.upload_percentage - b.upload_percentage,
       render: (percent) => `${percent}%`,
@@ -419,6 +464,7 @@ export const AllDocRecords = () => {
       title: 'Verified',
       dataIndex: 'verified',
       key: 'verified',
+      width: 75,
       align: 'center',
       render: (count) => <Tag color="green">{count}</Tag>,
     },
@@ -433,6 +479,7 @@ export const AllDocRecords = () => {
       title: 'Verification %',
       dataIndex: 'verification_percentage',
       key: 'verification_percentage',
+      width: 95,
       align: 'center',
       sorter: (a, b) => a.verification_percentage - b.verification_percentage,
       render: (percent) => `${percent}%`,
@@ -451,6 +498,7 @@ export const AllDocRecords = () => {
       title: 'Resume Uploaded',
       dataIndex: 'days_since_upload',
       key: 'days_since_upload',
+      width: 110,
       align: 'center',
       sorter: (a, b) => (a.days_since_upload ?? 9999) - (b.days_since_upload ?? 9999),
       render: (days) => days !== null && days !== undefined ? `${days} day${days === 1 ? '' : 's'} ago` : '—',
@@ -459,6 +507,7 @@ export const AllDocRecords = () => {
       title: 'Resume Status',
       dataIndex: 'resume_status',
       key: 'resume_status',
+      width: 110,
       align: 'center',
       filters: [...new Set(stats.map(item => item.resume_status))].map(status => ({ text: status, value: status })),
       onFilter: (value, record) => record.resume_status === value,
@@ -508,7 +557,7 @@ export const AllDocRecords = () => {
               showSizeChanger: false,
               showTotal: (total) => `Total ${total} documents`,
             }}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 950 }}
           />
         </>
       ),
@@ -545,7 +594,7 @@ export const AllDocRecords = () => {
               showSizeChanger: false,
               showTotal: (total) => `Total ${total} employees`,
             }}
-            scroll={{ x: 1000 }}
+            scroll={{ x: 900 }}
           />
         </>
       ),
@@ -600,15 +649,16 @@ export const AllDocRecords = () => {
                 // ]
               }}
               columns={[
-                { title: 'Employee ID', dataIndex: 'emp_id', key: 'emp_id', sorter: (a, b) => a.emp_id.localeCompare(b.emp_id) },
-                { title: 'Employee Name', dataIndex: 'employee_name', key: 'employee_name', sorter: (a, b) => a.employee_name.localeCompare(b.employee_name) },
-                { title: 'Uploaded Date', dataIndex: 'uploaded_at', key: 'uploaded_at', render: (date) => formatDate(date), sorter: (a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at) },
-                { title: 'Verification Status', dataIndex: 'is_verified', key: 'is_verified', render: (isVerified) => getVerificationStatusTag(isVerified) },
+                { title: 'Employee ID', dataIndex: 'emp_id', key: 'emp_id', width: 100, sorter: (a, b) => a.emp_id.localeCompare(b.emp_id) },
+                { title: 'Employee Name', dataIndex: 'employee_name', key: 'employee_name', width: 140, sorter: (a, b) => a.employee_name.localeCompare(b.employee_name) },
+                { title: 'File Name', dataIndex: 'file_name', key: 'file_name', width: 160, ellipsis: true },
+                { title: 'Uploaded Date', dataIndex: 'uploaded_at', key: 'uploaded_at', width: 110, render: (date) => formatDate(date), sorter: (a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at) },
+                { title: 'Verification Status', dataIndex: 'is_verified', key: 'is_verified', width: 130, render: (isVerified) => getVerificationStatusTag(isVerified) },
               ]}
               dataSource={documents.filter(doc => doc.doc_type === selectedDocType)}
               rowKey="emp_id"
               pagination={{ pageSize: 50, showSizeChanger: true }}
-              scroll={{ x: 800 }}
+              scroll={{ x: 650 }}
               size="middle"
             />
           )}

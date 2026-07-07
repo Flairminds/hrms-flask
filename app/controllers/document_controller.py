@@ -9,6 +9,7 @@ This module provides HTTP request handlers for:
 
 from typing import Tuple
 from io import BytesIO
+import mimetypes
 from flask import request, jsonify, send_file, g, Response
 
 from ..services.document_service import DocumentService
@@ -482,14 +483,18 @@ class DocumentController:
             Logger.debug("Calling DocumentService.get_document", emp_id=emp_id, doc_type=doc_type)
             file_blob, download_name = DocumentService.get_document(emp_id, doc_type)
             
-            Logger.info("Document download initiated", 
+            Logger.info("Document download initiated",
                        employee_id=emp_id,
                        doc_type=doc_type,
                        file_size=len(file_blob))
-            
+
+            mimetype, _ = mimetypes.guess_type(download_name)
+            if mimetype is None:
+                mimetype = "application/octet-stream"
+
             return send_file(
                 BytesIO(file_blob),
-                mimetype="application/pdf",
+                mimetype=mimetype,
                 as_attachment=True,
                 download_name=download_name,
             )
