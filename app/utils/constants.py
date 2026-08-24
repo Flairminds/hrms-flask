@@ -95,16 +95,18 @@ class EmailConfig:
     SECONDARY_LEAVE_APPROVER_EMAIL = 'hr@flairminds.com'
     
     # Global CC list for leave notifications
-    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
+    LEAVE_NOTIFICATION_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'Vaishnavi.Talokar@flairminds.com', 'Sushma.Jagtap@flairminds.com']
 
-    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com']
-    DOCUMENT_VERIFICATION_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com']
+    REVIEW_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'shishir.nigam@flairminds.com', 'Vaishnavi.Talokar@flairminds.com', 'Sushma.Jagtap@flairminds.com']
+    DOCUMENT_VERIFICATION_ALERT_CC = ['hr@flairminds.com', 'priyanka.mandale@flairminds.com', 'Vaishnavi.Talokar@flairminds.com', 'Sushma.Jagtap@flairminds.com']
 
     # Recipients for daily automated reports (leave report, attendance report, etc.)
     # Add or remove addresses here to control who receives the daily digest emails.
     DAILY_LEAVE_REPORT_RECIPIENTS = [
         'hr@flairminds.com',
         'priyanka.mandale@flairminds.com',
+        'Vaishnavi.Talokar@flairminds.com',
+        'Sushma.Jagtap@flairminds.com',
         'hasmukh@flairminds.com',
         'shishir.nigam@flairminds.com',
     ]
@@ -132,6 +134,8 @@ class IgnoreEmployees:
         'hr@flairminds.com',
         'hasmukh@flairminds.com',
         'priyanka.mandale@flairminds.com',
+        'Vaishnavi.Talokar@flairminds.com',
+        'Sushma.Jagtap@flairminds.com',
         'shishir.nigam@flairminds.com'
     ]
 

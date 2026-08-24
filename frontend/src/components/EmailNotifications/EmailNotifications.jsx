@@ -59,6 +59,9 @@ const EmailNotifications = () => {
                 <div>CC:</div>
                 <div>Team Lead / Approver</div>
                 <div>hr@flairminds.com (also for Second Approval)</div>
+                <div>priyanka.mandale@flairminds.com</div>
+                <div>Vaishnavi.Talokar@flairminds.com</div>
+                <div>Sushma.Jagtap@flairminds.com</div>
             </>,
             trigger: 'Immediate (On Approval/Rejection)',
         },
@@ -81,6 +84,8 @@ const EmailNotifications = () => {
                 <div>priyanka.mandale@flairminds.com</div>
                 <div>hr@flairminds.com</div>
                 <div>shishir.nigam@flairminds.com</div>
+                <div>Vaishnavi.Talokar@flairminds.com</div>
+                <div>Sushma.Jagtap@flairminds.com</div>
             </>,
             trigger: 'Daily 9:00am - End Date is in 5 days or in past',
         },
@@ -95,6 +100,8 @@ const EmailNotifications = () => {
                 <div>priyanka.mandale@flairminds.com</div>
                 <div>hr@flairminds.com</div>
                 <div>shishir.nigam@flairminds.com</div>
+                <div>Vaishnavi.Talokar@flairminds.com</div>
+                <div>Sushma.Jagtap@flairminds.com</div>
             </>,
             trigger: 'Daily 9:00am - Missing (>1 month of joining), no future schedule of review, or upcoming in 7 days; employee status is Intern, Probation, Confirmed; joined more than 2 weeks ago; only for full time employees',
         },
@@ -107,6 +114,8 @@ const EmailNotifications = () => {
                 <div>CC:</div>
                 <div>hr@flairminds.com</div>
                 <div>priyanka.mandale@flairminds.com</div>
+                <div>Vaishnavi.Talokar@flairminds.com</div>
+                <div>Sushma.Jagtap@flairminds.com</div>
                 <div>New Leave Approver</div>
                 <div>Old Leave Approver</div>
             </>,
@@ -122,7 +131,7 @@ const EmailNotifications = () => {
                     One consolidated email per approver listing all leaves awaiting their action.
                 </div>
                 <br />
-                <div>CC: hr@flairminds.com; priyanka.mandale@flairminds.com</div>
+                <div>CC: hr@flairminds.com; priyanka.mandale@flairminds.com; Vaishnavi.Talokar@flairminds.com; Sushma.Jagtap@flairminds.com</div>
             </>,
             trigger: (
                 <>
@@ -133,6 +142,17 @@ const EmailNotifications = () => {
                     </div>
                 </>
             ),
+        },
+        {
+            key: '11',
+            type: 'Document Verification Alert',
+            recipients: <>
+                <div>hr@flairminds.com</div>
+                <div>priyanka.mandale@flairminds.com</div>
+                <div>Vaishnavi.Talokar@flairminds.com</div>
+                <div>Sushma.Jagtap@flairminds.com</div>
+            </>,
+            trigger: 'Daily at 9:00 AM - Consolidated digest of employee documents pending verification',
         },
     ];
 
