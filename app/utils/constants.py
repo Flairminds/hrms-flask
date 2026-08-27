@@ -136,7 +136,10 @@ class IgnoreEmployees:
         'priyanka.mandale@flairminds.com',
         'Vaishnavi.Talokar@flairminds.com',
         'Sushma.Jagtap@flairminds.com',
-        'shishir.nigam@flairminds.com'
+        'shishir.nigam@flairminds.com',
+        'barun.sharma@flairminds.com',
+        'shrinivas.sarmane@flairminds.com',
+        'yogesh.amritkar@flairminds.com'
     ]
 
     IGNORE_FOR_DOCUMENTS = [

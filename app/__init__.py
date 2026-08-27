@@ -63,6 +63,7 @@ def create_app(config_name):
     from .routes.evaluators import evaluators_bp
     from .routes.policy import policy_bp
     from .routes.project import project_bp
+    from .routes.effort import effort_bp
     # from .routes.allocation import allocation_bp
     from .routes.health import health_bp
     from .routes.auth_routes import bp as auth_bp
@@ -94,6 +95,7 @@ def create_app(config_name):
     app.register_blueprint(evaluators_bp, url_prefix='/api/evaluators')
     app.register_blueprint(policy_bp, url_prefix='/api/policy')
     app.register_blueprint(project_bp, url_prefix='/api/project')
+    app.register_blueprint(effort_bp, url_prefix='/api/effort')
     # app.register_blueprint(allocation_bp, url_prefix='/api/allocation')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(hardware_bp, url_prefix='/api/hardware')

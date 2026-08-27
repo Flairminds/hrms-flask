@@ -1222,6 +1222,22 @@ export const getMyProjectsTeam = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/my-projects-team`);
 };
 
+// ── Effort Analyser persistence ──────────────────────────────────────────
+// Saves (upserts) a batch of parsed Excel task rows: { fileName, tasks: [...] }
+export const saveEffortReport = (payload) => {
+  return axiosInstance.post(`${API_BASE_URL}/effort/save-report`, payload);
+};
+
+// Fetches the flattened, persisted task list (optionally filtered)
+export const getEffortTasks = (params = {}) => {
+  return axiosInstance.get(`${API_BASE_URL}/effort/tasks`, { params });
+};
+
+// Lightweight per-project report listing (no task payload)
+export const getEffortReports = () => {
+  return axiosInstance.get(`${API_BASE_URL}/effort/reports`);
+};
+
 // ============= CAPABILITY DEVELOPMENT API FUNCTIONS =============
 
 // ── Goals ──────────────────────────────────────────────────────

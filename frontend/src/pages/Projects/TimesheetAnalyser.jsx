@@ -1,14 +1,34 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Switch, Badge, Tag } from 'antd';
-import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined } from '@ant-design/icons';
+import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select } from 'antd';
+import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    Legend, ResponsiveContainer
+    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+    Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import Cookies from 'js-cookie';
-import { getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations } from '../../services/api';
+import { getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks } from '../../services/api';
+
+// Task states counted as "done" in the persisted Effort Analyser backlog — a
+// task in any other state is still "planned" and feeds the projection below.
+const DONE_STATES = ['done', 'completed', 'complete', 'closed', 'resolved', 'canceled'];
+const isTaskDone = (state) => DONE_STATES.includes(String(state || '').toLowerCase().trim());
+
+// Matches an employee name across the two features' differing conventions —
+// exact (case-insensitive) or "Last, First" reordering, either direction.
+const employeeNamesMatch = (a, b) => {
+    if (!a || !b) return false;
+    const x = String(a).toLowerCase().trim();
+    const y = String(b).toLowerCase().trim();
+    if (x === y) return true;
+    const reorder = (s) => {
+        if (!s.includes(',')) return null;
+        const parts = s.split(',').map(p => p.trim());
+        return parts.length === 2 ? `${parts[1]} ${parts[0]}` : null;
+    };
+    return reorder(x) === y || reorder(y) === x;
+};
 
 // Mapping rules mirroring EffortsAnalyser
 const PROJECT_NAME_MAP = {
@@ -71,11 +91,15 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [uploading, setUploading] = useState(false);
     const [viewMode, setViewMode] = useState('employee'); // 'employee' or 'project'
     const [periodType, setPeriodType] = useState('week'); // 'week' or 'month'
-    const [displayType, setDisplayType] = useState('table'); // 'table', 'chart', or 'gaps'
+    const [displayType, setDisplayType] = useState('table'); // 'table', 'chart', 'gaps', or 'trend'
     const [hrmsProjects, setHrmsProjects] = useState([]);
     const [holidays, setHolidays] = useState([]);
     const [leaves, setLeaves] = useState([]);
     const [allocations, setAllocations] = useState([]);
+    const [backlogTasks, setBacklogTasks] = useState([]); // persisted, not-done Effort Analyser tasks
+    const [trendEntity, setTrendEntity] = useState('ALL'); // 'ALL' or a specific employee/project name
+
+    React.useEffect(() => { setTrendEntity('ALL'); }, [viewMode]);
 
     React.useEffect(() => {
         getProjects()
@@ -88,6 +112,13 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         getEmployeeAllocations()
             .then(res => setAllocations(res.data || []))
             .catch(e => console.error('Failed to load employee allocations', e));
+
+        // The saved Effort Analyser backlog — used only by the Trend view to
+        // project future weeks. Fetched once, unfiltered by date (a backlog
+        // task can be due whenever; only its state matters here).
+        getEffortTasks()
+            .then(res => setBacklogTasks((res.data || []).filter(t => !isTaskDone(t.state))))
+            .catch(e => console.error('Failed to load planned backlog for trend chart', e));
 
         holidayListData()
             .then(res => {
@@ -383,6 +414,125 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             timesheetRange: { min: minTime, max: maxTime }
         };
     }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType]);
+
+    // ── Trend view: past logged hours (always week-wise) + a capacity-based
+    // projection of the remaining planned backlog into future weeks ─────────
+    const trendEntityOptions = useMemo(() => {
+        const source = viewMode === 'employee' ? employeeData : projectData;
+        const label = viewMode === 'employee' ? 'All Employees' : 'All Projects';
+        return [{ value: 'ALL', label }, ...source.map(e => ({ value: e.name, label: e.name }))];
+    }, [viewMode, employeeData, projectData]);
+
+    // Project names in this component are rendered as "HRMS Name (Excel Name)"
+    // when remapped (see resolveProjectName) — strip that back to the HRMS
+    // name to match against the Effort Analyser's persisted `project` field.
+    const getHrmsProjectName = (name) => (name.includes(' (') ? name.split(' (')[0].trim() : name);
+
+    const trendData = useMemo(() => {
+        const empty = { series: [], weeklyRate: 0, totalBacklogHours: 0, weeksToClear: 0, lastLoggedWeek: null };
+        if (!rawRows.length || !timesheetRange) return empty;
+
+        // Past: actual logged hours, always bucketed weekly regardless of the
+        // page's Group By setting — a trend needs a consistent granularity.
+        const weekMap = {};
+        rawRows.forEach(row => {
+            const rawEmp = row['Primary Assignee'];
+            const rawProj = row['Project'];
+            const rawTime = row['Time'];
+            const rawDate = row['Date'];
+            if (!rawEmp || !rawDate) return;
+
+            const empName = resolveEmployeeName(String(rawEmp).trim());
+            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project');
+
+            if (viewMode === 'employee' && trendEntity !== 'ALL' && !employeeNamesMatch(empName, trendEntity)) return;
+            if (viewMode === 'project' && trendEntity !== 'ALL' && projName !== trendEntity) return;
+
+            const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
+            if (isNaN(timeHrs)) return;
+
+            const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+            if (isNaN(d.getTime())) return;
+
+            const label = getWeekRangeString(d);
+            const day = d.getDay() || 7;
+            const start = new Date(d);
+            start.setDate(d.getDate() - (day - 1));
+            start.setHours(0, 0, 0, 0);
+
+            if (!weekMap[label]) weekMap[label] = { hours: 0, startTime: start.getTime() };
+            weekMap[label].hours += timeHrs;
+        });
+
+        const pastWeeks = Object.entries(weekMap)
+            .map(([week, v]) => ({ week, actual: Number(v.hours.toFixed(1)), startTime: v.startTime }))
+            .sort((a, b) => a.startTime - b.startTime);
+
+        if (!pastWeeks.length) return empty;
+
+        // Backlog hours for the selected entity
+        let matchedBacklog = backlogTasks;
+        if (trendEntity !== 'ALL') {
+            if (viewMode === 'employee') {
+                matchedBacklog = backlogTasks.filter(t => employeeNamesMatch(t.assignee, trendEntity));
+            } else {
+                const hrmsName = getHrmsProjectName(trendEntity).toLowerCase().trim();
+                matchedBacklog = backlogTasks.filter(t => (t.project || '').toLowerCase().trim() === hrmsName);
+            }
+        }
+        const totalBacklogHours = matchedBacklog.reduce((s, t) => s + (Number(t.estimateHours) || 0), 0);
+
+        // Weekly capacity rate — the entity's own allocation, converted to a
+        // 40 hrs/week full-time-equivalent; falls back to a flat 40 for the
+        // aggregate "All" view (or if no HRMS allocation match is found).
+        let weeklyRate = 40;
+        if (trendEntity !== 'ALL') {
+            if (viewMode === 'employee') {
+                const emp = allocations.find(e => employeeNamesMatch(e.employee_name, trendEntity));
+                weeklyRate = emp ? (emp.total_allocation || 0) * 40 : 40;
+            } else {
+                const hrmsName = getHrmsProjectName(trendEntity).toLowerCase().trim();
+                const proj = hrmsProjects.find(p => (p.project_name || '').trim().toLowerCase() === hrmsName);
+                weeklyRate = (proj && proj.total_allocation != null) ? (Number(proj.total_allocation) / 100) * 40 : 40;
+            }
+        }
+
+        // Future: spread the backlog forward at `weeklyRate` per week,
+        // starting the week after the last logged week, until exhausted.
+        // Deliberately ignores each task's own due date (capacity-based, not
+        // due-date-based) — capped at 104 weeks (2 years) as a runaway guard.
+        const futureWeeks = [];
+        if (weeklyRate > 0 && totalBacklogHours > 0) {
+            let remaining = totalBacklogHours;
+            const cursor = new Date(pastWeeks[pastWeeks.length - 1].startTime);
+            cursor.setDate(cursor.getDate() + 7);
+            let guard = 0;
+            while (remaining > 0.05 && guard < 104) {
+                const hoursThisWeek = Math.min(weeklyRate, remaining);
+                futureWeeks.push({ week: getWeekRangeString(cursor), projected: Number(hoursThisWeek.toFixed(1)) });
+                remaining -= hoursThisWeek;
+                cursor.setDate(cursor.getDate() + 7);
+                guard++;
+            }
+        }
+
+        const lastLoggedWeek = pastWeeks[pastWeeks.length - 1].week;
+        const series = [
+            ...pastWeeks.map((p, i) => ({
+                week: p.week,
+                actual: p.actual,
+                // Bridge point: the last logged week also carries the
+                // projected value, so the dashed line starts exactly where
+                // the solid line ends instead of leaving a visual gap.
+                projected: i === pastWeeks.length - 1 ? p.actual : null,
+            })),
+            ...futureWeeks.map(f => ({ week: f.week, actual: null, projected: f.projected })),
+        ];
+
+        const weeksToClear = weeklyRate > 0 ? Math.ceil(totalBacklogHours / weeklyRate) : 0;
+
+        return { series, weeklyRate, totalBacklogHours, weeksToClear, lastLoggedWeek };
+    }, [rawRows, timesheetRange, viewMode, trendEntity, backlogTasks, allocations, hrmsProjects]);
 
     const tableColumns = useMemo(() => {
         if (!allPeriods.length) return [];
@@ -777,85 +927,72 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
     return (
         <div style={{ padding: '0 8px' }}>
-            <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-                <Col>
-                    <Space size="large">
-                        <Space>
-                            <b>Group By:</b>
-                            <Switch 
-                                checkedChildren="Month" 
-                                unCheckedChildren="Week" 
-                                checked={periodType === 'month'} 
-                                onChange={v => setPeriodType(v ? 'month' : 'week')}
-                            />
+            {/* Toolbar — one card, two tiers, instead of a single crowded row */}
+            <Card style={{ borderRadius: 12, marginBottom: 16 }}>
+                {/* Tier 1: primary controls */}
+                <Row gutter={[16, 12]} align="middle" justify="space-between">
+                    <Col>
+                        <Space size={24}>
+                            <Space size={8}>
+                                <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
+                                <Segmented value={periodType} onChange={setPeriodType}
+                                    options={[{ label: 'Week', value: 'week' }, { label: 'Month', value: 'month' }]} />
+                            </Space>
+                            <Space size={8}>
+                                <span style={{ fontSize: 12, color: '#888' }}>View</span>
+                                <Segmented value={viewMode} onChange={setViewMode}
+                                    options={[{ label: 'Employee', value: 'employee' }, { label: 'Project', value: 'project' }]} />
+                            </Space>
                         </Space>
-                        <Space>
-                            <b>View:</b>
-                            <Switch 
-                                checkedChildren="Project" 
-                                unCheckedChildren="Employee" 
-                                checked={viewMode === 'project'} 
-                                onChange={v => setViewMode(v ? 'project' : 'employee')}
-                            />
-                        </Space>
-                        <Space>
-                            <b>Display:</b>
-                            <Button.Group>
-                                <Button 
-                                    type={displayType === 'table' ? 'primary' : 'default'} 
-                                    icon={<TableOutlined />} 
-                                    onClick={() => setDisplayType('table')}
+                    </Col>
+                    <Col>
+                        <Segmented value={displayType} onChange={setDisplayType}
+                            options={[
+                                { label: 'Table', value: 'table', icon: <TableOutlined /> },
+                                { label: 'Chart', value: 'chart', icon: <BarChartOutlined /> },
+                                { label: 'Missing Logs', value: 'gaps', icon: <WarningOutlined /> },
+                                { label: 'Trend', value: 'trend', icon: <LineChartOutlined /> },
+                            ]} />
+                    </Col>
+                </Row>
+
+                <Divider style={{ margin: '14px 0' }} />
+
+                {/* Tier 2: file info + actions */}
+                <Row gutter={[12, 12]} align="middle" justify="space-between">
+                    <Col>
+                        <span style={{ fontSize: 12, color: '#888' }}>📄 {fileName}</span>
+                    </Col>
+                    <Col>
+                        <Space size={8}>
+                            {hasEffortsData && (
+                                <Button
+                                    type="primary"
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleCombinedDownload}
+                                    style={{ background: '#1890ff', borderColor: '#1890ff' }}
                                 >
-                                    Table
+                                    Download Combined Report
                                 </Button>
-                                <Button 
-                                    type={displayType === 'chart' ? 'primary' : 'default'} 
-                                    icon={<BarChartOutlined />} 
-                                    onClick={() => setDisplayType('chart')}
-                                >
-                                    Chart
-                                </Button>
-                                <Button 
-                                    type={displayType === 'gaps' ? 'primary' : 'default'} 
-                                    icon={<WarningOutlined />} 
-                                    onClick={() => setDisplayType('gaps')}
-                                >
-                                    Missing Logs
-                                </Button>
-                            </Button.Group>
-                        </Space>
-                    </Space>
-                </Col>
-                <Col>
-                    <Space>
-                        <span style={{ color: '#888' }}>{fileName}</span>
-                        {hasEffortsData && (
-                            <Button 
+                            )}
+                            <Button
                                 type="primary"
-                                icon={<DownloadOutlined />} 
-                                onClick={handleCombinedDownload}
-                                style={{ background: '#1890ff', borderColor: '#1890ff' }}
+                                icon={<DownloadOutlined />}
+                                onClick={handleDownload}
+                                style={{ background: '#52c41a', borderColor: '#52c41a' }}
                             >
-                                Download Combined Report
+                                Download Summary
                             </Button>
-                        )}
-                        <Button 
-                            type="primary"
-                            icon={<DownloadOutlined />} 
-                            onClick={handleDownload}
-                            style={{ background: '#52c41a', borderColor: '#52c41a' }}
-                        >
-                            Download Summary
-                        </Button>
-                        <Button 
-                            icon={<UploadOutlined />} 
-                            onClick={() => { setRawRows([]); setFileName(''); }}
-                        >
-                            Upload Another
-                        </Button>
-                    </Space>
-                </Col>
-            </Row>
+                            <Button
+                                icon={<UploadOutlined />}
+                                onClick={() => { setRawRows([]); setFileName(''); }}
+                            >
+                                Upload Another
+                            </Button>
+                        </Space>
+                    </Col>
+                </Row>
+            </Card>
 
             <Card bodyStyle={{ padding: 0 }}>
                 {displayType === 'table' ? (
@@ -876,9 +1013,69 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             <div style={{ textAlign: 'center', marginTop: 100 }}>No data for chart</div>
                         )}
                     </div>
+                ) : displayType === 'trend' ? (
+                    <div style={{ padding: 24 }}>
+                        <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 16 }}>
+                            <Col>
+                                <Space size={8}>
+                                    <span style={{ fontSize: 12, color: '#888' }}>{viewMode === 'employee' ? 'Employee' : 'Project'}</span>
+                                    <Select
+                                        style={{ minWidth: 240 }}
+                                        value={trendEntity}
+                                        onChange={setTrendEntity}
+                                        options={trendEntityOptions}
+                                        showSearch
+                                        optionFilterProp="label"
+                                    />
+                                </Space>
+                            </Col>
+                            <Col flex="auto" />
+                            <Col>
+                                <Space size={20} style={{ fontSize: 12, color: '#888' }}>
+                                    <span>Backlog: <b style={{ color: '#333' }}>{trendData.totalBacklogHours.toFixed(1)} hrs</b></span>
+                                    <span>Capacity: <b style={{ color: '#333' }}>{trendData.weeklyRate.toFixed(1)} hrs/wk</b></span>
+                                    {trendData.totalBacklogHours > 0 && (
+                                        <span>Est. clear in: <b style={{ color: '#fa8c16' }}>~{trendData.weeksToClear} wk{trendData.weeksToClear !== 1 ? 's' : ''}</b></span>
+                                    )}
+                                </Space>
+                            </Col>
+                        </Row>
+
+                        {trendData.series.length ? (
+                            <div style={{ height: 440 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={trendData.series} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                                        <XAxis dataKey="week" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 11 }} />
+                                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: -10 }} />
+                                        <Tooltip formatter={(v, name) => [v != null ? `${Number(v).toFixed(1)} h` : '-', name]} />
+                                        <Legend />
+                                        {trendData.lastLoggedWeek && (
+                                            <ReferenceLine x={trendData.lastLoggedWeek} stroke="#bbb" strokeDasharray="3 3"
+                                                label={{ value: 'Now', position: 'top', fontSize: 11, fill: '#999' }} />
+                                        )}
+                                        <Line type="monotone" dataKey="actual" name="Logged" stroke="#4f8ef7"
+                                            strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+                                        <Line type="monotone" dataKey="projected" name="Planned (projected)" stroke="#fa8c16"
+                                            strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3 }} connectNulls />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', marginTop: 100, color: '#999' }}>Not enough data to build a trend.</div>
+                        )}
+
+                        <Alert
+                            style={{ marginTop: 16 }}
+                            type="info"
+                            showIcon
+                            message="How this projection works"
+                            description={`The solid line is what was actually logged, week by week. The dashed line spreads the remaining planned (not-yet-done) backlog forward at ${trendData.weeklyRate.toFixed(1)} hrs/week — this entity's own allocation-based capacity — starting the week after the last logged week, until the backlog is exhausted. It does not use each task's individual due date.`}
+                        />
+                    </div>
                 ) : (
                     <div style={{ padding: 24 }}>
-                        <Alert 
+                        <Alert
                             message="Missing Time Logs Report"
                             description="Showing working days where no time log was found and employee was not on approved leave or public holiday."
                             type="warning"

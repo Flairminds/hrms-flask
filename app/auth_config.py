@@ -197,7 +197,16 @@ ROLE_PERMISSIONS = {
     "allocation": {
         "assign_employee": ["Admin", "HR"]  # No auth currently
     },
-    
+
+    # ===========================
+    # Effort Module - Effort Analyser (persisted task/timesheet reports)
+    # ===========================
+    "effort": {
+        "save_report": ["Admin", "HR", "Lead"],       # Import/save an Excel upload
+        "get_tasks": ["Admin", "HR", "Lead", "Employee"],   # Flattened tasks, for charts/tables
+        "get_reports": ["Admin", "HR", "Lead", "Employee"], # Per-project report listing
+    },
+
     # ===========================
     # Feedback Module (Legacy routes - may need review)
     # ===========================

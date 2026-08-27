@@ -266,17 +266,17 @@ const Projects = () => {
                 <Tabs.TabPane tab="My Projects & Team" key="3">
                     <MyProjectsTeam />
                 </Tabs.TabPane>
-                <Tabs.TabPane tab="Planned Efforts Analyser" key="5">
+                <Tabs.TabPane tab="Project Efforts Analytics" key="5">
                     <EffortsAnalyser exportRef={effortsExportRef} setHasEffortsData={setHasEffortsData} />
                 </Tabs.TabPane>
-                <Tabs.TabPane tab="Timesheet Analyzer" key="7">
+                <Tabs.TabPane tab="Timelog Analytics" key="7">
                     <TimesheetAnalyser effortsExportRef={effortsExportRef} hasEffortsData={hasEffortsData} />
                 </Tabs.TabPane>
 
-                <Tabs.TabPane tab="Tasks Analyser" key="6">
-                    {/* <EffortsAnalyser /> */}
+                {/* <Tabs.TabPane tab="Tasks Analyser" key="6">
+                    <EffortsAnalyser />
                     <span>To be developed</span>
-                </Tabs.TabPane>
+                </Tabs.TabPane> */}
             </Tabs>
         </div>
     );

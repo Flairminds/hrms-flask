@@ -11,6 +11,7 @@ const EmployeeAllocations = ({ stats }) => {
     const [employeeSearchText, setEmployeeSearchText] = useState('');
     const [allocationFilter, setAllocationFilter] = useState(null);
     const [billableAllocationFilter, setBillableAllocationFilter] = useState(null);
+    const [summaryCategoryFilter, setSummaryCategoryFilter] = useState(null); // null | 'billable' | 'nonbillable' | 'notallocated' — set by clicking an Allocation Summary row
 
     useEffect(() => {
         fetchEmployeeAllocations();
@@ -171,11 +172,22 @@ const EmployeeAllocations = ({ stats }) => {
         message.success('Excel downloaded successfully!');
     };
 
+    const matchesSummaryCategory = (emp) => {
+        const totalAlloc = emp.total_allocation || 0;
+        const billableAlloc = emp.billable_allocation || 0;
+        switch (summaryCategoryFilter) {
+            case 'billable': return billableAlloc > 0;
+            case 'nonbillable': return (totalAlloc - billableAlloc) > 0.001;
+            case 'notallocated': return totalAlloc <= 0.001;
+            default: return true; // null — no summary-row filter applied
+        }
+    };
+
     const filteredData = employeeAllocations.filter(emp => {
         const matchesName = !employeeSearchText || emp.employee_name.toLowerCase().includes(employeeSearchText.toLowerCase());
         const matchesAllocation = allocationFilter === null || emp.total_allocation <= allocationFilter;
         const matchesBillableAllocation = billableAllocationFilter === null || emp.billable_allocation <= billableAllocationFilter;
-        return matchesName && matchesAllocation && matchesBillableAllocation;
+        return matchesName && matchesAllocation && matchesBillableAllocation && matchesSummaryCategory(emp);
     });
 
     const columns = [
@@ -279,11 +291,11 @@ const EmployeeAllocations = ({ stats }) => {
     ];
 
     const summaryData = [
-        { key: '1', category: 'Total Active Employees', value: Number((stats.total_employees || 0).toFixed(2)), color: '#000' },
+        { key: '1', category: 'Total Active Employees', value: Number((stats.total_employees || 0).toFixed(2)), color: '#000', filterKey: null },
         // { key: '1', category: 'Total Allocated', value: Number((stats.total_allocation || 0).toFixed(2)), color: '#000' },
-        { key: '2', category: 'Billable', value: Number(billable.toFixed(2)), color: PIE_COLORS[0] },
-        { key: '3', category: 'Non-billable', value: Number(nonBillable.toFixed(2)), color: PIE_COLORS[1] },
-        { key: '4', category: 'Not Allocated', value: Number(notAllocated.toFixed(2)), color: PIE_COLORS[2] }
+        { key: '2', category: 'Billable', value: Number(billable.toFixed(2)), color: PIE_COLORS[0], filterKey: 'billable' },
+        { key: '3', category: 'Non-billable', value: Number(nonBillable.toFixed(2)), color: PIE_COLORS[1], filterKey: 'nonbillable' },
+        { key: '4', category: 'Not Allocated', value: Number(notAllocated.toFixed(2)), color: PIE_COLORS[2], filterKey: 'notallocated' }
     ];
 
     return (
@@ -318,12 +330,23 @@ const EmployeeAllocations = ({ stats }) => {
                     </Card>
                 </Col>
                 <Col xs={24} sm={24} md={12} lg={14}>
-                    <Card bordered={false} size='small' title="Allocation Summary">
+                    <Card bordered={false} size='small' title="Allocation Summary"
+                        extra={<span style={{ fontSize: 12, color: '#888', fontWeight: 400 }}>Click a row to filter the table below</span>}>
                         <Table
                             columns={summaryColumns}
                             dataSource={summaryData}
                             pagination={false}
                             size="small"
+                            onRow={(record) => {
+                                const isActive = summaryCategoryFilter !== null && record.filterKey === summaryCategoryFilter;
+                                return {
+                                    onClick: () => setSummaryCategoryFilter(prev => (prev === record.filterKey ? null : record.filterKey)),
+                                    style: {
+                                        cursor: 'pointer',
+                                        background: isActive ? '#e6f4ff' : undefined,
+                                    },
+                                };
+                            }}
                         />
                     </Card>
                 </Col>
@@ -350,6 +373,15 @@ const EmployeeAllocations = ({ stats }) => {
                     >
                         {`Billable allocation <= 0.5`}
                     </Button>
+                    {summaryCategoryFilter && (
+                        <Tag
+                            color="blue"
+                            closable
+                            onClose={() => setSummaryCategoryFilter(null)}
+                        >
+                            {{ billable: 'Billable', nonbillable: 'Non-billable', notallocated: 'Not Allocated' }[summaryCategoryFilter]}
+                        </Tag>
+                    )}
                     <Button
                         type="primary"
                         icon={<DownloadOutlined />}
