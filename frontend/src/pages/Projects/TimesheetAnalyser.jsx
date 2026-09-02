@@ -113,6 +113,10 @@ const REQUIRED_COLS = [
     'End Date', 'Key', 'Description', 'Time', 'Date', 'Id', 'Author',
 ];
 
+// 'Description' is allowed to be blank on a row — every other required
+// column (notably Title, Author, Id and Date) must still be non-empty.
+const REQUIRED_NON_EMPTY_COLS = REQUIRED_COLS.filter(c => c !== 'Description');
+
 const EXCEL_EXTENSIONS = ['.xlsx', '.xls'];
 
 // One example row, matching a real timelog export, shown in the format-info
@@ -182,7 +186,7 @@ const validateTimelogRows = (rawJson) => {
 
     // 2. Empty cell check (per row)
     rawJson.forEach((rawRow, i) => {
-        const emptyCols = REQUIRED_COLS.filter(col => {
+        const emptyCols = REQUIRED_NON_EMPTY_COLS.filter(col => {
             const v = rawRow[col];
             return v === '' || v === null || v === undefined;
         });
@@ -1015,11 +1019,14 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         return map;
     }, [allocations]);
 
-    // 2 & 3. Employees logging under/over their weekly project allocation.
-    const { underAllocationWeeks, overAllocationWeeks } = useMemo(() => {
+    // 2 & 3. Employees logging under/over their weekly project allocation —
+    // kept as ONE combined list (rather than two separate under/over lists)
+    // so an employee who is over-allocated on one project and under on
+    // another, in the same week, shows up together and the trade-off is
+    // obvious. Grouped/sorted by employee then week then project.
+    const allocationWeeks = useMemo(() => {
         const { empProjWeekHours, weekList, weekMeta } = weeklyGrid;
-        const under = [];
-        const over = [];
+        const rows = [];
 
         Object.entries(allocPctByKey).forEach(([key, pct]) => {
             if (!pct || pct <= 0) return;
@@ -1031,24 +1038,18 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 if (hideCurrentWeek && week === currentWeekLabel) return;
                 const hours = projHours?.[week] || 0;
                 const weekStart = weekMeta[week].startTime;
-                if (hours < targetHrs) {
-                    under.push({
-                        key: `${empName}__${projName}__${week}`, employee: empName, project: projName, week,
-                        weekStart, hours, targetHrs, deficit: Number((targetHrs - hours).toFixed(1)),
-                    });
-                } else if (hours > targetHrs) {
-                    over.push({
-                        key: `${empName}__${projName}__${week}`, employee: empName, project: projName, week,
-                        weekStart, hours, targetHrs, excess: Number((hours - targetHrs).toFixed(1)),
-                    });
-                }
+                if (hours === targetHrs) return;
+                const status = hours < targetHrs ? 'under' : 'over';
+                rows.push({
+                    key: `${empName}__${projName}__${week}`, employee: empName, project: projName, week,
+                    weekStart, hours, targetHrs, status,
+                    delta: Number((hours - targetHrs).toFixed(1)), // negative = under, positive = over
+                });
             });
         });
 
-        return {
-            underAllocationWeeks: under.sort((a, b) => b.deficit - a.deficit || a.weekStart - b.weekStart),
-            overAllocationWeeks: over.sort((a, b) => b.excess - a.excess || a.weekStart - b.weekStart),
-        };
+        return rows.sort((a, b) =>
+            a.employee.localeCompare(b.employee) || a.weekStart - b.weekStart || a.project.localeCompare(b.project));
     }, [weeklyGrid, allocPctByKey, hideCurrentWeek, currentWeekLabel]);
 
     // ── Drill-down: the OTHER dimension's effort (same period granularity as
@@ -1766,43 +1767,31 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     ]}
                 />
                 <WeeklyFlagPanel
-                    title="Employee-project-weeks under their allocation"
-                    emptyText="No employee logged under their weekly project allocation."
+                    title="Employee-project-weeks off their allocation"
+                    emptyText="No employee logged under/over their weekly project allocation."
                     color="#fa8c16" bgColor="#fffbe6" borderColor="#ffe58f"
-                    rows={underAllocationWeeks}
+                    rows={allocationWeeks}
                     columns={[
                         { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 170,
                             render: v => <span style={{ fontWeight: 600, fontSize: 12 }}>{v}</span> },
-                        { title: 'Project', dataIndex: 'project', key: 'project', width: 180,
-                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
                         { title: 'Week', dataIndex: 'week', key: 'week', width: 160,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Project', dataIndex: 'project', key: 'project', width: 180,
                             render: v => <span style={{ fontSize: 12 }}>{v}</span> },
                         { title: 'Logged (hrs)', dataIndex: 'hours', key: 'hours', width: 100, align: 'right',
                             render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
                         { title: 'Allocated (hrs/wk)', dataIndex: 'targetHrs', key: 'targetHrs', width: 130, align: 'right',
                             render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v.toFixed(1)}</span> },
-                        { title: 'Shortfall (hrs)', dataIndex: 'deficit', key: 'deficit', width: 120, align: 'right',
-                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#fa8c16' }}>{v.toFixed(1)}</span> },
-                    ]}
-                />
-                <WeeklyFlagPanel
-                    title="Employee-project-weeks over their allocation"
-                    emptyText="No employee logged over their weekly project allocation."
-                    color="#722ed1" bgColor="#f9f0ff" borderColor="#d3adf7"
-                    rows={overAllocationWeeks}
-                    columns={[
-                        { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 170,
-                            render: v => <span style={{ fontWeight: 600, fontSize: 12 }}>{v}</span> },
-                        { title: 'Project', dataIndex: 'project', key: 'project', width: 180,
-                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
-                        { title: 'Week', dataIndex: 'week', key: 'week', width: 160,
-                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
-                        { title: 'Logged (hrs)', dataIndex: 'hours', key: 'hours', width: 100, align: 'right',
-                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
-                        { title: 'Allocated (hrs/wk)', dataIndex: 'targetHrs', key: 'targetHrs', width: 130, align: 'right',
-                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v.toFixed(1)}</span> },
-                        { title: 'Excess (hrs)', dataIndex: 'excess', key: 'excess', width: 110, align: 'right',
-                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#722ed1' }}>{v.toFixed(1)}</span> },
+                        { title: 'Status', dataIndex: 'status', key: 'status', width: 90,
+                            render: v => v === 'under'
+                                ? <Tag color="warning" style={{ fontSize: 11 }}>Under</Tag>
+                                : <Tag color="purple" style={{ fontSize: 11 }}>Over</Tag> },
+                        { title: 'Δ (hrs)', dataIndex: 'delta', key: 'delta', width: 100, align: 'right',
+                            render: v => (
+                                <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: v < 0 ? '#fa8c16' : '#722ed1' }}>
+                                    {v > 0 ? '+' : ''}{v.toFixed(1)}
+                                </span>
+                            ) },
                     ]}
                 />
             </Card>
