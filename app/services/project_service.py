@@ -1,4 +1,4 @@
-from sqlalchemy import text, func, and_
+from sqlalchemy import text, func, and_, or_
 from ..models.hr import db, Project, ProjectAllocation, Employee, ProjectHistory, ProjectAllocationHistory
 from ..utils.logger import Logger
 from datetime import datetime
@@ -6,6 +6,10 @@ from ..utils.constants import IgnoreEmployees
 
 class ProjectService:
     """Service class for project management operations."""
+
+    # Sub roles (master_sub_role.sub_role_name) to exclude from employee allocation
+    # listings — add more sub role names here as needed.
+    IGNORED_SUB_ROLES_FOR_ALLOCATIONS = ['Human Resource Manager', 'Sales & Marketing']
     
     @staticmethod
     def get_all_projects():
@@ -183,6 +187,7 @@ class ProjectService:
     def get_employee_allocations():
         """Retrieves all employees with their project allocations aggregated."""
         from sqlalchemy.orm import aliased
+        from ..models.hr import MasterSubRole
         try:
             TeamLead = aliased(Employee)
             # Get all employees with their allocations and leave approver (team lead)
@@ -193,9 +198,15 @@ class ProjectService:
                 func.concat(TeamLead.first_name, ' ', TeamLead.last_name).label('manager_name')
             ).outerjoin(
                 TeamLead, Employee.team_lead_id == TeamLead.employee_id
+            ).outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
             ).filter(
                 Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
-                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS),
+                or_(
+                    MasterSubRole.sub_role_name.is_(None),
+                    MasterSubRole.sub_role_name.notin_(ProjectService.IGNORED_SUB_ROLES_FOR_ALLOCATIONS)
+                )
             ).order_by(
                 Employee.first_name
             ).all()
@@ -314,21 +325,28 @@ class ProjectService:
     @staticmethod
     def get_dashboard_stats():
         """Aggregates project dashboard statistics."""
+        from ..models.hr import MasterSubRole
         try:
             # Project Counts
             active_projects = Project.query.filter_by(project_status='Active').count()
             prospective_projects = Project.query.filter_by(project_status='Future Prospect').count()
-            
+
             # Allocation Stats (converting percentage to FTE by dividing by 100)
             allocations = ProjectAllocation.query.all()
             total_allocation = sum(float(a.project_allocation) for a in allocations) / 100.0 if allocations else 0
             # Assuming billable allocation logic: sum of allocation where is_billing is true
             billable_allocation = sum(float(a.project_allocation) for a in allocations if a.is_billing) / 100.0 if allocations else 0
-            
+
             # Total Employees (Capacity)
-            total_employees = Employee.query.filter(
+            total_employees = Employee.query.outerjoin(
+                MasterSubRole, Employee.sub_role == MasterSubRole.sub_role_id
+            ).filter(
                 Employee.employment_status.notin_(['Relieved', 'Absconding', 'Leave Without Pay']),
-                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS)
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_PROJECTS),
+                or_(
+                    MasterSubRole.sub_role_name.is_(None),
+                    MasterSubRole.sub_role_name.notin_(ProjectService.IGNORED_SUB_ROLES_FOR_ALLOCATIONS)
+                )
             ).count()
 
             return {

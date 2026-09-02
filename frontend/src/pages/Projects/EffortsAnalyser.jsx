@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-    Card, Tabs, Upload, Button, Radio, message, Empty, Spin,
-    Row, Col, Statistic, Tag, Table, Input, Badge, Modal, Alert, Select
+    Card, Tabs, Upload, Button, message, Empty, Spin,
+    Row, Col, Tag, Table, Input, Badge, Modal, Alert, Select, DatePicker, Segmented,
+    Divider, Space, Tooltip as AntTooltip, Popover
 } from 'antd';
 import {
-    InboxOutlined, UploadOutlined, DownloadOutlined,
-    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined
+    InboxOutlined, UploadOutlined, DownloadOutlined, ReloadOutlined,
+    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,10 +14,12 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import XLSXStyle from 'xlsx-js-style';
-import { getEmployeeAllocations, getProjects } from '../../services/api';
+import dayjs from 'dayjs';
+import { getEmployeeAllocations, getProjects, saveEffortReport, getEffortTasks, getEffortReports } from '../../services/api';
 
 const { Dragger } = Upload;
 const { TabPane } = Tabs;
+const { RangePicker } = DatePicker;
 
 // ── constants ──────────────────────────────────────────────────────────────
 const DONE_STATES = ['done', 'completed', 'complete', 'closed', 'resolved', 'canceled'];
@@ -39,6 +42,21 @@ const PERIOD_COLORS = [
     '#006d75', // dark teal
     '#d4b106', // dark gold
 ];
+
+// Quick-jump presets for the date-range picker. Computed relative to "today"
+// rather than from loaded data, so they work regardless of how much history
+// is fetched (the range picker drives a server-side fetch by task End Date).
+const getDateRangePresets = () => {
+    const today = dayjs();
+    return [
+        { label: 'This Week', value: [today.startOf('week'), today.endOf('week')] },
+        { label: 'This Month', value: [today.startOf('month'), today.endOf('month')] },
+        { label: 'Last Month', value: [today.subtract(1, 'month').startOf('month'), today.subtract(1, 'month').endOf('month')] },
+        { label: 'Last 3 Months', value: [today.subtract(2, 'month').startOf('month'), today.endOf('month')] },
+        { label: 'This Year', value: [today.startOf('year'), today.endOf('year')] },
+        { label: 'All Time', value: [dayjs('2000-01-01'), today.endOf('month')] },
+    ];
+};
 
 // ── Project name mapping ───────────────────────────────────────────────────
 // Maps Excel project names → HRMS project names.
@@ -104,6 +122,12 @@ const pad = n => String(n).padStart(2, '0');
 const fmtDate = (d) => {
     if (!d || !(d instanceof Date) || isNaN(d.getTime()))
         return <span style={{ color: '#f5222d', fontSize: 11 }}>⚠ invalid</span>;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// Plain 'YYYY-MM-DD' string (no JSX fallback) — for API payloads, not display.
+const toISODate = (d) => {
+    if (!d || !(d instanceof Date) || isNaN(d.getTime())) return null;
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
@@ -434,6 +458,8 @@ const runHealthChecks = (rows, allocationMap, projectAllocMap) => {
 const CHECK_COLUMNS = [
     { title: 'Row', dataIndex: 'rowNum', key: 'rowNum', width: 60,
         render: v => <span style={{ color: '#fa8c16', fontWeight: 700, fontSize: 11 }}>#{v}</span> },
+    { title: 'Key', dataIndex: 'taskKey', key: 'taskKey', width: 100,
+        render: v => <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 600, color: '#4f8ef7' }}>{v || '—'}</span> },
     { title: 'Assignee', dataIndex: 'assignee', key: 'assignee', width: 130,
         render: v => <b style={{ fontSize: 12 }}>{v}</b> },
     { title: 'Project', dataIndex: 'project', key: 'project', width: 140,
@@ -489,12 +515,12 @@ const HealthChecksModal = ({ checks, onClose }) => {
             onOk={onClose}
             okText="Close"
             cancelButtonProps={{ style: { display: 'none' } }}
-            width={820}
+            width={1200}
             styles={{ body: { maxHeight: '72vh', overflowY: 'auto', padding: '16px 24px' } }}
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <WarningOutlined style={{ color: (total + unmappedTotal) === 0 ? '#52c41a' : '#fa8c16', fontSize: 17 }} />
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>Data Health Checks</span>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: '#000000ff' }}>Data Health Checks</span>
                     {(total + unmappedTotal) === 0
                         ? <Tag color="success">All checks passed</Tag>
                         : <Tag color="warning">{total} issue{total !== 1 ? 's' : ''} · {unmappedTotal} unmapped</Tag>
@@ -709,6 +735,85 @@ const DrillDownModal = ({ drillDown, onClose }) => {
     );
 };
 
+// ── Import summary modal: what changed on this save vs. what was already stored ──
+const FIELD_LABELS = {
+    title: 'Title', workflow_state: 'State', assignee_name: 'Assignee', employee_id: 'Employee ID',
+    start_date: 'Start Date', end_date: 'End Date',
+    estimate_hours: 'Estimate (hrs)', logged_hours: 'Logged (hrs)', remaining_hours: 'Remaining (hrs)',
+};
+
+const ImportSummaryModal = ({ summary, onClose }) => {
+    if (!summary) return null;
+
+    const totals = summary.reduce((acc, p) => ({
+        added: acc.added + p.added,
+        changed: acc.changed + p.changed.length,
+        unchanged: acc.unchanged + p.unchanged,
+    }), { added: 0, changed: 0, unchanged: 0 });
+
+    return (
+        <Modal
+            open={!!summary}
+            onCancel={onClose}
+            onOk={onClose}
+            okText="Close"
+            cancelButtonProps={{ style: { display: 'none' } }}
+            width={760}
+            styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+            title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 17 }} />
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>Saved to Database</span>
+                    <Tag color="green" style={{ fontSize: 11 }}>{totals.added} new</Tag>
+                    <Tag color="orange" style={{ fontSize: 11 }}>{totals.changed} changed</Tag>
+                    <Tag style={{ fontSize: 11 }}>{totals.unchanged} unchanged</Tag>
+                </div>
+            }
+        >
+            {summary.map(p => (
+                <div key={p.projectName} style={{ marginBottom: 18 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <ProjectOutlined style={{ color: '#4f8ef7' }} />
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{p.projectName}</span>
+                        <span style={{ fontSize: 11, color: '#888' }}>
+                            {p.totalTasks} tasks total · {p.added} new · {p.changed.length} changed
+                        </span>
+                    </div>
+                    {p.changed.length > 0 ? (
+                        <Table
+                            size="small"
+                            dataSource={p.changed}
+                            rowKey="taskKey"
+                            pagination={{ pageSize: 5, size: 'small', showSizeChanger: false }}
+                            columns={[
+                                { title: 'Task', dataIndex: 'taskKey', key: 'taskKey', width: 110,
+                                    render: v => <b style={{ fontSize: 11 }}>{v}</b> },
+                                { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true,
+                                    render: v => <span style={{ fontSize: 11, color: '#555' }}>{v || '—'}</span> },
+                                { title: 'What changed', key: 'changes',
+                                    render: (_, r) => (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            {r.changes.map((c, i) => (
+                                                <span key={i} style={{ fontSize: 11 }}>
+                                                    <b>{FIELD_LABELS[c.field] || c.field}</b>:{' '}
+                                                    <span style={{ color: '#cf1322' }}>{String(c.old ?? '—')}</span>
+                                                    {' → '}
+                                                    <span style={{ color: '#389e0d' }}>{String(c.new ?? '—')}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) },
+                            ]}
+                        />
+                    ) : (
+                        <div style={{ fontSize: 11, color: '#52c41a' }}>No existing tasks changed for this project.</div>
+                    )}
+                </div>
+            ))}
+        </Modal>
+    );
+};
+
 // ── Stacked bar chart: done (period color) + planned (green) ────────────────
 const GroupedBarChart = ({ data, periods, onBarClick }) => {
     if (!data.length)
@@ -839,6 +944,211 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                     );
                 })}
             </div>
+        </div>
+    );
+};
+
+// ── Low planned-backlog panel: entities with < N working days of queued work ──
+const LowPlannedEffortPanel = ({ items, entityLabel, thresholdDays, onEntityClick }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (!items.length) {
+        return (
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52c41a',
+                padding: '8px 2px', marginBottom: 8,
+            }}>
+                <CheckCircleOutlined />
+                Every {entityLabel.toLowerCase()} with allocation data has at least {thresholdDays} working days of planned work queued.
+            </div>
+        );
+    }
+
+    return (
+        <Card size="small" bordered
+            style={{ borderRadius: 10, marginBottom: 12, background: '#fffbe6', borderColor: '#ffe58f' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                onClick={() => setExpanded(v => !v)}>
+                <WarningOutlined style={{ color: '#fa8c16', fontSize: 15 }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#7c4a00' }}>
+                    {items.length} {entityLabel}{items.length !== 1 ? 's' : ''} with less than {thresholdDays} working days of planned work
+                </span>
+                <span style={{ fontSize: 11, color: '#aaa', marginLeft: 'auto' }}>
+                    {expanded ? '▲ Hide' : '▼ Show'} list
+                </span>
+            </div>
+            {expanded && (
+                <Table
+                    size="small"
+                    dataSource={items}
+                    rowKey="name"
+                    pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+                    style={{ marginTop: 10 }}
+                    onRow={onEntityClick ? (r) => ({ onClick: () => onEntityClick(r.name), style: { cursor: 'pointer' } }) : undefined}
+                    columns={[
+                        { title: entityLabel, dataIndex: 'name', key: 'name', width: 160,
+                            render: v => <span style={{ fontWeight: 600, fontSize: 12, color: onEntityClick ? '#4f8ef7' : '#333' }}>{v}</span> },
+                        ...(items.some(i => i.projects) ? [{
+                            title: 'Assigned Projects', dataIndex: 'projects', key: 'projects',
+                            render: v => !v?.length
+                                ? <span style={{ fontSize: 11, color: '#ccc' }}>—</span>
+                                : (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                        {v.map(p => (
+                                            <Tag key={p} style={{ fontSize: 11, margin: 0 }}>{p}</Tag>
+                                        ))}
+                                    </div>
+                                ),
+                        }] : []),
+                        { title: 'Planned (hrs)', dataIndex: 'plannedHrs', key: 'plannedHrs', width: 110, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
+                        { title: `Needed (${thresholdDays}d, hrs)`, dataIndex: 'thresholdHrs', key: 'thresholdHrs', width: 130, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v.toFixed(1)}</span> },
+                        { title: 'Shortfall (hrs)', dataIndex: 'deficitHrs', key: 'deficitHrs', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#cf1322' }}>{v.toFixed(1)}</span> },
+                        { title: 'Planned (working days)', dataIndex: 'plannedDays', key: 'plannedDays', width: 150, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>~{v.toFixed(1)}d</span> },
+                    ]}
+                />
+            )}
+        </Card>
+    );
+};
+
+// ── Summary table: entity rows × period-grouped columns ─────────────────────
+// Each period (month or week) becomes one grouped column header spanning
+// Done / Planned / Alloc / Total % / Eff % sub-columns — a horizontal club of
+// all detected periods, so multiple months/weeks sit side-by-side per entity.
+const pctColor = (pct) => pct === null || pct === undefined ? '#bbb' : pct >= 90 ? '#52c41a' : pct >= 60 ? '#faad14' : '#f5222d';
+const effColor = (eff) => eff === null || eff === undefined ? '#bbb' : eff >= 100 ? '#52c41a' : eff >= 80 ? '#faad14' : '#f5222d';
+
+const SummaryTable = ({ data, periods, entityLabel, onRowClick, noDataSet }) => {
+    const [search, setSearch] = useState('');
+
+    const filtered = useMemo(() => {
+        if (!search) return data;
+        const q = search.toLowerCase();
+        return data.filter(d => (d.name || '').toLowerCase().includes(q));
+    }, [data, search]);
+
+    const missingCount = useMemo(() =>
+        noDataSet ? data.filter(d => noDataSet.has((d.name || '').toLowerCase().trim())).length : 0,
+    [data, noDataSet]);
+
+    const columns = useMemo(() => [
+        {
+            title: entityLabel,
+            dataIndex: 'name',
+            key: 'name',
+            fixed: 'left',
+            width: 220,
+            sorter: (a, b) => a.name.localeCompare(b.name),
+            defaultSortOrder: 'ascend',
+            render: v => {
+                const isMissing = noDataSet?.has((v || '').toLowerCase().trim());
+                return (
+                    <span style={{
+                        fontWeight: 700, fontSize: 12,
+                        color: isMissing ? '#aaa' : onRowClick ? '#4f8ef7' : '#333',
+                        fontStyle: isMissing ? 'italic' : 'normal',
+                        cursor: onRowClick ? 'pointer' : 'default',
+                    }}>
+                        {v}
+                        {isMissing && (
+                            <Tag color="warning" style={{ fontSize: 10, marginLeft: 6, fontWeight: 400, fontStyle: 'normal' }}>
+                                no timesheet
+                            </Tag>
+                        )}
+                    </span>
+                );
+            },
+        },
+        ...periods.map((period, idx) => ({
+            title: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: PERIOD_COLORS[idx % PERIOD_COLORS.length], display: 'inline-block' }} />
+                    {period}
+                </span>
+            ),
+            key: period,
+            children: [
+                {
+                    title: 'Done', key: `${period}__done`, width: 74, align: 'right',
+                    sorter: (a, b) => (a[`${period}__done`] || 0) - (b[`${period}__done`] || 0),
+                    render: (_, r) => {
+                        const v = r[`${period}__done`];
+                        return <span style={{ fontFamily: 'monospace', fontSize: 11, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v != null ? v.toFixed(1) : '—'}</span>;
+                    },
+                },
+                {
+                    title: 'Planned', key: `${period}__planned`, width: 78, align: 'right',
+                    sorter: (a, b) => (a[`${period}__planned`] || 0) - (b[`${period}__planned`] || 0),
+                    render: (_, r) => {
+                        const v = r[`${period}__planned`];
+                        return <span style={{ fontFamily: 'monospace', fontSize: 11, color: v > 0 ? '#52c41a' : '#ccc' }}>{v != null ? v.toFixed(1) : '—'}</span>;
+                    },
+                },
+                {
+                    title: 'Alloc', key: `${period}__allocated`, width: 74, align: 'right',
+                    sorter: (a, b) => (a[`${period}__allocated`] || 0) - (b[`${period}__allocated`] || 0),
+                    render: (_, r) => {
+                        const v = r[`${period}__allocated`];
+                        return <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#888' }}>{v > 0 ? v.toFixed(1) : '—'}</span>;
+                    },
+                },
+                {
+                    title: 'Total %', key: `${period}__totalPct`, width: 74, align: 'right',
+                    sorter: (a, b) => (a[`${period}__totalPct`] ?? -1) - (b[`${period}__totalPct`] ?? -1),
+                    render: (_, r) => {
+                        const v = r[`${period}__totalPct`];
+                        return <span style={{ fontWeight: 700, fontSize: 11, color: pctColor(v) }}>{v != null ? `${v}%` : '—'}</span>;
+                    },
+                },
+                {
+                    title: 'Eff %', key: `${period}__efficiency`, width: 70, align: 'right',
+                    sorter: (a, b) => (a[`${period}__efficiency`] ?? -1) - (b[`${period}__efficiency`] ?? -1),
+                    render: (_, r) => {
+                        const v = r[`${period}__efficiency`];
+                        return <span style={{ fontWeight: 700, fontSize: 11, color: effColor(v) }}>{v != null ? `${v}%` : '—'}</span>;
+                    },
+                },
+            ],
+        })),
+    ], [periods, entityLabel, onRowClick, noDataSet]);
+
+    if (!data.length) return <Empty description="No data found" style={{ padding: 40 }} />;
+
+    return (
+        <div>
+            <Row justify="space-between" align="middle" style={{ marginBottom: 8 }}>
+                <Col>
+                    <span style={{ fontSize: 12, color: '#888' }}>
+                        {filtered.length} of {data.length} {entityLabel.toLowerCase()}{data.length !== 1 ? 's' : ''} shown
+                        {missingCount > 0 && (
+                            <Tag color="warning" style={{ fontSize: 11, marginLeft: 8 }}>
+                                {missingCount} without timesheet data
+                            </Tag>
+                        )}
+                    </span>
+                </Col>
+                <Col>
+                    <Input.Search placeholder={`Search ${entityLabel.toLowerCase()}…`} value={search}
+                        onChange={e => setSearch(e.target.value)} allowClear size="small" style={{ width: 220 }} />
+                </Col>
+            </Row>
+            <Table
+                columns={columns}
+                dataSource={filtered}
+                rowKey="name"
+                size="small"
+                bordered
+                pagination={{ pageSize: 30, showSizeChanger: false, pageSizeOptions: ['20', '50', '100'] }}
+                scroll={{ x: 'max-content' }}
+                onRow={onRowClick ? (record) => ({
+                    onClick: () => onRowClick(record.name),
+                    style: { cursor: 'pointer' },
+                }) : undefined}
+            />
         </div>
     );
 };
@@ -1445,6 +1755,60 @@ const downloadSummaryExcel = (employeeData, projectData, periods, fileName, peri
     XLSXStyle.writeFile(wb, `${baseName}_summary_${stamp}.xlsx`);
 };
 
+// 'Key' (the tracker's ticket/task ID, e.g. 'TPAA-267') is required — it's
+// the unique key rows are saved/upserted against in the database.
+const REQUIRED_COLS = [
+    'Primary Assignee', 'Workflow State', 'Title', 'Project', 'Key',
+    'Start Date', 'End Date', 'Estimate Effort', 'Logged Time',
+];
+
+// One example row, matching a real effort export, shown in the format-info
+// popover so the expected shape is unambiguous before anyone uploads.
+const SAMPLE_ROW = {
+    'Project': 'Testing Practice',
+    'Title': 'Greencard-Web Testing',
+    'Workflow State': 'Done',
+    'Primary Assignee': 'Lalit Jadhav',
+    'Start Date': '2026-08-18',
+    'End Date': '2026-08-18',
+    'Estimate Effort': 7200,
+    'Logged Time': 7200,
+    'Remaining Time': 0,
+    'Key': 'TPAA-267',
+};
+
+const FormatInfoContent = () => (
+    <div style={{ maxWidth: 480 }}>
+        <ul style={{ fontSize: 12, color: '#555', paddingLeft: 18, margin: 0, lineHeight: 1.8 }}>
+            <li><b>Key</b> must be unique per row — it&apos;s the task/ticket id rows are saved and updated against on re-upload, instead of being duplicated.</li>
+            <li><b>Estimate Effort</b> and <b>Logged Time</b> must be in <b>seconds</b> (e.g. <code>3600</code> = 1 hour). Values are automatically converted to hours for display and charts.</li>
+            <li>Only tasks with <b>Workflow State</b> Done/Completed are counted as logged; everything else counts as planned, using <b>Estimate Effort</b>.</li>
+            <li><b>Remaining Time</b> (seconds) is optional and not required, but is stored if present.</li>
+        </ul>
+        <div style={{ marginTop: 12, fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Example row
+        </div>
+        <div style={{ overflowX: 'auto', marginTop: 6 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                    <tr>
+                        {[...REQUIRED_COLS, 'Remaining Time'].map(c => (
+                            <th key={c} style={{ border: '1px solid #eee', padding: '4px 7px', background: '#fafafa', whiteSpace: 'nowrap', textAlign: 'left' }}>{c}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        {[...REQUIRED_COLS, 'Remaining Time'].map(c => (
+                            <td key={c} style={{ border: '1px solid #eee', padding: '4px 7px', whiteSpace: 'nowrap', color: '#333' }}>{SAMPLE_ROW[c]}</td>
+                        ))}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
 // ── main component ─────────────────────────────────────────────────────────
 const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
@@ -1452,11 +1816,102 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
     const [uploading, setUploading] = useState(false);
     const [periodMode, setPeriodMode] = useState('monthly');
+    const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table' — applies to Project & Employee tabs
     const [fileName, setFileName] = useState('');
     const [validationErrors, setValidationErrors] = useState(null);
     const [drillDown, setDrillDown] = useState(null);
     const [healthChecks, setHealthChecks] = useState(null);
     const [empProjectFilter, setEmpProjectFilter] = useState(null); // null = all projects
+    const [initializing, setInitializing] = useState(true);   // true only until the very first DB fetch resolves
+    const [refreshing, setRefreshing] = useState(false);       // a subsequent fetch (date range change / Refresh button)
+    const [hasSavedData, setHasSavedData] = useState(null);    // null = unknown yet; does ANY report exist in the DB at all
+    const [showUploadPanel, setShowUploadPanel] = useState(false); // "Upload New File" was clicked
+    const [saving, setSaving] = useState(false);               // POSTing a new upload to the database
+    const [importSummary, setImportSummary] = useState(null);  // diff summary shown after a successful save
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);    // when rawRows last reflected the database
+    const [dateRange, setDateRange] = useState(() => [dayjs().startOf('month'), dayjs().endOf('month')]);
+    const [backlogRows, setBacklogRows] = useState([]); // ALL not-done tasks, any End Date — independent of dateRange
+
+    // Maps DB-persisted task rows (services/api getEffortTasks shape) back into
+    // the same row shape the Excel parser produces, so every chart/table below
+    // is agnostic to where the data came from.
+    const mapDbRowsToRawRows = (dbRows) => (dbRows || [])
+        .map(t => ({
+            assignee: t.assignee || '',
+            state: t.state || '',
+            task: t.title || '',
+            project: t.project || '',
+            startDate: parseExcelDate(t.startDate),
+            endDate: parseExcelDate(t.endDate),
+            estimateEffort: Number(t.estimateHours) || 0,
+            loggedTime: Number(t.loggedHours) || 0,
+            remainingTime: t.remainingHours != null ? Number(t.remainingHours) : null,
+            taskKey: t.taskKey || '',
+        }))
+        .filter(r => r.assignee && r.project && r.endDate);
+
+    // The database is the source of truth for viewing. Fetches only the
+    // currently-selected date range (filtered server-side by task End Date) —
+    // not the full historical dataset — so this scales as more months get
+    // uploaded. Re-runs automatically whenever `dateRange` changes.
+    const syncFromDatabase = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setRefreshing(true);
+        try {
+            const params = {};
+            if (dateRange?.[0]) params.from = dateRange[0].format('YYYY-MM-DD');
+            if (dateRange?.[1]) params.to = dateRange[1].format('YYYY-MM-DD');
+            const res = await getEffortTasks(params);
+            const rows = mapDbRowsToRawRows(res.data);
+            setRawRows(rows);
+            setFileName('');
+            setLastSyncedAt(new Date());
+        } catch (err) {
+            console.error('Failed to load effort data from database', err);
+            if (!silent) message.error('Failed to load saved effort data from the database.');
+        } finally {
+            if (!silent) setRefreshing(false);
+            setInitializing(false);
+        }
+    }, [dateRange]);
+
+    // Runs once on mount: is there ANY saved report at all? Independent of the
+    // selected date range, so the Upload screen only shows for a truly-empty
+    // database — not just an empty result for the current month.
+    useEffect(() => {
+        let cancelled = false;
+        getEffortReports()
+            .then(res => { if (!cancelled) setHasSavedData((res.data || []).length > 0); })
+            .catch(err => console.error('Failed to check for saved effort reports', err));
+        return () => { cancelled = true; };
+    }, []);
+
+    // Loads the selected date range on mount, and again whenever it changes.
+    useEffect(() => {
+        syncFromDatabase();
+    }, [syncFromDatabase]);
+
+    // Loads ALL not-done tasks, with no date filter — deliberately NOT tied to
+    // `dateRange`. Planned/open work is a backlog: a task due next quarter, or
+    // overdue from last month, is still part of it regardless of what window
+    // the rest of the dashboard happens to be viewing. Only used for the
+    // low-planned-backlog check; everything else keeps using the date-scoped
+    // `rawRows`/`plannedRows` for its (intentionally) period-based reporting.
+    const fetchBacklog = useCallback(async () => {
+        try {
+            const res = await getEffortTasks();
+            setBacklogRows(mapDbRowsToRawRows(res.data).filter(r => !isDone(r.state)));
+        } catch (err) {
+            console.error('Failed to load planned-work backlog', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchBacklog();
+    }, [fetchBacklog]);
+
+    const handleDateRangeChange = (range) => {
+        setDateRange(range && range[0] && range[1] ? range : [dayjs().startOf('month'), dayjs().endOf('month')]);
+    };
 
     useEffect(() => {
         if (exportRef) {
@@ -1491,10 +1946,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     }, []);
 
     // ── upload validation ──────────────────────────────────────────────
-    const REQUIRED_COLS = [
-        'Primary Assignee', 'Workflow State', 'Title', 'Project',
-        'Start Date', 'End Date', 'Estimate Effort', 'Logged Time',
-    ];
+    // (REQUIRED_COLS is defined at module scope above, alongside the
+    // format-info popover that displays it.)
 
     const validateRows = (rawJson) => {
         const errors = [];
@@ -1578,17 +2031,52 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                         state: String(n['Workflow State'] || '').trim(),
                         task: String(n['Title'] || '').trim(),
                         project: String(n['Project'] || '').trim(),
+                        taskKey: String(n['Key'] || '').trim(),
                         startDate: parseExcelDate(n['Start Date']),
                         endDate: parseExcelDate(n['End Date']),
                         estimateEffort: (parseFloat(n['Estimate Effort']) || 0) / 3600,
                         loggedTime: (parseFloat(n['Logged Time']) || 0) / 3600,
+                        remainingTime: n['Remaining Time'] !== undefined && n['Remaining Time'] !== ''
+                            ? (parseFloat(n['Remaining Time']) || 0) / 3600
+                            : null,
                     };
-                }).filter(r => r.assignee && r.project && r.endDate);
+                }).filter(r => r.assignee && r.project && r.endDate && r.taskKey);
 
                 setRawRows(rows);
                 setFileName(file.name);
                 const doneCount = rows.filter(r => isDone(r.state)).length;
                 message.success(`Loaded ${rows.length} rows (${doneCount} completed tasks)`);
+
+                // ── Auto-save to the database, then re-sync so the view reflects
+                // the full accumulated dataset (this upload merged with everything
+                // saved previously), not just this one file. ──────────────────
+                setSaving(true);
+                saveEffortReport({
+                    fileName: file.name,
+                    tasks: rows.map(r => ({
+                        taskKey: r.taskKey,
+                        project: resolveProjectName(r.project),
+                        assigneeName: resolveEmployeeName(r.assignee),
+                        title: r.task,
+                        state: r.state,
+                        startDate: toISODate(r.startDate),
+                        endDate: toISODate(r.endDate),
+                        estimateHours: r.estimateEffort,
+                        loggedHours: r.loggedTime,
+                        remainingHours: r.remainingTime,
+                    })),
+                })
+                    .then(res => {
+                        setImportSummary(res.data?.projects || []);
+                        setHasSavedData(true);
+                        setShowUploadPanel(false);
+                        return Promise.all([syncFromDatabase({ silent: true }), fetchBacklog()]);
+                    })
+                    .catch(err => {
+                        console.error('Failed to save effort report to database', err);
+                        message.warning('Loaded locally, but failed to save to the database — this upload won’t be included in future reports until re-uploaded successfully.');
+                    })
+                    .finally(() => setSaving(false));
             } catch (err) {
                 message.error('Failed to parse Excel. Check column names.');
                 console.error(err);
@@ -1598,7 +2086,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         };
         reader.readAsArrayBuffer(file);
         return false;
-    }, []);
+    }, [syncFromDatabase, fetchBacklog]);
 
     // ── allocation map: empName_lower → { projName_lower → alloc% } ──────
     const allocationMap = useMemo(() => {
@@ -1613,6 +2101,25 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             });
         });
         return map;
+    }, [allocations]);
+
+    // HRMS employee record lookup, by HRMS employee name (lowercased).
+    const employeeAllocationsMap = useMemo(() => {
+        const map = {};
+        allocations.forEach(emp => {
+            const key = (emp.employee_name || '').toLowerCase().trim();
+            if (key) map[key] = emp;
+        });
+        return map;
+    }, [allocations]);
+
+    // Which HRMS-allocated projects a given employee belongs to (by HRMS employee name).
+    const getHrmsEmployeesForProject = useCallback((excelProjName) => {
+        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        return allocations
+            .filter(emp => (emp.projects || []).some(p => (p.project_name || '').toLowerCase().trim() === hrmsProj))
+            .map(emp => emp.employee_name)
+            .filter(Boolean);
     }, [allocations]);
 
     // ── Project-level allocation map: hrmsName_lower → FTE (total_allocation / 100) ──
@@ -1647,7 +2154,32 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         return (pct / 100) * 40 * weeks;
     }, [allocationMap, periodMode]);
 
+    // Period-independent "hours per working day" rates (8hr/5-day week), used
+    // for the low-planned-backlog check below — a fixed "N working days" bar
+    // shouldn't move depending on whether the page is set to Monthly or Weekly.
+    const getProjectDailyAllocHrs = useCallback((excelProjName) => {
+        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        const fte = projectAllocMap[hrmsProj] ?? null;
+        return fte ? fte * 8 : null;
+    }, [projectAllocMap]);
+
+    const getEmployeeDailyAllocHrs = useCallback((assignee, project = null) => {
+        const hrmsEmployee = resolveEmployeeName(assignee)?.toLowerCase().trim();
+        const empMap = allocationMap[hrmsEmployee];
+        if (!empMap) return null;
+        if (project) {
+            const hrmsProject = resolveProjectName(project)?.toLowerCase().trim();
+            const pct = empMap[hrmsProject];
+            return pct ? (pct / 100) * 8 : null;
+        }
+        const totalPct = Object.values(empMap).reduce((s, p) => s + (p || 0), 0);
+        return totalPct > 0 ? (totalPct / 100) * 8 : null;
+    }, [allocationMap]);
+
     // ── row splits ─────────────────────────────────────────────────────
+    // `rawRows` is already scoped to the selected date range — filtered
+    // server-side by task End Date (see syncFromDatabase) — so nothing else
+    // needs to re-filter it client-side.
     const doneRows    = useMemo(() => rawRows.filter(r =>  isDone(r.state)), [rawRows]);
     const plannedRows = useMemo(() => rawRows.filter(r => !isDone(r.state)), [rawRows]);
 
@@ -1721,11 +2253,29 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         }
     ), [buildChartData, allEmployees, rawRows, getAllocHrs]);
 
-    // Employee chart — filtered by selected project
-    const filteredEmployees = useMemo(() => {
-        if (!empProjectFilter) return allEmployees;
-        return [...new Set(rawRows.filter(r => r.project === empProjectFilter).map(r => r.assignee))].sort();
-    }, [rawRows, empProjectFilter, allEmployees]);
+    // Employee chart — filtered by selected project, PLUS any HRMS employee who
+    // has logged nothing in the uploaded Excel at all (so missing timesheets are
+    // visible rather than silently absent from the list).
+    const { filteredEmployees, missingEmployeeSet } = useMemo(() => {
+        const excelNames = empProjectFilter
+            ? [...new Set(rawRows.filter(r => r.project === empProjectFilter).map(r => r.assignee))]
+            : allEmployees;
+
+        const representedHrmsNames = new Set(
+            excelNames.map(n => resolveEmployeeName(n).toLowerCase().trim())
+        );
+        const hrmsCandidates = empProjectFilter
+            ? getHrmsEmployeesForProject(empProjectFilter)
+            : allocations.map(e => e.employee_name).filter(Boolean);
+        const missingNames = hrmsCandidates.filter(
+            name => !representedHrmsNames.has((name || '').toLowerCase().trim())
+        );
+
+        return {
+            filteredEmployees: [...new Set([...excelNames, ...missingNames])].sort(),
+            missingEmployeeSet: new Set(missingNames.map(n => n.toLowerCase().trim())),
+        };
+    }, [rawRows, empProjectFilter, allEmployees, allocations, getHrmsEmployeesForProject]);
 
     const filteredEmployeeChartData = useMemo(() => {
         const rowFilter = empProjectFilter ? (r => r.project === empProjectFilter) : null;
@@ -1738,12 +2288,21 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                     const h = getAllocHrs(emp, empProjectFilter);
                     return h !== null ? h : 0;
                 }
-                const projects = [...new Set(rawRows.filter(r => r.assignee === emp).map(r => r.project))];
+                let projects = [...new Set(rawRows.filter(r => r.assignee === emp).map(r => r.project))];
+                if (projects.length === 0) {
+                    // No Excel rows for this employee (e.g. missing timesheet, or all of
+                    // their rows fall outside the selected date range) — fall back to
+                    // their HRMS-allocated projects so their expected allocation still
+                    // shows (making a 0% Total clearly meaningful, not just blank).
+                    const hrmsEmp = employeeAllocationsMap[resolveEmployeeName(emp).toLowerCase().trim()]
+                        || employeeAllocationsMap[emp.toLowerCase().trim()];
+                    projects = (hrmsEmp?.projects || []).map(p => p.project_name);
+                }
                 return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
             },
             rowFilter
         );
-    }, [buildChartData, filteredEmployees, rawRows, getAllocHrs, empProjectFilter]);
+    }, [buildChartData, filteredEmployees, rawRows, getAllocHrs, empProjectFilter, employeeAllocationsMap]);
 
     // Employee-by-project breakdown — for the Excel "Employee by Project" sheet
     // One entry per unique (employee, project) pair, with same period structure
@@ -1778,6 +2337,71 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     // ── summary ────────────────────────────────────────────────────────
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
     const totalPlanned = plannedRows.reduce((s, r) => s + r.estimateEffort, 0);
+
+    // ── low planned-backlog check ─────────────────────────────────────
+    // Flags projects/employees whose queued (not-yet-done) task estimate
+    // totals less than 10 working days' worth of their own allocation — a
+    // pipeline risk signal ("running out of planned work soon").
+    const LOW_PLANNED_THRESHOLD_DAYS = 10;
+
+    // Every HRMS project (not just ones with rows in the current date range)
+    // so a project with zero tasks loaded still surfaces as needing planning.
+    const allProjectNamesForPlannedCheck = useMemo(() => {
+        const hrmsNames = (hrmsProjects || []).map(p => p.project_name).filter(Boolean);
+        return [...new Set([...allProjects, ...hrmsNames])];
+    }, [allProjects, hrmsProjects]);
+
+    // Sourced from `backlogRows` (all-time, unscoped by dateRange) — not
+    // `plannedRows` — so the low-planned-backlog check doesn't change just
+    // because the viewing window changed; backlog is backlog regardless of
+    // whether its due date falls inside the currently-selected range.
+    const projectPlannedTotals = useMemo(() => {
+        const map = {};
+        backlogRows.forEach(r => { map[r.project] = (map[r.project] || 0) + r.estimateEffort; });
+        return map;
+    }, [backlogRows]);
+
+    const employeePlannedTotals = useMemo(() => {
+        const rows = empProjectFilter ? backlogRows.filter(r => r.project === empProjectFilter) : backlogRows;
+        const map = {};
+        rows.forEach(r => { map[r.assignee] = (map[r.assignee] || 0) + r.estimateEffort; });
+        return map;
+    }, [backlogRows, empProjectFilter]);
+
+    const buildLowPlannedList = (names, plannedTotals, getDailyAllocHrs) => names
+        .map(name => {
+            const dailyHrs = getDailyAllocHrs(name);
+            if (!dailyHrs) return null; // no allocation data — can't judge "as per the allocation"
+            const thresholdHrs = dailyHrs * LOW_PLANNED_THRESHOLD_DAYS;
+            const plannedHrs = plannedTotals[name] || 0;
+            if (plannedHrs >= thresholdHrs) return null;
+            return {
+                name, plannedHrs, thresholdHrs, dailyHrs,
+                deficitHrs: thresholdHrs - plannedHrs,
+                plannedDays: plannedHrs / dailyHrs, // tentative working days of planned work queued
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.deficitHrs - a.deficitHrs);
+
+    const lowPlannedProjects = useMemo(
+        () => buildLowPlannedList(allProjectNamesForPlannedCheck, projectPlannedTotals, getProjectDailyAllocHrs),
+        [allProjectNamesForPlannedCheck, projectPlannedTotals, getProjectDailyAllocHrs]
+    );
+
+    const lowPlannedEmployees = useMemo(() => {
+        const base = buildLowPlannedList(
+            filteredEmployees, employeePlannedTotals,
+            (name) => getEmployeeDailyAllocHrs(name, empProjectFilter)
+        );
+        // Attach each employee's HRMS-assigned projects, so a low-planned-work
+        // flag comes with "here's where they're allocated" for context.
+        return base.map(item => {
+            const hrmsEmp = employeeAllocationsMap[resolveEmployeeName(item.name)?.toLowerCase().trim()];
+            const projects = (hrmsEmp?.projects || []).map(p => p.project_name).filter(Boolean);
+            return { ...item, projects };
+        });
+    }, [filteredEmployees, employeePlannedTotals, getEmployeeDailyAllocHrs, empProjectFilter, employeeAllocationsMap]);
 
     // ── render ─────────────────────────────────────────────────────────
     return (
@@ -1870,16 +2494,38 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             </Modal>
 
             {/* Upload screen / Dashboard */}
-            {!rawRows.length ? (
+            {initializing ? (
+                <Card style={{ borderRadius: 12, textAlign: 'center', padding: '40px 0' }}>
+                    <Spin tip="Loading saved effort data…" />
+                </Card>
+            ) : (!hasSavedData || showUploadPanel) ? (
                 <Card style={{ borderRadius: 12 }}>
                     <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                        {hasSavedData && (
+                            <Button type="link" style={{ marginBottom: 8 }}
+                                onClick={() => setShowUploadPanel(false)}>
+                                ← Back to dashboard
+                            </Button>
+                        )}
                         <h3 style={{ fontWeight: 700, color: '#333', marginBottom: 6 }}>
                             Upload Efforts Excel
                         </h3>
                         <p style={{ color: '#888', fontSize: 13 }}>
-                            Required columns: <b>Primary Assignee, Workflow State, Title, Project, Start Date, End Date, Estimate Effort, Logged Time</b>
+                            {hasSavedData
+                                ? 'Upload another file to add or update saved data — it’s merged with what’s already stored, matched by task Key.'
+                                : 'No saved effort data yet — upload one to get started. It’s saved to the database automatically, so you won’t need to re-upload it to see it again.'}
                         </p>
-                        <p style={{ color: '#52c41a', fontSize: 12, marginTop: 4 }}>
+                        <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottom">
+                            <Button
+                                type="dashed"
+                                size="small"
+                                icon={<InfoCircleOutlined />}
+                                style={{ marginTop: 4, marginBottom: 4, color: '#1890ff', borderColor: '#91caff' }}
+                            >
+                                What should the Excel file look like?
+                            </Button>
+                        </Popover>
+                        <p style={{ color: '#52c41a', fontSize: 12, marginTop: 8 }}>
                             <CheckCircleOutlined /> Only tasks with state <b>Done / Completed</b> are counted in charts; planned tasks use <b>Estimate Effort</b>
                         </p>
                         <div style={{
@@ -1914,102 +2560,123 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 </Card>
             ) : (
                 <>
-                    {/* Header */}
-                    <Row gutter={[12, 12]} style={{ marginBottom: 12, alignItems: 'center' }}>
-                        <Col flex="auto">
-                            <span style={{ fontSize: 13, color: '#555' }}>
-                                📄 <b>{fileName}</b>&nbsp;·&nbsp;
-                                {rawRows.length} rows total&nbsp;·&nbsp;
-                                <span style={{ color: '#52c41a', fontWeight: 600 }}>
-                                    <CheckCircleOutlined /> {doneRows.length} completed tasks
-                                </span>
-                            </span>
-                        </Col>
-                        <Col>
-                            <Button size="small" icon={<WarningOutlined />}
-                                style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
-                                onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
-                                Run Checks
-                            </Button>
-                        </Col>
-                        <Col>
-                            <Button
-                                size="small"
-                                icon={<DownloadOutlined />}
-                                type="primary"
-                                style={{ background: '#52c41a', borderColor: '#52c41a' }}
-                                onClick={() => downloadSummaryExcel(
-                                    filteredEmployeeChartData,
-                                    projectChartData,
-                                    allPeriods,
-                                    fileName,
-                                    periodMode,
-                                    allocations,
-                                    employeeProjectChartData,
-                                    hrmsProjects,
-                                    rawRows
-                                )}
-                            >
-                                Download Summary
-                            </Button>
-                        </Col>
-                        <Col>
-                            <Button size="small" icon={<UploadOutlined />}
-                                onClick={() => { setRawRows([]); setFileName(''); }}>
-                                Re-upload
-                            </Button>
-                        </Col>
-                    </Row>
+                    {/* Toolbar — one card, three tiers, instead of four separate boxes */}
+                    <Card style={{ borderRadius: 12, marginBottom: 16 }}>
 
-                    {/* Summary cards */}
-                    <Row gutter={[12, 12]} style={{ marginBottom: 14 }}>
-                        {[
-                            { title: 'Logged (Done tasks)', value: `${totalLogged.toFixed(1)} hrs`, icon: <CheckCircleOutlined />, color: '#52c41a' },
-                            { title: 'Planned (Estimated)', value: `${totalPlanned.toFixed(1)} hrs`, icon: <ClockCircleOutlined />, color: '#fa8c16' },
-                            { title: 'Assignees', value: allEmployees.length, icon: <TeamOutlined />, color: '#722ed1' },
-                            { title: 'Projects', value: allProjects.length, icon: <ProjectOutlined />, color: '#4f8ef7' },
-                        ].map(s => (
-                            <Col key={s.title} xs={12} sm={6}>
-                                <Card size="small" bordered={false}
-                                    style={{ borderRadius: 10, boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>
-                                    <Statistic title={s.title} value={s.value}
-                                        prefix={<span style={{ color: s.color }}>{s.icon}</span>}
-                                        valueStyle={{ fontSize: 16, fontWeight: 700, color: s.color }} />
-                                </Card>
-                            </Col>
-                        ))}
-                    </Row>
-
-                    {/* Period toggle + detected periods */}
-                    <Card size="small" style={{ borderRadius: 10, marginBottom: 14 }}>
-                        <Row gutter={[16, 8]} align="middle">
-                            <Col>
-                                <span style={{ fontSize: 12, color: '#555', marginRight: 8 }}>View by:</span>
-                                <Radio.Group value={periodMode}
-                                    onChange={e => setPeriodMode(e.target.value)}
-                                    buttonStyle="solid" size="small">
-                                    <Radio.Button value="monthly">Monthly</Radio.Button>
-                                    <Radio.Button value="weekly">Weekly</Radio.Button>
-                                </Radio.Group>
+                        {/* Tier 2: status + actions */}
+                        <Row gutter={[12, 12]} align="middle" justify="space-between">
+                            <Col flex="auto">
+                                <Space size={14} wrap style={{ fontSize: 12, color: '#888' }}>
+                                    {fileName && <span>📄 <b style={{ color: '#333' }}>{fileName}</b></span>}
+                                    {/* <span><b style={{ color: '#333' }}>{rawRows.length}</b> rows</span>
+                                    <span style={{ color: '#52c41a', fontWeight: 600 }}>
+                                        <CheckCircleOutlined /> {doneRows.length} completed
+                                    </span> */}
+                                    {saving ? (
+                                        <span style={{ color: '#4f8ef7' }}><Spin size="small" style={{ marginRight: 4 }} />Saving…</span>
+                                    ) : lastSyncedAt && (
+                                        <span style={{ color: '#aaa' }}>Synced {lastSyncedAt.toLocaleTimeString()}</span>
+                                    )}
+                                </Space>
                             </Col>
                             <Col>
-                                <span style={{ fontSize: 11, color: '#999' }}>
-                                    {allPeriods.length} {periodMode === 'weekly' ? 'week' : 'month'}{allPeriods.length !== 1 ? 's' : ''}:&nbsp;
-                                    {allPeriods.map((p, i) => (
-                                        <Tag key={p} style={{
-                                            fontSize: 10, marginRight: 3, color: '#fff',
-                                            background: PERIOD_COLORS[i % PERIOD_COLORS.length],
-                                            borderColor: 'transparent'
-                                        }}>{p}</Tag>
-                                    ))}
-                                </span>
+                                <Space size={8}>
+                                    <AntTooltip title="Refresh from database">
+                                        <Button size="small" icon={<ReloadOutlined />}
+                                            onClick={() => { syncFromDatabase(); fetchBacklog(); }}>Refresh</Button>
+                                    </AntTooltip>
+                                    <Button size="small" icon={<WarningOutlined />}
+                                        style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
+                                        onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
+                                        Run Checks
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        icon={<DownloadOutlined />}
+                                        type="primary"
+                                        style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                                        onClick={() => downloadSummaryExcel(
+                                            filteredEmployeeChartData,
+                                            projectChartData,
+                                            allPeriods,
+                                            fileName,
+                                            periodMode,
+                                            allocations,
+                                            employeeProjectChartData,
+                                            hrmsProjects,
+                                            rawRows
+                                        )}
+                                    >
+                                        Download Summary
+                                    </Button>
+                                    <Button size="small" icon={<UploadOutlined />}
+                                        onClick={() => setShowUploadPanel(true)}>
+                                        Upload New File
+                                    </Button>
+                                    <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottomRight">
+                                        <Button size="small" icon={<InfoCircleOutlined />}>
+                                            File Format
+                                        </Button>
+                                    </Popover>
+                                </Space>
                             </Col>
+                        </Row>
+
+                        <Divider style={{ margin: '14px 0' }} />
+                        {/* Tier 1: primary controls — date range + view toggles */}
+
+                        <Row gutter={[16, 12]} align="middle" justify="space-between">
+                            <Col>
+                                <Space align="center" size={10}>
+                                    <span style={{ fontSize: 13 }}>📅</span>
+                                    <RangePicker
+                                        format="DD-MM-YYYY"
+                                        value={dateRange}
+                                        onChange={handleDateRangeChange}
+                                        allowClear={false}
+                                        presets={getDateRangePresets()}
+                                    />
+                                    {refreshing && <Spin size="small" />}
+                                </Space>
+                            </Col>
+                            <Col>
+                                <Space size={16}>
+                                    <Segmented value={periodMode} onChange={setPeriodMode}
+                                        options={[{ label: 'Monthly', value: 'monthly' }, { label: 'Weekly', value: 'weekly' }]} />
+                                    <Segmented value={viewMode} onChange={setViewMode}
+                                        options={[{ label: 'Chart', value: 'chart' }, { label: 'Table', value: 'table' }]} />
+                                </Space>
+                            </Col>
+                        </Row>
+
+                        <Divider style={{ margin: '14px 0' }} />
+
+                        {/* Tier 3: at-a-glance stats — plain inline, not boxed */}
+                        <Row gutter={[32, 8]}>
+                            {[
+                                { title: 'Logged', value: `${totalLogged.toFixed(1)} hrs`, icon: <CheckCircleOutlined />, color: '#52c41a' },
+                                { title: 'Planned', value: `${totalPlanned.toFixed(1)} hrs`, icon: <ClockCircleOutlined />, color: '#fa8c16' },
+                                { title: 'Assignees', value: allEmployees.length, icon: <TeamOutlined />, color: '#722ed1' },
+                                { title: 'Projects', value: allProjects.length, icon: <ProjectOutlined />, color: '#4f8ef7' },
+                            ].map(s => (
+                                <Col key={s.title}>
+                                    <span style={{ color: s.color, marginRight: 6 }}>{s.icon}</span>
+                                    <b style={{ fontSize: 15, marginRight: 5 }}>{s.value}</b>
+                                    <span style={{ fontSize: 12, color: '#888' }}>{s.title}</span>
+                                </Col>
+                            ))}
                         </Row>
                     </Card>
 
                     {/* Charts + Raw Data */}
                     <Tabs defaultActiveKey="project" type="card">
                         <TabPane tab={<span><ProjectOutlined /> Project Level</span>} key="project">
+                            <LowPlannedEffortPanel items={lowPlannedProjects} entityLabel="Project"
+                                thresholdDays={LOW_PLANNED_THRESHOLD_DAYS}
+                                onEntityClick={(name) => setDrillDown({
+                                    type: 'project', name,
+                                    rows: rawRows.filter(r => r.project === name),
+                                })} />
                             <Card bordered={false}
                                 style={{ borderRadius: 10, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
                                 title={
@@ -2018,19 +2685,39 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         <span style={{ fontWeight: 400, color: '#888', fontSize: 12, marginLeft: 8 }}>
                                             — {periodMode === 'weekly' ? 'week' : 'month'}-wise · % label = % of allocation
                                         </span>
+                                        <Tag color="blue" style={{ fontSize: 11, marginLeft: 8, fontWeight: 400 }}>
+                                            {projectChartData.length} project{projectChartData.length !== 1 ? 's' : ''}
+                                        </Tag>
                                     </span>
                                 }
-                                extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a bar to inspect rows</span>}
+                                extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a {viewMode === 'chart' ? 'bar' : 'row'} to inspect tasks</span>}
                                 >
-                                <GroupedBarChart data={projectChartData} periods={allPeriods}
-                                    onBarClick={(name) => setDrillDown({
-                                        type: 'project', name,
-                                        rows: rawRows.filter(r => r.project === name),
-                                    })} />
+                                {viewMode === 'chart' ? (
+                                    <GroupedBarChart data={projectChartData} periods={allPeriods}
+                                        onBarClick={(name) => setDrillDown({
+                                            type: 'project', name,
+                                            rows: rawRows.filter(r => r.project === name),
+                                        })} />
+                                ) : (
+                                    <SummaryTable data={projectChartData} periods={allPeriods} entityLabel="Project"
+                                        onRowClick={(name) => setDrillDown({
+                                            type: 'project', name,
+                                            rows: rawRows.filter(r => r.project === name),
+                                        })} />
+                                )}
                             </Card>
                         </TabPane>
 
                         <TabPane tab={<span><TeamOutlined /> Employee Level</span>} key="employee">
+                            <LowPlannedEffortPanel items={lowPlannedEmployees} entityLabel="Employee"
+                                thresholdDays={LOW_PLANNED_THRESHOLD_DAYS}
+                                onEntityClick={(name) => setDrillDown({
+                                    type: 'employee', name,
+                                    rows: (empProjectFilter
+                                        ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                        : rawRows.filter(r => r.assignee === name)
+                                    ),
+                                })} />
                             <Card bordered={false}
                                 style={{ borderRadius: 10, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
                                 title={
@@ -2051,23 +2738,38 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                             onChange={v => setEmpProjectFilter(v ?? null)}
                                             options={allProjects.map(p => ({ value: p, label: p }))}
                                         />
-                                        {empProjectFilter && (
-                                            <Tag color="blue" style={{ fontSize: 11 }}>
-                                                {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''}
+                                        <Tag color="blue" style={{ fontSize: 11, fontWeight: 400 }}>
+                                            {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''}
+                                        </Tag>
+                                        {missingEmployeeSet.size > 0 && (
+                                            <Tag color="warning" style={{ fontSize: 11 }}>
+                                                {missingEmployeeSet.size} without timesheet data
                                             </Tag>
                                         )}
                                     </div>
                                 }
-                                extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a bar to inspect rows</span>}
+                                extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a {viewMode === 'chart' ? 'bar' : 'row'} to inspect tasks</span>}
                             >
-                                <GroupedBarChart data={filteredEmployeeChartData} periods={allPeriods}
-                                    onBarClick={(name) => setDrillDown({
-                                        type: 'employee', name,
-                                        rows: (empProjectFilter
-                                            ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
-                                            : rawRows.filter(r => r.assignee === name)
-                                        ),
-                                    })} />
+                                {viewMode === 'chart' ? (
+                                    <GroupedBarChart data={filteredEmployeeChartData} periods={allPeriods}
+                                        onBarClick={(name) => setDrillDown({
+                                            type: 'employee', name,
+                                            rows: (empProjectFilter
+                                                ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                                : rawRows.filter(r => r.assignee === name)
+                                            ),
+                                        })} />
+                                ) : (
+                                    <SummaryTable data={filteredEmployeeChartData} periods={allPeriods} entityLabel="Employee"
+                                        noDataSet={missingEmployeeSet}
+                                        onRowClick={(name) => setDrillDown({
+                                            type: 'employee', name,
+                                            rows: (empProjectFilter
+                                                ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                                : rawRows.filter(r => r.assignee === name)
+                                            ),
+                                        })} />
+                                )}
                             </Card>
                         </TabPane>
 
@@ -2081,6 +2783,9 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
                     {/* Health checks modal */}
                     <HealthChecksModal checks={healthChecks} onClose={() => setHealthChecks(null)} />
+
+                    {/* Import summary modal — what changed vs. the previously saved data */}
+                    <ImportSummaryModal summary={importSummary} onClose={() => setImportSummary(null)} />
                 </>
             )}
         </div>
