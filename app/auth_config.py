@@ -208,6 +208,15 @@ ROLE_PERMISSIONS = {
     },
 
     # ===========================
+    # Timelog Module - Timesheet Analyser (persisted employee-wise, monthly log entries)
+    # ===========================
+    "timelog": {
+        "save_report": ["Admin", "HR", "Lead"],        # Import/save an Excel upload
+        "get_entries": ["Admin", "HR", "Lead", "Employee"],  # Flattened entries, for charts/tables
+        "get_reports": ["Admin", "HR", "Lead", "Employee"],  # Per-employee-month report listing
+    },
+
+    # ===========================
     # Feedback Module (Legacy routes - may need review)
     # ===========================
     "feedback": {

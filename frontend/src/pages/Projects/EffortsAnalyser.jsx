@@ -2,11 +2,11 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Card, Tabs, Upload, Button, message, Empty, Spin,
     Row, Col, Tag, Table, Input, Badge, Modal, Alert, Select, DatePicker, Segmented,
-    Divider, Space, Tooltip as AntTooltip
+    Divider, Space, Tooltip as AntTooltip, Popover
 } from 'antd';
 import {
     InboxOutlined, UploadOutlined, DownloadOutlined, ReloadOutlined,
-    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined
+    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -1755,6 +1755,60 @@ const downloadSummaryExcel = (employeeData, projectData, periods, fileName, peri
     XLSXStyle.writeFile(wb, `${baseName}_summary_${stamp}.xlsx`);
 };
 
+// 'Key' (the tracker's ticket/task ID, e.g. 'TPAA-267') is required — it's
+// the unique key rows are saved/upserted against in the database.
+const REQUIRED_COLS = [
+    'Primary Assignee', 'Workflow State', 'Title', 'Project', 'Key',
+    'Start Date', 'End Date', 'Estimate Effort', 'Logged Time',
+];
+
+// One example row, matching a real effort export, shown in the format-info
+// popover so the expected shape is unambiguous before anyone uploads.
+const SAMPLE_ROW = {
+    'Project': 'Testing Practice',
+    'Title': 'Greencard-Web Testing',
+    'Workflow State': 'Done',
+    'Primary Assignee': 'Lalit Jadhav',
+    'Start Date': '2026-08-18',
+    'End Date': '2026-08-18',
+    'Estimate Effort': 7200,
+    'Logged Time': 7200,
+    'Remaining Time': 0,
+    'Key': 'TPAA-267',
+};
+
+const FormatInfoContent = () => (
+    <div style={{ maxWidth: 480 }}>
+        <ul style={{ fontSize: 12, color: '#555', paddingLeft: 18, margin: 0, lineHeight: 1.8 }}>
+            <li><b>Key</b> must be unique per row — it&apos;s the task/ticket id rows are saved and updated against on re-upload, instead of being duplicated.</li>
+            <li><b>Estimate Effort</b> and <b>Logged Time</b> must be in <b>seconds</b> (e.g. <code>3600</code> = 1 hour). Values are automatically converted to hours for display and charts.</li>
+            <li>Only tasks with <b>Workflow State</b> Done/Completed are counted as logged; everything else counts as planned, using <b>Estimate Effort</b>.</li>
+            <li><b>Remaining Time</b> (seconds) is optional and not required, but is stored if present.</li>
+        </ul>
+        <div style={{ marginTop: 12, fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Example row
+        </div>
+        <div style={{ overflowX: 'auto', marginTop: 6 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                    <tr>
+                        {[...REQUIRED_COLS, 'Remaining Time'].map(c => (
+                            <th key={c} style={{ border: '1px solid #eee', padding: '4px 7px', background: '#fafafa', whiteSpace: 'nowrap', textAlign: 'left' }}>{c}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        {[...REQUIRED_COLS, 'Remaining Time'].map(c => (
+                            <td key={c} style={{ border: '1px solid #eee', padding: '4px 7px', whiteSpace: 'nowrap', color: '#333' }}>{SAMPLE_ROW[c]}</td>
+                        ))}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
 // ── main component ─────────────────────────────────────────────────────────
 const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
@@ -1892,12 +1946,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     }, []);
 
     // ── upload validation ──────────────────────────────────────────────
-    // 'Key' (the tracker's ticket/task ID, e.g. 'TPAA-267') is required — it's
-    // the unique key rows are saved/upserted against in the database.
-    const REQUIRED_COLS = [
-        'Primary Assignee', 'Workflow State', 'Title', 'Project', 'Key',
-        'Start Date', 'End Date', 'Estimate Effort', 'Logged Time',
-    ];
+    // (REQUIRED_COLS is defined at module scope above, alongside the
+    // format-info popover that displays it.)
 
     const validateRows = (rawJson) => {
         const errors = [];
@@ -2465,10 +2515,17 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                 ? 'Upload another file to add or update saved data — it’s merged with what’s already stored, matched by task Key.'
                                 : 'No saved effort data yet — upload one to get started. It’s saved to the database automatically, so you won’t need to re-upload it to see it again.'}
                         </p>
-                        <p style={{ color: '#888', fontSize: 13 }}>
-                            Required columns: <b>Primary Assignee, Workflow State, Title, Project, Key, Start Date, End Date, Estimate Effort, Logged Time</b>
-                        </p>
-                        <p style={{ color: '#52c41a', fontSize: 12, marginTop: 4 }}>
+                        <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottom">
+                            <Button
+                                type="dashed"
+                                size="small"
+                                icon={<InfoCircleOutlined />}
+                                style={{ marginTop: 4, marginBottom: 4, color: '#1890ff', borderColor: '#91caff' }}
+                            >
+                                What should the Excel file look like?
+                            </Button>
+                        </Popover>
+                        <p style={{ color: '#52c41a', fontSize: 12, marginTop: 8 }}>
                             <CheckCircleOutlined /> Only tasks with state <b>Done / Completed</b> are counted in charts; planned tasks use <b>Estimate Effort</b>
                         </p>
                         <div style={{
@@ -2556,6 +2613,11 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         onClick={() => setShowUploadPanel(true)}>
                                         Upload New File
                                     </Button>
+                                    <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottomRight">
+                                        <Button size="small" icon={<InfoCircleOutlined />}>
+                                            File Format
+                                        </Button>
+                                    </Popover>
                                 </Space>
                             </Col>
                         </Row>

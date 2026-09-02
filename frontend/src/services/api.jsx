@@ -1238,6 +1238,22 @@ export const getEffortReports = () => {
   return axiosInstance.get(`${API_BASE_URL}/effort/reports`);
 };
 
+// ── Timesheet Analyser persistence (employee-wise, monthly) ─────────────
+// Saves (upserts) a batch of parsed Excel log-entry rows: { fileName, entries: [...] }
+export const saveTimelogReport = (payload) => {
+  return axiosInstance.post(`${API_BASE_URL}/timelog/save-report`, payload);
+};
+
+// Fetches the flattened, persisted timelog entries (optionally filtered)
+export const getTimelogEntries = (params = {}) => {
+  return axiosInstance.get(`${API_BASE_URL}/timelog/entries`, { params });
+};
+
+// Lightweight per-employee-month report listing (no entry payload)
+export const getTimelogReports = () => {
+  return axiosInstance.get(`${API_BASE_URL}/timelog/reports`);
+};
+
 // ============= CAPABILITY DEVELOPMENT API FUNCTIONS =============
 
 // ── Goals ──────────────────────────────────────────────────────

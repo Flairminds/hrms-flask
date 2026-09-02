@@ -1,14 +1,34 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select } from 'antd';
-import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined } from '@ant-design/icons';
+import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select, DatePicker, Spin, Modal, Popover, Switch, Empty } from 'antd';
+import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
+import dayjs from 'dayjs';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import Cookies from 'js-cookie';
-import { getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks } from '../../services/api';
+import {
+    getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks,
+    saveTimelogReport, getTimelogEntries, getTimelogReports,
+} from '../../services/api';
+
+const { RangePicker } = DatePicker;
+
+// Quick-jump presets for the date-range picker (filters by each entry's own
+// log Date, server-side). Computed relative to "today" so they work
+// regardless of how much history has been uploaded.
+const getDateRangePresets = () => {
+    const today = dayjs();
+    return [
+        { label: 'This Month', value: [today.startOf('month'), today.endOf('month')] },
+        { label: 'Last Month', value: [today.subtract(1, 'month').startOf('month'), today.subtract(1, 'month').endOf('month')] },
+        { label: 'Last 3 Months', value: [today.subtract(2, 'month').startOf('month'), today.endOf('month')] },
+        { label: 'This Year', value: [today.startOf('year'), today.endOf('year')] },
+        { label: 'All Time', value: [dayjs('2000-01-01'), today.endOf('month')] },
+    ];
+};
 
 // Task states counted as "done" in the persisted Effort Analyser backlog — a
 // task in any other state is still "planned" and feeds the projection below.
@@ -83,7 +103,167 @@ const getMonthString = (dateObj) => {
     return dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
 };
 
-const REQUIRED_COLS = ['Primary Assignee', 'Project', 'Time', 'Date'];
+// Every column present in the timelog export is required — 'Id' (unique per
+// log row) and 'Author' (who actually logged the time — used as employee
+// identity, NOT 'Primary Assignee') are what the database persists and
+// dedupes entries by, but the rest are stored too, so a row missing any of
+// them is rejected rather than silently saved with gaps.
+const REQUIRED_COLS = [
+    'Primary Assignee', 'Workflow State', 'Title', 'Project', 'Start Date',
+    'End Date', 'Key', 'Description', 'Time', 'Date', 'Id', 'Author',
+];
+
+const EXCEL_EXTENSIONS = ['.xlsx', '.xls'];
+
+// One example row, matching a real timelog export, shown in the format-info
+// popover so the expected shape is unambiguous before anyone uploads.
+const SAMPLE_ROW = {
+    'Primary Assignee': 'Ahiresh Gaik',
+    'Workflow State': 'Done',
+    'Title': 'Internal meeting',
+    'Project': 'FM Internal',
+    'Start Date': '2026-08-03',
+    'End Date': '2026-08-31',
+    'Key': 'FM-Project-6',
+    'Description': 'Bi-weekly leadership sync',
+    'Time': 2400,
+    'Date': '2026-08-17',
+    'Id': '005a780168',
+    'Author': 'Ahiresh Gaik',
+};
+
+const FormatInfoContent = () => (
+    <div style={{ maxWidth: 480 }}>
+        <ul style={{ fontSize: 12, color: '#555', paddingLeft: 18, margin: 0, lineHeight: 1.8 }}>
+            <li><b>Author</b> is who actually logged the time — this drives employee identity, <b>not</b> Primary Assignee (they can differ).</li>
+            <li><b>Date</b> is the day the time was logged. Every chart/table here groups and filters by this date — not by Start Date or End Date, which just describe the underlying task.</li>
+            <li><b>Time</b> is the logged duration in <b>seconds</b> (e.g. <code>3600</code> = 1 hour).</li>
+            <li><b>Id</b> must be unique per row. Re-uploading a sheet updates a previously-seen Id in place instead of duplicating it.</li>
+        </ul>
+        <div style={{ marginTop: 12, fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Example row
+        </div>
+        <div style={{ overflowX: 'auto', marginTop: 6 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                    <tr>
+                        {REQUIRED_COLS.map(c => (
+                            <th key={c} style={{ border: '1px solid #eee', padding: '4px 7px', background: '#fafafa', whiteSpace: 'nowrap', textAlign: 'left' }}>{c}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        {REQUIRED_COLS.map(c => (
+                            <td key={c} style={{ border: '1px solid #eee', padding: '4px 7px', whiteSpace: 'nowrap', color: '#333' }}>{SAMPLE_ROW[c]}</td>
+                        ))}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+const validateTimelogRows = (rawJson) => {
+    const errors = [];
+
+    // 1. Missing column check (once, on first row)
+    if (rawJson.length > 0) {
+        const firstKeys = Object.keys(rawJson[0]).map(k => k.trim());
+        const missingCols = REQUIRED_COLS.filter(c => !firstKeys.includes(c));
+        if (missingCols.length > 0) {
+            errors.push({
+                type: 'missing_columns',
+                message: `Missing required columns: ${missingCols.join(', ')}`,
+            });
+            return errors; // No point continuing without the columns
+        }
+    }
+
+    // 2. Empty cell check (per row)
+    rawJson.forEach((rawRow, i) => {
+        const emptyCols = REQUIRED_COLS.filter(col => {
+            const v = rawRow[col];
+            return v === '' || v === null || v === undefined;
+        });
+        if (emptyCols.length > 0) {
+            errors.push({
+                type: 'empty_cell',
+                row: i + 2, // Excel row number (1-indexed header + 1)
+                message: `Row ${i + 2}: Empty value in column(s): ${emptyCols.join(', ')}`,
+            });
+        }
+    });
+
+    return errors;
+};
+
+const pad2 = n => String(n).padStart(2, '0');
+const toISODate = (d) => {
+    if (!d || !(d instanceof Date) || isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+// ── Weekly analytics panel: collapsible flag list (mirrors EffortsAnalyser's
+// LowPlannedEffortPanel), reused for the three weekly checks below ─────────
+// Column dataIndexes that get a quick filter (checklist + search box in the
+// header funnel) auto-attached, so every WeeklyFlagPanel table is filterable
+// by employee and/or week without repeating this at each call site.
+const FILTERABLE_KEYS = ['employee', 'week'];
+
+const WeeklyFlagPanel = ({ title, emptyText, color, bgColor, borderColor, rows, columns }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    const filterableColumns = useMemo(() => columns.map(col => {
+        if (!FILTERABLE_KEYS.includes(col.dataIndex)) return col;
+        const values = [...new Set(rows.map(r => r[col.dataIndex]))].filter(Boolean).sort();
+        return {
+            ...col,
+            filters: values.map(v => ({ text: v, value: v })),
+            filterSearch: true,
+            onFilter: (value, record) => record[col.dataIndex] === value,
+        };
+    }), [columns, rows]);
+
+    if (!rows.length) {
+        return (
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52c41a',
+                padding: '8px 2px', marginBottom: 8,
+            }}>
+                <CheckCircleOutlined />
+                {emptyText}
+            </div>
+        );
+    }
+
+    return (
+        <Card size="small" bordered
+            style={{ borderRadius: 10, marginBottom: 12, background: bgColor, borderColor }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                onClick={() => setExpanded(v => !v)}>
+                <WarningOutlined style={{ color, fontSize: 15 }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#7c4a00' }}>
+                    {title} <Tag color={color === '#cf1322' ? 'error' : 'warning'} style={{ fontSize: 11, marginLeft: 4 }}>{rows.length}</Tag>
+                </span>
+                <span style={{ fontSize: 11, color: '#aaa', marginLeft: 'auto' }}>
+                    {expanded ? '▲ Hide' : '▼ Show'} list
+                </span>
+            </div>
+            {expanded && (
+                <Table
+                    size="small"
+                    dataSource={rows}
+                    rowKey="key"
+                    pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+                    style={{ marginTop: 10 }}
+                    columns={filterableColumns}
+                    scroll={{ x: 'max-content' }}
+                />
+            )}
+        </Card>
+    );
+};
 
 const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
@@ -98,8 +278,80 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [allocations, setAllocations] = useState([]);
     const [backlogTasks, setBacklogTasks] = useState([]); // persisted, not-done Effort Analyser tasks
     const [trendEntity, setTrendEntity] = useState('ALL'); // 'ALL' or a specific employee/project name
+    const [hideCurrentWeek, setHideCurrentWeek] = useState(true); // weekly analytics: skip the still-in-progress week
+    const [drillDown, setDrillDown] = useState(null); // { employee: name } — opens the per-employee detail modal
+
+    // ── Database persistence (employee-wise, monthly) ───────────────────────
+    const [dateRange, setDateRange] = useState(() => [dayjs().startOf('month'), dayjs().endOf('month')]);
+    const [initializing, setInitializing] = useState(true);    // true only until the very first DB fetch resolves
+    const [refreshing, setRefreshing] = useState(false);       // a subsequent fetch (date range change / Refresh)
+    const [hasSavedData, setHasSavedData] = useState(null);    // null = unknown yet; does ANY report exist at all
+    const [showUploadPanel, setShowUploadPanel] = useState(false); // "Upload New File" was clicked
+    const [saving, setSaving] = useState(false);                // POSTing a new upload to the database
+    const [importSummary, setImportSummary] = useState(null);   // diff summary shown after a successful save
+    const [validationErrors, setValidationErrors] = useState(null); // { fileName, errors: [...] }
 
     React.useEffect(() => { setTrendEntity('ALL'); }, [viewMode]);
+
+    // Maps DB-persisted log entries (services/api getTimelogEntries shape)
+    // back into the same row shape the Excel parser produces, so every
+    // chart/table below is agnostic to where the data came from.
+    const mapDbRowsToRawRows = (dbRows) => (dbRows || []).map(t => ({
+        'Id': t.id,
+        'Author': t.author,
+        'Primary Assignee': t.primaryAssignee,
+        'Workflow State': t.workflowState,
+        'Title': t.title,
+        'Project': t.project,
+        'Key': t.key,
+        'Description': t.description,
+        'Start Date': t.startDate,
+        'End Date': t.endDate,
+        'Date': t.date,
+        'Time': (t.timeSeconds != null ? t.timeSeconds : Math.round((t.timeHours || 0) * 3600)),
+    }));
+
+    // The database is the source of truth for viewing. Fetches only the
+    // currently-selected date range (filtered server-side by each entry's log
+    // Date) — not the full historical dataset. Re-runs whenever `dateRange`
+    // changes.
+    const syncFromDatabase = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setRefreshing(true);
+        try {
+            const params = {};
+            if (dateRange?.[0]) params.from = dateRange[0].format('YYYY-MM-DD');
+            if (dateRange?.[1]) params.to = dateRange[1].format('YYYY-MM-DD');
+            const res = await getTimelogEntries(params);
+            setRawRows(mapDbRowsToRawRows(res.data));
+            setFileName('');
+        } catch (err) {
+            console.error('Failed to load saved timelog data from the database', err);
+            if (!silent) message.error('Failed to load saved timelog data from the database.');
+        } finally {
+            if (!silent) setRefreshing(false);
+            setInitializing(false);
+        }
+    }, [dateRange]);
+
+    // Runs once on mount: is there ANY saved report at all? Independent of
+    // the selected date range, so the Upload screen only shows for a truly
+    // empty database — not just an empty result for the current month.
+    React.useEffect(() => {
+        let cancelled = false;
+        getTimelogReports()
+            .then(res => { if (!cancelled) setHasSavedData((res.data || []).length > 0); })
+            .catch(err => console.error('Failed to check for saved timelog reports', err));
+        return () => { cancelled = true; };
+    }, []);
+
+    // Loads the selected date range on mount, and again whenever it changes.
+    React.useEffect(() => {
+        syncFromDatabase();
+    }, [syncFromDatabase]);
+
+    const handleDateRangeChange = (range) => {
+        setDateRange(range && range[0] && range[1] ? range : [dayjs().startOf('month'), dayjs().endOf('month')]);
+    };
 
     React.useEffect(() => {
         getProjects()
@@ -174,6 +426,12 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     }, [rawRows]);
 
     const handleFile = useCallback((file) => {
+        const ext = `.${(file.name.split('.').pop() || '').toLowerCase()}`;
+        if (!EXCEL_EXTENSIONS.includes(ext)) {
+            message.error('Only Excel files (.xlsx or .xls) are supported.');
+            return false;
+        }
+
         setUploading(true);
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -187,15 +445,64 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     return;
                 }
 
-                const firstRow = json[0];
-                const missing = REQUIRED_COLS.filter(c => !(c in firstRow));
-                if (missing.length > 0) {
-                    message.error(`Missing required columns: ${missing.join(', ')}`);
+                const errors = validateTimelogRows(json);
+                if (errors.length > 0) {
+                    setValidationErrors({ fileName: file.name, errors });
+                    return; // Do not save until the file is fixed
+                }
+
+                // Build the DB payload — one entry per row. Author (who logged
+                // the time) drives employee identity, not Primary Assignee.
+                const entries = json
+                    .map(row => {
+                        const author = String(row['Author'] || '').trim();
+                        const id = String(row['Id'] || '').trim();
+                        const dateVal = row['Date'] instanceof Date ? row['Date'] : new Date(row['Date']);
+                        const startVal = row['Start Date'] instanceof Date ? row['Start Date'] : (row['Start Date'] ? new Date(row['Start Date']) : null);
+                        const endVal = row['End Date'] instanceof Date ? row['End Date'] : (row['End Date'] ? new Date(row['End Date']) : null);
+                        const timeSeconds = typeof row['Time'] === 'number' ? row['Time'] : parseFloat(row['Time'] || 0);
+                        if (!author || !id || isNaN(dateVal.getTime())) return null;
+                        return {
+                            id,
+                            author,
+                            primaryAssignee: String(row['Primary Assignee'] || '').trim() || null,
+                            workflowState: String(row['Workflow State'] || '').trim() || null,
+                            title: String(row['Title'] || '').trim() || null,
+                            project: String(row['Project'] || '').trim(),
+                            key: String(row['Key'] || '').trim() || null,
+                            description: String(row['Description'] || '').trim() || null,
+                            startDate: toISODate(startVal),
+                            endDate: toISODate(endVal),
+                            date: toISODate(dateVal),
+                            timeSeconds: isNaN(timeSeconds) ? 0 : timeSeconds,
+                            timeHours: isNaN(timeSeconds) ? 0 : Number((timeSeconds / 3600).toFixed(4)),
+                        };
+                    })
+                    .filter(Boolean);
+
+                if (!entries.length) {
+                    message.error('No valid rows found (each row needs an Id, Author, and a valid Date).');
                     return;
                 }
 
-                setFileName(file.name);
-                setRawRows(json);
+                message.success(`Parsed ${entries.length} rows — saving to the database…`);
+
+                // ── Save to the database, then re-sync so the view reflects the
+                // full accumulated dataset for the selected range (this upload
+                // merged with everything saved previously), not just this file.
+                setSaving(true);
+                saveTimelogReport({ fileName: file.name, entries })
+                    .then(res => {
+                        setImportSummary(res.data?.groups || []);
+                        setHasSavedData(true);
+                        setShowUploadPanel(false);
+                        return syncFromDatabase({ silent: true });
+                    })
+                    .catch(err => {
+                        console.error('Failed to save timelog report to database', err);
+                        message.error('Failed to save the timelog data to the database.');
+                    })
+                    .finally(() => setSaving(false));
             } catch (err) {
                 console.error(err);
                 message.error('Failed to parse file.');
@@ -205,10 +512,12 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         };
         reader.readAsArrayBuffer(file);
         return false;
-    }, []);
+    }, [syncFromDatabase]);
 
     const { employeeData, projectData, allPeriods, timesheetRange } = useMemo(() => {
-        if (!rawRows.length) return { employeeData: [], projectData: [], allPeriods: [], timesheetRange: null };
+        if (!rawRows.length && !allocations.length) {
+            return { employeeData: [], projectData: [], allPeriods: [], timesheetRange: null };
+        }
 
         const empMap = {};
         const projMap = {};
@@ -221,7 +530,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         rawRows.forEach(row => {
-            const rawEmp = row['Primary Assignee'];
+            const rawEmp = row['Author'];
             const rawProj = row['Project'];
             const rawTime = row['Time'];
             const rawDate = row['Date'];
@@ -271,6 +580,34 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             projMap[projName][periodStr] = (projMap[projName][periodStr] || 0) + timeHrs;
         });
 
+        // Ensure every period covering the SELECTED date range gets a bucket,
+        // even one with zero logged rows in it — otherwise "Missing Logs"
+        // would silently skip a week/month nobody logged anything in. Capped
+        // at today — no timelog can exist for a future date, so there's
+        // nothing to flag as "missing" beyond it.
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (dateRange?.[0] && dateRange?.[1]) {
+            const rangeStart = dateRange[0].startOf('day').toDate();
+            const rangeEndSelected = dateRange[1].endOf('day').toDate();
+            const rangeEnd = rangeEndSelected > today ? today : rangeEndSelected;
+            for (let cursor = new Date(rangeStart); cursor <= rangeEnd; cursor.setDate(cursor.getDate() + 1)) {
+                const periodStr = periodType === 'week' ? getWeekRangeString(cursor) : getMonthString(cursor);
+                periodSet.add(periodStr);
+                if (!periodStartDates[periodStr]) {
+                    if (periodType === 'week') {
+                        const day = cursor.getDay() || 7;
+                        const start = new Date(cursor);
+                        start.setDate(cursor.getDate() - (day - 1));
+                        periodStartDates[periodStr] = start.getTime();
+                    } else {
+                        const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+                        periodStartDates[periodStr] = start.getTime();
+                    }
+                }
+            }
+        }
+
         // Add all employees from HRMS who have active project allocations
         allocations.forEach(alloc => {
             if (alloc.projects && alloc.projects.length > 0) {
@@ -281,14 +618,20 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
         // Calculate dynamic weekly targets for each employee
         const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        
-        const minDatasetTime = new Date(actualMinTime);
-        minDatasetTime.setHours(0, 0, 0, 0);
-        const minDatasetT = minDatasetTime.getTime();
-        
-        const maxDatasetTime = new Date(actualMaxTime);
-        maxDatasetTime.setHours(23, 59, 59, 999);
-        const maxDatasetT = maxDatasetTime.getTime();
+
+        // "In bounds" means within the SELECTED date range (not just where
+        // logged data happens to exist) — so a day nobody logged anything on,
+        // anywhere in the viewed range, is correctly flagged as missing
+        // instead of being silently excluded as "outside the dataset". Capped
+        // at today: a future day can't have a missing timelog yet, so it's
+        // treated as out-of-bounds (excluded from both the target hours and
+        // the missing-logs list) rather than flagged.
+        const minDatasetT = dateRange?.[0]
+            ? dateRange[0].startOf('day').valueOf()
+            : (actualMinTime !== Infinity ? actualMinTime : -Infinity);
+        const maxDatasetT = dateRange?.[1]
+            ? Math.min(dateRange[1].endOf('day').valueOf(), today.getTime())
+            : (actualMaxTime !== -Infinity ? actualMaxTime : Infinity);
 
         Object.values(empMap).forEach(emp => {
             // Find all approved leaves for this employee
@@ -403,17 +746,20 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             }).sort((a, b) => b.Total - a.Total);
         };
 
+        // The viewed range is always the selected date range now — it drives
+        // the "Holidays/Leaves in Period" notes below the same way it drives
+        // the missing-log bounds above.
         const allStarts = Object.values(periodStartDates);
-        const minTime = actualMinTime !== Infinity ? actualMinTime : Math.min(...allStarts);
-        const maxTime = actualMaxTime !== -Infinity ? actualMaxTime : Math.max(...allStarts) + 6 * 24 * 60 * 60 * 1000;
+        const minTime = minDatasetT !== -Infinity ? minDatasetT : (actualMinTime !== Infinity ? actualMinTime : Math.min(...allStarts));
+        const maxTime = maxDatasetT !== Infinity ? maxDatasetT : (actualMaxTime !== -Infinity ? actualMaxTime : Math.max(...allStarts) + 6 * 24 * 60 * 60 * 1000);
 
-        return { 
-            employeeData: formatData(empMap), 
-            projectData: formatData(projMap), 
+        return {
+            employeeData: formatData(empMap),
+            projectData: formatData(projMap),
             allPeriods: sortedPeriods,
             timesheetRange: { min: minTime, max: maxTime }
         };
-    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType]);
+    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType, dateRange]);
 
     // ── Trend view: past logged hours (always week-wise) + a capacity-based
     // projection of the remaining planned backlog into future weeks ─────────
@@ -436,7 +782,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         // page's Group By setting — a trend needs a consistent granularity.
         const weekMap = {};
         rawRows.forEach(row => {
-            const rawEmp = row['Primary Assignee'];
+            const rawEmp = row['Author'];
             const rawProj = row['Project'];
             const rawTime = row['Time'];
             const rawDate = row['Date'];
@@ -534,14 +880,267 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         return { series, weeklyRate, totalBacklogHours, weeksToClear, lastLoggedWeek };
     }, [rawRows, timesheetRange, viewMode, trendEntity, backlogTasks, allocations, hrmsProjects]);
 
+    // ── Weekly analytics: three quick-info checks, always bucketed weekly
+    // (independent of the page's Group By setting) ──────────────────────────
+    const currentWeekLabel = useMemo(() => getWeekRangeString(new Date()), []);
+
+    // Case-insensitive index of HRMS employee names, so a row's Author (which
+    // may differ slightly in casing/spacing from HRMS) still matches its
+    // allocation record — same "Last, First" reorder fallback as nameMatch().
+    const hrmsEmpIndex = useMemo(() => {
+        const idx = {};
+        allocations.forEach(a => {
+            const key = (a.employee_name || '').toLowerCase().trim();
+            if (key) idx[key] = a.employee_name;
+        });
+        return idx;
+    }, [allocations]);
+
+    const canonicalEmpName = useCallback((rawName) => {
+        const key = (rawName || '').toLowerCase().trim();
+        if (hrmsEmpIndex[key]) return hrmsEmpIndex[key];
+        if (key.includes(',')) {
+            const parts = key.split(',').map(s => s.trim());
+            if (parts.length === 2 && hrmsEmpIndex[`${parts[1]} ${parts[0]}`]) {
+                return hrmsEmpIndex[`${parts[1]} ${parts[0]}`];
+            }
+        }
+        return rawName;
+    }, [hrmsEmpIndex]);
+
+    // empWeekHours: { empName: { week: hours } } — total across all projects
+    // empProjWeekHours: { empName: { hrmsProjectName: { week: hours } } }
+    // weekMeta: { week: { startTime } } — every week touching the selected
+    // date range (capped at today), even one with zero logged rows in it.
+    const weeklyGrid = useMemo(() => {
+        const empWeekHours = {};
+        const empProjWeekHours = {};
+        const weekMeta = {};
+
+        const addWeek = (week, cursor) => {
+            if (weekMeta[week]) return;
+            const day = cursor.getDay() || 7;
+            const start = new Date(cursor);
+            start.setDate(cursor.getDate() - (day - 1));
+            start.setHours(0, 0, 0, 0);
+            weekMeta[week] = { startTime: start.getTime() };
+        };
+
+        rawRows.forEach(row => {
+            const rawEmp = row['Author'];
+            const rawProj = row['Project'];
+            const rawTime = row['Time'];
+            const rawDate = row['Date'];
+            if (!rawEmp || !rawDate) return;
+
+            const empName = canonicalEmpName(String(rawEmp).trim());
+            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project');
+            const hrmsProjName = projName.includes(' (') ? projName.split(' (')[0].trim() : projName;
+
+            const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
+            if (isNaN(timeHrs)) return;
+
+            const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+            if (isNaN(d.getTime())) return;
+
+            const week = getWeekRangeString(d);
+            addWeek(week, d);
+
+            empWeekHours[empName] = empWeekHours[empName] || {};
+            empWeekHours[empName][week] = (empWeekHours[empName][week] || 0) + timeHrs;
+
+            empProjWeekHours[empName] = empProjWeekHours[empName] || {};
+            empProjWeekHours[empName][hrmsProjName] = empProjWeekHours[empName][hrmsProjName] || {};
+            empProjWeekHours[empName][hrmsProjName][week] = (empProjWeekHours[empName][hrmsProjName][week] || 0) + timeHrs;
+        });
+
+        // Fill in every week of the selected range (capped at today) so a
+        // week nobody logged anything in still gets checked, not skipped.
+        if (dateRange?.[0] && dateRange?.[1]) {
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            const rangeStart = dateRange[0].startOf('day').toDate();
+            const rangeEndSelected = dateRange[1].endOf('day').toDate();
+            const rangeEnd = rangeEndSelected > today ? today : rangeEndSelected;
+            for (let cursor = new Date(rangeStart); cursor <= rangeEnd; cursor.setDate(cursor.getDate() + 1)) {
+                addWeek(getWeekRangeString(cursor), cursor);
+            }
+        }
+
+        const weekList = Object.keys(weekMeta).sort((a, b) => weekMeta[a].startTime - weekMeta[b].startTime);
+        return { empWeekHours, empProjWeekHours, weekMeta, weekList };
+    }, [rawRows, dateRange, canonicalEmpName]);
+
+    // Full employee universe for the weekly checks — same union used to build
+    // employeeData above: anyone with logged rows, plus every HRMS employee
+    // with an active project allocation (so a zero-hour week isn't missed
+    // just because they never appear in rawRows at all).
+    const weeklyCheckEmployees = useMemo(() => {
+        const names = new Set(Object.keys(weeklyGrid.empWeekHours));
+        allocations.forEach(a => {
+            if (a.projects && a.projects.length > 0) names.add(a.employee_name);
+        });
+        return [...names];
+    }, [weeklyGrid, allocations]);
+
+    // 1. Employees logging less than 40 hours in any (checked) week.
+    const under40HourWeeks = useMemo(() => {
+        const { empWeekHours, weekList, weekMeta } = weeklyGrid;
+        const rows = [];
+        weeklyCheckEmployees.forEach(name => {
+            weekList.forEach(week => {
+                if (hideCurrentWeek && week === currentWeekLabel) return;
+                const hours = empWeekHours[name]?.[week] || 0;
+                if (hours < 40) {
+                    rows.push({
+                        key: `${name}__${week}`, employee: name, week,
+                        weekStart: weekMeta[week].startTime, hours, deficit: Number((40 - hours).toFixed(1)),
+                    });
+                }
+            });
+        });
+        return rows.sort((a, b) => b.deficit - a.deficit || a.weekStart - b.weekStart);
+    }, [weeklyGrid, weeklyCheckEmployees, hideCurrentWeek, currentWeekLabel]);
+
+    // Per-employee-project weekly allocation target, in hours (allocation is
+    // stored as a whole-number percentage, e.g. 50 = 50%).
+    const allocPctByKey = useMemo(() => {
+        const map = {};
+        allocations.forEach(emp => {
+            (emp.projects || []).forEach(p => {
+                const key = `${(emp.employee_name || '').trim()}\x00${(p.project_name || '').trim()}`;
+                map[key] = p.allocation || 0;
+            });
+        });
+        return map;
+    }, [allocations]);
+
+    // 2 & 3. Employees logging under/over their weekly project allocation.
+    const { underAllocationWeeks, overAllocationWeeks } = useMemo(() => {
+        const { empProjWeekHours, weekList, weekMeta } = weeklyGrid;
+        const under = [];
+        const over = [];
+
+        Object.entries(allocPctByKey).forEach(([key, pct]) => {
+            if (!pct || pct <= 0) return;
+            const [empName, projName] = key.split('\x00');
+            const targetHrs = Number(((pct / 100) * 40).toFixed(1));
+            const projHours = empProjWeekHours[empName]?.[projName];
+
+            weekList.forEach(week => {
+                if (hideCurrentWeek && week === currentWeekLabel) return;
+                const hours = projHours?.[week] || 0;
+                const weekStart = weekMeta[week].startTime;
+                if (hours < targetHrs) {
+                    under.push({
+                        key: `${empName}__${projName}__${week}`, employee: empName, project: projName, week,
+                        weekStart, hours, targetHrs, deficit: Number((targetHrs - hours).toFixed(1)),
+                    });
+                } else if (hours > targetHrs) {
+                    over.push({
+                        key: `${empName}__${projName}__${week}`, employee: empName, project: projName, week,
+                        weekStart, hours, targetHrs, excess: Number((hours - targetHrs).toFixed(1)),
+                    });
+                }
+            });
+        });
+
+        return {
+            underAllocationWeeks: under.sort((a, b) => b.deficit - a.deficit || a.weekStart - b.weekStart),
+            overAllocationWeeks: over.sort((a, b) => b.excess - a.excess || a.weekStart - b.weekStart),
+        };
+    }, [weeklyGrid, allocPctByKey, hideCurrentWeek, currentWeekLabel]);
+
+    // ── Drill-down: the OTHER dimension's effort (same period granularity as
+    // the page) + individual log entries grouped by it, for the currently
+    // selected date range — clicking an employee row groups by project, and
+    // clicking a project row groups by employee. ────────────────────────────
+    const drillDownData = useMemo(() => {
+        if (!drillDown) return null;
+        const { type, name } = drillDown;
+        const groupLabel = type === 'employee' ? 'Project' : 'Employee';
+
+        const rowProjectName = (row) => resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project');
+        const rowAuthorName = (row) => String(row['Author'] || '').trim();
+
+        const targetRows = rawRows.filter(row =>
+            type === 'employee' ? rowAuthorName(row) === name : rowProjectName(row) === name
+        );
+        const getGroupName = type === 'employee' ? rowProjectName : rowAuthorName;
+
+        const groupPeriodMap = {};   // groupName -> period -> hours
+        const periodStartDates = {}; // period -> startTime, for chronological sorting
+        const logsByGroup = {};      // groupName -> [{ date, title, description, key, state, hours }]
+        let totalHours = 0;
+
+        targetRows.forEach(row => {
+            const rawTime = row['Time'];
+            const rawDate = row['Date'];
+            if (!rawDate) return;
+
+            const groupName = getGroupName(row);
+            if (!groupName) return;
+
+            const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
+            const hours = isNaN(timeHrs) ? 0 : timeHrs;
+
+            const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+            if (isNaN(d.getTime())) return;
+
+            totalHours += hours;
+
+            const periodStr = periodType === 'week' ? getWeekRangeString(d) : getMonthString(d);
+            if (!periodStartDates[periodStr]) {
+                if (periodType === 'week') {
+                    const day = d.getDay() || 7;
+                    const start = new Date(d);
+                    start.setDate(d.getDate() - (day - 1));
+                    periodStartDates[periodStr] = start.getTime();
+                } else {
+                    periodStartDates[periodStr] = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+                }
+            }
+
+            groupPeriodMap[groupName] = groupPeriodMap[groupName] || {};
+            groupPeriodMap[groupName][periodStr] = (groupPeriodMap[groupName][periodStr] || 0) + hours;
+
+            logsByGroup[groupName] = logsByGroup[groupName] || [];
+            logsByGroup[groupName].push({
+                date: d,
+                title: row['Title'] || '',
+                description: row['Description'] || '',
+                key: row['Key'] || '',
+                state: row['Workflow State'] || '',
+                hours,
+            });
+        });
+
+        Object.values(logsByGroup).forEach(list => list.sort((a, b) => a.date.getTime() - b.date.getTime()));
+
+        const periods = Object.keys(periodStartDates).sort((a, b) => periodStartDates[a] - periodStartDates[b]);
+        const groupNames = Object.keys(groupPeriodMap).sort();
+
+        return {
+            type, name, groupLabel, groupNames, groupPeriodMap, periods, logsByGroup,
+            totalHours, entryCount: targetRows.length,
+        };
+    }, [drillDown, rawRows, periodType]);
+
     const tableColumns = useMemo(() => {
         if (!allPeriods.length) return [];
+        const source = viewMode === 'employee' ? employeeData : projectData;
+        const nameFilters = [...new Set(source.map(r => r.name))].filter(Boolean).sort()
+            .map(name => ({ text: name, value: name }));
+
         const base = [{
             title: viewMode === 'employee' ? 'Employee' : 'Project',
             dataIndex: 'name',
             key: 'name',
             fixed: 'left',
             width: 200,
+            filters: nameFilters,
+            filterSearch: true,
+            onFilter: (value, record) => record.name === value,
             render: (text) => <b>{text}</b>
         }];
 
@@ -609,7 +1208,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         });
 
         return base;
-    }, [allPeriods, viewMode]);
+    }, [allPeriods, viewMode, employeeData, projectData]);
 
     // Build Chart Data for Recharts
     const chartData = useMemo(() => {
@@ -902,25 +1501,150 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         }
     };
 
-    if (rawRows.length === 0) {
+    if (initializing) {
         return (
-            <div style={{ maxWidth: 600, margin: '40px auto', textAlign: 'center' }}>
-                <Alert
-                    message="Timesheet Analyser"
-                    description="Upload your timesheet export to see week-wise efforts logged per employee and per project."
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: 24, textAlign: 'left' }}
-                />
-                <Upload.Dragger
-                    accept=".csv, .xlsx, .xls"
-                    beforeUpload={handleFile}
-                    showUploadList={false}
+            <div style={{ textAlign: 'center', padding: 80 }}>
+                <Spin size="large" />
+                <div style={{ marginTop: 16, color: '#888' }}>Loading saved timelog data…</div>
+            </div>
+        );
+    }
+
+    if (!hasSavedData || showUploadPanel) {
+        return (
+            <div style={{ maxWidth: 560, margin: '48px auto', padding: '0 16px' }}>
+                {hasSavedData && (
+                    <Button type="link" icon={<ArrowLeftOutlined />} style={{ padding: 0, marginBottom: 12, fontSize: 13 }}
+                        onClick={() => setShowUploadPanel(false)}>
+                        Back to saved data
+                    </Button>
+                )}
+
+                <Card
+                    bordered={false}
+                    style={{ borderRadius: 16, textAlign: 'center', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}
+                    bodyStyle={{ padding: '40px 40px 32px' }}
                 >
-                    <p className="ant-upload-drag-icon"><UploadOutlined /></p>
-                    <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                    <p className="ant-upload-hint">Ensure columns include Primary Assignee, Project, Time, and Date.</p>
-                </Upload.Dragger>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: '50%', background: '#e6f4ff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px',
+                    }}>
+                        <ClockCircleOutlined style={{ fontSize: 26, color: '#1890ff' }} />
+                    </div>
+                    <div style={{ fontSize: 19, fontWeight: 700, color: '#1f1f1f' }}>Timesheet Analyser</div>
+                    <p style={{ color: '#888', fontSize: 13, lineHeight: 1.7, margin: '10px auto 16px', maxWidth: 420 }}>
+                        Upload a timesheet export to see week-wise effort logged per employee and per project.
+                        Data is saved to the database, employee-wise per month — re-uploading a past sheet
+                        safely updates existing entries instead of duplicating them.
+                    </p>
+                    <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottom">
+                        <Button
+                            type="dashed"
+                            size="small"
+                            icon={<InfoCircleOutlined />}
+                            style={{ marginBottom: 24, color: '#1890ff', borderColor: '#91caff' }}
+                        >
+                            What should the Excel file look like?
+                        </Button>
+                    </Popover>
+
+                    <Spin spinning={saving} tip="Saving to the database…">
+                        <Upload.Dragger
+                            accept=".xlsx,.xls"
+                            beforeUpload={handleFile}
+                            showUploadList={false}
+                            disabled={saving}
+                            style={{ background: '#fafbfc', borderRadius: 12, border: '1px dashed #d9e2ec', padding: '10px 0' }}
+                        >
+                            <p className="ant-upload-drag-icon" style={{ marginBottom: 6 }}>
+                                <UploadOutlined style={{ fontSize: 28, color: '#4f8ef7' }} />
+                            </p>
+                            <p className="ant-upload-text" style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>
+                                Click or drag file to this area to upload
+                            </p>
+                            <p className="ant-upload-hint" style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
+                                Excel files only — .xlsx or .xls
+                            </p>
+                        </Upload.Dragger>
+                    </Spin>
+
+                    <div style={{ marginTop: 24, textAlign: 'left' }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                            Required columns
+                        </div>
+                        <Space size={[6, 6]} wrap>
+                            {REQUIRED_COLS.map(c => (
+                                <Tag key={c} style={{ margin: 0, borderRadius: 4, fontSize: 12, color: '#555' }}>{c}</Tag>
+                            ))}
+                        </Space>
+                    </div>
+
+                    {importSummary && (
+                        <Alert
+                            style={{ marginTop: 24, textAlign: 'left', borderRadius: 10 }}
+                            type="success"
+                            showIcon
+                            icon={<CheckCircleOutlined />}
+                            message="Saved to the database"
+                            description={
+                                <div style={{ fontSize: 12, marginTop: 4 }}>
+                                    {importSummary.map(g => (
+                                        <div key={`${g.employeeName}-${g.month}`} style={{ marginBottom: 2 }}>
+                                            <b>{g.employeeName}</b> ({g.month}): {g.totalEntries} total · {g.added} new · {g.changed.length} changed · {g.unchanged} unchanged
+                                        </div>
+                                    ))}
+                                </div>
+                            }
+                        />
+                    )}
+                </Card>
+
+                {/* Validation errors modal */}
+                <Modal
+                    open={!!validationErrors}
+                    title={
+                        <span style={{ color: '#cf1322', fontWeight: 700 }}>
+                            ⚠ Validation Errors — {validationErrors?.fileName}
+                        </span>
+                    }
+                    onOk={() => setValidationErrors(null)}
+                    onCancel={() => setValidationErrors(null)}
+                    okText="Close &amp; fix file"
+                    cancelButtonProps={{ style: { display: 'none' } }}
+                    width={660}
+                    styles={{ body: { maxHeight: 460, overflowY: 'auto' } }}
+                >
+                    <p style={{ color: '#555', marginBottom: 12, fontSize: 13 }}>
+                        Please fix the issues below in your Excel file and re-upload. All columns are required.
+                    </p>
+
+                    {validationErrors?.errors.some(e => e.type === 'missing_columns') && (
+                        <Alert type="error" showIcon style={{ marginBottom: 10, borderRadius: 8 }}
+                            message="Missing required columns"
+                            description={validationErrors.errors
+                                .filter(e => e.type === 'missing_columns')
+                                .map(e => e.message).join('; ')}
+                        />
+                    )}
+
+                    {validationErrors?.errors.some(e => e.type === 'empty_cell') && (<>
+                        <Alert type="warning" showIcon style={{ marginBottom: 6, borderRadius: 8 }}
+                            message={`${validationErrors.errors.filter(e => e.type === 'empty_cell').length} row(s) have empty cells`}
+                        />
+                        <Table size="small"
+                            dataSource={validationErrors.errors.filter(e => e.type === 'empty_cell')}
+                            rowKey="row"
+                            pagination={{ pageSize: 8, size: 'small' }}
+                            style={{ marginBottom: 12 }}
+                            columns={[
+                                { title: 'Excel Row', dataIndex: 'row', key: 'row', width: 90,
+                                    render: v => <b style={{ color: '#cf1322' }}>Row {v}</b> },
+                                { title: 'Empty Column(s)', dataIndex: 'message', key: 'message',
+                                    render: v => <span style={{ fontSize: 12 }}>{v.replace(/^Row \d+: /, '')}</span> },
+                            ]}
+                        />
+                    </>)}
+                </Modal>
             </div>
         );
     }
@@ -932,7 +1656,18 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 {/* Tier 1: primary controls */}
                 <Row gutter={[16, 12]} align="middle" justify="space-between">
                     <Col>
-                        <Space size={24}>
+                        <Space size={24} wrap>
+                            <Space size={8}>
+                                <span style={{ fontSize: 12, color: '#888' }}>Date range</span>
+                                <RangePicker
+                                    value={dateRange}
+                                    onChange={handleDateRangeChange}
+                                    presets={getDateRangePresets()}
+                                    allowClear={false}
+                                    format="DD MMM YYYY"
+                                />
+                                {refreshing && <Spin size="small" />}
+                            </Space>
                             <Space size={8}>
                                 <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
                                 <Segmented value={periodType} onChange={setPeriodType}
@@ -958,10 +1693,12 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
                 <Divider style={{ margin: '14px 0' }} />
 
-                {/* Tier 2: file info + actions */}
+                {/* Tier 2: record count + actions */}
                 <Row gutter={[12, 12]} align="middle" justify="space-between">
                     <Col>
-                        <span style={{ fontSize: 12, color: '#888' }}>📄 {fileName}</span>
+                        <span style={{ fontSize: 12, color: '#888' }}>
+                            {rawRows.length} log entries in this range · saved to the database, employee-wise per month
+                        </span>
                     </Col>
                     <Col>
                         <Space size={8}>
@@ -985,16 +1722,99 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             </Button>
                             <Button
                                 icon={<UploadOutlined />}
-                                onClick={() => { setRawRows([]); setFileName(''); }}
+                                onClick={() => { setImportSummary(null); setShowUploadPanel(true); }}
                             >
-                                Upload Another
+                                Upload New File
                             </Button>
+                            <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottomRight">
+                                <Button icon={<InfoCircleOutlined />}>
+                                    File Format
+                                </Button>
+                            </Popover>
                         </Space>
                     </Col>
                 </Row>
             </Card>
 
-            <Card bodyStyle={{ padding: 0 }}>
+            {/* Weekly analytics — quick-info flags, always week-wise regardless
+                of the page's Group By setting */}
+            <Card
+                size="small"
+                style={{ borderRadius: 12, marginBottom: 16 }}
+                title={<span style={{ fontWeight: 700, fontSize: 13, color: '#333' }}>Weekly Analytics</span>}
+                extra={
+                    <Space size={8}>
+                        <span style={{ fontSize: 12, color: '#888' }}>Hide current (in-progress) week</span>
+                        <Switch size="small" checked={hideCurrentWeek} onChange={setHideCurrentWeek} />
+                    </Space>
+                }
+            >
+                <WeeklyFlagPanel
+                    title="Employee-weeks logged under 40 hours"
+                    emptyText="No employee logged under 40 hours in any checked week."
+                    color="#cf1322" bgColor="#fff1f0" borderColor="#ffccc7"
+                    rows={under40HourWeeks}
+                    columns={[
+                        { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 170,
+                            render: v => <span style={{ fontWeight: 600, fontSize: 12 }}>{v}</span> },
+                        { title: 'Week', dataIndex: 'week', key: 'week', width: 160,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Logged (hrs)', dataIndex: 'hours', key: 'hours', width: 110, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
+                        { title: 'Shortfall (hrs)', dataIndex: 'deficit', key: 'deficit', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#cf1322' }}>{v.toFixed(1)}</span> },
+                    ]}
+                />
+                <WeeklyFlagPanel
+                    title="Employee-project-weeks under their allocation"
+                    emptyText="No employee logged under their weekly project allocation."
+                    color="#fa8c16" bgColor="#fffbe6" borderColor="#ffe58f"
+                    rows={underAllocationWeeks}
+                    columns={[
+                        { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 170,
+                            render: v => <span style={{ fontWeight: 600, fontSize: 12 }}>{v}</span> },
+                        { title: 'Project', dataIndex: 'project', key: 'project', width: 180,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Week', dataIndex: 'week', key: 'week', width: 160,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Logged (hrs)', dataIndex: 'hours', key: 'hours', width: 100, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
+                        { title: 'Allocated (hrs/wk)', dataIndex: 'targetHrs', key: 'targetHrs', width: 130, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v.toFixed(1)}</span> },
+                        { title: 'Shortfall (hrs)', dataIndex: 'deficit', key: 'deficit', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#fa8c16' }}>{v.toFixed(1)}</span> },
+                    ]}
+                />
+                <WeeklyFlagPanel
+                    title="Employee-project-weeks over their allocation"
+                    emptyText="No employee logged over their weekly project allocation."
+                    color="#722ed1" bgColor="#f9f0ff" borderColor="#d3adf7"
+                    rows={overAllocationWeeks}
+                    columns={[
+                        { title: 'Employee', dataIndex: 'employee', key: 'employee', width: 170,
+                            render: v => <span style={{ fontWeight: 600, fontSize: 12 }}>{v}</span> },
+                        { title: 'Project', dataIndex: 'project', key: 'project', width: 180,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Week', dataIndex: 'week', key: 'week', width: 160,
+                            render: v => <span style={{ fontSize: 12 }}>{v}</span> },
+                        { title: 'Logged (hrs)', dataIndex: 'hours', key: 'hours', width: 100, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</span> },
+                        { title: 'Allocated (hrs/wk)', dataIndex: 'targetHrs', key: 'targetHrs', width: 130, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v.toFixed(1)}</span> },
+                        { title: 'Excess (hrs)', dataIndex: 'excess', key: 'excess', width: 110, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#722ed1' }}>{v.toFixed(1)}</span> },
+                    ]}
+                />
+            </Card>
+
+            <Card
+                bodyStyle={{ padding: 0 }}
+                title={displayType === 'table' ? (
+                    <span style={{ fontSize: 12, fontWeight: 400, color: '#aaa' }}>
+                        🖱 Click a{viewMode === 'employee' ? 'n employee' : ' project'} row to see {viewMode === 'employee' ? 'their project-wise effort' : 'employee-wise effort'} and individual logs
+                    </span>
+                ) : null}
+            >
                 {displayType === 'table' ? (
                     <Table
                         columns={tableColumns}
@@ -1004,6 +1824,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         scroll={{ x: 'max-content', y: 600 }}
                         size="small"
                         bordered
+                        onRow={(record) => ({
+                            onClick: () => setDrillDown({ type: viewMode, name: record.name }),
+                            style: { cursor: 'pointer' },
+                        })}
                     />
                 ) : displayType === 'chart' ? (
                     <div style={{ height: 600, padding: 24 }}>
@@ -1163,6 +1987,117 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     </div>
                 )}
             </div>
+
+            {/* Employee drill-down: project-wise effort + individual logs */}
+            <Modal
+                open={!!drillDown}
+                onCancel={() => setDrillDown(null)}
+                onOk={() => setDrillDown(null)}
+                okText="Close"
+                cancelButtonProps={{ style: { display: 'none' } }}
+                width={900}
+                styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
+                            {drillDown?.type === 'employee'
+                                ? <UserOutlined style={{ color: '#722ed1', marginRight: 6 }} />
+                                : <ProjectOutlined style={{ color: '#4f8ef7', marginRight: 6 }} />}
+                            {drillDown?.name}
+                        </span>
+                        {drillDownData && (
+                            <>
+                                <Tag color="blue" style={{ fontSize: 11 }}>{drillDownData.entryCount} log entries</Tag>
+                                <Tag color="green" style={{ fontSize: 11 }}>{drillDownData.totalHours.toFixed(1)} hrs total</Tag>
+                            </>
+                        )}
+                    </div>
+                }
+            >
+                {drillDownData && (
+                    <>
+                        <div style={{ fontSize: 11, color: '#888', marginBottom: 12 }}>
+                            Selected range: {dateRange?.[0]?.format('DD MMM YYYY')} – {dateRange?.[1]?.format('DD MMM YYYY')}
+                            &nbsp;·&nbsp; {periodType === 'week' ? 'Week-wise' : 'Month-wise'}
+                        </div>
+
+                        {drillDownData.groupNames.length === 0 ? (
+                            <Empty description="No logged time in this range" style={{ padding: 24 }} />
+                        ) : (
+                            <>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                    {drillDownData.groupLabel}-wise effort
+                                </div>
+                                <Table
+                                    size="small"
+                                    bordered
+                                    pagination={false}
+                                    rowKey="group"
+                                    style={{ marginBottom: 24 }}
+                                    scroll={{ x: 'max-content' }}
+                                    dataSource={drillDownData.groupNames.map(g => {
+                                        const row = { group: g, total: 0 };
+                                        drillDownData.periods.forEach(period => {
+                                            const v = drillDownData.groupPeriodMap[g]?.[period] || 0;
+                                            row[period] = v;
+                                            row.total += v;
+                                        });
+                                        return row;
+                                    })}
+                                    columns={[
+                                        { title: drillDownData.groupLabel, dataIndex: 'group', key: 'group', fixed: 'left', width: 200,
+                                            render: v => <b style={{ fontSize: 12 }}>{v}</b> },
+                                        ...drillDownData.periods.map(period => ({
+                                            title: period, dataIndex: period, key: period, width: 130, align: 'right',
+                                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(1) : '-'}</span>,
+                                        })),
+                                        { title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
+                                            render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</b> },
+                                    ]}
+                                />
+
+                                <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                    Individual log entries
+                                </div>
+                                {drillDownData.groupNames.map(g => (
+                                    <div key={g} style={{ marginBottom: 18 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                                            {drillDownData.type === 'employee'
+                                                ? <ProjectOutlined style={{ color: '#4f8ef7', fontSize: 12 }} />
+                                                : <UserOutlined style={{ color: '#722ed1', fontSize: 12 }} />}
+                                            <span style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{g}</span>
+                                            <Tag style={{ fontSize: 11 }}>{drillDownData.logsByGroup[g].length} entries</Tag>
+                                        </div>
+                                        <Table
+                                            size="small"
+                                            pagination={{ pageSize: 5, size: 'small', showSizeChanger: false }}
+                                            rowKey={(_, i) => i}
+                                            scroll={{ x: 'max-content' }}
+                                            dataSource={drillDownData.logsByGroup[g]}
+                                            columns={[
+                                                { title: 'Date', dataIndex: 'date', key: 'date', width: 100,
+                                                    sorter: (a, b) => a.date.getTime() - b.date.getTime(),
+                                                    render: d => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{toISODate(d)}</span> },
+                                                { title: 'Key', dataIndex: 'key', key: 'key', width: 100,
+                                                    render: v => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#4f8ef7' }}>{v || '—'}</span> },
+                                                { title: 'Task', dataIndex: 'title', key: 'title', width: 200, ellipsis: true,
+                                                    render: v => <span style={{ fontSize: 12 }}>{v || '—'}</span> },
+                                                { title: 'State', dataIndex: 'state', key: 'state', width: 90,
+                                                    render: v => v ? <Tag style={{ fontSize: 11 }}>{v}</Tag> : '—' },
+                                                { title: 'Description', dataIndex: 'description', key: 'description',
+                                                    render: v => <span style={{ fontSize: 12, color: '#555' }}>{v || '—'}</span> },
+                                                { title: 'Time (hrs)', dataIndex: 'hours', key: 'hours', width: 90, align: 'right',
+                                                    sorter: (a, b) => a.hours - b.hours,
+                                                    render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{v.toFixed(2)}</span> },
+                                            ]}
+                                        />
+                                    </div>
+                                ))}
+                            </>
+                        )}
+                    </>
+                )}
+            </Modal>
         </div>
     );
 };
