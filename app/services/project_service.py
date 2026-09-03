@@ -47,6 +47,7 @@ class ProjectService:
                 Project.category,
                 Project.sub_category,
                 Project.task_category_overrides,
+                Project.tags,
                 func.concat(Employee.first_name, ' ', Employee.last_name).label('lead_name'),
                 func.coalesce(total_alloc_subq.c.total_allocation, 0).label('total_allocation'),
                 func.coalesce(billable_alloc_subq.c.billable_allocation, 0).label('billable_allocation')
@@ -72,6 +73,7 @@ class ProjectService:
                     'category': p.category,
                     'sub_category': p.sub_category,
                     'task_category_overrides': p.task_category_overrides or [],
+                    'tags': p.tags or [],
                     'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else '',
                     'total_allocation': float(p.total_allocation),
                     'billable_allocation': float(p.billable_allocation)
@@ -103,6 +105,7 @@ class ProjectService:
                 category=data.get('category'),
                 sub_category=data.get('sub_category') if data.get('category') == 'Internal' else None,
                 task_category_overrides=data.get('task_category_overrides') or [],
+                tags=data.get('tags') or [],
                 start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
                 end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
             )
@@ -137,6 +140,8 @@ class ProjectService:
                 project.sub_category = data.get('sub_category') if project.category == 'Internal' else None
             if 'task_category_overrides' in data:
                 project.task_category_overrides = data.get('task_category_overrides') or []
+            if 'tags' in data:
+                project.tags = data.get('tags') or []
 
             if 'start_date' in data:
                 project.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data['start_date'] else None
@@ -345,6 +350,8 @@ class ProjectService:
         try:
             # Project Counts
             active_projects = Project.query.filter_by(project_status='Active').count()
+            active_client_projects = Project.query.filter_by(project_status='Active', category='Client Project').count()
+            active_internal_projects = Project.query.filter_by(project_status='Active', category='Internal').count()
             prospective_projects = Project.query.filter_by(project_status='Future Prospect').count()
 
             # Allocation Stats (converting percentage to FTE by dividing by 100)
@@ -367,6 +374,8 @@ class ProjectService:
 
             return {
                 'active_projects': active_projects,
+                'active_client_projects': active_client_projects,
+                'active_internal_projects': active_internal_projects,
                 'prospective_projects': prospective_projects,
                 'total_allocation': total_allocation,
                 'billable_allocation': billable_allocation,
@@ -376,6 +385,8 @@ class ProjectService:
             Logger.error("Error fetching dashboard stats", error=str(e))
             return {
                 'active_projects': 0,
+                'active_client_projects': 0,
+                'active_internal_projects': 0,
                 'prospective_projects': 0,
                 'total_allocation': 0,
                 'billable_allocation': 0,

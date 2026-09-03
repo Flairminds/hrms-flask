@@ -319,6 +319,8 @@ class Project(BaseModel):
     sub_category = db.Column(db.String(50))
     # Per-task overrides of sub_category, e.g. [{"task_name": "Leave", "sub_category": "Leaves"}]
     task_category_overrides = db.Column(db.JSON, default=list)
+    # Arbitrary key/value tags, e.g. [{"key": "Zymmr Project Name", "value": "..."}]
+    tags = db.Column(db.JSON, default=list)
 
 class ProjectHistory(BaseModel):
     __tablename__ = 'project_history'
@@ -334,6 +336,7 @@ class ProjectHistory(BaseModel):
     category = db.Column(db.String(30))
     sub_category = db.Column(db.String(50))
     task_category_overrides = db.Column(db.JSON)
+    tags = db.Column(db.JSON)
     action = db.Column(db.String(10), nullable=False)  # INSERT, UPDATE, DELETE
     modified_by = db.Column(db.String(50))  # User ID or 'System'
     modified_on = db.Column(db.DateTime, server_default=db.func.now())
@@ -360,6 +363,7 @@ def register_project_history_listeners():
                 'category': target.category,
                 'sub_category': target.sub_category,
                 'task_category_overrides': target.task_category_overrides,
+                'tags': target.tags,
                 'action': action,
                 'modified_by': user_id
             }

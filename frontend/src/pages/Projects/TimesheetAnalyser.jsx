@@ -51,20 +51,26 @@ const employeeNamesMatch = (a, b) => {
     return reorder(x) === y || reorder(y) === x;
 };
 
-// Mapping rules mirroring EffortsAnalyser
-const PROJECT_NAME_MAP = {
-    '2 OnPepper Leverage Modelling & Hummingbird': 'Onpepper',
-    '2 BNYM': 'BNY-M',
-    '2 XMPro 10': 'XMPS-2000',
-    'Bridge Platform': 'Bridge Connect'
+// Builds an excel/external-name -> HRMS-project-name lookup from each project's
+// "Zymmr Project Name" tags (configured by HR/Admin on the project's Edit form).
+// Multiple tags can point the same external name variant to one HRMS project.
+const buildProjectNameMap = (hrmsProjects) => {
+    const map = {};
+    (hrmsProjects || []).forEach(p => {
+        (p.tags || []).forEach(tag => {
+            if (tag?.key === 'Zymmr Project Name' && tag.value && p.project_name) {
+                map[String(tag.value).toLowerCase().trim()] = p.project_name;
+            }
+        });
+    });
+    return map;
 };
 
-const resolveProjectName = (excelName) => {
+const resolveProjectName = (excelName, nameMap) => {
     if (!excelName) return excelName;
-    const key = Object.keys(PROJECT_NAME_MAP).find(
-        k => k.toLowerCase().trim() === excelName.toLowerCase().trim()
-    );
-    return key ? `${PROJECT_NAME_MAP[key]} (${excelName})` : excelName;
+    const key = String(excelName).toLowerCase().trim();
+    const hrmsName = nameMap ? nameMap[key] : undefined;
+    return hrmsName ? `${hrmsName} (${excelName})` : excelName;
 };
 
 const resolveEmployeeName = (excelName) => excelName;
@@ -284,6 +290,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [periodType, setPeriodType] = useState('week'); // 'week' or 'month'
     const [displayType, setDisplayType] = useState('table'); // 'table', 'chart', 'gaps', or 'trend'
     const [hrmsProjects, setHrmsProjects] = useState([]);
+    const projectNameMap = useMemo(() => buildProjectNameMap(hrmsProjects), [hrmsProjects]);
     const [holidays, setHolidays] = useState([]);
     const [leaves, setLeaves] = useState([]);
     const [allocations, setAllocations] = useState([]);
@@ -551,7 +558,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (!rawEmp || !rawDate) return;
 
             const empName = resolveEmployeeName(String(rawEmp).trim());
-            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project');
+            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project', projectNameMap);
             
             // Time is in seconds => hours
             const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
@@ -774,7 +781,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             allPeriods: sortedPeriods,
             timesheetRange: { min: minTime, max: maxTime }
         };
-    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType, dateRange]);
+    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType, dateRange, projectNameMap]);
 
     // ── Trend view: past logged hours (always week-wise) + a capacity-based
     // projection of the remaining planned backlog into future weeks ─────────
@@ -804,7 +811,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (!rawEmp || !rawDate) return;
 
             const empName = resolveEmployeeName(String(rawEmp).trim());
-            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project');
+            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project', projectNameMap);
 
             if (viewMode === 'employee' && trendEntity !== 'ALL' && !employeeNamesMatch(empName, trendEntity)) return;
             if (viewMode === 'project' && trendEntity !== 'ALL' && projName !== trendEntity) return;
@@ -893,7 +900,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const weeksToClear = weeklyRate > 0 ? Math.ceil(totalBacklogHours / weeklyRate) : 0;
 
         return { series, weeklyRate, totalBacklogHours, weeksToClear, lastLoggedWeek };
-    }, [rawRows, timesheetRange, viewMode, trendEntity, backlogTasks, allocations, hrmsProjects]);
+    }, [rawRows, timesheetRange, viewMode, trendEntity, backlogTasks, allocations, hrmsProjects, projectNameMap]);
 
     // ── Weekly analytics: three quick-info checks, always bucketed weekly
     // (independent of the page's Group By setting) ──────────────────────────
@@ -949,7 +956,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (!rawEmp || !rawDate) return;
 
             const empName = canonicalEmpName(String(rawEmp).trim());
-            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project');
+            const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project', projectNameMap);
             const hrmsProjName = projName.includes(' (') ? projName.split(' (')[0].trim() : projName;
 
             const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
@@ -984,7 +991,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
         const weekList = Object.keys(weekMeta).sort((a, b) => weekMeta[a].startTime - weekMeta[b].startTime);
         return { empWeekHours, empProjWeekHours, weekMeta, weekList };
-    }, [rawRows, dateRange, canonicalEmpName]);
+    }, [rawRows, dateRange, canonicalEmpName, projectNameMap]);
 
     // ── Category Breakdown: Client Project (Billable/Non-billable, from the
     // employee's own allocation on that project) vs Internal (project's
@@ -1035,11 +1042,11 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const projectFilterOptions = useMemo(() => {
         const names = new Set();
         rawRows.forEach(r => {
-            const resolved = resolveProjectName(r['Project'] ? String(r['Project']).trim() : 'Unknown Project');
+            const resolved = resolveProjectName(r['Project'] ? String(r['Project']).trim() : 'Unknown Project', projectNameMap);
             names.add(resolved.includes(' (') ? resolved.split(' (')[0].trim() : resolved);
         });
         return [...names].filter(Boolean).sort();
-    }, [rawRows]);
+    }, [rawRows, projectNameMap]);
 
     const categoryBreakdown = useMemo(() => {
         const rowMap = {};        // label -> { key, category, subCategory, total }
@@ -1054,7 +1061,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             const empName = canonicalEmpName(String(rawEmp).trim());
             if (categoryEmpFilter && empName !== categoryEmpFilter) return;
 
-            const resolvedProj = resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project');
+            const resolvedProj = resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project', projectNameMap);
             const hrmsProjName = resolvedProj.includes(' (') ? resolvedProj.split(' (')[0].trim() : resolvedProj;
             if (categoryProjFilter && hrmsProjName !== categoryProjFilter) return;
 
@@ -1099,7 +1106,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const pieData = rows.map(r => ({ name: r.key, value: r.total }));
 
         return { rows, entriesByLabel, pieData, grandTotal };
-    }, [rawRows, categoryEmpFilter, categoryProjFilter, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName]);
+    }, [rawRows, categoryEmpFilter, categoryProjFilter, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap]);
 
     // Drill-down for a clicked category/sub-category row: which employee
     // logged how many hours on which project (matrix), plus the individual
@@ -1223,7 +1230,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const { type, name } = drillDown;
         const groupLabel = type === 'employee' ? 'Project' : 'Employee';
 
-        const rowProjectName = (row) => resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project');
+        const rowProjectName = (row) => resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project', projectNameMap);
         const rowAuthorName = (row) => String(row['Author'] || '').trim();
 
         const targetRows = rawRows.filter(row =>
@@ -1326,7 +1333,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             groupCategoryMap, categoryPieData, employeePieData,
             totalHours, entryCount: targetRows.length,
         };
-    }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName]);
+    }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap]);
 
     const tableColumns = useMemo(() => {
         if (!allPeriods.length) return [];

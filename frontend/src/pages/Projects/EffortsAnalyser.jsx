@@ -60,27 +60,27 @@ const getDateRangePresets = () => {
 };
 
 // ── Project name mapping ───────────────────────────────────────────────────
-// Maps Excel project names → HRMS project names.
-// Keys   = exact project name as it appears in the Excel sheet (case-insensitive match).
-// Values = exact project name as it appears in HRMS.
-// Add one entry per mismatched project. Leave empty ({}) if names already match.
-const PROJECT_NAME_MAP = {
-    // 'Excel Project Name':  'HRMS Project Name',
-    // 'ClientX Portal':      'Client X Portal',
-    // 'website-redesign':    'Website Redesign',
-    '2 OnPepper Leverage Modelling & Hummingbird': 'Onpepper',
-    '2 BNYM': 'BNY-M',
-    '2 XMPro 10': 'XMPS-2000',
-    'Bridge Platform': 'Bridge Connect'
+// Builds an excel/external-name -> HRMS-project-name lookup from each project's
+// "Zymmr Project Name" tags (configured by HR/Admin on the project's Edit form).
+// Multiple tags can point the same external name variant to one HRMS project.
+const buildProjectNameMap = (hrmsProjects) => {
+    const map = {};
+    (hrmsProjects || []).forEach(p => {
+        (p.tags || []).forEach(tag => {
+            if (tag?.key === 'Zymmr Project Name' && tag.value && p.project_name) {
+                map[String(tag.value).toLowerCase().trim()] = p.project_name;
+            }
+        });
+    });
+    return map;
 };
 
 // Resolves an Excel project name to its HRMS equivalent (or returns it unchanged).
-const resolveProjectName = (excelName) => {
+const resolveProjectName = (excelName, nameMap) => {
     if (!excelName) return excelName;
-    const key = Object.keys(PROJECT_NAME_MAP).find(
-        k => k.toLowerCase().trim() === excelName.toLowerCase().trim()
-    );
-    return key ? PROJECT_NAME_MAP[key] : excelName;
+    const key = String(excelName).toLowerCase().trim();
+    const hrmsName = nameMap ? nameMap[key] : undefined;
+    return hrmsName ? hrmsName : excelName;
 };
 
 // ── Employee name mapping ───────────────────────────────────────────────────
@@ -364,7 +364,7 @@ const CustomXTick = ({ x, y, payload }) => {
 };
 
 // ── Health checks modal ──────────────────────────────────────────────────────────────────
-const runHealthChecks = (rows, allocationMap, projectAllocMap) => {
+const runHealthChecks = (rows, allocationMap, projectAllocMap, nameMap) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -414,7 +414,7 @@ const runHealthChecks = (rows, allocationMap, projectAllocMap) => {
             .reduce((s, r) => s + r.estimateEffort, 0);
 
         // Look up project-level FTE from HRMS Projects module
-        const hrmsProj = resolveProjectName(proj).toLowerCase().trim();
+        const hrmsProj = resolveProjectName(proj, nameMap).toLowerCase().trim();
         const fte = projectAllocMap?.[hrmsProj] ?? null;
         if (fte === null || fte <= 0) return; // no allocation data, skip
         const totalAlloc = fte * 40 * WEEKS_PER_MONTH;
@@ -440,7 +440,7 @@ const runHealthChecks = (rows, allocationMap, projectAllocMap) => {
     );
 
     const unmappedProjects = excelProjects.filter(p => {
-        const resolved = resolveProjectName(p).toLowerCase().trim();
+        const resolved = resolveProjectName(p, nameMap).toLowerCase().trim();
         return !hrmsProjKeys.has(resolved);
     });
 
@@ -615,9 +615,9 @@ const HealthChecksModal = ({ checks, onClose }) => {
                 </div>
                 <p style={{ fontSize: 11, color: '#888', margin: '-4px 0 12px' }}>
                     Names below exist in the Excel sheet but have <b>no matching entry in HRMS allocation data</b>.
-                    Bars for these entities show raw hours instead of %. Fix by adding them to
-                    <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 3, margin: '0 4px' }}>PROJECT_NAME_MAP</code>
-                    or
+                    Bars for these entities show raw hours instead of %. Fix by adding a
+                    <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 3, margin: '0 4px' }}>Zymmr Project Name</code>
+                    tag to the project from Projects → Edit Project, or by adding an employee entry to
                     <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 3, margin: '0 4px' }}>EMPLOYEE_NAME_MAP</code>
                     in the source file.
                 </p>
@@ -1163,6 +1163,7 @@ const SummaryTable = ({ data, periods, entityLabel, onRowClick, noDataSet }) => 
  * Rows where aggregate Total vs Alloc % < 75% are highlighted in light red.
  */
 const buildSummaryWorkbook = (employeeData, projectData, periods, fileName, periodMode, allocations, employeeProjectData, hrmsProjects, rawRows) => {
+    const nameMap = buildProjectNameMap(hrmsProjects);
     // ── Styles ────────────────────────────────────────────────────────────
     const STYLE_HEADER = {
         font:      { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
@@ -1318,7 +1319,7 @@ const buildSummaryWorkbook = (employeeData, projectData, periods, fileName, peri
     });
     const getAllocMeta = (empName, projName) => {
         const resolvedEmp  = resolveEmployeeName(empName  || '');
-        const resolvedProj = resolveProjectName(projName || '');
+        const resolvedProj = resolveProjectName(projName || '', nameMap);
         return allocLookup[`${resolvedEmp.toLowerCase().trim()}\x00${resolvedProj.toLowerCase().trim()}`] ?? null;
     };
 
@@ -1337,7 +1338,7 @@ const buildSummaryWorkbook = (employeeData, projectData, periods, fileName, peri
         }
     });
     const getProjMeta = (excelProjName) => {
-        const hrmsName = resolveProjectName(excelProjName || '').toLowerCase().trim();
+        const hrmsName = resolveProjectName(excelProjName || '', nameMap).toLowerCase().trim();
         return projMetaLookup[hrmsName] ?? null;
     };
 
@@ -1817,6 +1818,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [rawRows, setRawRows] = useState([]);
     const [allocations, setAllocations] = useState([]);      // per-employee allocations
     const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
+    const projectNameMap = useMemo(() => buildProjectNameMap(hrmsProjects), [hrmsProjects]);
     const [uploading, setUploading] = useState(false);
     const [periodMode, setPeriodMode] = useState('monthly');
     const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table' — applies to Project & Employee tabs
@@ -2058,7 +2060,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                     fileName: file.name,
                     tasks: rows.map(r => ({
                         taskKey: r.taskKey,
-                        project: resolveProjectName(r.project),
+                        project: resolveProjectName(r.project, projectNameMap),
                         assigneeName: resolveEmployeeName(r.assignee),
                         title: r.task,
                         state: r.state,
@@ -2089,7 +2091,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         };
         reader.readAsArrayBuffer(file);
         return false;
-    }, [syncFromDatabase, fetchBacklog]);
+    }, [syncFromDatabase, fetchBacklog, projectNameMap]);
 
     // ── allocation map: empName_lower → { projName_lower → alloc% } ──────
     const allocationMap = useMemo(() => {
@@ -2118,12 +2120,12 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
     // Which HRMS-allocated projects a given employee belongs to (by HRMS employee name).
     const getHrmsEmployeesForProject = useCallback((excelProjName) => {
-        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        const hrmsProj = resolveProjectName(excelProjName, projectNameMap).toLowerCase().trim();
         return allocations
             .filter(emp => (emp.projects || []).some(p => (p.project_name || '').toLowerCase().trim() === hrmsProj))
             .map(emp => emp.employee_name)
             .filter(Boolean);
-    }, [allocations]);
+    }, [allocations, projectNameMap]);
 
     // ── Project-level allocation map: hrmsName_lower → FTE (total_allocation / 100) ──
     // total_allocation in HRMS is stored ×100 (e.g. 335 = 3.35 FTE)
@@ -2140,44 +2142,44 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
     // Per-project allocation: FTE from Projects module → hours
     const getProjectAllocHrs = useCallback((excelProjName) => {
-        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        const hrmsProj = resolveProjectName(excelProjName, projectNameMap).toLowerCase().trim();
         const fte = projectAllocMap[hrmsProj] ?? null;
         if (fte === null) return null;
         const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
         return fte * 40 * weeks;
-    }, [projectAllocMap, periodMode]);
+    }, [projectAllocMap, periodMode, projectNameMap]);
 
     // Per-employee allocation: used only for the Employee chart
     const getAllocHrs = useCallback((assignee, project) => {
         const hrmsEmployee = resolveEmployeeName(assignee);
-        const hrmsProject  = resolveProjectName(project);
+        const hrmsProject  = resolveProjectName(project, projectNameMap);
         const pct = allocationMap[hrmsEmployee?.toLowerCase().trim()]?.[hrmsProject?.toLowerCase().trim()] ?? null;
         if (pct === null) return null;
         const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
         return (pct / 100) * 40 * weeks;
-    }, [allocationMap, periodMode]);
+    }, [allocationMap, periodMode, projectNameMap]);
 
     // Period-independent "hours per working day" rates (8hr/5-day week), used
     // for the low-planned-backlog check below — a fixed "N working days" bar
     // shouldn't move depending on whether the page is set to Monthly or Weekly.
     const getProjectDailyAllocHrs = useCallback((excelProjName) => {
-        const hrmsProj = resolveProjectName(excelProjName).toLowerCase().trim();
+        const hrmsProj = resolveProjectName(excelProjName, projectNameMap).toLowerCase().trim();
         const fte = projectAllocMap[hrmsProj] ?? null;
         return fte ? fte * 8 : null;
-    }, [projectAllocMap]);
+    }, [projectAllocMap, projectNameMap]);
 
     const getEmployeeDailyAllocHrs = useCallback((assignee, project = null) => {
         const hrmsEmployee = resolveEmployeeName(assignee)?.toLowerCase().trim();
         const empMap = allocationMap[hrmsEmployee];
         if (!empMap) return null;
         if (project) {
-            const hrmsProject = resolveProjectName(project)?.toLowerCase().trim();
+            const hrmsProject = resolveProjectName(project, projectNameMap)?.toLowerCase().trim();
             const pct = empMap[hrmsProject];
             return pct ? (pct / 100) * 8 : null;
         }
         const totalPct = Object.values(empMap).reduce((s, p) => s + (p || 0), 0);
         return totalPct > 0 ? (totalPct / 100) * 8 : null;
-    }, [allocationMap]);
+    }, [allocationMap, projectNameMap]);
 
     // ── row splits ─────────────────────────────────────────────────────
     // `rawRows` is already scoped to the selected date range — filtered
@@ -2601,7 +2603,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                     </AntTooltip>
                                     <Button size="small" icon={<WarningOutlined />}
                                         style={{ borderColor: '#fa8c16', color: '#fa8c16' }}
-                                        onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
+                                        onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap, projectNameMap))}>
                                         Run Checks
                                     </Button>
                                     {isHRorAdmin && (
