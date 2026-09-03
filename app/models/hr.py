@@ -312,6 +312,13 @@ class Project(BaseModel):
     end_date = db.Column(db.Date) # Optional
     project_status = db.Column(db.String(50), nullable=False, default='Active')
     contractual_allocation = db.Column(db.Numeric(10, 2), default=0)
+    # 'Client Project' or 'Internal'
+    category = db.Column(db.String(30))
+    # Only applicable when category == 'Internal': Management, Marketing, HR Operations,
+    # Training & Development, Infrastructure, Leaves, Productivity Loss due to infra, Other Internal Work
+    sub_category = db.Column(db.String(50))
+    # Per-task overrides of sub_category, e.g. [{"task_name": "Leave", "sub_category": "Leaves"}]
+    task_category_overrides = db.Column(db.JSON, default=list)
 
 class ProjectHistory(BaseModel):
     __tablename__ = 'project_history'
@@ -324,6 +331,9 @@ class ProjectHistory(BaseModel):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     project_status = db.Column(db.String(50))
+    category = db.Column(db.String(30))
+    sub_category = db.Column(db.String(50))
+    task_category_overrides = db.Column(db.JSON)
     action = db.Column(db.String(10), nullable=False)  # INSERT, UPDATE, DELETE
     modified_by = db.Column(db.String(50))  # User ID or 'System'
     modified_on = db.Column(db.DateTime, server_default=db.func.now())
@@ -347,6 +357,9 @@ def register_project_history_listeners():
                 'start_date': target.start_date,
                 'end_date': target.end_date,
                 'project_status': target.project_status,
+                'category': target.category,
+                'sub_category': target.sub_category,
+                'task_category_overrides': target.task_category_overrides,
                 'action': action,
                 'modified_by': user_id
             }

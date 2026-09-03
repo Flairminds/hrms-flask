@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Button, DatePicker, Select, Tabs, Table, Row, Col, Popconfirm, message, Tooltip, Checkbox } from 'antd';
-import { DeleteOutlined, EditOutlined, ProjectOutlined, CalendarOutlined, UserOutlined, FileTextOutlined, TeamOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ProjectOutlined, CalendarOutlined, UserOutlined, FileTextOutlined, TeamOutlined, TagsOutlined } from '@ant-design/icons';
 import { getEmployeeList, addProject, updateProject, getProjectAllocations, manageAllocation, deleteAllocation } from '../../../services/api'; // updated imports
 import dayjs from 'dayjs';
 import WidgetCard from '../../common/WidgetCard';
@@ -8,6 +8,18 @@ import WidgetCard from '../../common/WidgetCard';
 const { TextArea } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
+
+export const PROJECT_CATEGORY_OPTIONS = ['Client Project', 'Internal'];
+export const INTERNAL_SUB_CATEGORIES = [
+    'Management',
+    'Marketing',
+    'HR Operations',
+    'Training & Development',
+    'Infrastructure',
+    'Leaves',
+    'Productivity Loss due to infra',
+    'Other Internal Work'
+];
 
 const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false, refreshProjects }) => {
     const [form] = Form.useForm();
@@ -18,6 +30,8 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
     const [allocations, setAllocations] = useState([]);
     const [allocationLoading, setAllocationLoading] = useState(false);
     const [editingAllocation, setEditingAllocation] = useState(null);
+    const categoryValue = Form.useWatch('category', form);
+    const subCategoryValue = Form.useWatch('sub_category', form);
 
     useEffect(() => {
         const fetchEmployees = async () => {
@@ -45,6 +59,9 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                     contractual_allocation: project.contractual_allocation || 0,
                     start_date: project.start_date ? dayjs(project.start_date) : null,
                     end_date: project.end_date ? dayjs(project.end_date) : null,
+                    category: project.category,
+                    sub_category: project.sub_category,
+                    task_category_overrides: project.task_category_overrides || [],
                 });
                 fetchAllocations(project.project_id);
             } else {
@@ -254,9 +271,86 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                                                 <Input type="number" min={0} step={0.1} disabled={readOnly} placeholder="Enter contractual allocation" />
                                             </Form.Item>
                                         </Col>
+                                        <Col xs={24} md={8}>
+                                            <Form.Item name="category" label="Category">
+                                                <Select
+                                                    disabled={readOnly}
+                                                    placeholder="Select category"
+                                                    allowClear
+                                                    onChange={(val) => {
+                                                        if (val !== 'Internal') {
+                                                            form.setFieldsValue({ sub_category: undefined, task_category_overrides: [] });
+                                                        }
+                                                    }}
+                                                >
+                                                    {PROJECT_CATEGORY_OPTIONS.map(c => <Option key={c} value={c}>{c}</Option>)}
+                                                </Select>
+                                            </Form.Item>
+                                        </Col>
+                                        {categoryValue === 'Internal' && (
+                                            <Col xs={24} md={8}>
+                                                <Form.Item name="sub_category" label="Internal Sub-category">
+                                                    <Select disabled={readOnly} placeholder="Select sub-category" allowClear>
+                                                        {INTERNAL_SUB_CATEGORIES.map(s => <Option key={s} value={s}>{s}</Option>)}
+                                                    </Select>
+                                                </Form.Item>
+                                            </Col>
+                                        )}
                                     </Row>
                                 </WidgetCard>
                             </Col>
+
+                            {categoryValue === 'Internal' && (
+                                <Col span={24}>
+                                    <WidgetCard title="Task Sub-category Exceptions" icon={<TagsOutlined />} iconColor="#722ed1">
+                                        <div style={{ marginBottom: 12, color: 'rgba(0,0,0,.45)' }}>
+                                            By default, all tasks under this project are classified as <b>{subCategoryValue || 'the selected sub-category'}</b>.
+                                            Add an exception below to map a specific task name to a different sub-category
+                                            (e.g. task "Leave" should count under "Leaves").
+                                        </div>
+                                        <Form.List name="task_category_overrides">
+                                            {(fields, { add, remove }) => (
+                                                <>
+                                                    {fields.map((field) => (
+                                                        <Row key={field.key} gutter={8} align="middle">
+                                                            <Col xs={24} md={10}>
+                                                                <Form.Item
+                                                                    {...field}
+                                                                    name={[field.name, 'task_name']}
+                                                                    rules={[{ required: true, message: 'Task name required' }]}
+                                                                >
+                                                                    <Input disabled={readOnly} placeholder="Task name (e.g. Leave)" />
+                                                                </Form.Item>
+                                                            </Col>
+                                                            <Col xs={24} md={10}>
+                                                                <Form.Item
+                                                                    {...field}
+                                                                    name={[field.name, 'sub_category']}
+                                                                    rules={[{ required: true, message: 'Sub-category required' }]}
+                                                                >
+                                                                    <Select disabled={readOnly} placeholder="Sub-category">
+                                                                        {INTERNAL_SUB_CATEGORIES.map(s => <Option key={s} value={s}>{s}</Option>)}
+                                                                    </Select>
+                                                                </Form.Item>
+                                                            </Col>
+                                                            {!readOnly && (
+                                                                <Col xs={24} md={4}>
+                                                                    <Button danger icon={<DeleteOutlined />} onClick={() => remove(field.name)} />
+                                                                </Col>
+                                                            )}
+                                                        </Row>
+                                                    ))}
+                                                    {!readOnly && (
+                                                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                                            Add Task Exception
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </Form.List>
+                                    </WidgetCard>
+                                </Col>
+                            )}
                         </Row>
 
                         {!readOnly && (

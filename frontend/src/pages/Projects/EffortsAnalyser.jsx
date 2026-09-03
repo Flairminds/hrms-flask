@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import XLSXStyle from 'xlsx-js-style';
 import dayjs from 'dayjs';
 import { getEmployeeAllocations, getProjects, saveEffortReport, getEffortTasks, getEffortReports } from '../../services/api';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const { Dragger } = Upload;
 const { TabPane } = Tabs;
@@ -1811,6 +1812,8 @@ const FormatInfoContent = () => (
 
 // ── main component ─────────────────────────────────────────────────────────
 const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
+    const { user } = useAuth();
+    const isHRorAdmin = user?.roleName === 'HR' || user?.roleName === 'Admin';
     const [rawRows, setRawRows] = useState([]);
     const [allocations, setAllocations] = useState([]);      // per-employee allocations
     const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
@@ -2550,13 +2553,24 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                             </span>
                         </div>
                     </div>
-                    <Dragger accept=".xlsx,.xls" beforeUpload={handleFile} showUploadList={false}
-                        style={{ borderRadius: 10, background: '#fafbff' }}>
-                        <p style={{ fontSize: 44, color: '#4f8ef7', margin: '12px 0 8px' }}><InboxOutlined /></p>
-                        <p style={{ fontWeight: 600, color: '#333', marginBottom: 4 }}>Click or drag an Excel file here</p>
-                        <p style={{ color: '#aaa', fontSize: 12 }}>.xlsx or .xls files only</p>
-                    </Dragger>
-                    {uploading && <div style={{ textAlign: 'center', marginTop: 16 }}><Spin tip="Parsing…" /></div>}
+                    {isHRorAdmin ? (
+                        <>
+                            <Dragger accept=".xlsx,.xls" beforeUpload={handleFile} showUploadList={false}
+                                style={{ borderRadius: 10, background: '#fafbff' }}>
+                                <p style={{ fontSize: 44, color: '#4f8ef7', margin: '12px 0 8px' }}><InboxOutlined /></p>
+                                <p style={{ fontWeight: 600, color: '#333', marginBottom: 4 }}>Click or drag an Excel file here</p>
+                                <p style={{ color: '#aaa', fontSize: 12 }}>.xlsx or .xls files only</p>
+                            </Dragger>
+                            {uploading && <div style={{ textAlign: 'center', marginTop: 16 }}><Spin tip="Parsing…" /></div>}
+                        </>
+                    ) : (
+                        <Alert
+                            type="info"
+                            showIcon
+                            message="No effort data available yet"
+                            description="Uploading an effort report is restricted to HR/Admin. Please reach out to HR or an Admin to upload one."
+                        />
+                    )}
                 </Card>
             ) : (
                 <>
@@ -2590,29 +2604,31 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap))}>
                                         Run Checks
                                     </Button>
-                                    <Button
-                                        size="small"
-                                        icon={<DownloadOutlined />}
-                                        type="primary"
-                                        style={{ background: '#52c41a', borderColor: '#52c41a' }}
-                                        onClick={() => downloadSummaryExcel(
-                                            filteredEmployeeChartData,
-                                            projectChartData,
-                                            allPeriods,
-                                            fileName,
-                                            periodMode,
-                                            allocations,
-                                            employeeProjectChartData,
-                                            hrmsProjects,
-                                            rawRows
-                                        )}
-                                    >
-                                        Download Summary
-                                    </Button>
-                                    <Button size="small" icon={<UploadOutlined />}
-                                        onClick={() => setShowUploadPanel(true)}>
-                                        Upload New File
-                                    </Button>
+                                    {isHRorAdmin && (
+                                        <Button
+                                            size="small"
+                                            icon={<DownloadOutlined />}
+                                            onClick={() => downloadSummaryExcel(
+                                                filteredEmployeeChartData,
+                                                projectChartData,
+                                                allPeriods,
+                                                fileName,
+                                                periodMode,
+                                                allocations,
+                                                employeeProjectChartData,
+                                                hrmsProjects,
+                                                rawRows
+                                            )}
+                                        >
+                                            Download Summary
+                                        </Button>
+                                    )}
+                                    {isHRorAdmin && (
+                                        <Button size="small" icon={<UploadOutlined />}
+                                            onClick={() => setShowUploadPanel(true)}>
+                                            Upload New File
+                                        </Button>
+                                    )}
                                     <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottomRight">
                                         <Button size="small" icon={<InfoCircleOutlined />}>
                                             File Format

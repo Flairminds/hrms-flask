@@ -1,14 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select, DatePicker, Spin, Modal, Popover, Switch, Empty } from 'antd';
-import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
+import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, PieChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
 import dayjs from 'dayjs';
 import {
-    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+    BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
     Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import Cookies from 'js-cookie';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
     getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks,
     saveTimelogReport, getTimelogEntries, getTimelogReports,
@@ -102,6 +103,10 @@ const getMonthString = (dateObj) => {
     if (!dateObj || isNaN(dateObj.getTime())) return 'Invalid Date';
     return dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
 };
+
+// Colors for the Category Breakdown pie/table — cycled by index over however
+// many distinct "Category — Sub-category" labels are present.
+const CATEGORY_COLORS = ['#4f8ef7', '#5ad8a6', '#fa8c16', '#722ed1', '#f5222d', '#13c2c2', '#eb2f96', '#a0d911', '#faad14', '#2f54eb'];
 
 // Every column present in the timelog export is required — 'Id' (unique per
 // log row) and 'Author' (who actually logged the time — used as employee
@@ -270,10 +275,12 @@ const WeeklyFlagPanel = ({ title, emptyText, color, bgColor, borderColor, rows, 
 };
 
 const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
+    const { user } = useAuth();
+    const isHRorAdmin = user?.roleName === 'HR' || user?.roleName === 'Admin';
     const [rawRows, setRawRows] = useState([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
-    const [viewMode, setViewMode] = useState('employee'); // 'employee' or 'project'
+    const [viewMode, setViewMode] = useState('category'); // 'employee', 'project', or 'category'
     const [periodType, setPeriodType] = useState('week'); // 'week' or 'month'
     const [displayType, setDisplayType] = useState('table'); // 'table', 'chart', 'gaps', or 'trend'
     const [hrmsProjects, setHrmsProjects] = useState([]);
@@ -283,6 +290,8 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [backlogTasks, setBacklogTasks] = useState([]); // persisted, not-done Effort Analyser tasks
     const [trendEntity, setTrendEntity] = useState('ALL'); // 'ALL' or a specific employee/project name
     const [hideCurrentWeek, setHideCurrentWeek] = useState(true); // weekly analytics: skip the still-in-progress week
+    const [categoryEmpFilter, setCategoryEmpFilter] = useState(null); // Category Breakdown: optional employee filter
+    const [categoryProjFilter, setCategoryProjFilter] = useState(null); // Category Breakdown: optional project filter
     const [drillDown, setDrillDown] = useState(null); // { employee: name } — opens the per-employee detail modal
 
     // ── Database persistence (employee-wise, monthly) ───────────────────────
@@ -733,6 +742,8 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             }
             const match = hrmsProjects.find(hp => String(hp.project_name).trim().toLowerCase() === hrmsName.toLowerCase());
             p.allocation = match && match.total_allocation != null ? Number(match.total_allocation) / 100 : 0;
+            p.category = match?.category || null;
+            p.subCategory = match?.sub_category || null;
         });
 
         // Sort periods chronologically
@@ -975,6 +986,157 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         return { empWeekHours, empProjWeekHours, weekMeta, weekList };
     }, [rawRows, dateRange, canonicalEmpName]);
 
+    // ── Category Breakdown: Client Project (Billable/Non-billable, from the
+    // employee's own allocation on that project) vs Internal (project's
+    // configured sub-category, with per-task overrides) — week/month-wise,
+    // plus a whole-range total for the pie chart. Independent employee/project
+    // filters, in addition to the page's date range + Group By period. ───────
+    const projectCategoryIndex = useMemo(() => {
+        const idx = {};
+        hrmsProjects.forEach(p => {
+            const key = String(p.project_name || '').trim().toLowerCase();
+            if (key) idx[key] = p;
+        });
+        return idx;
+    }, [hrmsProjects]);
+
+    // { empName -> { hrmsProjectName(lower) -> is_billing } }
+    const empProjectBillingIndex = useMemo(() => {
+        const idx = {};
+        allocations.forEach(a => {
+            const map = {};
+            (a.projects || []).forEach(p => {
+                map[String(p.project_name || '').trim().toLowerCase()] = !!p.is_billing;
+            });
+            idx[(a.employee_name || '').trim()] = map;
+        });
+        return idx;
+    }, [allocations]);
+
+    // A project's default sub_category, unless one of its task_category_overrides
+    // matches this row's task Title or Key (case-insensitive).
+    const resolveTaskSubCategory = (proj, row) => {
+        const overrides = proj.task_category_overrides || [];
+        const fallback = proj.sub_category || 'Other Internal Work';
+        if (!overrides.length) return fallback;
+        const title = String(row['Title'] || '').trim().toLowerCase();
+        const key = String(row['Key'] || '').trim().toLowerCase();
+        const hit = overrides.find(o => {
+            const t = String(o.task_name || '').trim().toLowerCase();
+            return t && (t === title || t === key);
+        });
+        return hit ? hit.sub_category : fallback;
+    };
+
+    const employeeFilterOptions = useMemo(() =>
+        [...new Set(rawRows.map(r => canonicalEmpName(String(r['Author'] || '').trim())))].filter(Boolean).sort(),
+        [rawRows, canonicalEmpName]);
+
+    const projectFilterOptions = useMemo(() => {
+        const names = new Set();
+        rawRows.forEach(r => {
+            const resolved = resolveProjectName(r['Project'] ? String(r['Project']).trim() : 'Unknown Project');
+            names.add(resolved.includes(' (') ? resolved.split(' (')[0].trim() : resolved);
+        });
+        return [...names].filter(Boolean).sort();
+    }, [rawRows]);
+
+    const categoryBreakdown = useMemo(() => {
+        const rowMap = {};        // label -> { key, category, subCategory, total }
+        const entriesByLabel = {}; // label -> [{ empName, projName, hours, date, title, key, state, description }]
+
+        rawRows.forEach(row => {
+            const rawEmp = row['Author'];
+            const rawDate = row['Date'];
+            const rawTime = row['Time'];
+            if (!rawEmp || !rawDate) return;
+
+            const empName = canonicalEmpName(String(rawEmp).trim());
+            if (categoryEmpFilter && empName !== categoryEmpFilter) return;
+
+            const resolvedProj = resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project');
+            const hrmsProjName = resolvedProj.includes(' (') ? resolvedProj.split(' (')[0].trim() : resolvedProj;
+            if (categoryProjFilter && hrmsProjName !== categoryProjFilter) return;
+
+            const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
+            if (isNaN(timeHrs)) return;
+
+            const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+            if (isNaN(d.getTime())) return;
+
+            const proj = projectCategoryIndex[hrmsProjName.toLowerCase()];
+            let category = 'Uncategorized';
+            let subCategory = 'Uncategorized';
+
+            if (proj?.category === 'Internal') {
+                category = 'Internal';
+                subCategory = resolveTaskSubCategory(proj, row);
+            } else if (proj?.category === 'Client Project') {
+                category = 'Client Project';
+                const billingMap = empProjectBillingIndex[empName];
+                const isBilling = billingMap ? billingMap[hrmsProjName.toLowerCase()] : undefined;
+                subCategory = isBilling === undefined ? 'Unallocated' : (isBilling ? 'Billable' : 'Non-billable');
+            }
+
+            const label = `${category} — ${subCategory}`;
+
+            if (!rowMap[label]) rowMap[label] = { key: label, category, subCategory, total: 0 };
+            rowMap[label].total += timeHrs;
+
+            if (!entriesByLabel[label]) entriesByLabel[label] = [];
+            entriesByLabel[label].push({
+                empName, projName: hrmsProjName, hours: timeHrs, date: d,
+                title: row['Title'] || '', key: row['Key'] || '',
+                state: row['Workflow State'] || '', description: row['Description'] || '',
+            });
+        });
+
+        const rows = Object.values(rowMap)
+            .map(r => ({ ...r, total: Number(r.total.toFixed(2)) }))
+            .sort((a, b) => b.total - a.total);
+
+        const grandTotal = rows.reduce((s, r) => s + r.total, 0);
+        const pieData = rows.map(r => ({ name: r.key, value: r.total }));
+
+        return { rows, entriesByLabel, pieData, grandTotal };
+    }, [rawRows, categoryEmpFilter, categoryProjFilter, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName]);
+
+    // Drill-down for a clicked category/sub-category row: which employee
+    // logged how many hours on which project (matrix), plus the individual
+    // task entries behind it — both scoped to whatever the top-level
+    // Employee/Project filters currently select.
+    const [categoryDrillDown, setCategoryDrillDown] = useState(null); // the clicked row's `label` (key), or null
+
+    const categoryDrillDownData = useMemo(() => {
+        if (!categoryDrillDown) return null;
+        const entries = categoryBreakdown.entriesByLabel[categoryDrillDown] || [];
+
+        const empProjMap = {}; // empName -> projName -> hours
+        const projSet = new Set();
+        entries.forEach(e => {
+            projSet.add(e.projName);
+            empProjMap[e.empName] = empProjMap[e.empName] || {};
+            empProjMap[e.empName][e.projName] = (empProjMap[e.empName][e.projName] || 0) + e.hours;
+        });
+
+        const projects = [...projSet].sort();
+        const matrixRows = Object.keys(empProjMap).sort().map(emp => {
+            const row = { key: emp, employee: emp, total: 0 };
+            projects.forEach(p => {
+                const v = empProjMap[emp][p] || 0;
+                row[p] = Number(v.toFixed(2));
+                row.total += v;
+            });
+            row.total = Number(row.total.toFixed(2));
+            return row;
+        }).sort((a, b) => b.total - a.total);
+
+        const tasks = [...entries].sort((a, b) => a.date.getTime() - b.date.getTime());
+        const totalHours = Number(entries.reduce((s, e) => s + e.hours, 0).toFixed(2));
+
+        return { projects, matrixRows, tasks, totalHours, entryCount: entries.length };
+    }, [categoryDrillDown, categoryBreakdown]);
+
     // Full employee universe for the weekly checks — same union used to build
     // employeeData above: anyone with logged rows, plus every HRMS employee
     // with an active project allocation (so a zero-hour week isn't missed
@@ -1072,6 +1234,8 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const groupPeriodMap = {};   // groupName -> period -> hours
         const periodStartDates = {}; // period -> startTime, for chronological sorting
         const logsByGroup = {};      // groupName -> [{ date, title, description, key, state, hours }]
+        const groupCategoryMap = {}; // groupName (project) -> { category, subCategory } — 'employee' drill-downs only
+        const categoryTotals = {};   // "Category — Sub-category" -> hours — 'employee' drill-downs only, for the pie chart
         let totalHours = 0;
 
         targetRows.forEach(row => {
@@ -1114,18 +1278,48 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 state: row['Workflow State'] || '',
                 hours,
             });
+
+            // Category/sub-category classification — same logic as the
+            // Category view, only computed when drilling into an employee
+            // (groupName is a project there; classifying a project drill-down's
+            // groups, which are employees, wouldn't make sense).
+            if (type === 'employee' && !groupCategoryMap[groupName]) {
+                const hrmsProjName = groupName.includes(' (') ? groupName.split(' (')[0].trim() : groupName;
+                const proj = projectCategoryIndex[hrmsProjName.toLowerCase()];
+                let category = 'Uncategorized';
+                let subCategory = 'Uncategorized';
+                if (proj?.category === 'Internal') {
+                    category = 'Internal';
+                    subCategory = resolveTaskSubCategory(proj, row);
+                } else if (proj?.category === 'Client Project') {
+                    category = 'Client Project';
+                    const billingMap = empProjectBillingIndex[canonicalEmpName(name)];
+                    const isBilling = billingMap ? billingMap[hrmsProjName.toLowerCase()] : undefined;
+                    subCategory = isBilling === undefined ? 'Unallocated' : (isBilling ? 'Billable' : 'Non-billable');
+                }
+                groupCategoryMap[groupName] = { category, subCategory };
+            }
+            if (type === 'employee') {
+                const { category, subCategory } = groupCategoryMap[groupName];
+                const label = `${category} — ${subCategory}`;
+                categoryTotals[label] = (categoryTotals[label] || 0) + hours;
+            }
         });
 
         Object.values(logsByGroup).forEach(list => list.sort((a, b) => a.date.getTime() - b.date.getTime()));
 
         const periods = Object.keys(periodStartDates).sort((a, b) => periodStartDates[a] - periodStartDates[b]);
         const groupNames = Object.keys(groupPeriodMap).sort();
+        const categoryPieData = Object.entries(categoryTotals)
+            .map(([label, hours]) => ({ name: label, value: Number(hours.toFixed(2)) }))
+            .sort((a, b) => b.value - a.value);
 
         return {
             type, name, groupLabel, groupNames, groupPeriodMap, periods, logsByGroup,
+            groupCategoryMap, categoryPieData,
             totalHours, entryCount: targetRows.length,
         };
-    }, [drillDown, rawRows, periodType]);
+    }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName]);
 
     const tableColumns = useMemo(() => {
         if (!allPeriods.length) return [];
@@ -1144,6 +1338,27 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             onFilter: (value, record) => record.name === value,
             render: (text) => <b>{text}</b>
         }];
+
+        if (viewMode === 'project') {
+            const categoryFilters = [...new Set(source.map(r => r.category).filter(Boolean))].sort()
+                .map(c => ({ text: c, value: c }));
+            base.push({
+                title: 'Category',
+                dataIndex: 'category',
+                key: 'category',
+                width: 190,
+                filters: categoryFilters,
+                onFilter: (value, record) => record.category === value,
+                render: (category, record) => category ? (
+                    <>
+                        <Tag color={category === 'Internal' ? 'purple' : 'blue'}>{category}</Tag>
+                        {category === 'Internal' && record.subCategory && (
+                            <div><small style={{ color: '#888' }}>{record.subCategory}</small></div>
+                        )}
+                    </>
+                ) : <span style={{ color: '#ccc' }}>Uncategorized</span>
+            });
+        }
 
         allPeriods.forEach(p => {
             base.push({
@@ -1228,6 +1443,231 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     }, [employeeData, projectData, allPeriods, viewMode]);
 
     const CHART_COLORS = ['#5b8ff9', '#5ad8a6', '#5d7092', '#f6bd16', '#e8684a', '#6dc8ec', '#9270ca', '#ff9d4d', '#269a99', '#ff99c3'];
+
+    // Category Breakdown view — an independent "View" mode (alongside
+    // Employee/Project), not a display type, since it's a different
+    // dimension (Client Project Billable/Non-billable vs Internal
+    // sub-category) rather than another way of slicing employee/project data.
+    const renderCategoryView = () => (
+        <div style={{ padding: 24 }}>
+            <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 16 }}>
+                <Col>
+                    <Space size={8}>
+                        <span style={{ fontSize: 12, color: '#888' }}>Employee</span>
+                        <Select
+                            allowClear
+                            showSearch
+                            style={{ minWidth: 200 }}
+                            placeholder="All employees"
+                            value={categoryEmpFilter}
+                            onChange={setCategoryEmpFilter}
+                            options={employeeFilterOptions.map(n => ({ value: n, label: n }))}
+                        />
+                    </Space>
+                </Col>
+                <Col>
+                    <Space size={8}>
+                        <span style={{ fontSize: 12, color: '#888' }}>Project</span>
+                        <Select
+                            allowClear
+                            showSearch
+                            style={{ minWidth: 200 }}
+                            placeholder="All projects"
+                            value={categoryProjFilter}
+                            onChange={setCategoryProjFilter}
+                            options={projectFilterOptions.map(n => ({ value: n, label: n }))}
+                        />
+                    </Space>
+                </Col>
+            </Row>
+
+            {categoryBreakdown.rows.length === 0 ? (
+                <Empty description="No logged time for this selection" style={{ padding: 40 }} />
+            ) : (
+                <Row gutter={[16, 16]}>
+                    <Col xs={24} lg={9}>
+                        <div style={{ height: 280 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={categoryBreakdown.pieData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={65}
+                                        outerRadius={110}
+                                        paddingAngle={1}
+                                    >
+                                        {categoryBreakdown.pieData.map((entry, idx) => (
+                                            <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} h`, name]} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div style={{ textAlign: 'center', fontSize: 12, color: '#888', margin: '-8px 0 10px' }}>
+                            Total: <b style={{ color: '#333' }}>{categoryBreakdown.grandTotal.toFixed(1)} hrs</b> across selected range
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {categoryBreakdown.pieData.map((entry, idx) => (
+                                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#555' }}>
+                                    <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Col>
+                    <Col xs={24} lg={15}>
+                        <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>
+                            🖱 Click a row to see employee/project-wise effort and the individual tasks behind it
+                        </div>
+                        <Table
+                            size="small"
+                            bordered
+                            pagination={false}
+                            rowKey="key"
+                            scroll={{ x: 'max-content', y: 340 }}
+                            dataSource={categoryBreakdown.rows}
+                            onRow={(record) => ({
+                                onClick: () => setCategoryDrillDown(record.key),
+                                style: { cursor: 'pointer' },
+                            })}
+                            columns={[
+                                {
+                                    title: 'Category', dataIndex: 'category', key: 'category', width: 130,
+                                    render: v => <Tag color={v === 'Internal' ? 'purple' : v === 'Client Project' ? 'blue' : 'default'}>{v}</Tag>
+                                },
+                                { title: 'Sub-category', dataIndex: 'subCategory', key: 'subCategory', width: 190 },
+                                {
+                                    title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 120, align: 'right',
+                                    render: v => <b>{v.toFixed(2)}</b>,
+                                    sorter: (a, b) => a.total - b.total,
+                                    defaultSortOrder: 'descend',
+                                },
+                            ]}
+                        />
+                    </Col>
+                </Row>
+            )}
+
+            <Alert
+                style={{ marginTop: 20 }}
+                type="info"
+                showIcon
+                message="How categories are assigned"
+                description="Client Project hours split into Billable / Non-billable based on that employee's own project allocation billing flag (no allocation found → Unallocated). Internal hours use the project's configured sub-category, overridden per-task where the project defines a task exception (e.g. a 'Leave' task counted under Leaves). Projects with no category configured show as Uncategorized — set one from Projects → Edit Project."
+            />
+
+            {/* Category row drill-down: employee × project matrix + individual tasks */}
+            <Modal
+                open={!!categoryDrillDown}
+                onCancel={() => setCategoryDrillDown(null)}
+                onOk={() => setCategoryDrillDown(null)}
+                okText="Close"
+                cancelButtonProps={{ style: { display: 'none' } }}
+                width={960}
+                styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
+                            <PieChartOutlined style={{ color: '#722ed1', marginRight: 6 }} />
+                            {categoryDrillDown}
+                        </span>
+                        {categoryDrillDownData && (
+                            <>
+                                <Tag color="blue" style={{ fontSize: 11 }}>{categoryDrillDownData.entryCount} log entries</Tag>
+                                <Tag color="green" style={{ fontSize: 11 }}>{categoryDrillDownData.totalHours.toFixed(1)} hrs total</Tag>
+                            </>
+                        )}
+                    </div>
+                }
+            >
+                {categoryDrillDownData && (
+                    categoryDrillDownData.tasks.length === 0 ? (
+                        <Empty description="No logged time in this selection" style={{ padding: 24 }} />
+                    ) : (
+                        <>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                Employee × Project effort
+                            </div>
+                            <Table
+                                size="small"
+                                bordered
+                                pagination={false}
+                                rowKey="key"
+                                style={{ marginBottom: 24 }}
+                                scroll={{ x: 'max-content' }}
+                                dataSource={categoryDrillDownData.matrixRows}
+                                columns={[
+                                    {
+                                        title: 'Employee', dataIndex: 'employee', key: 'employee', fixed: 'left', width: 190,
+                                        filters: categoryDrillDownData.matrixRows.map(r => ({ text: r.employee, value: r.employee })),
+                                        filterSearch: true,
+                                        onFilter: (value, record) => record.employee === value,
+                                        render: v => <b style={{ fontSize: 12 }}>{v}</b>
+                                    },
+                                    ...categoryDrillDownData.projects.map(p => ({
+                                        title: p, dataIndex: p, key: p, width: 150, align: 'right',
+                                        filters: [{ text: p, value: p }],
+                                        onFilter: (value, record) => (record[value] || 0) > 0,
+                                        render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(2) : '-'}</span>,
+                                    })),
+                                    {
+                                        title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
+                                        render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(2)}</b>,
+                                        sorter: (a, b) => a.total - b.total,
+                                    },
+                                ]}
+                            />
+
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                Tasks
+                            </div>
+                            <Table
+                                size="small"
+                                bordered
+                                pagination={{ pageSize: 10, size: 'small' }}
+                                rowKey={(_, i) => i}
+                                scroll={{ x: 'max-content' }}
+                                dataSource={categoryDrillDownData.tasks}
+                                columns={[
+                                    { title: 'Date', dataIndex: 'date', key: 'date', width: 100,
+                                        sorter: (a, b) => a.date.getTime() - b.date.getTime(),
+                                        render: d => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{toISODate(d)}</span> },
+                                    {
+                                        title: 'Employee', dataIndex: 'empName', key: 'empName', width: 160,
+                                        filters: [...new Set(categoryDrillDownData.tasks.map(t => t.empName))].sort().map(n => ({ text: n, value: n })),
+                                        filterSearch: true,
+                                        onFilter: (value, record) => record.empName === value,
+                                        render: v => <span style={{ fontSize: 12 }}>{v}</span>
+                                    },
+                                    {
+                                        title: 'Project', dataIndex: 'projName', key: 'projName', width: 160,
+                                        filters: [...new Set(categoryDrillDownData.tasks.map(t => t.projName))].sort().map(n => ({ text: n, value: n })),
+                                        filterSearch: true,
+                                        onFilter: (value, record) => record.projName === value,
+                                        render: v => <span style={{ fontSize: 12 }}>{v}</span>
+                                    },
+                                    { title: 'Key', dataIndex: 'key', key: 'key', width: 100,
+                                        render: v => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#4f8ef7' }}>{v || '—'}</span> },
+                                    { title: 'Task', dataIndex: 'title', key: 'title', width: 200, ellipsis: true,
+                                        render: v => <span style={{ fontSize: 12 }}>{v || '—'}</span> },
+                                    { title: 'State', dataIndex: 'state', key: 'state', width: 90,
+                                        render: v => v ? <Tag style={{ fontSize: 11 }}>{v}</Tag> : '—' },
+                                    { title: 'Description', dataIndex: 'description', key: 'description',
+                                        render: v => <span style={{ fontSize: 12, color: '#555' }}>{v || '—'}</span> },
+                                    { title: 'Time (hrs)', dataIndex: 'hours', key: 'hours', width: 90, align: 'right',
+                                        sorter: (a, b) => a.hours - b.hours,
+                                        render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{v.toFixed(2)}</span> },
+                                ]}
+                            />
+                        </>
+                    )
+                )}
+            </Modal>
+        </div>
+    );
 
     const renderChart = () => {
         const data = viewMode === 'employee' ? employeeData : projectData;
@@ -1549,25 +1989,35 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         </Button>
                     </Popover>
 
-                    <Spin spinning={saving} tip="Saving to the database…">
-                        <Upload.Dragger
-                            accept=".xlsx,.xls"
-                            beforeUpload={handleFile}
-                            showUploadList={false}
-                            disabled={saving}
-                            style={{ background: '#fafbfc', borderRadius: 12, border: '1px dashed #d9e2ec', padding: '10px 0' }}
-                        >
-                            <p className="ant-upload-drag-icon" style={{ marginBottom: 6 }}>
-                                <UploadOutlined style={{ fontSize: 28, color: '#4f8ef7' }} />
-                            </p>
-                            <p className="ant-upload-text" style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>
-                                Click or drag file to this area to upload
-                            </p>
-                            <p className="ant-upload-hint" style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
-                                Excel files only — .xlsx or .xls
-                            </p>
-                        </Upload.Dragger>
-                    </Spin>
+                    {isHRorAdmin ? (
+                        <Spin spinning={saving} tip="Saving to the database…">
+                            <Upload.Dragger
+                                accept=".xlsx,.xls"
+                                beforeUpload={handleFile}
+                                showUploadList={false}
+                                disabled={saving}
+                                style={{ background: '#fafbfc', borderRadius: 12, border: '1px dashed #d9e2ec', padding: '10px 0' }}
+                            >
+                                <p className="ant-upload-drag-icon" style={{ marginBottom: 6 }}>
+                                    <UploadOutlined style={{ fontSize: 28, color: '#4f8ef7' }} />
+                                </p>
+                                <p className="ant-upload-text" style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>
+                                    Click or drag file to this area to upload
+                                </p>
+                                <p className="ant-upload-hint" style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
+                                    Excel files only — .xlsx or .xls
+                                </p>
+                            </Upload.Dragger>
+                        </Spin>
+                    ) : (
+                        <Alert
+                            type="info"
+                            showIcon
+                            style={{ textAlign: 'left' }}
+                            message="No timelog data available yet"
+                            description="Uploading a timesheet export is restricted to HR/Admin. Please reach out to HR or an Admin to upload one."
+                        />
+                    )}
 
                     <div style={{ marginTop: 24, textAlign: 'left' }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
@@ -1670,26 +2120,34 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 {refreshing && <Spin size="small" />}
                             </Space>
                             <Space size={8}>
-                                <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
-                                <Segmented value={periodType} onChange={setPeriodType}
-                                    options={[{ label: 'Week', value: 'week' }, { label: 'Month', value: 'month' }]} />
-                            </Space>
-                            <Space size={8}>
                                 <span style={{ fontSize: 12, color: '#888' }}>View</span>
                                 <Segmented value={viewMode} onChange={setViewMode}
-                                    options={[{ label: 'Employee', value: 'employee' }, { label: 'Project', value: 'project' }]} />
+                                    options={[
+                                        { label: 'Category', value: 'category', icon: <PieChartOutlined /> },
+                                        { label: 'Project', value: 'project' },
+                                        { label: 'Employee', value: 'employee' },
+                                    ]} />
                             </Space>
+                            {viewMode !== 'category' && (
+                                <Space size={8}>
+                                    <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
+                                    <Segmented value={periodType} onChange={setPeriodType}
+                                        options={[{ label: 'Week', value: 'week' }, { label: 'Month', value: 'month' }]} />
+                                </Space>
+                            )}
                         </Space>
                     </Col>
-                    <Col>
-                        <Segmented value={displayType} onChange={setDisplayType}
-                            options={[
-                                { label: 'Table', value: 'table', icon: <TableOutlined /> },
-                                { label: 'Chart', value: 'chart', icon: <BarChartOutlined /> },
-                                { label: 'Missing Logs', value: 'gaps', icon: <WarningOutlined /> },
-                                { label: 'Trend', value: 'trend', icon: <LineChartOutlined /> },
-                            ]} />
-                    </Col>
+                    {viewMode !== 'category' && (
+                        <Col>
+                            <Segmented value={displayType} onChange={setDisplayType}
+                                options={[
+                                    { label: 'Table', value: 'table', icon: <TableOutlined /> },
+                                    { label: 'Chart', value: 'chart', icon: <BarChartOutlined /> },
+                                    { label: 'Missing Logs', value: 'gaps', icon: <WarningOutlined /> },
+                                    { label: 'Trend', value: 'trend', icon: <LineChartOutlined /> },
+                                ]} />
+                        </Col>
+                    )}
                 </Row>
 
                 <Divider style={{ margin: '14px 0' }} />
@@ -1703,7 +2161,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     </Col>
                     <Col>
                         <Space size={8}>
-                            {hasEffortsData && (
+                            {isHRorAdmin && hasEffortsData && (
                                 <Button
                                     type="primary"
                                     icon={<DownloadOutlined />}
@@ -1713,20 +2171,22 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                     Download Combined Report
                                 </Button>
                             )}
-                            <Button
-                                type="primary"
-                                icon={<DownloadOutlined />}
-                                onClick={handleDownload}
-                                style={{ background: '#52c41a', borderColor: '#52c41a' }}
-                            >
-                                Download Summary
-                            </Button>
-                            <Button
-                                icon={<UploadOutlined />}
-                                onClick={() => { setImportSummary(null); setShowUploadPanel(true); }}
-                            >
-                                Upload New File
-                            </Button>
+                            {isHRorAdmin && (
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleDownload}
+                                >
+                                    Download Summary
+                                </Button>
+                            )}
+                            {isHRorAdmin && (
+                                <Button
+                                    icon={<UploadOutlined />}
+                                    onClick={() => { setImportSummary(null); setShowUploadPanel(true); }}
+                                >
+                                    Upload New File
+                                </Button>
+                            )}
                             <Popover content={<FormatInfoContent />} title="Expected Excel format" trigger="click" placement="bottomRight">
                                 <Button icon={<InfoCircleOutlined />}>
                                     File Format
@@ -1798,13 +2258,13 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
             <Card
                 bodyStyle={{ padding: 0 }}
-                title={displayType === 'table' ? (
+                title={(viewMode !== 'category' && displayType === 'table') ? (
                     <span style={{ fontSize: 12, fontWeight: 400, color: '#aaa' }}>
                         🖱 Click a{viewMode === 'employee' ? 'n employee' : ' project'} row to see {viewMode === 'employee' ? 'their project-wise effort' : 'employee-wise effort'} and individual logs
                     </span>
                 ) : null}
             >
-                {displayType === 'table' ? (
+                {viewMode === 'category' ? renderCategoryView() : displayType === 'table' ? (
                     <Table
                         columns={tableColumns}
                         dataSource={viewMode === 'employee' ? employeeData : projectData}
@@ -1984,7 +2444,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 onOk={() => setDrillDown(null)}
                 okText="Close"
                 cancelButtonProps={{ style: { display: 'none' } }}
-                width={900}
+                width={drillDown?.type === 'employee' ? 1180 : 900}
                 styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -2014,38 +2474,89 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             <Empty description="No logged time in this range" style={{ padding: 24 }} />
                         ) : (
                             <>
-                                <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
-                                    {drillDownData.groupLabel}-wise effort
-                                </div>
-                                <Table
-                                    size="small"
-                                    bordered
-                                    pagination={false}
-                                    rowKey="group"
-                                    style={{ marginBottom: 24 }}
-                                    scroll={{ x: 'max-content' }}
-                                    dataSource={drillDownData.groupNames.map(g => {
-                                        const row = { group: g, total: 0 };
-                                        drillDownData.periods.forEach(period => {
-                                            const v = drillDownData.groupPeriodMap[g]?.[period] || 0;
-                                            row[period] = v;
-                                            row.total += v;
-                                        });
-                                        return row;
-                                    })}
-                                    columns={[
-                                        { title: drillDownData.groupLabel, dataIndex: 'group', key: 'group', fixed: 'left', width: 200,
-                                            render: v => <b style={{ fontSize: 12 }}>{v}</b> },
-                                        ...drillDownData.periods.map(period => ({
-                                            title: period, dataIndex: period, key: period, width: 130, align: 'right',
-                                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(1) : '-'}</span>,
-                                        })),
-                                        { title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
-                                            render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</b> },
-                                    ]}
-                                />
+                                <Row gutter={[16, 16]}>
+                                    {drillDownData.type === 'employee' && drillDownData.categoryPieData.length > 0 && (
+                                        <Col xs={24} md={9}>
+                                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                                Time by category
+                                            </div>
+                                            <div style={{ height: 220 }}>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={drillDownData.categoryPieData}
+                                                            dataKey="value"
+                                                            nameKey="name"
+                                                            innerRadius={45}
+                                                            outerRadius={80}
+                                                            paddingAngle={1}
+                                                        >
+                                                            {drillDownData.categoryPieData.map((entry, idx) => (
+                                                                <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} h`, name]} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4, paddingBottom: 24, borderBottom: '1px solid #f0f0f0' }}>
+                                                {drillDownData.categoryPieData.map((entry, idx) => (
+                                                    <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}>
+                                                        <span style={{ width: 9, height: 9, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                                                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </Col>
+                                    )}
+                                    <Col xs={24} md={drillDownData.type === 'employee' && drillDownData.categoryPieData.length > 0 ? 15 : 24}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                            {drillDownData.groupLabel}-wise effort
+                                        </div>
+                                        <Table
+                                            size="small"
+                                            bordered
+                                            pagination={false}
+                                            rowKey="group"
+                                            style={{ marginBottom: 24 }}
+                                            scroll={{ x: 'max-content', y: drillDownData.type === 'employee' ? 260 : undefined }}
+                                            dataSource={drillDownData.groupNames.map(g => {
+                                                const row = { group: g, total: 0, ...drillDownData.groupCategoryMap[g] };
+                                                drillDownData.periods.forEach(period => {
+                                                    const v = drillDownData.groupPeriodMap[g]?.[period] || 0;
+                                                    row[period] = v;
+                                                    row.total += v;
+                                                });
+                                                return row;
+                                            })}
+                                            columns={[
+                                                { title: drillDownData.groupLabel, dataIndex: 'group', key: 'group', fixed: 'left', width: 200,
+                                                    render: v => <b style={{ fontSize: 12 }}>{v}</b> },
+                                                ...(drillDownData.type === 'employee' ? [{
+                                                    title: 'Category', dataIndex: 'category', key: 'category', width: 190,
+                                                    render: (category, record) => category ? (
+                                                        <>
+                                                            <Tag color={category === 'Internal' ? 'purple' : category === 'Client Project' ? 'blue' : 'default'} style={{ fontSize: 11 }}>{category}</Tag>
+                                                            {category !== 'Uncategorized' && record.subCategory && (
+                                                                <div><small style={{ color: '#888' }}>{record.subCategory}</small></div>
+                                                            )}
+                                                        </>
+                                                    ) : '-'
+                                                }] : []),
+                                                ...drillDownData.periods.map(period => ({
+                                                    title: period, dataIndex: period, key: period, width: 130, align: 'right',
+                                                    render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(1) : '-'}</span>,
+                                                })),
+                                                { title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
+                                                    render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</b>,
+                                                    sorter: (a, b) => a.total - b.total },
+                                            ]}
+                                        />
+                                    </Col>
+                                </Row>
 
-                                <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginTop: 20, marginBottom: 8 }}>
                                     Individual log entries
                                 </div>
                                 {drillDownData.groupNames.map(g => (

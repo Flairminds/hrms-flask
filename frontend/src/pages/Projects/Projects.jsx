@@ -107,6 +107,25 @@ const Projects = () => {
             onFilter: (value, record) => record.client === value,
         },
         {
+            title: 'Category',
+            dataIndex: 'category',
+            filters: [
+                { text: 'Client Project', value: 'Client Project' },
+                { text: 'Internal', value: 'Internal' }
+            ],
+            onFilter: (value, record) => record.category === value,
+            render: (category, record) => (
+                category ? (
+                    <>
+                        <Tag color={category === 'Internal' ? 'purple' : 'blue'}>{category}</Tag>
+                        {category === 'Internal' && record.sub_category && (
+                            <div><small>{record.sub_category}</small></div>
+                        )}
+                    </>
+                ) : '-'
+            )
+        },
+        {
             title: 'Status',
             dataIndex: 'project_status',
             filters: [

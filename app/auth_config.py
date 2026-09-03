@@ -202,7 +202,7 @@ ROLE_PERMISSIONS = {
     # Effort Module - Effort Analyser (persisted task/timesheet reports)
     # ===========================
     "effort": {
-        "save_report": ["Admin", "HR", "Lead"],       # Import/save an Excel upload
+        "save_report": ["Admin", "HR"],       # Import/save an Excel upload — HR/Admin only
         "get_tasks": ["Admin", "HR", "Lead", "Employee"],   # Flattened tasks, for charts/tables
         "get_reports": ["Admin", "HR", "Lead", "Employee"], # Per-project report listing
     },
@@ -211,7 +211,7 @@ ROLE_PERMISSIONS = {
     # Timelog Module - Timesheet Analyser (persisted employee-wise, monthly log entries)
     # ===========================
     "timelog": {
-        "save_report": ["Admin", "HR", "Lead"],        # Import/save an Excel upload
+        "save_report": ["Admin", "HR"],        # Import/save an Excel upload — HR/Admin only
         "get_entries": ["Admin", "HR", "Lead", "Employee"],  # Flattened entries, for charts/tables
         "get_reports": ["Admin", "HR", "Lead", "Employee"],  # Per-employee-month report listing
     },
