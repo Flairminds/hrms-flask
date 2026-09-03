@@ -44,6 +44,9 @@ class ProjectService:
                 Project.project_status,
                 Project.lead_by,
                 Project.contractual_allocation,
+                Project.category,
+                Project.sub_category,
+                Project.task_category_overrides,
                 func.concat(Employee.first_name, ' ', Employee.last_name).label('lead_name'),
                 func.coalesce(total_alloc_subq.c.total_allocation, 0).label('total_allocation'),
                 func.coalesce(billable_alloc_subq.c.billable_allocation, 0).label('billable_allocation')
@@ -66,6 +69,9 @@ class ProjectService:
                     'project_status': p.project_status,
                     'lead_by': p.lead_by,
                     'contractual_allocation': float(p.contractual_allocation) if p.contractual_allocation else 0.0,
+                    'category': p.category,
+                    'sub_category': p.sub_category,
+                    'task_category_overrides': p.task_category_overrides or [],
                     'lead_name': ' '.join(p.lead_name.split()) if p.lead_name else '',
                     'total_allocation': float(p.total_allocation),
                     'billable_allocation': float(p.billable_allocation)
@@ -94,6 +100,9 @@ class ProjectService:
                 client=data.get('client'),
                 lead_by=data.get('lead_by'),
                 project_status=data.get('project_status', 'Active'),
+                category=data.get('category'),
+                sub_category=data.get('sub_category') if data.get('category') == 'Internal' else None,
+                task_category_overrides=data.get('task_category_overrides') or [],
                 start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
                 end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
             )
@@ -121,7 +130,14 @@ class ProjectService:
             project.project_status = data.get('project_status', project.project_status)
             project.lead_by = data.get('lead_by', project.lead_by)
             project.contractual_allocation = data.get('contractual_allocation', project.contractual_allocation)
-            
+
+            if 'category' in data:
+                project.category = data.get('category')
+                # Sub-category only applies to Internal projects; clear it otherwise.
+                project.sub_category = data.get('sub_category') if project.category == 'Internal' else None
+            if 'task_category_overrides' in data:
+                project.task_category_overrides = data.get('task_category_overrides') or []
+
             if 'start_date' in data:
                 project.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data['start_date'] else None
             if 'end_date' in data:
