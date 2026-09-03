@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select, DatePicker, Spin, Modal, Popover, Switch, Empty } from 'antd';
+import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select, DatePicker, Spin, Modal, Popover, Switch, Empty, Tooltip as AntTooltip } from 'antd';
 import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, PieChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
@@ -66,11 +66,15 @@ const buildProjectNameMap = (hrmsProjects) => {
     return map;
 };
 
+// Resolves to the plain HRMS project name (no appended excel-name suffix) so
+// that every external/Zymmr name tagged onto the same HRMS project collapses
+// into a single row/group everywhere this is used (tables, charts, drill-down)
+// — that's the whole point of letting one HRMS project carry multiple tags.
 const resolveProjectName = (excelName, nameMap) => {
     if (!excelName) return excelName;
     const key = String(excelName).toLowerCase().trim();
     const hrmsName = nameMap ? nameMap[key] : undefined;
-    return hrmsName ? `${hrmsName} (${excelName})` : excelName;
+    return hrmsName ? hrmsName : excelName;
 };
 
 const resolveEmployeeName = (excelName) => excelName;
@@ -90,6 +94,52 @@ const nameMatch = (hrmsName, excelName) => {
         }
     }
     return false;
+};
+
+const fmtDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Expected working hours for one employee over [rangeStart, rangeEnd] (both ms
+// timestamps, inclusive — the caller should already cap rangeEnd at "today",
+// since there's no expected work, and no possible timelog, for a future date):
+// 8 hrs per weekday, minus company holidays and that employee's own approved
+// privilege/sick leave days. Mirrors the per-period target-hours logic used
+// for the Missing Logs / Gaps view, generalized to a flat date range so it can
+// be summed across every active employee for an org-wide "expected capacity".
+const computeExpectedHours = (employeeName, rangeStart, rangeEnd, holidays, leaves) => {
+    if (!rangeStart || !rangeEnd || rangeEnd < rangeStart) return 0;
+    const empLeaves = (leaves || []).filter(l => {
+        const name = l.EmployeeName || l.employeeName || l.empName || l.appliedByName || '';
+        const type = l.LeaveType || l.leaveType || '';
+        const status = l.LeaveStatus || l.leaveStatus || l.leave_status || '';
+        const isPrivilegeOrSick = type.toLowerCase().includes('sick') || type.toLowerCase().includes('privilege')
+            || String(l.leaveTypeId) === "1" || String(l.leaveTypeId) === "2"
+            || String(l.leave_type_id) === "1" || String(l.leave_type_id) === "2";
+        const isApproved = status.toLowerCase() === 'approved';
+        return nameMatch(name, employeeName) && isPrivilegeOrSick && isApproved;
+    });
+
+    let hours = 0;
+    for (let cursor = new Date(rangeStart); cursor.getTime() <= rangeEnd; cursor.setDate(cursor.getDate() + 1)) {
+        const dayOfWeek = cursor.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue; // weekend
+
+        const dayStr = fmtDateStr(cursor);
+        if ((holidays || []).some(h => h.dateStr === dayStr)) continue;
+
+        const dayTime = cursor.getTime();
+        const isOnLeave = empLeaves.some(l => {
+            const sVal = l.fromDate || l.from_date;
+            const eVal = l.toDate || l.to_date;
+            if (!sVal || !eVal) return false;
+            const lStart = new Date(sVal).getTime();
+            const lEnd = new Date(eVal).getTime();
+            return dayTime >= lStart && dayTime <= lEnd;
+        });
+        if (isOnLeave) continue;
+
+        hours += 8;
+    }
+    return hours;
 };
 
 // Helper to format Date into "MMM DD - MMM DD" (Mon-Sun week)
@@ -743,10 +793,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         // Add allocation to project data
         Object.values(projMap).forEach(p => {
             // Determine HRMS name to match
-            let hrmsName = p.name;
-            if (p.name.includes(' (')) {
-                hrmsName = p.name.split(' (')[0].trim();
-            }
+            const hrmsName = p.name;
             const match = hrmsProjects.find(hp => String(hp.project_name).trim().toLowerCase() === hrmsName.toLowerCase());
             p.allocation = match && match.total_allocation != null ? Number(match.total_allocation) / 100 : 0;
             p.category = match?.category || null;
@@ -790,11 +837,6 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const label = viewMode === 'employee' ? 'All Employees' : 'All Projects';
         return [{ value: 'ALL', label }, ...source.map(e => ({ value: e.name, label: e.name }))];
     }, [viewMode, employeeData, projectData]);
-
-    // Project names in this component are rendered as "HRMS Name (Excel Name)"
-    // when remapped (see resolveProjectName) — strip that back to the HRMS
-    // name to match against the Effort Analyser's persisted `project` field.
-    const getHrmsProjectName = (name) => (name.includes(' (') ? name.split(' (')[0].trim() : name);
 
     const trendData = useMemo(() => {
         const empty = { series: [], weeklyRate: 0, totalBacklogHours: 0, weeksToClear: 0, lastLoggedWeek: null };
@@ -844,7 +886,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (viewMode === 'employee') {
                 matchedBacklog = backlogTasks.filter(t => employeeNamesMatch(t.assignee, trendEntity));
             } else {
-                const hrmsName = getHrmsProjectName(trendEntity).toLowerCase().trim();
+                const hrmsName = trendEntity.toLowerCase().trim();
                 matchedBacklog = backlogTasks.filter(t => (t.project || '').toLowerCase().trim() === hrmsName);
             }
         }
@@ -859,7 +901,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 const emp = allocations.find(e => employeeNamesMatch(e.employee_name, trendEntity));
                 weeklyRate = emp ? (emp.total_allocation || 0) * 40 : 40;
             } else {
-                const hrmsName = getHrmsProjectName(trendEntity).toLowerCase().trim();
+                const hrmsName = trendEntity.toLowerCase().trim();
                 const proj = hrmsProjects.find(p => (p.project_name || '').trim().toLowerCase() === hrmsName);
                 weeklyRate = (proj && proj.total_allocation != null) ? (Number(proj.total_allocation) / 100) * 40 : 40;
             }
@@ -957,7 +999,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
             const empName = canonicalEmpName(String(rawEmp).trim());
             const projName = resolveProjectName(rawProj ? String(rawProj).trim() : 'Unknown Project', projectNameMap);
-            const hrmsProjName = projName.includes(' (') ? projName.split(' (')[0].trim() : projName;
+            const hrmsProjName = projName;
 
             const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
             if (isNaN(timeHrs)) return;
@@ -1043,10 +1085,51 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const names = new Set();
         rawRows.forEach(r => {
             const resolved = resolveProjectName(r['Project'] ? String(r['Project']).trim() : 'Unknown Project', projectNameMap);
-            names.add(resolved.includes(' (') ? resolved.split(' (')[0].trim() : resolved);
+            names.add(resolved);
         });
         return [...names].filter(Boolean).sort();
     }, [rawRows, projectNameMap]);
+
+    // ── Expected capacity: what the org SHOULD have logged for the selected
+    // range, so percentages can be read against headcount capacity as well as
+    // against total logged hours. Every active employee counts (billable,
+    // non-billable, and unallocated) — the same roster `getEmployeeAllocations`
+    // returns for the Projects page's "Total Employees" stat.
+    const orgCapacity = useMemo(() => {
+        const empty = { totalHours: 0, billableHours: 0, nonBillableHours: 0, employeeCount: 0 };
+        if (!dateRange?.[0] || !dateRange?.[1]) return empty;
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        const rangeStart = dateRange[0].startOf('day').valueOf();
+        const rangeEnd = Math.min(dateRange[1].endOf('day').valueOf(), today.getTime());
+
+        let totalHours = 0, billableHours = 0, nonBillableHours = 0;
+        allocations.forEach(emp => {
+            const empHours = computeExpectedHours(emp.employee_name, rangeStart, rangeEnd, holidays, leaves);
+            totalHours += empHours;
+            // total_allocation / billable_allocation come from getEmployeeAllocations
+            // as 0-1 FTE fractions aggregated across that employee's client
+            // projects — used here to split their expected capacity into
+            // "capacity allocated to billable work" vs "...to non-billable work",
+            // so Client Project rows can be measured against allocated
+            // capacity rather than blanket org-wide capacity.
+            const billablePct = emp.billable_allocation || 0;
+            const nonBillablePct = Math.max(0, (emp.total_allocation || 0) - billablePct);
+            billableHours += empHours * billablePct;
+            nonBillableHours += empHours * nonBillablePct;
+        });
+        return { totalHours, billableHours, nonBillableHours, employeeCount: allocations.length };
+    }, [allocations, holidays, leaves, dateRange]);
+
+    // Client Project rows are measured against the capacity actually
+    // allocated to that split (billable vs non-billable); everything else
+    // (Internal, Uncategorized, Unallocated client work) has no per-employee
+    // "% allocated" to divide by, so it falls back to org-wide capacity.
+    const capacityForCategoryRow = (category, subCategory) => {
+        if (category === 'Client Project' && subCategory === 'Billable') return orgCapacity.billableHours;
+        if (category === 'Client Project' && subCategory === 'Non-billable') return orgCapacity.nonBillableHours;
+        return orgCapacity.totalHours;
+    };
 
     const categoryBreakdown = useMemo(() => {
         const rowMap = {};        // label -> { key, category, subCategory, total }
@@ -1062,7 +1145,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (categoryEmpFilter && empName !== categoryEmpFilter) return;
 
             const resolvedProj = resolveProjectName(row['Project'] ? String(row['Project']).trim() : 'Unknown Project', projectNameMap);
-            const hrmsProjName = resolvedProj.includes(' (') ? resolvedProj.split(' (')[0].trim() : resolvedProj;
+            const hrmsProjName = resolvedProj;
             if (categoryProjFilter && hrmsProjName !== categoryProjFilter) return;
 
             const timeHrs = typeof rawTime === 'number' ? rawTime / 3600 : parseFloat(rawTime || 0) / 3600;
@@ -1103,7 +1186,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             .sort((a, b) => b.total - a.total);
 
         const grandTotal = rows.reduce((s, r) => s + r.total, 0);
-        const pieData = rows.map(r => ({ name: r.key, value: r.total }));
+        const pieData = rows.map(r => ({ name: r.key, value: r.total, category: r.category, subCategory: r.subCategory }));
 
         return { rows, entriesByLabel, pieData, grandTotal };
     }, [rawRows, categoryEmpFilter, categoryProjFilter, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap]);
@@ -1140,9 +1223,40 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
         const tasks = [...entries].sort((a, b) => a.date.getTime() - b.date.getTime());
         const totalHours = Number(entries.reduce((s, e) => s + e.hours, 0).toFixed(2));
+        const employeePieData = matrixRows
+            .map(r => ({ name: r.employee, value: r.total }))
+            .sort((a, b) => b.value - a.value);
 
-        return { projects, matrixRows, tasks, totalHours, entryCount: entries.length };
-    }, [categoryDrillDown, categoryBreakdown]);
+        // This modal is scoped to ONE category/sub-category — Client Project
+        // rows are measured against that employee's own billable/non-billable
+        // ALLOCATED capacity (their total capacity × their allocation %,
+        // aggregated across whichever of their projects fall in this split);
+        // Internal/Uncategorized rows fall back to that employee's total
+        // capacity, since there's no per-employee "% allocated" for those.
+        const rowMeta = categoryBreakdown.rows.find(r => r.key === categoryDrillDown);
+        const category = rowMeta?.category;
+        const subCategory = rowMeta?.subCategory;
+        const employeeCapacityMap = {}; // empName -> capacity hours to measure that row's Total against
+        if (dateRange?.[0] && dateRange?.[1]) {
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            const rangeStart = dateRange[0].startOf('day').valueOf();
+            const rangeEnd = Math.min(dateRange[1].endOf('day').valueOf(), today.getTime());
+            Object.keys(empProjMap).forEach(emp => {
+                const empCapacityHours = computeExpectedHours(emp, rangeStart, rangeEnd, holidays, leaves);
+                const empAlloc = allocations.find(a => employeeNamesMatch(a.employee_name, emp));
+                let cap = empCapacityHours;
+                if (category === 'Client Project' && subCategory === 'Billable') {
+                    cap = empCapacityHours * (empAlloc?.billable_allocation || 0);
+                } else if (category === 'Client Project' && subCategory === 'Non-billable') {
+                    cap = empCapacityHours * Math.max(0, (empAlloc?.total_allocation || 0) - (empAlloc?.billable_allocation || 0));
+                }
+                employeeCapacityMap[emp] = cap;
+            });
+        }
+
+        return { projects, matrixRows, tasks, totalHours, entryCount: entries.length, employeePieData, category, subCategory, employeeCapacityMap };
+    }, [categoryDrillDown, categoryBreakdown, dateRange, holidays, leaves, allocations]);
 
     // Full employee universe for the weekly checks — same union used to build
     // employeeData above: anyone with logged rows, plus every HRMS employee
@@ -1293,7 +1407,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             // (groupName is a project there; classifying a project drill-down's
             // groups, which are employees, wouldn't make sense).
             if (type === 'employee' && !groupCategoryMap[groupName]) {
-                const hrmsProjName = groupName.includes(' (') ? groupName.split(' (')[0].trim() : groupName;
+                const hrmsProjName = groupName;
                 const proj = projectCategoryIndex[hrmsProjName.toLowerCase()];
                 let category = 'Uncategorized';
                 let subCategory = 'Uncategorized';
@@ -1311,7 +1425,8 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             if (type === 'employee') {
                 const { category, subCategory } = groupCategoryMap[groupName];
                 const label = `${category} — ${subCategory}`;
-                categoryTotals[label] = (categoryTotals[label] || 0) + hours;
+                if (!categoryTotals[label]) categoryTotals[label] = { hours: 0, category, subCategory };
+                categoryTotals[label].hours += hours;
             }
         });
 
@@ -1320,7 +1435,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const periods = Object.keys(periodStartDates).sort((a, b) => periodStartDates[a] - periodStartDates[b]);
         const groupNames = Object.keys(groupPeriodMap).sort();
         const categoryPieData = Object.entries(categoryTotals)
-            .map(([label, hours]) => ({ name: label, value: Number(hours.toFixed(2)) }))
+            .map(([label, { hours, category, subCategory }]) => ({ name: label, value: Number(hours.toFixed(2)), category, subCategory }))
             .sort((a, b) => b.value - a.value);
         const employeePieData = type === 'project'
             ? Object.entries(groupTotals)
@@ -1328,12 +1443,61 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 .sort((a, b) => b.value - a.value)
             : [];
 
+        // Capacity denominator for the "% of capacity" figures below: an
+        // employee drill-down is measured against THAT employee's own
+        // expected hours (their working days minus their leaves/holidays); a
+        // project doesn't have its own headcount, so it's measured against
+        // org-wide expected capacity instead.
+        let capacityHours = 0;
+        let billableCapacityHours = 0;
+        let nonBillableCapacityHours = 0;
+        if (type === 'employee') {
+            if (dateRange?.[0] && dateRange?.[1]) {
+                const today = new Date();
+                today.setHours(23, 59, 59, 999);
+                const rangeStart = dateRange[0].startOf('day').valueOf();
+                const rangeEnd = Math.min(dateRange[1].endOf('day').valueOf(), today.getTime());
+                capacityHours = computeExpectedHours(name, rangeStart, rangeEnd, holidays, leaves);
+            }
+            // Split this one employee's capacity into billable/non-billable
+            // allocated portions, same idea as orgCapacity's split — so the
+            // "Time by category" pie's Client Project rows can be measured
+            // against THIS employee's allocated capacity for that split,
+            // consistent with how the Project-wise effort table on the right
+            // measures each row against allocated capacity too.
+            const empAlloc = allocations.find(a => employeeNamesMatch(a.employee_name, name));
+            if (empAlloc) {
+                const billablePct = empAlloc.billable_allocation || 0;
+                const nonBillablePct = Math.max(0, (empAlloc.total_allocation || 0) - billablePct);
+                billableCapacityHours = capacityHours * billablePct;
+                nonBillableCapacityHours = capacityHours * nonBillablePct;
+            }
+        } else {
+            capacityHours = orgCapacity.totalHours;
+        }
+
+        // For a project drill-down, each row is an employee — their own
+        // expected capacity (not the org-wide total) is the meaningful
+        // per-row denominator, mirroring how the employee drill-down's rows
+        // (projects) are measured against that one employee's capacity.
+        const groupCapacityMap = {};
+        if (type === 'project' && dateRange?.[0] && dateRange?.[1]) {
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            const rangeStart = dateRange[0].startOf('day').valueOf();
+            const rangeEnd = Math.min(dateRange[1].endOf('day').valueOf(), today.getTime());
+            groupNames.forEach(g => {
+                groupCapacityMap[g] = computeExpectedHours(g, rangeStart, rangeEnd, holidays, leaves);
+            });
+        }
+
         return {
             type, name, groupLabel, groupNames, groupPeriodMap, periods, logsByGroup,
-            groupCategoryMap, categoryPieData, employeePieData,
+            groupCategoryMap, categoryPieData, employeePieData, capacityHours, groupCapacityMap,
+            billableCapacityHours, nonBillableCapacityHours,
             totalHours, entryCount: targetRows.length,
         };
-    }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap]);
+    }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap, dateRange, holidays, leaves, orgCapacity, allocations]);
 
     const tableColumns = useMemo(() => {
         if (!allPeriods.length) return [];
@@ -1519,18 +1683,42 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div style={{ textAlign: 'center', fontSize: 12, color: '#888', margin: '-8px 0 10px' }}>
+                        <div style={{ textAlign: 'center', fontSize: 12, color: '#888', margin: '-8px 0 4px' }}>
                             Total: <b style={{ color: '#333' }}>{categoryBreakdown.grandTotal.toFixed(1)} hrs</b> across selected range
                         </div>
+                        <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>
+                            Expected capacity: <b style={{ color: '#666' }}>{orgCapacity.totalHours.toFixed(1)} hrs</b>
+                            {' '}({orgCapacity.employeeCount} active employees, excl. leaves/holidays)
+                            {orgCapacity.totalHours > 0 && (
+                                <> · <b style={{ color: '#666' }}>{((categoryBreakdown.grandTotal / orgCapacity.totalHours) * 100).toFixed(1)}%</b> utilized</>
+                            )}
+                        </div>
+                        <AntTooltip title="Sum of (each employee's expected capacity × their billable / non-billable allocation %) — the 'cap' % on Client Project rows below is measured against these, not total org capacity">
+                            <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 10px', cursor: 'help' }}>
+                                Allocated capacity — billable: <b style={{ color: '#666' }}>{orgCapacity.billableHours.toFixed(1)} hrs</b>
+                                {' '}· non-billable: <b style={{ color: '#666' }}>{orgCapacity.nonBillableHours.toFixed(1)} hrs</b>
+                            </div>
+                        </AntTooltip>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {categoryBreakdown.pieData.map((entry, idx) => (
                                 <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#555' }}>
                                     <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-                                    <span style={{ fontFamily: 'monospace', color: '#999' }}>
-                                        {categoryBreakdown.grandTotal > 0 ? `${((entry.value / categoryBreakdown.grandTotal) * 100).toFixed(1)}%` : '0%'}
-                                    </span>
-                                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
+                                    <AntTooltip title={
+                                        entry.category === 'Client Project' && (entry.subCategory === 'Billable' || entry.subCategory === 'Non-billable')
+                                            ? `% of logged hours · % of capacity allocated to ${entry.subCategory.toLowerCase()} work`
+                                            : '% of logged hours · % of org-wide expected capacity'
+                                    }>
+                                        <span style={{ fontFamily: 'monospace', color: '#999', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                            {categoryBreakdown.grandTotal > 0 ? `${((entry.value / categoryBreakdown.grandTotal) * 100).toFixed(1)}%` : '0%'}
+                                            {' · '}
+                                            {(() => {
+                                                const cap = capacityForCategoryRow(entry.category, entry.subCategory);
+                                                return cap > 0 ? `${((entry.value / cap) * 100).toFixed(1)}% cap` : '0% cap';
+                                            })()}
+                                        </span>
+                                    </AntTooltip>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{entry.value.toFixed(1)}h</span>
                                 </div>
                             ))}
                         </div>
@@ -1557,17 +1745,26 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 },
                                 { title: 'Sub-category', dataIndex: 'subCategory', key: 'subCategory', width: 190 },
                                 {
-                                    title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 120, align: 'right',
-                                    render: v => (
-                                        <span>
-                                            <b>{v.toFixed(2)}</b>
-                                            {categoryBreakdown.grandTotal > 0 && (
-                                                <span style={{ color: '#999', fontSize: 11, marginLeft: 6 }}>
-                                                    ({((v / categoryBreakdown.grandTotal) * 100).toFixed(1)}%)
-                                                </span>
-                                            )}
-                                        </span>
-                                    ),
+                                    title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 140, align: 'right',
+                                    render: (v, record) => {
+                                        const cap = capacityForCategoryRow(record.category, record.subCategory);
+                                        const tooltipText = record.category === 'Client Project' && (record.subCategory === 'Billable' || record.subCategory === 'Non-billable')
+                                            ? `% of logged hours · % of capacity allocated to ${record.subCategory.toLowerCase()} work`
+                                            : '% of logged hours · % of org-wide expected capacity';
+                                        return (
+                                            <AntTooltip title={tooltipText}>
+                                                <div style={{ lineHeight: 1.3 }}>
+                                                    <b>{v.toFixed(2)}</b>
+                                                    {categoryBreakdown.grandTotal > 0 && (
+                                                        <div style={{ color: '#999', fontSize: 10, whiteSpace: 'nowrap' }}>
+                                                            {((v / categoryBreakdown.grandTotal) * 100).toFixed(1)}% logged
+                                                            {cap > 0 && ` · ${((v / cap) * 100).toFixed(1)}% cap`}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </AntTooltip>
+                                        );
+                                    },
                                     sorter: (a, b) => a.total - b.total,
                                     defaultSortOrder: 'descend',
                                 },
@@ -1615,40 +1812,101 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         <Empty description="No logged time in this selection" style={{ padding: 24 }} />
                     ) : (
                         <>
-                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
-                                Employee × Project effort
-                            </div>
-                            <Table
-                                size="small"
-                                bordered
-                                pagination={false}
-                                rowKey="key"
-                                style={{ marginBottom: 24 }}
-                                scroll={{ x: 'max-content' }}
-                                dataSource={categoryDrillDownData.matrixRows}
-                                columns={[
-                                    {
-                                        title: 'Employee', dataIndex: 'employee', key: 'employee', fixed: 'left', width: 190,
-                                        filters: categoryDrillDownData.matrixRows.map(r => ({ text: r.employee, value: r.employee })),
-                                        filterSearch: true,
-                                        onFilter: (value, record) => record.employee === value,
-                                        render: v => <b style={{ fontSize: 12 }}>{v}</b>
-                                    },
-                                    ...categoryDrillDownData.projects.map(p => ({
-                                        title: p, dataIndex: p, key: p, width: 150, align: 'right',
-                                        filters: [{ text: p, value: p }],
-                                        onFilter: (value, record) => (record[value] || 0) > 0,
-                                        render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(2) : '-'}</span>,
-                                    })),
-                                    {
-                                        title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
-                                        render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(2)}</b>,
-                                        sorter: (a, b) => a.total - b.total,
-                                    },
-                                ]}
-                            />
+                            <Row gutter={[16, 16]}>
+                                {categoryDrillDownData.employeePieData.length > 0 && (
+                                    <Col xs={24} md={8}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                            Time by employee
+                                        </div>
+                                        <div style={{ height: 220 }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={categoryDrillDownData.employeePieData}
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                        innerRadius={45}
+                                                        outerRadius={80}
+                                                        paddingAngle={1}
+                                                    >
+                                                        {categoryDrillDownData.employeePieData.map((entry, idx) => (
+                                                            <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} h`, name]} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4, maxHeight: 180, overflowY: 'auto' }}>
+                                            {categoryDrillDownData.employeePieData.map((entry, idx) => {
+                                                const cap = categoryDrillDownData.employeeCapacityMap[entry.name];
+                                                return (
+                                                    <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}>
+                                                        <span style={{ width: 9, height: 9, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                                                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                                        <AntTooltip title="% of this category/sub-category's total · % of this employee's allocated capacity">
+                                                            <span style={{ fontFamily: 'monospace', color: '#999', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                                {categoryDrillDownData.totalHours > 0 ? `${((entry.value / categoryDrillDownData.totalHours) * 100).toFixed(1)}%` : '0%'}
+                                                                {' · '}
+                                                                {cap > 0 ? `${((entry.value / cap) * 100).toFixed(1)}% alloc` : '— alloc'}
+                                                            </span>
+                                                        </AntTooltip>
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{entry.value.toFixed(1)}h</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </Col>
+                                )}
+                                <Col xs={24} md={categoryDrillDownData.employeePieData.length > 0 ? 16 : 24}>
+                                    <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                                        Employee × Project effort
+                                    </div>
+                                    <Table
+                                        size="small"
+                                        bordered
+                                        pagination={false}
+                                        rowKey="key"
+                                        scroll={{ x: 'max-content', y: 340 }}
+                                        dataSource={categoryDrillDownData.matrixRows}
+                                        columns={[
+                                            {
+                                                title: 'Employee', dataIndex: 'employee', key: 'employee', fixed: 'left', width: 190,
+                                                filters: categoryDrillDownData.matrixRows.map(r => ({ text: r.employee, value: r.employee })),
+                                                filterSearch: true,
+                                                onFilter: (value, record) => record.employee === value,
+                                                render: v => <b style={{ fontSize: 12 }}>{v}</b>
+                                            },
+                                            ...categoryDrillDownData.projects.map(p => ({
+                                                title: p, dataIndex: p, key: p, width: 150, align: 'right',
+                                                filters: [{ text: p, value: p }],
+                                                onFilter: (value, record) => (record[value] || 0) > 0,
+                                                render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(2) : '-'}</span>,
+                                            })),
+                                            {
+                                                title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 130, align: 'right',
+                                                render: (v, record) => {
+                                                    const cap = categoryDrillDownData.employeeCapacityMap[record.employee];
+                                                    return (
+                                                        <AntTooltip title="% of this category/sub-category's total · % of this employee's allocated capacity">
+                                                            <div style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.3 }}>
+                                                                <b>{v.toFixed(2)}</b>
+                                                                <div style={{ color: '#999', fontSize: 10, whiteSpace: 'nowrap' }}>
+                                                                    {categoryDrillDownData.totalHours > 0 ? `${((v / categoryDrillDownData.totalHours) * 100).toFixed(1)}% total` : '0% total'}
+                                                                    {cap > 0 && ` · ${((v / cap) * 100).toFixed(1)}% alloc`}
+                                                                </div>
+                                                            </div>
+                                                        </AntTooltip>
+                                                    );
+                                                },
+                                                sorter: (a, b) => a.total - b.total,
+                                            },
+                                        ]}
+                                    />
+                                </Col>
+                            </Row>
 
-                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#333', margin: '20px 0 8px' }}>
                                 Tasks
                             </div>
                             <Table
@@ -2486,6 +2744,18 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             <>
                                 <Tag color="blue" style={{ fontSize: 11 }}>{drillDownData.entryCount} log entries</Tag>
                                 <Tag color="green" style={{ fontSize: 11 }}>{drillDownData.totalHours.toFixed(1)} hrs total</Tag>
+                                {drillDownData.capacityHours > 0 && (
+                                    <AntTooltip title={
+                                        drillDownData.type === 'employee'
+                                            ? "This employee's expected hours for the selected range (working days minus their leaves/holidays)"
+                                            : 'Org-wide expected capacity for the selected range (all active employees)'
+                                    }>
+                                        <Tag color="orange" style={{ fontSize: 11 }}>
+                                            {((drillDownData.totalHours / drillDownData.capacityHours) * 100).toFixed(1)}% of
+                                            {' '}{drillDownData.capacityHours.toFixed(1)}h capacity
+                                        </Tag>
+                                    </AntTooltip>
+                                )}
                             </>
                         )}
                     </div>
@@ -2538,10 +2808,51 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                                     <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}>
                                                         <span style={{ width: 9, height: 9, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
                                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-                                                        <span style={{ fontFamily: 'monospace', color: '#999' }}>
-                                                            {drillDownData.totalHours > 0 ? `${((entry.value / drillDownData.totalHours) * 100).toFixed(1)}%` : '0%'}
-                                                        </span>
-                                                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
+                                                        {(() => {
+                                                            // Employee drill-down: each slice is a category. Client
+                                                            // Project slices are measured against THIS employee's own
+                                                            // billable/non-billable allocated capacity (same split
+                                                            // logic as the org-wide Category Breakdown, scoped to one
+                                                            // employee) — Internal/Uncategorized fall back to their
+                                                            // total capacity, since there's no per-category allocation
+                                                            // % for those. Project drill-down: each slice is an
+                                                            // employee, measured against THEIR allocation on this
+                                                            // project — same denominator as the table on the right, so
+                                                            // the two don't show conflicting percentages for the same row.
+                                                            let cap, tooltipText, capLabel;
+                                                            if (drillDownData.type === 'employee') {
+                                                                if (entry.category === 'Client Project' && entry.subCategory === 'Billable') {
+                                                                    cap = drillDownData.billableCapacityHours;
+                                                                    tooltipText = "% of logged hours · % of this employee's capacity allocated to billable work";
+                                                                    capLabel = 'of alloc';
+                                                                } else if (entry.category === 'Client Project' && entry.subCategory === 'Non-billable') {
+                                                                    cap = drillDownData.nonBillableCapacityHours;
+                                                                    tooltipText = "% of logged hours · % of this employee's capacity allocated to non-billable work";
+                                                                    capLabel = 'of alloc';
+                                                                } else {
+                                                                    cap = drillDownData.capacityHours;
+                                                                    tooltipText = "% of logged hours · % of this employee's expected capacity";
+                                                                    capLabel = 'cap';
+                                                                }
+                                                            } else {
+                                                                const empName = canonicalEmpName(entry.name);
+                                                                const allocPct = allocPctByKey[`${empName}\x00${drillDownData.name}`] || 0;
+                                                                const empCapacityHours = drillDownData.groupCapacityMap[entry.name];
+                                                                cap = (empCapacityHours > 0 && allocPct > 0) ? empCapacityHours * (allocPct / 100) : 0;
+                                                                tooltipText = "% of logged hours · % of this employee's allocated capacity on this project";
+                                                                capLabel = 'of alloc';
+                                                            }
+                                                            return (
+                                                                <AntTooltip title={tooltipText}>
+                                                                    <span style={{ fontFamily: 'monospace', color: '#999', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                                        {drillDownData.totalHours > 0 ? `${((entry.value / drillDownData.totalHours) * 100).toFixed(1)}%` : '0%'}
+                                                                        {' · '}
+                                                                        {cap > 0 ? `${((entry.value / cap) * 100).toFixed(1)}% ${capLabel}` : `— ${capLabel}`}
+                                                                    </span>
+                                                                </AntTooltip>
+                                                            );
+                                                        })()}
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{entry.value.toFixed(1)}h</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -2585,8 +2896,35 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                                     title: period, dataIndex: period, key: period, width: 130, align: 'right',
                                                     render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: v > 0 ? '#4f8ef7' : '#ccc' }}>{v ? v.toFixed(1) : '-'}</span>,
                                                 })),
-                                                { title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 110, align: 'right',
-                                                    render: v => <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.toFixed(1)}</b>,
+                                                { title: 'Total (hrs)', dataIndex: 'total', key: 'total', fixed: 'right', width: 130, align: 'right',
+                                                    render: (v, record) => {
+                                                        // Each row pairs one employee with one project — cap is that
+                                                        // employee's OWN allocation % on THIS specific project (not
+                                                        // their overall capacity), converted to hours: their expected
+                                                        // capacity for the range × allocation%. Falls back to nothing
+                                                        // (no % shown) when there's no formal allocation to measure
+                                                        // against, e.g. unallocated Internal Work.
+                                                        const empNameRaw = drillDownData.type === 'employee' ? drillDownData.name : record.group;
+                                                        const projName = drillDownData.type === 'employee' ? record.group : drillDownData.name;
+                                                        const empName = canonicalEmpName(empNameRaw);
+                                                        const empCapacityHours = drillDownData.type === 'employee'
+                                                            ? drillDownData.capacityHours
+                                                            : drillDownData.groupCapacityMap[record.group];
+                                                        const allocPct = allocPctByKey[`${empName}\x00${projName}`] || 0;
+                                                        const cap = (empCapacityHours > 0 && allocPct > 0) ? empCapacityHours * (allocPct / 100) : 0;
+                                                        return (
+                                                            <AntTooltip title="% of this employee's allocated capacity on this project (their expected hours × their allocation %)">
+                                                                <div style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.3 }}>
+                                                                    <b>{v.toFixed(1)}</b>
+                                                                    {cap > 0 && (
+                                                                        <div style={{ color: '#999', fontSize: 10, whiteSpace: 'nowrap' }}>
+                                                                            {((v / cap) * 100).toFixed(1)}% of alloc
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </AntTooltip>
+                                                        );
+                                                    },
                                                     sorter: (a, b) => a.total - b.total },
                                             ]}
                                         />
