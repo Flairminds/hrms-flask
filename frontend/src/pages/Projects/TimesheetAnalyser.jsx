@@ -1236,6 +1236,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const logsByGroup = {};      // groupName -> [{ date, title, description, key, state, hours }]
         const groupCategoryMap = {}; // groupName (project) -> { category, subCategory } — 'employee' drill-downs only
         const categoryTotals = {};   // "Category — Sub-category" -> hours — 'employee' drill-downs only, for the pie chart
+        const groupTotals = {};      // groupName -> hours — 'project' drill-downs only, for the employee-wise pie chart
         let totalHours = 0;
 
         targetRows.forEach(row => {
@@ -1268,6 +1269,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
             groupPeriodMap[groupName] = groupPeriodMap[groupName] || {};
             groupPeriodMap[groupName][periodStr] = (groupPeriodMap[groupName][periodStr] || 0) + hours;
+            groupTotals[groupName] = (groupTotals[groupName] || 0) + hours;
 
             logsByGroup[groupName] = logsByGroup[groupName] || [];
             logsByGroup[groupName].push({
@@ -1313,10 +1315,15 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const categoryPieData = Object.entries(categoryTotals)
             .map(([label, hours]) => ({ name: label, value: Number(hours.toFixed(2)) }))
             .sort((a, b) => b.value - a.value);
+        const employeePieData = type === 'project'
+            ? Object.entries(groupTotals)
+                .map(([label, hours]) => ({ name: label, value: Number(hours.toFixed(2)) }))
+                .sort((a, b) => b.value - a.value)
+            : [];
 
         return {
             type, name, groupLabel, groupNames, groupPeriodMap, periods, logsByGroup,
-            groupCategoryMap, categoryPieData,
+            groupCategoryMap, categoryPieData, employeePieData,
             totalHours, entryCount: targetRows.length,
         };
     }, [drillDown, rawRows, periodType, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName]);
@@ -1513,6 +1520,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#555' }}>
                                     <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                    <span style={{ fontFamily: 'monospace', color: '#999' }}>
+                                        {categoryBreakdown.grandTotal > 0 ? `${((entry.value / categoryBreakdown.grandTotal) * 100).toFixed(1)}%` : '0%'}
+                                    </span>
                                     <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
                                 </div>
                             ))}
@@ -1541,7 +1551,16 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 { title: 'Sub-category', dataIndex: 'subCategory', key: 'subCategory', width: 190 },
                                 {
                                     title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 120, align: 'right',
-                                    render: v => <b>{v.toFixed(2)}</b>,
+                                    render: v => (
+                                        <span>
+                                            <b>{v.toFixed(2)}</b>
+                                            {categoryBreakdown.grandTotal > 0 && (
+                                                <span style={{ color: '#999', fontSize: 11, marginLeft: 6 }}>
+                                                    ({((v / categoryBreakdown.grandTotal) * 100).toFixed(1)}%)
+                                                </span>
+                                            )}
+                                        </span>
+                                    ),
                                     sorter: (a, b) => a.total - b.total,
                                     defaultSortOrder: 'descend',
                                 },
@@ -1565,9 +1584,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 onCancel={() => setCategoryDrillDown(null)}
                 onOk={() => setCategoryDrillDown(null)}
                 okText="Close"
-                cancelButtonProps={{ style: { display: 'none' } }}
-                width={960}
-                styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
+                width={1200}
+                styles={{ body: { maxHeight: '85vh', overflowY: 'auto' } }}
+                style={{top: 20}}
+                footer={null}
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
@@ -2444,8 +2464,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 onOk={() => setDrillDown(null)}
                 okText="Close"
                 cancelButtonProps={{ style: { display: 'none' } }}
-                width={drillDown?.type === 'employee' ? 1180 : 900}
-                styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
+                width={1200}
+                styles={{ body: { maxHeight: '85vh', overflowY: 'auto' } }}
+                style={{top: 20}}
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
@@ -2462,6 +2483,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         )}
                     </div>
                 }
+                footer={null}
             >
                 {drillDownData && (
                     <>
@@ -2474,24 +2496,29 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             <Empty description="No logged time in this range" style={{ padding: 24 }} />
                         ) : (
                             <>
+                                {(() => {
+                                    const pieData = drillDownData.type === 'employee' ? drillDownData.categoryPieData : drillDownData.employeePieData;
+                                    const pieTitle = drillDownData.type === 'employee' ? 'Time by category' : 'Time by employee';
+                                    const hasPie = pieData.length > 0;
+                                    return (
                                 <Row gutter={[16, 16]}>
-                                    {drillDownData.type === 'employee' && drillDownData.categoryPieData.length > 0 && (
+                                    {hasPie && (
                                         <Col xs={24} md={9}>
                                             <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
-                                                Time by category
+                                                {pieTitle}
                                             </div>
                                             <div style={{ height: 220 }}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <PieChart>
                                                         <Pie
-                                                            data={drillDownData.categoryPieData}
+                                                            data={pieData}
                                                             dataKey="value"
                                                             nameKey="name"
                                                             innerRadius={45}
                                                             outerRadius={80}
                                                             paddingAngle={1}
                                                         >
-                                                            {drillDownData.categoryPieData.map((entry, idx) => (
+                                                            {pieData.map((entry, idx) => (
                                                                 <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
                                                             ))}
                                                         </Pie>
@@ -2500,17 +2527,20 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                                 </ResponsiveContainer>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4, paddingBottom: 24, borderBottom: '1px solid #f0f0f0' }}>
-                                                {drillDownData.categoryPieData.map((entry, idx) => (
+                                                {pieData.map((entry, idx) => (
                                                     <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}>
                                                         <span style={{ width: 9, height: 9, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
                                                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                                        <span style={{ fontFamily: 'monospace', color: '#999' }}>
+                                                            {drillDownData.totalHours > 0 ? `${((entry.value / drillDownData.totalHours) * 100).toFixed(1)}%` : '0%'}
+                                                        </span>
                                                         <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{entry.value.toFixed(1)}h</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         </Col>
                                     )}
-                                    <Col xs={24} md={drillDownData.type === 'employee' && drillDownData.categoryPieData.length > 0 ? 15 : 24}>
+                                    <Col xs={24} md={hasPie ? 15 : 24}>
                                         <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginBottom: 8 }}>
                                             {drillDownData.groupLabel}-wise effort
                                         </div>
@@ -2555,6 +2585,8 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                         />
                                     </Col>
                                 </Row>
+                                    );
+                                })()}
 
                                 <div style={{ fontWeight: 700, fontSize: 13, color: '#333', marginTop: 20, marginBottom: 8 }}>
                                     Individual log entries
