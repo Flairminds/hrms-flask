@@ -20,6 +20,7 @@ export const INTERNAL_SUB_CATEGORIES = [
     'Productivity Loss due to infra',
     'Other Internal Work'
 ];
+export const TAG_KEY_OPTIONS = ['Zymmr Project Name'];
 
 const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false, refreshProjects }) => {
     const [form] = Form.useForm();
@@ -62,6 +63,7 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                     category: project.category,
                     sub_category: project.sub_category,
                     task_category_overrides: project.task_category_overrides || [],
+                    tags: project.tags || [],
                 });
                 fetchAllocations(project.project_id);
             } else {
@@ -351,6 +353,88 @@ const ProjectModal = ({ visible, onClose, project, isEditMode, readOnly = false,
                                     </WidgetCard>
                                 </Col>
                             )}
+
+                            <Col span={24}>
+                                <WidgetCard title="Project Tags" icon={<TagsOutlined />} iconColor="#13c2c2">
+                                    <div style={{ marginBottom: 14, color: 'rgba(0,0,0,.45)' }}>
+                                        Map this project to its name in external systems (e.g. Zymmr) so timesheet/effort report imports can match it automatically.
+                                    </div>
+                                    <Form.List name="tags">
+                                        {(fields, { add, remove }) => (
+                                            <>
+                                                {fields.length > 0 && (
+                                                    <Row gutter={12} style={{ marginBottom: 6 }}>
+                                                        <Col xs={24} md={8}>
+                                                            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,.65)' }}>Tag Key</span>
+                                                        </Col>
+                                                        <Col xs={24} md={13}>
+                                                            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,.65)' }}>Tag Value</span>
+                                                        </Col>
+                                                    </Row>
+                                                )}
+                                                {fields.map((field) => (
+                                                    <Row
+                                                        key={field.key}
+                                                        gutter={12}
+                                                        align="middle"
+                                                        style={{
+                                                            background: '#fafafa',
+                                                            border: '1px solid #f0f0f0',
+                                                            borderRadius: 8,
+                                                            margin: '0 0 10px',
+                                                            padding: '10px 10px 0',
+                                                        }}
+                                                    >
+                                                        <Col xs={24} md={8}>
+                                                            <Form.Item
+                                                                {...field}
+                                                                name={[field.name, 'key']}
+                                                                rules={[{ required: true, message: 'Tag key required' }]}
+                                                            >
+                                                                <Select disabled={readOnly} placeholder="Select tag key">
+                                                                    {TAG_KEY_OPTIONS.map(k => <Option key={k} value={k}>{k}</Option>)}
+                                                                </Select>
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={13}>
+                                                            <Form.Item
+                                                                {...field}
+                                                                name={[field.name, 'value']}
+                                                                rules={[{ required: true, message: 'Tag value required' }]}
+                                                            >
+                                                                <Input disabled={readOnly} placeholder="e.g. the project's name in Zymmr" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        {!readOnly && (
+                                                            <Col xs={24} md={3} style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+                                                                <Tooltip title="Remove tag">
+                                                                    <Button
+                                                                        danger
+                                                                        type="text"
+                                                                        shape="circle"
+                                                                        icon={<DeleteOutlined />}
+                                                                        onClick={() => remove(field.name)}
+                                                                    />
+                                                                </Tooltip>
+                                                            </Col>
+                                                        )}
+                                                    </Row>
+                                                ))}
+                                                {!readOnly && (
+                                                    <Button
+                                                        type="dashed"
+                                                        onClick={() => add(TAG_KEY_OPTIONS.length === 1 ? { key: TAG_KEY_OPTIONS[0] } : {})}
+                                                        block
+                                                        icon={<PlusOutlined />}
+                                                    >
+                                                        Add Tag
+                                                    </Button>
+                                                )}
+                                            </>
+                                        )}
+                                    </Form.List>
+                                </WidgetCard>
+                            </Col>
                         </Row>
 
                         {!readOnly && (

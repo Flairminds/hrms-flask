@@ -41,7 +41,8 @@ class ProjectController:
                 "end_date": project.end_date.strftime('%Y-%m-%d') if project.end_date else None,
                 "category": project.category,
                 "sub_category": project.sub_category,
-                "task_category_overrides": project.task_category_overrides or []
+                "task_category_overrides": project.task_category_overrides or [],
+                "tags": project.tags or []
             }), 200
         except Exception as e:
             Logger.error("Error in get_project", error=str(e))

@@ -16,6 +16,8 @@ const Projects = () => {
     const [projects, setProjects] = useState([]);
     const [stats, setStats] = useState({
         active_projects: 0,
+        active_client_projects: 0,
+        active_internal_projects: 0,
         prospective_projects: 0,
         total_allocation: 0,
         billable_allocation: 0,
@@ -217,34 +219,42 @@ const Projects = () => {
             <Tabs defaultActiveKey="1">
                 <Tabs.TabPane tab="Projects" key="1">
 
-                    <Row gutter={[16, 16]} style={{ marginBottom: 24, alignItems: 'center' }}>
-                        <Col xs={24} sm={4} md={4}>
-                            <Card bordered={false} size='small'>
-                                <Statistic
-                                    title="Active Projects"
-                                    value={stats.active_projects}
-                                    prefix={<ProjectOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                />
-                            </Card>
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24, alignItems: 'center' }} justify="space-between">
+                        <Col flex="none">
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                                <Card bordered={false} size='small' style={{ width: 200 }}>
+                                    <Statistic
+                                        title="Active Client Projects"
+                                        value={stats.active_client_projects}
+                                        prefix={<ProjectOutlined />}
+                                        valueStyle={{ color: '#3f8600', fontSize: 40, fontWeight: 600 }}
+                                    />
+                                </Card>
+                                <Card bordered={false} size='small' style={{ width: 200 }}>
+                                    <Statistic
+                                        title="Internal Projects"
+                                        value={stats.active_internal_projects}
+                                        prefix={<TeamOutlined />}
+                                        valueStyle={{ color: '#722ed1', fontSize: 40, fontWeight: 600 }}
+                                    />
+                                </Card>
+                                <Card bordered={false} size='small' style={{ width: 200 }}>
+                                    <Statistic
+                                        title="Prospective Projects"
+                                        value={stats.prospective_projects}
+                                        prefix={<RiseOutlined />}
+                                        valueStyle={{ color: '#1890ff', fontSize: 40, fontWeight: 600 }}
+                                    />
+                                </Card>
+                            </div>
                         </Col>
-                        <Col xs={24} sm={4} md={4}>
-                            <Card bordered={false} size='small'>
-                                <Statistic
-                                    title="Prospective Projects"
-                                    value={stats.prospective_projects}
-                                    prefix={<RiseOutlined />}
-                                    valueStyle={{ color: '#1890ff' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={24} md={4}>
-                            {isHRorAdmin && (
-                                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                        {isHRorAdmin && (
+                            <Col flex="none">
+                                <Button type="primary" size="large" icon={<PlusOutlined />} onClick={handleAdd}>
                                     Add Project
                                 </Button>
-                            )}
-                        </Col>
+                            </Col>
+                        )}
                     </Row>
 
                     <Card>
