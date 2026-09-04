@@ -1,20 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress, Segmented } from 'antd';
 import { SearchOutlined, CopyOutlined, TeamOutlined, DownloadOutlined } from '@ant-design/icons';
-import { getEmployeeAllocations } from '../../services/api';
+import { getEmployeeAllocations, getProjects } from '../../services/api';
 import XLSXStyle from 'xlsx-js-style';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const EmployeeAllocations = ({ stats }) => {
+// Classifies one employee-project allocation the same way the Timesheet
+// Analyser's Category Breakdown does, so the two screens agree: Client
+// Project splits into Billable/Non-billable (by that allocation's own
+// is_billing flag), Internal uses the project's configured sub-category, and
+// a project with no category configured falls under Uncategorized.
+const classifyAllocation = (projectName, isBilling, projectCategoryIndex) => {
+    const proj = projectCategoryIndex[String(projectName || '').toLowerCase().trim()];
+    if (proj?.category === 'Internal') {
+        return { category: 'Internal', subCategory: proj.sub_category || 'Other Internal Work' };
+    }
+    if (proj?.category === 'Client Project') {
+        return { category: 'Client Project', subCategory: isBilling ? 'Billable' : 'Non-billable' };
+    }
+    return { category: 'Uncategorized', subCategory: 'Uncategorized' };
+};
+
+// Roles that aren't really available for project assignment in the first
+// place — excluded from the "Available for Billable Allocation" figure/filter.
+const NON_PROJECT_SUB_ROLES = ['Human Resource Manager', 'Sales & Marketing'];
+
+const EmployeeAllocations = () => {
     const [employeeAllocations, setEmployeeAllocations] = useState([]);
+    const [hrmsProjects, setHrmsProjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [employeeSearchText, setEmployeeSearchText] = useState('');
     const [allocationFilter, setAllocationFilter] = useState(null);
     const [billableAllocationFilter, setBillableAllocationFilter] = useState(null);
-    const [summaryCategoryFilter, setSummaryCategoryFilter] = useState(null); // null | 'billable' | 'nonbillable' | 'notallocated' — set by clicking an Allocation Summary row
+    const [summaryCategoryFilter, setSummaryCategoryFilter] = useState(null); // null | a summary row's key — set by clicking an Allocation Summary row
+    const [summaryLevel, setSummaryLevel] = useState('category'); // 'category' or 'subcategory'
 
     useEffect(() => {
         fetchEmployeeAllocations();
+        getProjects()
+            .then(res => {
+                const data = Array.isArray(res.data) ? res.data : (res.data?.projects || []);
+                setHrmsProjects(data);
+            })
+            .catch(e => console.error('Failed to load projects for allocation categorization', e));
     }, []);
 
     const fetchEmployeeAllocations = async () => {
@@ -28,6 +56,15 @@ const EmployeeAllocations = ({ stats }) => {
             setLoading(false);
         }
     };
+
+    const projectCategoryIndex = useMemo(() => {
+        const idx = {};
+        hrmsProjects.forEach(p => {
+            const key = String(p.project_name || '').toLowerCase().trim();
+            if (key) idx[key] = p;
+        });
+        return idx;
+    }, [hrmsProjects]);
 
     const downloadExcel = () => {
         const wb = XLSXStyle.utils.book_new();
@@ -172,15 +209,26 @@ const EmployeeAllocations = ({ stats }) => {
         message.success('Excel downloaded successfully!');
     };
 
+    // summaryCategoryFilter is a row key: 'Not Allocated', 'Available for
+    // Allocation', a bare category ('Client Project', 'Internal',
+    // 'Uncategorized') from the category-level view, or 'Category —
+    // Sub-category' from the sub-category view.
     const matchesSummaryCategory = (emp) => {
-        const totalAlloc = emp.total_allocation || 0;
-        const billableAlloc = emp.billable_allocation || 0;
-        switch (summaryCategoryFilter) {
-            case 'billable': return billableAlloc > 0;
-            case 'nonbillable': return (totalAlloc - billableAlloc) > 0.001;
-            case 'notallocated': return totalAlloc <= 0.001;
-            default: return true; // null — no summary-row filter applied
+        if (!summaryCategoryFilter) return true;
+        if (summaryCategoryFilter === 'Not Allocated') return (emp.total_allocation || 0) <= 0.001;
+        if (summaryCategoryFilter === 'Available for Billable Allocation') {
+            if (NON_PROJECT_SUB_ROLES.includes(emp.sub_role_name)) return false;
+            const totalAlloc = emp.total_allocation || 0;
+            const nonBillableAlloc = totalAlloc - (emp.billable_allocation || 0);
+            const isNotAllocated = totalAlloc <= 0.001;
+            return isNotAllocated || nonBillableAlloc > 0.001;
         }
+        const [filterCategory, filterSub] = summaryCategoryFilter.split(' — ');
+        return (emp.projects || []).some(p => {
+            const { category, subCategory } = classifyAllocation(p.project_name, p.is_billing, projectCategoryIndex);
+            if (category !== filterCategory) return false;
+            return filterSub ? subCategory === filterSub : true;
+        });
     };
 
     const filteredData = employeeAllocations.filter(emp => {
@@ -261,16 +309,66 @@ const EmployeeAllocations = ({ stats }) => {
         );
     };
 
-    const billable = stats.billable_allocation || 0;
-    const nonBillable = Math.max(0, (stats.total_allocation || 0) - billable);
-    const notAllocated = Math.max(0, (stats.total_employees || 0) - (stats.total_allocation || 0));
+    // Sub-category rows: sum each employee-project allocation (as FTE,
+    // allocation% / 100) into its "Category — Sub-category" bucket, the same
+    // taxonomy the Timesheet Analyser's Category Breakdown uses.
+    const allocationSubRows = (() => {
+        const map = {};
+        employeeAllocations.forEach(emp => {
+            (emp.projects || []).forEach(p => {
+                const { category, subCategory } = classifyAllocation(p.project_name, p.is_billing, projectCategoryIndex);
+                const key = `${category} — ${subCategory}`;
+                if (!map[key]) map[key] = { key, category, subCategory, value: 0 };
+                map[key].value += (p.allocation || 0) / 100;
+            });
+        });
+        return Object.values(map)
+            .map(r => ({ ...r, value: Number(r.value.toFixed(2)) }))
+            .sort((a, b) => b.value - a.value);
+    })();
 
-    const pieData = [
-        { name: 'Billable', value: Number(billable.toFixed(2)) },
-        { name: 'Non-billable', value: Number(nonBillable.toFixed(2)) },
-        { name: 'Not Allocated', value: Number(notAllocated.toFixed(2)) }
+    // Category-level rollup of the sub-rows above (Client Project / Internal
+    // / Uncategorized) — the default view.
+    const allocationCategoryRows = (() => {
+        const map = {};
+        allocationSubRows.forEach(r => {
+            if (!map[r.category]) map[r.category] = { key: r.category, category: r.category, value: 0 };
+            map[r.category].value += r.value;
+        });
+        return Object.values(map)
+            .map(r => ({ ...r, value: Number(r.value.toFixed(2)) }))
+            .sort((a, b) => b.value - a.value);
+    })();
+
+    // "Not Allocated" is a headcount of employees with (effectively) zero
+    // allocation — computed from this same employeeAllocations roster so it
+    // always reconciles with the category rows above and the "Total Active
+    // Employees" count below, rather than an FTE gap against the separate
+    // `stats` dashboard aggregate (a different backend query, which can
+    // disagree with this roster's own numbers and silently mask real
+    // unallocated headcount, e.g. when over-allocated employees offset it).
+    const notAllocatedCount = employeeAllocations.filter(emp => (emp.total_allocation || 0) <= 0.001).length;
+    const notAllocatedRow = { key: 'Not Allocated', category: 'Not Allocated', value: notAllocatedCount };
+
+    // "Available for Billable Allocation to a project" — headcount, not a row in the
+    // breakdown above: total active employees, minus the FTE already
+    // committed to billable client work, minus employees whose role isn't
+    // really available for project assignment in the first place (HR /
+    // Sales & Marketing).
+    const billableAllocationFTE = employeeAllocations.reduce((sum, emp) => sum + (emp.billable_allocation || 0), 0);
+    const nonProjectRoleCount = employeeAllocations.filter(emp => NON_PROJECT_SUB_ROLES.includes(emp.sub_role_name)).length;
+    const availableForAllocation = employeeAllocations.length - billableAllocationFTE - nonProjectRoleCount;
+
+    const summaryRows = [
+        ...(summaryLevel === 'subcategory' ? allocationSubRows : allocationCategoryRows),
+        notAllocatedRow,
     ];
-    const PIE_COLORS = ['#87d068', '#108ee9', '#ff4d4f'];
+
+    const PIE_COLORS_PALETTE = ['#87d068', '#108ee9', '#722ed1', '#fa8c16', '#13c2c2', '#eb2f96', '#a0d911', '#faad14'];
+    const colorForRow = (row, idx) => row.key === 'Not Allocated' ? '#ff4d4f' : PIE_COLORS_PALETTE[idx % PIE_COLORS_PALETTE.length];
+
+    const pieData = summaryRows.map(r => ({ name: r.key, value: r.value }));
+    const PIE_COLORS = summaryRows.map((r, idx) => colorForRow(r, idx));
 
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, value }) => {
@@ -291,11 +389,14 @@ const EmployeeAllocations = ({ stats }) => {
     ];
 
     const summaryData = [
-        { key: '1', category: 'Total Active Employees', value: Number((stats.total_employees || 0).toFixed(2)), color: '#000', filterKey: null },
-        // { key: '1', category: 'Total Allocated', value: Number((stats.total_allocation || 0).toFixed(2)), color: '#000' },
-        { key: '2', category: 'Billable', value: Number(billable.toFixed(2)), color: PIE_COLORS[0], filterKey: 'billable' },
-        { key: '3', category: 'Non-billable', value: Number(nonBillable.toFixed(2)), color: PIE_COLORS[1], filterKey: 'nonbillable' },
-        { key: '4', category: 'Not Allocated', value: Number(notAllocated.toFixed(2)), color: PIE_COLORS[2], filterKey: 'notallocated' }
+        { key: 'total', category: 'Total Active Employees', value: employeeAllocations.length, color: '#000', filterKey: null },
+        ...summaryRows.map((r, idx) => ({
+            key: r.key,
+            category: r.key,
+            value: r.value,
+            color: colorForRow(r, idx),
+            filterKey: r.key,
+        })),
     ];
 
     return (
@@ -331,7 +432,20 @@ const EmployeeAllocations = ({ stats }) => {
                 </Col>
                 <Col xs={24} sm={24} md={12} lg={14}>
                     <Card bordered={false} size='small' title="Allocation Summary"
-                        extra={<span style={{ fontSize: 12, color: '#888', fontWeight: 400 }}>Click a row to filter the table below</span>}>
+                        extra={
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 12, color: '#888', fontWeight: 400 }}>Click a row to filter the table below</span>
+                                <Segmented
+                                    size="small"
+                                    value={summaryLevel}
+                                    onChange={setSummaryLevel}
+                                    options={[
+                                        { label: 'Category', value: 'category' },
+                                        { label: 'Sub-category', value: 'subcategory' },
+                                    ]}
+                                />
+                            </div>
+                        }>
                         <Table
                             columns={summaryColumns}
                             dataSource={summaryData}
@@ -373,13 +487,21 @@ const EmployeeAllocations = ({ stats }) => {
                     >
                         {`Billable allocation <= 0.5`}
                     </Button>
+                    <Tooltip title={`Basis: ${employeeAllocations.length} total employees − ${billableAllocationFTE.toFixed(2)} FTE already committed to billable client work − ${nonProjectRoleCount} employees in HR / Sales & Marketing roles = ${availableForAllocation.toFixed(2)}. Filters the table to employees with spare capacity (total allocation < 1) who aren't in an HR/Sales role — this headcount won't exactly equal the FTE figure above, since one is a capacity estimate and the other counts people.`}>
+                        <Button
+                            type={summaryCategoryFilter === 'Available for Billable Allocation' ? 'primary' : 'default'}
+                            onClick={() => setSummaryCategoryFilter(prev => (prev === 'Available for Billable Allocation' ? null : 'Available for Billable Allocation'))}
+                        >
+                            Available for Billable Allocation: {availableForAllocation.toFixed(2)}
+                        </Button>
+                    </Tooltip>
                     {summaryCategoryFilter && (
                         <Tag
                             color="blue"
                             closable
                             onClose={() => setSummaryCategoryFilter(null)}
                         >
-                            {{ billable: 'Billable', nonbillable: 'Non-billable', notallocated: 'Not Allocated' }[summaryCategoryFilter]}
+                            {summaryCategoryFilter}
                         </Tag>
                     )}
                     <Button
