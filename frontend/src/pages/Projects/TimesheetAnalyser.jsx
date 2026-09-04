@@ -109,8 +109,8 @@ const computeExpectedHours = (employeeName, rangeStart, rangeEnd, holidays, leav
     if (!rangeStart || !rangeEnd || rangeEnd < rangeStart) return 0;
     const empLeaves = (leaves || []).filter(l => {
         const name = l.EmployeeName || l.employeeName || l.empName || l.appliedByName || '';
-        const type = l.LeaveType || l.leaveType || '';
-        const status = l.LeaveStatus || l.leaveStatus || l.leave_status || '';
+        const type = String(l.LeaveType || l.leaveType || '');
+        const status = String(l.LeaveStatus || l.leaveStatus || l.leave_status || '');
         const isPrivilegeOrSick = type.toLowerCase().includes('sick') || type.toLowerCase().includes('privilege')
             || String(l.leaveTypeId) === "1" || String(l.leaveTypeId) === "2"
             || String(l.leave_type_id) === "1" || String(l.leave_type_id) === "2";
@@ -487,7 +487,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 });
                 // Filter only Approved leaves
                 const approvedLeaves = allData.filter(l => {
-                    const status = l.LeaveStatus || l.leaveStatus || '';
+                    const status = String(l.LeaveStatus || l.leaveStatus || '');
                     return status.toLowerCase().includes('approved');
                 });
                 setLeaves(approvedLeaves);
@@ -707,9 +707,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             // Find all approved leaves for this employee
             const empLeaves = leaves.filter(l => {
                 const name = l.EmployeeName || l.employeeName || l.empName || l.appliedByName || '';
-                const type = l.LeaveType || l.leaveType || '';
-                const status = l.LeaveStatus || l.leaveStatus || l.leave_status || '';
-                
+                const type = String(l.LeaveType || l.leaveType || '');
+                const status = String(l.LeaveStatus || l.leaveStatus || l.leave_status || '');
+
                 const isPrivilegeOrSick = type.toLowerCase().includes('sick') || type.toLowerCase().includes('privilege') || String(l.leaveTypeId) === "1" || String(l.leaveTypeId) === "2" || String(l.leave_type_id) === "1" || String(l.leave_type_id) === "2";
                 const isApproved = status.toLowerCase() === 'approved';
                 
