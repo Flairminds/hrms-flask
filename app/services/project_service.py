@@ -10,6 +10,7 @@ class ProjectService:
     # Sub roles (master_sub_role.sub_role_name) to exclude from employee allocation
     # listings — add more sub role names here as needed.
     IGNORED_SUB_ROLES_FOR_ALLOCATIONS = ['Human Resource Manager', 'Sales & Marketing']
+    IGNORED_SUB_ROLES_FOR_ALLOCATIONS = []
     
     @staticmethod
     def get_all_projects():
@@ -216,7 +217,8 @@ class ProjectService:
                 Employee.employee_id,
                 func.concat(Employee.first_name, ' ', Employee.last_name).label('employee_name'),
                 Employee.email,
-                func.concat(TeamLead.first_name, ' ', TeamLead.last_name).label('manager_name')
+                func.concat(TeamLead.first_name, ' ', TeamLead.last_name).label('manager_name'),
+                MasterSubRole.sub_role_name
             ).outerjoin(
                 TeamLead, Employee.team_lead_id == TeamLead.employee_id
             ).outerjoin(
@@ -271,6 +273,7 @@ class ProjectService:
                     'employee_name': ' '.join(emp.employee_name.split()),
                     'email': emp.email,
                     'manager_name': ' '.join(emp.manager_name.split()) if emp.manager_name and emp.manager_name.strip() else '',
+                    'sub_role_name': emp.sub_role_name,
                     'total_allocation': float(total_allocation / 100) if total_allocation else 0.0,  # Convert to 0-1 scale
                     'billable_allocation': float(billable_allocation / 100) if billable_allocation else 0.0,  # Convert to 0-1 scale
                     'projects': projects

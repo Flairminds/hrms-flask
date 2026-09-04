@@ -134,8 +134,6 @@ class IgnoreEmployees:
         'hr@flairminds.com',
         'hasmukh@flairminds.com',
         'priyanka.mandale@flairminds.com',
-        'Vaishnavi.Talokar@flairminds.com',
-        'Sushma.Jagtap@flairminds.com',
         'shishir.nigam@flairminds.com',
         'barun.sharma@flairminds.com',
         'shrinivas.sarmane@flairminds.com',

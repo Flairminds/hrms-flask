@@ -1128,6 +1128,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const capacityForCategoryRow = (category, subCategory) => {
         if (category === 'Client Project' && subCategory === 'Billable') return orgCapacity.billableHours;
         if (category === 'Client Project' && subCategory === 'Non-billable') return orgCapacity.nonBillableHours;
+        // Category-level row (no sub-category, e.g. the top "Client Project"
+        // aggregate) — measured against ALL capacity allocated to client
+        // work, billable and non-billable combined.
+        if (category === 'Client Project' && !subCategory) return orgCapacity.billableHours + orgCapacity.nonBillableHours;
         return orgCapacity.totalHours;
     };
 
@@ -1190,6 +1194,27 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
         return { rows, entriesByLabel, pieData, grandTotal };
     }, [rawRows, categoryEmpFilter, categoryProjFilter, projectCategoryIndex, empProjectBillingIndex, canonicalEmpName, projectNameMap]);
+
+    // Top-level rollup of categoryBreakdown by CATEGORY alone (Client Project
+    // / Internal / Uncategorized) — the default view; drilling into one of
+    // these (via selectedCategory) reveals its sub-category breakdown.
+    const categoryLevelBreakdown = useMemo(() => {
+        const map = {};
+        categoryBreakdown.rows.forEach(r => {
+            if (!map[r.category]) map[r.category] = { key: r.category, category: r.category, total: 0 };
+            map[r.category].total += r.total;
+        });
+        const rows = Object.values(map)
+            .map(r => ({ ...r, total: Number(r.total.toFixed(2)) }))
+            .sort((a, b) => b.total - a.total);
+        const pieData = rows.map(r => ({ name: r.category, value: r.total, category: r.category }));
+        return { rows, pieData };
+    }, [categoryBreakdown]);
+
+    // null = showing the category-level rollup; a category name = drilled
+    // into ALL categories' sub-category breakdown at once (not isolated to
+    // whichever one was clicked).
+    const [categoryViewLevel, setCategoryViewLevel] = useState('category'); // 'category' or 'subcategory'
 
     // Drill-down for a clicked category/sub-category row: which employee
     // logged how many hours on which project (matrix), plus the individual
@@ -1661,118 +1686,148 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
             {categoryBreakdown.rows.length === 0 ? (
                 <Empty description="No logged time for this selection" style={{ padding: 40 }} />
-            ) : (
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} lg={9}>
-                        <div style={{ height: 280 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={categoryBreakdown.pieData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={65}
-                                        outerRadius={110}
-                                        paddingAngle={1}
-                                    >
-                                        {categoryBreakdown.pieData.map((entry, idx) => (
-                                            <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} h`, name]} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div style={{ textAlign: 'center', fontSize: 12, color: '#888', margin: '-8px 0 4px' }}>
-                            Total: <b style={{ color: '#333' }}>{categoryBreakdown.grandTotal.toFixed(1)} hrs</b> across selected range
-                        </div>
-                        <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>
-                            Expected capacity: <b style={{ color: '#666' }}>{orgCapacity.totalHours.toFixed(1)} hrs</b>
-                            {' '}({orgCapacity.employeeCount} active employees, excl. leaves/holidays)
-                            {orgCapacity.totalHours > 0 && (
-                                <> · <b style={{ color: '#666' }}>{((categoryBreakdown.grandTotal / orgCapacity.totalHours) * 100).toFixed(1)}%</b> utilized</>
-                            )}
-                        </div>
-                        <AntTooltip title="Sum of (each employee's expected capacity × their billable / non-billable allocation %) — the 'cap' % on Client Project rows below is measured against these, not total org capacity">
-                            <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 10px', cursor: 'help' }}>
-                                Allocated capacity — billable: <b style={{ color: '#666' }}>{orgCapacity.billableHours.toFixed(1)} hrs</b>
-                                {' '}· non-billable: <b style={{ color: '#666' }}>{orgCapacity.nonBillableHours.toFixed(1)} hrs</b>
-                            </div>
-                        </AntTooltip>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                            {categoryBreakdown.pieData.map((entry, idx) => (
-                                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#555' }}>
-                                    <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
-                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-                                    <AntTooltip title={
-                                        entry.category === 'Client Project' && (entry.subCategory === 'Billable' || entry.subCategory === 'Non-billable')
-                                            ? `% of logged hours · % of capacity allocated to ${entry.subCategory.toLowerCase()} work`
-                                            : '% of logged hours · % of org-wide expected capacity'
-                                    }>
-                                        <span style={{ fontFamily: 'monospace', color: '#999', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                            {categoryBreakdown.grandTotal > 0 ? `${((entry.value / categoryBreakdown.grandTotal) * 100).toFixed(1)}%` : '0%'}
-                                            {' · '}
-                                            {(() => {
-                                                const cap = capacityForCategoryRow(entry.category, entry.subCategory);
-                                                return cap > 0 ? `${((entry.value / cap) * 100).toFixed(1)}% cap` : '0% cap';
-                                            })()}
-                                        </span>
-                                    </AntTooltip>
-                                    <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{entry.value.toFixed(1)}h</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Col>
-                    <Col xs={24} lg={15}>
-                        <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>
-                            🖱 Click a row to see employee/project-wise effort and the individual tasks behind it
-                        </div>
-                        <Table
+            ) : (() => {
+                const isDrilled = categoryViewLevel === 'subcategory';
+                const pieData = isDrilled ? categoryBreakdown.pieData : categoryLevelBreakdown.pieData;
+                const tableRows = isDrilled ? categoryBreakdown.rows : categoryLevelBreakdown.rows;
+                const tooltipFor = (category, subCategory) => (
+                    category === 'Client Project' && (subCategory === 'Billable' || subCategory === 'Non-billable')
+                        ? `% of logged hours · % of capacity allocated to ${subCategory.toLowerCase()} work`
+                        : category === 'Client Project' && !subCategory
+                            ? '% of logged hours · % of capacity allocated to client work (billable + non-billable)'
+                            : '% of logged hours · % of org-wide expected capacity'
+                );
+
+                return (
+                <>
+                    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#333' }}>
+                            {isDrilled
+                                ? 'By category — sub-category breakdown for all categories'
+                                : 'By category — top-level totals'}
+                        </span>
+                        <Segmented
                             size="small"
-                            bordered
-                            pagination={false}
-                            rowKey="key"
-                            scroll={{ x: 'max-content', y: 340 }}
-                            dataSource={categoryBreakdown.rows}
-                            onRow={(record) => ({
-                                onClick: () => setCategoryDrillDown(record.key),
-                                style: { cursor: 'pointer' },
-                            })}
-                            columns={[
-                                {
-                                    title: 'Category', dataIndex: 'category', key: 'category', width: 130,
-                                    render: v => <Tag color={v === 'Internal' ? 'purple' : v === 'Client Project' ? 'blue' : 'default'}>{v}</Tag>
-                                },
-                                { title: 'Sub-category', dataIndex: 'subCategory', key: 'subCategory', width: 190 },
-                                {
-                                    title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 140, align: 'right',
-                                    render: (v, record) => {
-                                        const cap = capacityForCategoryRow(record.category, record.subCategory);
-                                        const tooltipText = record.category === 'Client Project' && (record.subCategory === 'Billable' || record.subCategory === 'Non-billable')
-                                            ? `% of logged hours · % of capacity allocated to ${record.subCategory.toLowerCase()} work`
-                                            : '% of logged hours · % of org-wide expected capacity';
-                                        return (
-                                            <AntTooltip title={tooltipText}>
-                                                <div style={{ lineHeight: 1.3 }}>
-                                                    <b>{v.toFixed(2)}</b>
-                                                    {categoryBreakdown.grandTotal > 0 && (
-                                                        <div style={{ color: '#999', fontSize: 10, whiteSpace: 'nowrap' }}>
-                                                            {((v / categoryBreakdown.grandTotal) * 100).toFixed(1)}% logged
-                                                            {cap > 0 && ` · ${((v / cap) * 100).toFixed(1)}% cap`}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </AntTooltip>
-                                        );
-                                    },
-                                    sorter: (a, b) => a.total - b.total,
-                                    defaultSortOrder: 'descend',
-                                },
+                            value={categoryViewLevel}
+                            onChange={setCategoryViewLevel}
+                            options={[
+                                { label: 'Category', value: 'category' },
+                                { label: 'Sub-category', value: 'subcategory' },
                             ]}
                         />
-                    </Col>
-                </Row>
-            )}
+                    </div>
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} lg={9}>
+                            <div style={{ height: 280 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={pieData}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            innerRadius={65}
+                                            outerRadius={110}
+                                            paddingAngle={1}
+                                        >
+                                            {pieData.map((entry, idx) => (
+                                                <Cell key={entry.name} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)} h`, name]} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div style={{ textAlign: 'center', fontSize: 12, color: '#888', margin: '-8px 0 4px' }}>
+                                Total: <b style={{ color: '#333' }}>{categoryBreakdown.grandTotal.toFixed(1)} hrs</b> across selected range
+                            </div>
+                            <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>
+                                Expected capacity: <b style={{ color: '#666' }}>{orgCapacity.totalHours.toFixed(1)} hrs</b>
+                                {' '}({orgCapacity.employeeCount} active employees, excl. leaves/holidays)
+                                {orgCapacity.totalHours > 0 && (
+                                    <> · <b style={{ color: '#666' }}>{((categoryBreakdown.grandTotal / orgCapacity.totalHours) * 100).toFixed(1)}%</b> utilized</>
+                                )}
+                            </div>
+                            <AntTooltip title="Sum of (each employee's expected capacity × their billable / non-billable allocation %) — the 'cap' % on Client Project rows below is measured against these, not total org capacity">
+                                <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', margin: '0 0 10px', cursor: 'help' }}>
+                                    Allocated capacity — billable: <b style={{ color: '#666' }}>{orgCapacity.billableHours.toFixed(1)} hrs</b>
+                                    {' '}· non-billable: <b style={{ color: '#666' }}>{orgCapacity.nonBillableHours.toFixed(1)} hrs</b>
+                                </div>
+                            </AntTooltip>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                {pieData.map((entry, idx) => (
+                                    <div
+                                        key={entry.name}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#555', cursor: !isDrilled ? 'pointer' : 'default' }}
+                                        onClick={!isDrilled ? () => setCategoryViewLevel('subcategory') : undefined}
+                                    >
+                                        <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                        <AntTooltip title={tooltipFor(entry.category, entry.subCategory)}>
+                                            <span style={{ fontFamily: 'monospace', color: '#999', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                {categoryBreakdown.grandTotal > 0 ? `${((entry.value / categoryBreakdown.grandTotal) * 100).toFixed(1)}%` : '0%'}
+                                                {' · '}
+                                                {(() => {
+                                                    const cap = capacityForCategoryRow(entry.category, entry.subCategory);
+                                                    return cap > 0 ? `${((entry.value / cap) * 100).toFixed(1)}% cap` : '0% cap';
+                                                })()}
+                                            </span>
+                                        </AntTooltip>
+                                        <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{entry.value.toFixed(1)}h</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </Col>
+                        <Col xs={24} lg={15}>
+                            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>
+                                {isDrilled
+                                    ? '🖱 Click a row to see employee/project-wise effort and the individual tasks behind it'
+                                    : '🖱 Click a row (or switch to Sub-category above) to see the full sub-category breakdown'}
+                            </div>
+                            <Table
+                                size="small"
+                                bordered
+                                pagination={false}
+                                rowKey="key"
+                                scroll={{ x: 'max-content', y: 340 }}
+                                dataSource={tableRows}
+                                onRow={(record) => ({
+                                    onClick: () => isDrilled ? setCategoryDrillDown(record.key) : setCategoryViewLevel('subcategory'),
+                                    style: { cursor: 'pointer' },
+                                })}
+                                columns={[
+                                    {
+                                        title: 'Category', dataIndex: 'category', key: 'category', width: 130,
+                                        render: v => <Tag color={v === 'Internal' ? 'purple' : v === 'Client Project' ? 'blue' : 'default'}>{v}</Tag>
+                                    },
+                                    ...(isDrilled ? [{ title: 'Sub-category', dataIndex: 'subCategory', key: 'subCategory', width: 190 }] : []),
+                                    {
+                                        title: 'Total (hrs)', dataIndex: 'total', key: 'total', width: 140, align: 'right',
+                                        render: (v, record) => {
+                                            const cap = capacityForCategoryRow(record.category, record.subCategory);
+                                            return (
+                                                <AntTooltip title={tooltipFor(record.category, record.subCategory)}>
+                                                    <div style={{ lineHeight: 1.3 }}>
+                                                        <b>{v.toFixed(2)}</b>
+                                                        {categoryBreakdown.grandTotal > 0 && (
+                                                            <div style={{ color: '#999', fontSize: 10, whiteSpace: 'nowrap' }}>
+                                                                {((v / categoryBreakdown.grandTotal) * 100).toFixed(1)}% logged
+                                                                {cap > 0 && ` · ${((v / cap) * 100).toFixed(1)}% cap`}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </AntTooltip>
+                                            );
+                                        },
+                                        sorter: (a, b) => a.total - b.total,
+                                        defaultSortOrder: 'descend',
+                                    },
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+                </>
+                );
+            })()}
 
             <Alert
                 style={{ marginTop: 20 }}
