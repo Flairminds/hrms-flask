@@ -1,6 +1,9 @@
-from flask import request, jsonify, g
+from datetime import date, timedelta
+from flask import request, jsonify, g, current_app
 from ..services.timelog_service import TimelogService
 from ..utils.logger import Logger
+
+ZYMMR_DEFAULT_SYNC_DAYS = 7  # default window when no range is given: last 7 days including today
 
 
 class TimelogController:
@@ -52,24 +55,34 @@ class TimelogController:
             return jsonify({"Message": "An error occurred while fetching timelog reports."}), 500
 
     @staticmethod
-    def zymmr_public_key():
-        from ..utils.zymmr_crypto import public_key_pem
-        return jsonify({'publicKey': public_key_pem()}), 200
+    def get_zymmr_last_sync():
+        try:
+            info = TimelogService.get_last_zymmr_sync()
+            return jsonify(info), 200
+        except Exception as e:
+            Logger.error("Unexpected error fetching last Zymmr sync", error=str(e), error_type=type(e).__name__)
+            return jsonify({"Message": "An error occurred while fetching the last Zymmr sync time."}), 500
 
     @staticmethod
     def sync_from_zymmr():
         Logger.info("Zymmr timelog sync request received")
         try:
-            data = request.get_json()
-            if not data:
-                return jsonify({"Message": "Request body must be JSON"}), 400
+            usr = current_app.config.get('ZYMMR_SYNC_USERNAME')
+            pwd = current_app.config.get('ZYMMR_SYNC_PASSWORD')
+            if not usr or not pwd:
+                Logger.warning("Zymmr sync requested but service-account credentials are not configured")
+                return jsonify({
+                    "Message": "Zymmr sync is not configured. Set ZYMMR_SYNC_USERNAME and ZYMMR_SYNC_PASSWORD."
+                }), 503
+
+            data = request.get_json(silent=True) or {}
             from_date = data.get('from')
             to_date = data.get('to')
             if not from_date or not to_date:
-                return jsonify({"Message": "A date range (from, to) is required"}), 400
-
-            from ..utils.zymmr_crypto import decrypt_zymmr_credentials
-            usr, pwd = decrypt_zymmr_credentials(data.get('encrypted'))
+                # Default: last 7 days including today.
+                today = date.today()
+                from_date = (today - timedelta(days=ZYMMR_DEFAULT_SYNC_DAYS - 1)).isoformat()
+                to_date = today.isoformat()
 
             uploaded_by = g.get('employee_id')
             result = TimelogService.sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by)

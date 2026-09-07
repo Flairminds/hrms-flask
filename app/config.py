@@ -62,6 +62,11 @@ class Config:
     ZYMMR_BASE_URL = os.environ.get('ZYMMR_BASE_URL', 'https://flairminds.zymmr.com').rstrip('/')
     ZYMMR_SITE_NAME = os.environ.get('ZYMMR_SITE_NAME', 'flairminds.zymmr.com')
     ZYMMR_SSL_VERIFY = os.environ.get('ZYMMR_SSL_VERIFY', 'true').lower() in ('1', 'true', 'yes')
+    # Service-account credentials used for both the nightly scheduled sync and
+    # any on-demand sync triggered from the frontend (no user-supplied
+    # credentials any more — see zymmr_timelog_service.py).
+    ZYMMR_SYNC_USERNAME = os.environ.get('ZYMMR_SYNC_USERNAME')
+    ZYMMR_SYNC_PASSWORD = os.environ.get('ZYMMR_SYNC_PASSWORD')
 
     # Azure Blob Storage Configuration
     AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING', '').strip().strip("'").strip('"') or None
