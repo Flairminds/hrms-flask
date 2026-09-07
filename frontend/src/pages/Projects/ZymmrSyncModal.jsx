@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, DatePicker, Alert, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { syncTimelogFromZymmr } from '../../services/api';
+import { getZymmrPublicKey, syncTimelogFromZymmr } from '../../services/api';
+import { encryptZymmrCredentials } from '../../util/zymmrEncrypt';
 
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
@@ -23,8 +24,6 @@ const rangePresets = () => [
     { label: 'Last week', value: [dayjs().subtract(1, 'week').startOf('week'), dayjs().subtract(1, 'week').endOf('week')] },
 ];
 
-const SID_STORAGE_KEY = 'zymmr_sid';
-
 const ZymmrSyncModal = ({ open, onCancel, onSynced }) => {
     const [form] = Form.useForm();
     const [syncing, setSyncing] = useState(false);
@@ -35,12 +34,9 @@ const ZymmrSyncModal = ({ open, onCancel, onSynced }) => {
         if (!open) return;
         setError(null);
         setPicking(null);
-        const storedSid = (() => {
-            try { return sessionStorage.getItem(SID_STORAGE_KEY) || ''; }
-            catch { return ''; }
-        })();
         form.setFieldsValue({
-            sid: storedSid,
+            username: '',
+            password: '',
             dateRange: defaultSyncRange(),
         });
     }, [open, form]);
@@ -60,18 +56,26 @@ const ZymmrSyncModal = ({ open, onCancel, onSynced }) => {
             if (!from || !to) return;
             setSyncing(true);
             setError(null);
-            try {
-                sessionStorage.setItem(SID_STORAGE_KEY, values.sid.trim());
-            } catch { /* private mode — ignore */ }
+
+            const keyRes = await getZymmrPublicKey();
+            const publicKey = keyRes.data?.publicKey;
+            if (!publicKey) throw new Error('Could not load encryption key from the server.');
+
+            const encrypted = await encryptZymmrCredentials(
+                publicKey,
+                values.username.trim(),
+                values.password,
+            );
 
             const res = await syncTimelogFromZymmr({
-                sid: values.sid.trim(),
+                encrypted,
                 from: from.format('YYYY-MM-DD'),
                 to: to.format('YYYY-MM-DD'),
             });
+            form.setFieldsValue({ password: '' });
             onSynced?.(res.data || {});
         } catch (err) {
-            if (err?.errorFields) return; // form validation
+            if (err?.errorFields) return;
             const msg = err.response?.data?.Message
                 || err.message
                 || 'Failed to sync from Zymmr.';
@@ -93,8 +97,8 @@ const ZymmrSyncModal = ({ open, onCancel, onSynced }) => {
             width={520}
         >
             <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 16 }}>
-                Pulls time logs from Zymmr for the selected dates and saves them the same way an Excel upload does.
-                Your SID is sent to our backend only to attach as a cookie on the Zymmr request — it is not stored.
+                Sign in to Zymmr to pull time logs for the selected dates. Username and password are
+                encrypted in the browser, decrypted only for this request, and are not stored.
             </Paragraph>
 
             {error && (
@@ -108,19 +112,24 @@ const ZymmrSyncModal = ({ open, onCancel, onSynced }) => {
 
             <Form form={form} layout="vertical">
                 <Form.Item
-                    name="sid"
-                    label="Zymmr SID"
-                    rules={[{ required: true, message: 'Paste your Zymmr sid cookie' }]}
-                    extra={
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                            While logged into flairminds.zymmr.com, open DevTools → Application → Cookies
-                            and copy the <Text code>sid</Text> value.
-                        </Text>
-                    }
+                    name="username"
+                    label="Zymmr username"
+                    rules={[{ required: true, message: 'Enter your Zymmr username' }]}
+                >
+                    <Input
+                        placeholder="Zymmr username or email"
+                        autoComplete="off"
+                        autoCapitalize="none"
+                    />
+                </Form.Item>
+                <Form.Item
+                    name="password"
+                    label="Zymmr password"
+                    rules={[{ required: true, message: 'Enter your Zymmr password' }]}
                 >
                     <Input.Password
-                        placeholder="Paste sid cookie value"
-                        autoComplete="off"
+                        placeholder="Zymmr password"
+                        autoComplete="new-password"
                     />
                 </Form.Item>
                 <Form.Item
