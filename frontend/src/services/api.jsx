@@ -1254,9 +1254,14 @@ export const getTimelogReports = () => {
   return axiosInstance.get(`${API_BASE_URL}/timelog/reports`);
 };
 
-// Pulls time logs from Zymmr (backend forwards the user-supplied SID as a cookie)
+// Pulls time logs from Zymmr. Credentials are RSA-encrypted in the browser
+// and decrypted only for the duration of this request — never stored.
+export const getZymmrPublicKey = () => {
+  return axiosInstance.get(`${API_BASE_URL}/timelog/zymmr-public-key`);
+};
+
 export const syncTimelogFromZymmr = (payload) => {
-  return axiosInstance.post(`${API_BASE_URL}/timelog/sync-zymmr`, payload, { timeout: 120000 });
+  return axiosInstance.post(`${API_BASE_URL}/timelog/sync-zymmr`, payload, { timeout: 150000 });
 };
 
 // ============= CAPABILITY DEVELOPMENT API FUNCTIONS =============

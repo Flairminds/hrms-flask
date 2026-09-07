@@ -52,21 +52,27 @@ class TimelogController:
             return jsonify({"Message": "An error occurred while fetching timelog reports."}), 500
 
     @staticmethod
+    def zymmr_public_key():
+        from ..utils.zymmr_crypto import public_key_pem
+        return jsonify({'publicKey': public_key_pem()}), 200
+
+    @staticmethod
     def sync_from_zymmr():
         Logger.info("Zymmr timelog sync request received")
         try:
             data = request.get_json()
             if not data:
                 return jsonify({"Message": "Request body must be JSON"}), 400
-            sid = data.get('sid')
             from_date = data.get('from')
             to_date = data.get('to')
-            if not sid or not str(sid).strip():
-                return jsonify({"Message": "Zymmr SID is required"}), 400
             if not from_date or not to_date:
                 return jsonify({"Message": "A date range (from, to) is required"}), 400
+
+            from ..utils.zymmr_crypto import decrypt_zymmr_credentials
+            usr, pwd = decrypt_zymmr_credentials(data.get('encrypted'))
+
             uploaded_by = g.get('employee_id')
-            result = TimelogService.sync_from_zymmr(sid, from_date, to_date, uploaded_by)
+            result = TimelogService.sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by)
             Logger.info(
                 "Zymmr timelog sync finished",
                 fetched=result.get('fetchedCount'),

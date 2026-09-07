@@ -24,6 +24,12 @@ def get_reports():
     return TimelogController.get_reports()
 
 
+@timelog_bp.route('/zymmr-public-key', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['timelog']['sync_zymmr'])
+def zymmr_public_key():
+    return TimelogController.zymmr_public_key()
+
+
 @timelog_bp.route('/sync-zymmr', methods=['POST'])
 @roles_required(*ROLE_PERMISSIONS['timelog']['sync_zymmr'])
 def sync_zymmr():

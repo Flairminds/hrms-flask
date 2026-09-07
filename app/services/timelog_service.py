@@ -193,15 +193,15 @@ class TimelogService:
         return summary
 
     @staticmethod
-    def sync_from_zymmr(sid, from_date, to_date, uploaded_by):
+    def sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by):
         """
-        Pull time-log rows from Zymmr for [from_date, to_date] and upsert them
-        the same way an Excel upload does. SID is forwarded as a request
-        cookie only — never stored.
+        Login to Zymmr with request-scoped credentials, pull time-log rows
+        for [from_date, to_date], and upsert them the same way an Excel
+        upload does. usr/pwd/sid are never stored.
         """
         from .zymmr_timelog_service import fetch_zymmr_timelog_entries
 
-        entries, meta = fetch_zymmr_timelog_entries(sid, from_date, to_date)
+        entries, meta = fetch_zymmr_timelog_entries(usr, pwd, from_date, to_date)
         if not entries:
             return {
                 'groups': [],
