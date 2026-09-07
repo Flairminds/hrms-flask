@@ -212,6 +212,7 @@ ROLE_PERMISSIONS = {
     # ===========================
     "timelog": {
         "save_report": ["Admin", "HR"],        # Import/save an Excel upload — HR/Admin only
+        "sync_zymmr": ["Admin", "HR"],         # Pull time logs from Zymmr using a user-supplied SID
         "get_entries": ["Admin", "HR", "Lead", "Employee"],  # Flattened entries, for charts/tables
         "get_reports": ["Admin", "HR", "Lead", "Employee"],  # Per-employee-month report listing
     },

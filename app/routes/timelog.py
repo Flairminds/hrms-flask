@@ -22,3 +22,9 @@ def get_entries():
 @roles_required(*ROLE_PERMISSIONS['timelog']['get_reports'])
 def get_reports():
     return TimelogController.get_reports()
+
+
+@timelog_bp.route('/sync-zymmr', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['timelog']['sync_zymmr'])
+def sync_zymmr():
+    return TimelogController.sync_from_zymmr()
