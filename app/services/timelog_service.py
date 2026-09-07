@@ -26,6 +26,18 @@ def _normalize(value):
     return value
 
 
+def _iso_utc(dt):
+    """
+    `last_uploaded_at` is stored as a naive datetime.utcnow() — plain
+    `.isoformat()` on it has no timezone marker, so the frontend's `dayjs()`
+    parses it as local time instead of UTC (throwing off "time ago" display
+    by the browser's UTC offset). Marking it explicitly as UTC fixes that.
+    """
+    if not dt:
+        return None
+    return dt.isoformat() + 'Z'
+
+
 def _parse_iso_date(value):
     """'YYYY-MM-DD' string -> date, or None. Already-a-date passes through."""
     if not value:
@@ -193,11 +205,13 @@ class TimelogService:
         return summary
 
     @staticmethod
-    def sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by):
+    def sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by, source='zymmr-sync'):
         """
-        Login to Zymmr with request-scoped credentials, pull time-log rows
-        for [from_date, to_date], and upsert them the same way an Excel
-        upload does. usr/pwd/sid are never stored.
+        Login to Zymmr, pull time-log rows for [from_date, to_date], and
+        upsert them the same way an Excel upload does. usr/pwd/sid are never
+        stored. `source` labels the stored `source_file` so a scheduled run
+        (uploaded_by is None — no human actor) can be told apart from an
+        on-demand sync, e.g. source='zymmr-scheduled-sync'.
         """
         from .zymmr_timelog_service import fetch_zymmr_timelog_entries
 
@@ -214,7 +228,7 @@ class TimelogService:
 
         # Converted Zymmr rows are the same shape as an Excel upload, so they
         # share save_report (upsert by Id, grouped by Author + calendar month).
-        file_name = f"zymmr-sync {meta.get('from')} to {meta.get('to')}"
+        file_name = f"{source} {meta.get('from')} to {meta.get('to')}"
         summary = TimelogService.save_report(entries, file_name, uploaded_by)
         return {
             'groups': summary,
@@ -272,6 +286,26 @@ class TimelogService:
         return rows
 
     @staticmethod
+    def get_last_zymmr_sync():
+        """
+        Most recent successful Zymmr sync (scheduled or on-demand), based on
+        `source_file` written by sync_from_zymmr — the highest last_uploaded_at
+        among rows whose source_file starts with 'zymmr-'. Returns
+        { lastSyncedAt, source } with both None if no sync has run yet.
+        """
+        report = (
+            EmployeeTimelogReport.query
+            .filter(EmployeeTimelogReport.is_deleted.is_(False))
+            .filter(EmployeeTimelogReport.source_file.ilike('zymmr-%'))
+            .order_by(EmployeeTimelogReport.last_uploaded_at.desc())
+            .first()
+        )
+        if not report or not report.last_uploaded_at:
+            return {'lastSyncedAt': None, 'source': None}
+        source = 'scheduled' if (report.source_file or '').startswith('zymmr-scheduled-sync') else 'manual'
+        return {'lastSyncedAt': _iso_utc(report.last_uploaded_at), 'source': source}
+
+    @staticmethod
     def get_reports_summary():
         """Lightweight per-employee-month listing (no entry payload) for a reports index."""
         reports = (
@@ -287,7 +321,7 @@ class TimelogService:
             'entryCount': r.entry_count,
             'startDate': r.start_date.isoformat() if r.start_date else None,
             'endDate': r.end_date.isoformat() if r.end_date else None,
-            'lastUploadedAt': r.last_uploaded_at.isoformat() if r.last_uploaded_at else None,
+            'lastUploadedAt': _iso_utc(r.last_uploaded_at),
             'lastUploadedBy': r.last_uploaded_by,
             'sourceFile': r.source_file,
         } for r in reports]

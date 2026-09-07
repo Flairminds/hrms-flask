@@ -4,15 +4,18 @@ import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, Warn
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
     Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
+
+dayjs.extend(relativeTime);
 import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
     getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks,
-    saveTimelogReport, getTimelogEntries, getTimelogReports,
+    saveTimelogReport, getTimelogEntries, getTimelogReports, getZymmrLastSync,
 } from '../../services/api';
 import ZymmrSyncModal from './ZymmrSyncModal.jsx';
 
@@ -362,6 +365,18 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [importSummary, setImportSummary] = useState(null);   // diff summary shown after a successful save
     const [validationErrors, setValidationErrors] = useState(null); // { fileName, errors: [...] }
     const [zymmrSyncOpen, setZymmrSyncOpen] = useState(false);
+    const [zymmrLastSync, setZymmrLastSync] = useState(null);
+
+    const refreshZymmrLastSync = useCallback(() => {
+        getZymmrLastSync()
+            .then(res => setZymmrLastSync(res.data || null))
+            .catch(() => {});
+    }, []);
+
+    React.useEffect(() => {
+        if (!isHRorAdmin) return;
+        refreshZymmrLastSync();
+    }, [isHRorAdmin, refreshZymmrLastSync]);
 
     React.useEffect(() => { setTrendEntity('ALL'); }, [viewMode]);
 
@@ -596,6 +611,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         setImportSummary(data.groups || []);
         setHasSavedData(true);
         setShowUploadPanel(false);
+        refreshZymmrLastSync();
         const added = (data.groups || []).reduce((s, g) => s + (g.added || 0), 0);
         const changed = (data.groups || []).reduce((s, g) => s + ((g.changed || []).length), 0);
         message.success(`Synced ${saved} time logs from Zymmr (${added} new, ${changed} updated).`);
@@ -608,6 +624,14 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             syncFromDatabase({ silent: true });
         }
     };
+
+    const zymmrLastSyncLabel = zymmrLastSync?.lastSyncedAt ? (
+        <AntTooltip title={dayjs(zymmrLastSync.lastSyncedAt).format('DD MMM YYYY, hh:mm A')}>
+            <span style={{ fontSize: 12, color: '#888' }}>
+                Last synced {dayjs(zymmrLastSync.lastSyncedAt).fromNow()}
+            </span>
+        </AntTooltip>
+    ) : null;
 
     const zymmrSyncModal = (
         <ZymmrSyncModal
@@ -2391,8 +2415,11 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                 Zymmr Data Sync
                             </Button>
                             <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
-                                Pull time logs directly using your Zymmr session
+                                Pull time logs directly from Zymmr for a chosen date range
                             </div>
+                            {zymmrLastSyncLabel && (
+                                <div style={{ marginTop: 4 }}>{zymmrLastSyncLabel}</div>
+                            )}
                         </Spin>
                     ) : (
                         <Alert
@@ -2508,6 +2535,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     }
                 />
             )}
+            {isHRorAdmin && zymmrLastSyncLabel}
             {/* Toolbar — one card, two tiers, instead of a single crowded row */}
             <Card style={{ borderRadius: 12, marginBottom: 16 }}>
                 {/* Tier 1: primary controls */}
@@ -2566,7 +2594,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         </span>
                     </Col>
                     <Col>
-                        <Space size={8}>
+                        <Space size={8} align="center">
                             {isHRorAdmin && hasEffortsData && (
                                 <Button
                                     type="primary"

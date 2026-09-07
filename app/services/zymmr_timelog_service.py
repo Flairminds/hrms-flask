@@ -21,7 +21,7 @@ ZYMMR_USER_AGENT = (
     '(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36'
 )
 REPORT_LIMIT = 1000
-MAX_RANGE_DAYS = 10
+MAX_RANGE_DAYS = 7
 WINDOW_DAYS = 10
 
 # Zymmr generate_report columns (table + field name) → TimelogService.save_report

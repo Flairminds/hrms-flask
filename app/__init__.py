@@ -33,9 +33,6 @@ def create_app(config_name):
     db.init_app(app)
     migrate.init_app(app, db)
 
-    from .utils.zymmr_crypto import init_zymmr_rsa
-    init_zymmr_rsa(app)
-    
     # Enable CORS for development (when React runs on different port)
     # In production with same origin, CORS is not needed
     if not has_build or config_name == 'dev':
