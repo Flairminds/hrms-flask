@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button, Upload, message, Table, Space, Row, Col, Card, Alert, Badge, Tag, Segmented, Divider, Select, DatePicker, Spin, Modal, Popover, Switch, Empty, Tooltip as AntTooltip } from 'antd';
-import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, PieChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
+import { UploadOutlined, BarChartOutlined, TableOutlined, DownloadOutlined, WarningOutlined, LineChartOutlined, PieChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined, InfoCircleOutlined, UserOutlined, ProjectOutlined, CloudSyncOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import * as XLSXStyle from 'xlsx-js-style';
 import dayjs from 'dayjs';
@@ -14,6 +14,7 @@ import {
     getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks,
     saveTimelogReport, getTimelogEntries, getTimelogReports,
 } from '../../services/api';
+import ZymmrSyncModal from './ZymmrSyncModal.jsx';
 
 const { RangePicker } = DatePicker;
 
@@ -360,6 +361,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [saving, setSaving] = useState(false);                // POSTing a new upload to the database
     const [importSummary, setImportSummary] = useState(null);   // diff summary shown after a successful save
     const [validationErrors, setValidationErrors] = useState(null); // { fileName, errors: [...] }
+    const [zymmrSyncOpen, setZymmrSyncOpen] = useState(false);
 
     React.useEffect(() => { setTrendEntity('ALL'); }, [viewMode]);
 
@@ -583,6 +585,37 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         reader.readAsArrayBuffer(file);
         return false;
     }, [syncFromDatabase]);
+
+    const handleZymmrSynced = (data) => {
+        const saved = data?.savedCount || 0;
+        if (!saved) {
+            message.info('No time logs found in Zymmr for that date range.');
+            return;
+        }
+        setZymmrSyncOpen(false);
+        setImportSummary(data.groups || []);
+        setHasSavedData(true);
+        setShowUploadPanel(false);
+        const added = (data.groups || []).reduce((s, g) => s + (g.added || 0), 0);
+        const changed = (data.groups || []).reduce((s, g) => s + ((g.changed || []).length), 0);
+        message.success(`Synced ${saved} time logs from Zymmr (${added} new, ${changed} updated).`);
+        if (data.truncated) {
+            message.warning('Zymmr hit the row limit for at least one week — try a smaller date range if anything looks missing.');
+        }
+        if (data.from && data.to) {
+            setDateRange([dayjs(data.from), dayjs(data.to)]);
+        } else {
+            syncFromDatabase({ silent: true });
+        }
+    };
+
+    const zymmrSyncModal = (
+        <ZymmrSyncModal
+            open={zymmrSyncOpen}
+            onCancel={() => setZymmrSyncOpen(false)}
+            onSynced={handleZymmrSynced}
+        />
+    );
 
     const { employeeData, projectData, allPeriods, timesheetRange } = useMemo(() => {
         if (!rawRows.length && !allocations.length) {
@@ -2348,6 +2381,18 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                     Excel files only — .xlsx or .xls
                                 </p>
                             </Upload.Dragger>
+                            <Divider plain style={{ margin: '20px 0 12px', fontSize: 12, color: '#aaa' }}>or</Divider>
+                            <Button
+                                type="primary"
+                                icon={<CloudSyncOutlined />}
+                                onClick={() => setZymmrSyncOpen(true)}
+                                disabled={saving}
+                            >
+                                Zymmr Data Sync
+                            </Button>
+                            <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+                                Pull time logs directly using your Zymmr session
+                            </div>
                         </Spin>
                     ) : (
                         <Alert
@@ -2436,12 +2481,33 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                         />
                     </>)}
                 </Modal>
+                {zymmrSyncModal}
             </div>
         );
     }
 
     return (
         <div style={{ padding: '0 8px' }}>
+            {importSummary && (
+                <Alert
+                    style={{ marginBottom: 16, borderRadius: 10 }}
+                    type="success"
+                    showIcon
+                    closable
+                    onClose={() => setImportSummary(null)}
+                    icon={<CheckCircleOutlined />}
+                    message="Saved to the database"
+                    description={
+                        <div style={{ fontSize: 12, marginTop: 4 }}>
+                            {importSummary.map(g => (
+                                <div key={`${g.employeeName}-${g.month}`} style={{ marginBottom: 2 }}>
+                                    <b>{g.employeeName}</b> ({g.month}): {g.totalEntries} total · {g.added} new · {g.changed.length} changed · {g.unchanged} unchanged
+                                </div>
+                            ))}
+                        </div>
+                    }
+                />
+            )}
             {/* Toolbar — one card, two tiers, instead of a single crowded row */}
             <Card style={{ borderRadius: 12, marginBottom: 16 }}>
                 {/* Tier 1: primary controls */}
@@ -2517,6 +2583,14 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                                     onClick={handleDownload}
                                 >
                                     Download Summary
+                                </Button>
+                            )}
+                            {isHRorAdmin && (
+                                <Button
+                                    icon={<CloudSyncOutlined />}
+                                    onClick={() => setZymmrSyncOpen(true)}
+                                >
+                                    Zymmr Data Sync
                                 </Button>
                             )}
                             {isHRorAdmin && (
@@ -3030,6 +3104,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     </>
                 )}
             </Modal>
+            {zymmrSyncModal}
         </div>
     );
 };

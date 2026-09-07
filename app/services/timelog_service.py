@@ -193,6 +193,39 @@ class TimelogService:
         return summary
 
     @staticmethod
+    def sync_from_zymmr(sid, from_date, to_date, uploaded_by):
+        """
+        Pull time-log rows from Zymmr for [from_date, to_date] and upsert them
+        the same way an Excel upload does. SID is forwarded as a request
+        cookie only — never stored.
+        """
+        from .zymmr_timelog_service import fetch_zymmr_timelog_entries
+
+        entries, meta = fetch_zymmr_timelog_entries(sid, from_date, to_date)
+        if not entries:
+            return {
+                'groups': [],
+                'fetchedCount': 0,
+                'savedCount': 0,
+                'truncated': meta.get('truncated', False),
+                'from': meta.get('from'),
+                'to': meta.get('to'),
+            }
+
+        # Converted Zymmr rows are the same shape as an Excel upload, so they
+        # share save_report (upsert by Id, grouped by Author + calendar month).
+        file_name = f"zymmr-sync {meta.get('from')} to {meta.get('to')}"
+        summary = TimelogService.save_report(entries, file_name, uploaded_by)
+        return {
+            'groups': summary,
+            'fetchedCount': meta.get('fetchedCount', len(entries)),
+            'savedCount': len(entries),
+            'truncated': meta.get('truncated', False),
+            'from': meta.get('from'),
+            'to': meta.get('to'),
+        }
+
+    @staticmethod
     def get_entries(employee_name=None, employee_id=None, from_date=None, to_date=None):
         """
         Flattened list of all log entries across (optionally filtered)
