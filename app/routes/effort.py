@@ -22,3 +22,15 @@ def get_tasks():
 @roles_required(*ROLE_PERMISSIONS['effort']['get_reports'])
 def get_reports():
     return EffortController.get_reports()
+
+
+@effort_bp.route('/sync-zymmr', methods=['POST'])
+@roles_required(*ROLE_PERMISSIONS['effort']['sync_zymmr'])
+def sync_zymmr():
+    return EffortController.sync_from_zymmr()
+
+
+@effort_bp.route('/zymmr-last-sync', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['effort']['sync_zymmr'])
+def zymmr_last_sync():
+    return EffortController.get_zymmr_last_sync()

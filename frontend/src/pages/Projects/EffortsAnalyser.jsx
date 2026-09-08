@@ -6,7 +6,8 @@ import {
 } from 'antd';
 import {
     InboxOutlined, UploadOutlined, DownloadOutlined, ReloadOutlined,
-    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined, InfoCircleOutlined
+    TeamOutlined, ProjectOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined, InfoCircleOutlined,
+    CloudSyncOutlined
 } from '@ant-design/icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -15,8 +16,15 @@ import {
 import * as XLSX from 'xlsx';
 import XLSXStyle from 'xlsx-js-style';
 import dayjs from 'dayjs';
-import { getEmployeeAllocations, getProjects, saveEffortReport, getEffortTasks, getEffortReports } from '../../services/api';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import {
+    getEmployeeAllocations, getProjects, saveEffortReport, getEffortTasks, getEffortReports,
+    getEffortZymmrLastSync,
+} from '../../services/api';
 import { useAuth } from '../../context/AuthContext.jsx';
+import EffortZymmrSyncModal from './EffortZymmrSyncModal.jsx';
+
+dayjs.extend(relativeTime);
 
 const { Dragger } = Upload;
 const { TabPane } = Tabs;
@@ -1820,6 +1828,18 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
     const projectNameMap = useMemo(() => buildProjectNameMap(hrmsProjects), [hrmsProjects]);
     const [uploading, setUploading] = useState(false);
+    const [zymmrSyncOpen, setZymmrSyncOpen] = useState(false);
+    const [zymmrLastSync, setZymmrLastSync] = useState(null);
+    const refreshZymmrLastSync = useCallback(() => {
+        getEffortZymmrLastSync()
+            .then(res => setZymmrLastSync(res.data || null))
+            .catch(() => {});
+    }, []);
+    useEffect(() => {
+        if (!isHRorAdmin) return;
+        refreshZymmrLastSync();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isHRorAdmin]);
     const [periodMode, setPeriodMode] = useState('monthly');
     const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table' — applies to Project & Employee tabs
     const [fileName, setFileName] = useState('');
@@ -2092,6 +2112,44 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         reader.readAsArrayBuffer(file);
         return false;
     }, [syncFromDatabase, fetchBacklog, projectNameMap]);
+
+    const handleZymmrSynced = (data) => {
+        const saved = data?.savedCount || 0;
+        if (!saved) {
+            message.info('No Work Items found in Zymmr for that cutoff date.');
+            return;
+        }
+        setZymmrSyncOpen(false);
+        setImportSummary(data.projects || []);
+        setHasSavedData(true);
+        setShowUploadPanel(false);
+        refreshZymmrLastSync();
+        const added = (data.projects || []).reduce((s, p) => s + (p.added || 0), 0);
+        const changed = (data.projects || []).reduce((s, p) => s + ((p.changed || []).length), 0);
+        message.success(`Synced ${saved} Work Items from Zymmr (${added} new, ${changed} updated).`);
+        if (data.truncated) {
+            message.warning('Zymmr hit the row limit — try a more recent cutoff date if anything looks missing.');
+        }
+        syncFromDatabase({ silent: true });
+        fetchBacklog();
+    };
+
+    const zymmrLastSyncLabel = zymmrLastSync?.lastSyncedAt ? (
+        <AntTooltip title={dayjs(zymmrLastSync.lastSyncedAt).format('DD MMM YYYY, hh:mm A')}>
+            <span style={{ fontSize: 12, color: '#888' }}>
+                Last synced {dayjs(zymmrLastSync.lastSyncedAt).fromNow()}
+                {/* {zymmrLastSync.source ? ` (${zymmrLastSync.source})` : ''} */}
+            </span>
+        </AntTooltip>
+    ) : null;
+
+    const zymmrSyncModal = (
+        <EffortZymmrSyncModal
+            open={zymmrSyncOpen}
+            onCancel={() => setZymmrSyncOpen(false)}
+            onSynced={handleZymmrSynced}
+        />
+    );
 
     // ── allocation map: empName_lower → { projName_lower → alloc% } ──────
     const allocationMap = useMemo(() => {
@@ -2498,6 +2556,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 </>)}
             </Modal>
 
+            {zymmrSyncModal}
+
             {/* Upload screen / Dashboard */}
             {initializing ? (
                 <Card style={{ borderRadius: 12, textAlign: 'center', padding: '40px 0' }}>
@@ -2564,6 +2624,20 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                 <p style={{ color: '#aaa', fontSize: 12 }}>.xlsx or .xls files only</p>
                             </Dragger>
                             {uploading && <div style={{ textAlign: 'center', marginTop: 16 }}><Spin tip="Parsing…" /></div>}
+                            <Divider plain style={{ margin: '20px 0 12px', fontSize: 12, color: '#aaa' }}>or</Divider>
+                            <Button
+                                type="primary"
+                                icon={<CloudSyncOutlined />}
+                                onClick={() => setZymmrSyncOpen(true)}
+                            >
+                                Zymmr Data Sync
+                            </Button>
+                            <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+                                Pull Work Items directly from Zymmr for a chosen cutoff date
+                            </div>
+                            {zymmrLastSyncLabel && (
+                                <div style={{ marginTop: 4 }}>{zymmrLastSyncLabel}</div>
+                            )}
                         </>
                     ) : (
                         <Alert
@@ -2588,11 +2662,12 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                     <span style={{ color: '#52c41a', fontWeight: 600 }}>
                                         <CheckCircleOutlined /> {doneRows.length} completed
                                     </span> */}
-                                    {saving ? (
+                                    {saving && (
                                         <span style={{ color: '#4f8ef7' }}><Spin size="small" style={{ marginRight: 4 }} />Saving…</span>
-                                    ) : lastSyncedAt && (
-                                        <span style={{ color: '#aaa' }}>Synced {lastSyncedAt.toLocaleTimeString()}</span>
+                                    // ) : lastSyncedAt && (
+                                    //     <span style={{ color: '#aaa' }}>Synced {lastSyncedAt.toLocaleTimeString()}</span>
                                     )}
+                                    {isHRorAdmin && zymmrLastSyncLabel}
                                 </Space>
                             </Col>
                             <Col>
@@ -2606,6 +2681,12 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         onClick={() => setHealthChecks(runHealthChecks(rawRows, allocationMap, projectAllocMap, projectNameMap))}>
                                         Run Checks
                                     </Button>
+                                    {isHRorAdmin && (
+                                        <Button size="small" icon={<CloudSyncOutlined />}
+                                            onClick={() => setZymmrSyncOpen(true)}>
+                                            Zymmr Data Sync
+                                        </Button>
+                                    )}
                                     {isHRorAdmin && (
                                         <Button
                                             size="small"
