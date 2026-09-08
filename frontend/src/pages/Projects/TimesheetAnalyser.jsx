@@ -2535,63 +2535,17 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     }
                 />
             )}
-            {isHRorAdmin && zymmrLastSyncLabel}
-            {/* Toolbar — one card, two tiers, instead of a single crowded row */}
+            {/* Toolbar — one card, three tiers, instead of a single crowded row */}
             <Card style={{ borderRadius: 12, marginBottom: 16 }}>
-                {/* Tier 1: primary controls */}
-                <Row gutter={[16, 12]} align="middle" justify="space-between">
-                    <Col>
-                        <Space size={24} wrap>
-                            <Space size={8}>
-                                <span style={{ fontSize: 12, color: '#888' }}>Date range</span>
-                                <RangePicker
-                                    value={dateRange}
-                                    onChange={handleDateRangeChange}
-                                    presets={getDateRangePresets()}
-                                    allowClear={false}
-                                    format="DD MMM YYYY"
-                                />
-                                {refreshing && <Spin size="small" />}
-                            </Space>
-                            <Space size={8}>
-                                <span style={{ fontSize: 12, color: '#888' }}>View</span>
-                                <Segmented value={viewMode} onChange={setViewMode}
-                                    options={[
-                                        { label: 'Category', value: 'category', icon: <PieChartOutlined /> },
-                                        { label: 'Project', value: 'project' },
-                                        { label: 'Employee', value: 'employee' },
-                                    ]} />
-                            </Space>
-                            {viewMode !== 'category' && (
-                                <Space size={8}>
-                                    <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
-                                    <Segmented value={periodType} onChange={setPeriodType}
-                                        options={[{ label: 'Week', value: 'week' }, { label: 'Month', value: 'month' }]} />
-                                </Space>
-                            )}
-                        </Space>
-                    </Col>
-                    {viewMode !== 'category' && (
-                        <Col>
-                            <Segmented value={displayType} onChange={setDisplayType}
-                                options={[
-                                    { label: 'Table', value: 'table', icon: <TableOutlined /> },
-                                    { label: 'Chart', value: 'chart', icon: <BarChartOutlined /> },
-                                    { label: 'Missing Logs', value: 'gaps', icon: <WarningOutlined /> },
-                                    { label: 'Trend', value: 'trend', icon: <LineChartOutlined /> },
-                                ]} />
-                        </Col>
-                    )}
-                </Row>
-
-                <Divider style={{ margin: '14px 0' }} />
-
-                {/* Tier 2: record count + actions */}
+                {/* Tier 1: status + actions */}
                 <Row gutter={[12, 12]} align="middle" justify="space-between">
-                    <Col>
-                        <span style={{ fontSize: 12, color: '#888' }}>
-                            {rawRows.length} log entries in this range · saved to the database, employee-wise per month
-                        </span>
+                    <Col flex="auto">
+                        <Space size={14} wrap style={{ fontSize: 12, color: '#888' }}>
+                            <span>
+                                {rawRows.length} log entries in this range · saved to the database, employee-wise per month
+                            </span>
+                            {isHRorAdmin && zymmrLastSyncLabel}
+                        </Space>
                     </Col>
                     <Col>
                         <Space size={8} align="center">
@@ -2636,6 +2590,54 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                             </Popover>
                         </Space>
                     </Col>
+                </Row>
+
+                <Divider style={{ margin: '14px 0' }} />
+
+                {/* Tier 2: primary controls — date range + view toggles */}
+                <Row gutter={[16, 12]} align="middle" justify="space-between">
+                    <Col>
+                        <Space size={24} wrap>
+                            <Space size={8}>
+                                <span style={{ fontSize: 12, color: '#888' }}>Date range</span>
+                                <RangePicker
+                                    value={dateRange}
+                                    onChange={handleDateRangeChange}
+                                    presets={getDateRangePresets()}
+                                    allowClear={false}
+                                    format="DD MMM YYYY"
+                                />
+                                {refreshing && <Spin size="small" />}
+                            </Space>
+                            <Space size={8}>
+                                <span style={{ fontSize: 12, color: '#888' }}>View</span>
+                                <Segmented value={viewMode} onChange={setViewMode}
+                                    options={[
+                                        { label: 'Category', value: 'category', icon: <PieChartOutlined /> },
+                                        { label: 'Project', value: 'project' },
+                                        { label: 'Employee', value: 'employee' },
+                                    ]} />
+                            </Space>
+                            {viewMode !== 'category' && (
+                                <Space size={8}>
+                                    <span style={{ fontSize: 12, color: '#888' }}>Group by</span>
+                                    <Segmented value={periodType} onChange={setPeriodType}
+                                        options={[{ label: 'Week', value: 'week' }, { label: 'Month', value: 'month' }]} />
+                                </Space>
+                            )}
+                        </Space>
+                    </Col>
+                    {viewMode !== 'category' && (
+                        <Col>
+                            <Segmented value={displayType} onChange={setDisplayType}
+                                options={[
+                                    { label: 'Table', value: 'table', icon: <TableOutlined /> },
+                                    { label: 'Chart', value: 'chart', icon: <BarChartOutlined /> },
+                                    { label: 'Missing Logs', value: 'gaps', icon: <WarningOutlined /> },
+                                    { label: 'Trend', value: 'trend', icon: <LineChartOutlined /> },
+                                ]} />
+                        </Col>
+                    )}
                 </Row>
             </Card>
 

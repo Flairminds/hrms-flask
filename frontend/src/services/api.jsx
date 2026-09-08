@@ -1238,6 +1238,17 @@ export const getEffortReports = () => {
   return axiosInstance.get(`${API_BASE_URL}/effort/reports`);
 };
 
+// Pulls Work Items from Zymmr (End Date after a cutoff) using the backend's
+// configured service-account credentials. `payload` is { endDateAfter } ('YYYY-MM-DD').
+export const syncEffortFromZymmr = (payload) => {
+  return axiosInstance.post(`${API_BASE_URL}/effort/sync-zymmr`, payload, { timeout: 150000 });
+};
+
+// { lastSyncedAt: ISO string | null, source: 'scheduled' | 'manual' | null }
+export const getEffortZymmrLastSync = () => {
+  return axiosInstance.get(`${API_BASE_URL}/effort/zymmr-last-sync`);
+};
+
 // ── Timesheet Analyser persistence (employee-wise, monthly) ─────────────
 // Saves (upserts) a batch of parsed Excel log-entry rows: { fileName, entries: [...] }
 export const saveTimelogReport = (payload) => {

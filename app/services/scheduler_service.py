@@ -10,8 +10,13 @@ from ..models.leave import LeaveOpeningTransaction, LeaveTransaction
 from ..utils.constants import LeaveTypeID, LeaveConfiguration, EmployeeStatus, LeaveStatus
 from ..services.leave.leave_transaction_service import LeaveTransactionService
 from ..services.timelog_service import TimelogService
+from ..services.effort_service import EffortService
+from ..utils.dates import months_ago, months_from_now
 
 ZYMMR_SCHEDULED_SYNC_DAYS = 7  # last 7 days including today
+# Effort sync window: End Date between (today - 2 months) and (today + 2 months).
+ZYMMR_EFFORT_SCHEDULED_MONTHS_BACK = 2
+ZYMMR_EFFORT_SCHEDULED_MONTHS_AHEAD = 2
 
 scheduler = APScheduler()
 
@@ -178,9 +183,9 @@ def register_jobs(app):
 
 
 
-    @scheduler.task('cron', id='zymmr_timelog_sync', hour=6, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='zymmr_timelog_sync', hour=9, minute=0, timezone='Asia/Kolkata')
     def zymmr_timelog_sync_job():
-        """Daily job at 6:00 AM IST – pulls the last 7 days (including today)
+        """Daily job at 9:00 AM IST – pulls the last 7 days (including today)
         of Zymmr time logs using the configured service-account credentials
         and upserts them into EmployeeTimelogReport, same as a manual sync."""
         with app.app_context():
@@ -209,6 +214,40 @@ def register_jobs(app):
             except Exception as e:
                 db.session.rollback()
                 Logger.error("Error in scheduled Zymmr timelog sync job", error=str(e), error_type=type(e).__name__)
+
+    @scheduler.task('cron', id='zymmr_effort_sync', hour=9, minute=0, timezone='Asia/Kolkata')
+    def zymmr_effort_sync_job():
+        """Daily job at 9:00 AM IST – pulls Work Items from Zymmr with an End
+        Date between (today - 2 months) and (today + 2 months), using the
+        configured service-account credentials, and upserts them into
+        EffortProjectReport, same as a manual sync."""
+        with app.app_context():
+            Logger.info("Running scheduled Zymmr effort sync job")
+            try:
+                usr = app.config.get('ZYMMR_SYNC_USERNAME')
+                pwd = app.config.get('ZYMMR_SYNC_PASSWORD')
+                if not usr or not pwd:
+                    Logger.warning(
+                        "Skipping scheduled Zymmr effort sync: "
+                        "ZYMMR_SYNC_USERNAME/ZYMMR_SYNC_PASSWORD not configured"
+                    )
+                    return
+                today = date.today()
+                from_date = months_ago(today, ZYMMR_EFFORT_SCHEDULED_MONTHS_BACK)
+                to_date = months_from_now(today, ZYMMR_EFFORT_SCHEDULED_MONTHS_AHEAD)
+                result = EffortService.sync_from_zymmr(
+                    usr, pwd, from_date.isoformat(), to_date.isoformat(),
+                    uploaded_by=None, source='zymmr-scheduled-sync',
+                )
+                Logger.info(
+                    "Scheduled Zymmr effort sync finished",
+                    fetched=result.get('fetchedCount'),
+                    saved=result.get('savedCount'),
+                    truncated=result.get('truncated'),
+                )
+            except Exception as e:
+                db.session.rollback()
+                Logger.error("Error in scheduled Zymmr effort sync job", error=str(e), error_type=type(e).__name__)
 
     @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
     @weekday_only

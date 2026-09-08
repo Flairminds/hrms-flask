@@ -58,13 +58,13 @@ class Config:
     # File upload / document generation
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
 
-    # Zymmr (external timesheet source for Timesheet Analyser sync)
+    # Zymmr (external source for the Timesheet Analyser and Effort Analyser syncs)
     ZYMMR_BASE_URL = os.environ.get('ZYMMR_BASE_URL', 'https://flairminds.zymmr.com').rstrip('/')
     ZYMMR_SITE_NAME = os.environ.get('ZYMMR_SITE_NAME', 'flairminds.zymmr.com')
     ZYMMR_SSL_VERIFY = os.environ.get('ZYMMR_SSL_VERIFY', 'true').lower() in ('1', 'true', 'yes')
-    # Service-account credentials used for both the nightly scheduled sync and
-    # any on-demand sync triggered from the frontend (no user-supplied
-    # credentials any more — see zymmr_timelog_service.py).
+    # Service-account credentials shared by both the scheduled sync(s) and any
+    # on-demand sync triggered from the frontend (no user-supplied credentials
+    # — see zymmr_timelog_service.py / zymmr_effort_service.py).
     ZYMMR_SYNC_USERNAME = os.environ.get('ZYMMR_SYNC_USERNAME')
     ZYMMR_SYNC_PASSWORD = os.environ.get('ZYMMR_SYNC_PASSWORD')
 

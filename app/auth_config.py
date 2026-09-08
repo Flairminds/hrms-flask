@@ -203,6 +203,7 @@ ROLE_PERMISSIONS = {
     # ===========================
     "effort": {
         "save_report": ["Admin", "HR"],       # Import/save an Excel upload — HR/Admin only
+        "sync_zymmr": ["Admin", "HR"],        # Pull Work Items from Zymmr (service-account credentials)
         "get_tasks": ["Admin", "HR", "Lead", "Employee"],   # Flattened tasks, for charts/tables
         "get_reports": ["Admin", "HR", "Lead", "Employee"], # Per-project report listing
     },
@@ -212,7 +213,7 @@ ROLE_PERMISSIONS = {
     # ===========================
     "timelog": {
         "save_report": ["Admin", "HR"],        # Import/save an Excel upload — HR/Admin only
-        "sync_zymmr": ["Admin", "HR"],         # Pull time logs from Zymmr (encrypted username/password)
+        "sync_zymmr": ["Admin", "HR"],         # Pull time logs from Zymmr (service-account credentials)
         "get_entries": ["Admin", "HR", "Lead", "Employee"],  # Flattened entries, for charts/tables
         "get_reports": ["Admin", "HR", "Lead", "Employee"],  # Per-employee-month report listing
     },

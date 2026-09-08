@@ -4,6 +4,7 @@ from .. import db
 from ..models.effort import EffortProjectReport
 from ..models.hr import Project, Employee
 from ..utils.logger import Logger
+from ..utils.dates import iso_utc
 
 # Fields inside a task's JSON entry that are compared to detect a change on re-import.
 _DIFF_FIELDS = (
@@ -188,6 +189,62 @@ class EffortService:
         return summary
 
     @staticmethod
+    def sync_from_zymmr(usr, pwd, from_date, to_date, uploaded_by, source='zymmr-sync'):
+        """
+        Login to Zymmr, pull Work Items with an End Date in [from_date, to_date]
+        (the caller enforces the range cap — see EffortController.sync_from_zymmr),
+        and upsert them the same way an Excel upload does.
+        usr/pwd/sid are never stored. `source` labels the stored `source_file`
+        so a scheduled run (uploaded_by is None — no human actor) can be told
+        apart from an on-demand sync, e.g. source='zymmr-scheduled-sync'.
+        """
+        from .zymmr_effort_service import fetch_zymmr_effort_tasks
+
+        tasks, meta = fetch_zymmr_effort_tasks(usr, pwd, from_date, to_date)
+        if not tasks:
+            return {
+                'projects': [],
+                'fetchedCount': 0,
+                'savedCount': 0,
+                'truncated': meta.get('truncated', False),
+                'from': meta.get('from'),
+                'to': meta.get('to'),
+            }
+
+        # Converted Zymmr rows are the same shape as an Excel upload, so they
+        # share save_report (upsert by taskKey, grouped by project).
+        file_name = f"{source} {meta.get('from')} to {meta.get('to')}"
+        summary = EffortService.save_report(tasks, file_name, uploaded_by)
+        return {
+            'projects': summary,
+            'fetchedCount': meta.get('fetchedCount', len(tasks)),
+            'savedCount': len(tasks),
+            'truncated': meta.get('truncated', False),
+            'from': meta.get('from'),
+            'to': meta.get('to'),
+        }
+
+    @staticmethod
+    def get_last_zymmr_sync():
+        """
+        Most recent successful Zymmr sync (scheduled or on-demand), based on
+        `source_file` written by sync_from_zymmr — the highest last_uploaded_at
+        among rows whose source_file starts with 'zymmr-'. Returns
+        { lastSyncedAt, source } with both None if no sync has run yet.
+        """
+        report = (
+            EffortProjectReport.query
+            .filter(EffortProjectReport.is_deleted.is_(False))
+            .filter(EffortProjectReport.source_file.ilike('zymmr-%'))
+            .order_by(EffortProjectReport.last_uploaded_at.desc())
+            .first()
+        )
+        if not report or not report.last_uploaded_at:
+            return {'lastSyncedAt': None, 'source': None}
+        source = 'scheduled' if (report.source_file or '').startswith('zymmr-scheduled-sync') else 'manual'
+        return {'lastSyncedAt': iso_utc(report.last_uploaded_at), 'source': source}
+
+    @staticmethod
     def get_tasks(project_name=None, from_date=None, to_date=None):
         """
         Flattened list of all tasks across (optionally filtered) projects, in
@@ -240,7 +297,7 @@ class EffortService:
             'taskCount': r.task_count,
             'startDate': r.start_date.isoformat() if r.start_date else None,
             'endDate': r.end_date.isoformat() if r.end_date else None,
-            'lastUploadedAt': r.last_uploaded_at.isoformat() if r.last_uploaded_at else None,
+            'lastUploadedAt': iso_utc(r.last_uploaded_at),
             'lastUploadedBy': r.last_uploaded_by,
             'sourceFile': r.source_file,
         } for r in reports]

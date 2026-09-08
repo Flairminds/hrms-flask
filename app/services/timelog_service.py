@@ -5,6 +5,7 @@ from .. import db
 from ..models.timelog import EmployeeTimelogReport
 from ..models.hr import Employee
 from ..utils.logger import Logger
+from ..utils.dates import iso_utc
 
 # Fields inside a log entry's JSON that are compared to detect a change on re-import.
 _DIFF_FIELDS = (
@@ -24,18 +25,6 @@ def _normalize(value):
     if isinstance(value, str):
         return value.strip()
     return value
-
-
-def _iso_utc(dt):
-    """
-    `last_uploaded_at` is stored as a naive datetime.utcnow() — plain
-    `.isoformat()` on it has no timezone marker, so the frontend's `dayjs()`
-    parses it as local time instead of UTC (throwing off "time ago" display
-    by the browser's UTC offset). Marking it explicitly as UTC fixes that.
-    """
-    if not dt:
-        return None
-    return dt.isoformat() + 'Z'
 
 
 def _parse_iso_date(value):
@@ -303,7 +292,7 @@ class TimelogService:
         if not report or not report.last_uploaded_at:
             return {'lastSyncedAt': None, 'source': None}
         source = 'scheduled' if (report.source_file or '').startswith('zymmr-scheduled-sync') else 'manual'
-        return {'lastSyncedAt': _iso_utc(report.last_uploaded_at), 'source': source}
+        return {'lastSyncedAt': iso_utc(report.last_uploaded_at), 'source': source}
 
     @staticmethod
     def get_reports_summary():
@@ -321,7 +310,7 @@ class TimelogService:
             'entryCount': r.entry_count,
             'startDate': r.start_date.isoformat() if r.start_date else None,
             'endDate': r.end_date.isoformat() if r.end_date else None,
-            'lastUploadedAt': _iso_utc(r.last_uploaded_at),
+            'lastUploadedAt': iso_utc(r.last_uploaded_at),
             'lastUploadedBy': r.last_uploaded_by,
             'sourceFile': r.source_file,
         } for r in reports]

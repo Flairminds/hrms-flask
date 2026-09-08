@@ -16,8 +16,8 @@ def test_register_jobs_creates_scheduled_tasks(app, mocker):
     
     register_jobs(app)
     
-    # Verify that task decorator was called for all 13 jobs
-    assert mock_task.call_count == 13
+    # Verify that task decorator was called for all 14 jobs
+    assert mock_task.call_count == 14
     
     # Verify the cron configurations
     calls = mock_task.call_args_list
