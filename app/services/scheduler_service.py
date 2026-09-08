@@ -178,9 +178,9 @@ def register_jobs(app):
 
 
 
-    @scheduler.task('cron', id='zymmr_timelog_sync', hour=6, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='zymmr_timelog_sync', hour=9, minute=0, timezone='Asia/Kolkata')
     def zymmr_timelog_sync_job():
-        """Daily job at 6:00 AM IST – pulls the last 7 days (including today)
+        """Daily job at 9:00 AM IST – pulls the last 7 days (including today)
         of Zymmr time logs using the configured service-account credentials
         and upserts them into EmployeeTimelogReport, same as a manual sync."""
         with app.app_context():
