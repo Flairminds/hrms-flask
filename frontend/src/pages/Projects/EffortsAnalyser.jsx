@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Card, Tabs, Upload, Button, message, Empty, Spin,
     Row, Col, Tag, Table, Input, Badge, Modal, Alert, Select, DatePicker, Segmented,
-    Divider, Space, Tooltip as AntTooltip, Popover
+    Divider, Space, Tooltip as AntTooltip, Popover, Switch
 } from 'antd';
 import {
     InboxOutlined, UploadOutlined, DownloadOutlined, ReloadOutlined,
@@ -824,9 +824,17 @@ const ImportSummaryModal = ({ summary, onClose }) => {
 };
 
 // ── Stacked bar chart: done (period color) + planned (green) ────────────────
-const GroupedBarChart = ({ data, periods, onBarClick }) => {
+const GroupedBarChart = ({ data, periods, onBarClick, metric = 'hours' }) => {
     if (!data.length)
         return <Empty description="No data found" style={{ padding: 40 }} />;
+
+    // 'hours' plots raw logged/planned hours (skewed by team size/FTE — a
+    // 5-person project will always dwarf a 1-person one). 'pct' plots % of
+    // that entity's own allocation instead, so bar height is comparable
+    // across entities regardless of how many people are on each one.
+    const isPct = metric === 'pct';
+    const doneKey    = (period) => isPct ? `${period}__donePctRaw`    : `${period}__done`;
+    const plannedKey = (period) => isPct ? `${period}__plannedPctRaw` : `${period}__planned`;
 
     const BAR_WIDTH = 28;
     const groupWidth = periods.length * (BAR_WIDTH + 6) + 32;
@@ -852,7 +860,8 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                         <XAxis dataKey="name" tick={<CustomXTick />}
                             interval={0} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false}
-                            label={{ value: 'Hours', angle: -90, position: 'insideLeft', offset: 12, fontSize: 11, fill: '#bbb' }} />
+                            {...(isPct ? { tickFormatter: (v) => `${v}%` } : {})}
+                            label={{ value: isPct ? '% of Allocation' : 'Hours', angle: -90, position: 'insideLeft', offset: 12, fontSize: 11, fill: '#bbb' }} />
                         <Tooltip content={<TooltipContent />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
                         <Legend
                             wrapperStyle={{ fontSize: 11, paddingTop: 10 }}
@@ -866,7 +875,7 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                             return [
                                 // Done segment — bottom, period color
                                 // Carries the label when planned = 0 (it is the topmost segment)
-                                <Bar key={`${period}__done`} dataKey={`${period}__done`}
+                                <Bar key={`${period}__done`} dataKey={doneKey(period)}
                                     name={`${period} Done`} stackId={period}
                                     fill={color} maxBarSize={BAR_WIDTH} legendType="none"
                                     isAnimationActive={false}>
@@ -899,7 +908,7 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                                 </Bar>,
                                 // Planned segment — top, always green
                                 // Carries the label when planned > 0 (it is the topmost segment)
-                                <Bar key={`${period}__planned`} dataKey={`${period}__planned`}
+                                <Bar key={`${period}__planned`} dataKey={plannedKey(period)}
                                     name={`${period} Planned`} stackId={period}
                                     fill="#52c41a" maxBarSize={BAR_WIDTH} legendType="none"
                                     isAnimationActive={false}
@@ -954,6 +963,66 @@ const GroupedBarChart = ({ data, periods, onBarClick }) => {
                 })}
             </div>
         </div>
+    );
+};
+
+// ── Overdue backlog panel: entities with not-done tasks whose End Date has
+// already passed — the opposite problem from "low planned work" (too much
+// stale backlog that hasn't moved, vs. too little queued at all). A project
+// can have plenty of backlog hours (so it never trips the low-planned check)
+// while every hour of it sits overdue and untouched. ──────────────────────
+const OverdueBacklogPanel = ({ items, entityLabel, onEntityClick }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (!items.length) {
+        return (
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52c41a',
+                padding: '8px 2px', marginBottom: 8,
+            }}>
+                <CheckCircleOutlined />
+                No {entityLabel.toLowerCase()} has not-done tasks past their End Date.
+            </div>
+        );
+    }
+
+    return (
+        <Card size="small" bordered
+            style={{ borderRadius: 10, marginBottom: 12, background: '#fff1f0', borderColor: '#ffccc7' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                onClick={() => setExpanded(v => !v)}>
+                <WarningOutlined style={{ color: '#cf1322', fontSize: 15 }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#820014' }}>
+                    {items.length} {entityLabel}{items.length !== 1 ? 's' : ''} with overdue backlog (not-done, past End Date)
+                </span>
+                <span style={{ fontSize: 11, color: '#aaa', marginLeft: 'auto' }}>
+                    {expanded ? '▲ Hide' : '▼ Show'} list
+                </span>
+            </div>
+            {expanded && (
+                <Table
+                    size="small"
+                    dataSource={items}
+                    rowKey="name"
+                    pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+                    style={{ marginTop: 10 }}
+                    onRow={onEntityClick ? (r) => ({ onClick: () => onEntityClick(r.name), style: { cursor: 'pointer' } }) : undefined}
+                    columns={[
+                        { title: entityLabel, dataIndex: 'name', key: 'name', width: 160,
+                            render: v => <span style={{ fontWeight: 600, fontSize: 12, color: onEntityClick ? '#4f8ef7' : '#333' }}>{v}</span> },
+                        { title: 'Overdue Tasks', dataIndex: 'overdueCount', key: 'overdueCount', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span> },
+                        { title: 'Overdue (hrs)', dataIndex: 'overdueHrs', key: 'overdueHrs', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#cf1322' }}>{v.toFixed(1)}</span> },
+                        { title: 'Oldest End Date', dataIndex: 'oldestEndDate', key: 'oldestEndDate', width: 130, align: 'right',
+                            sorter: (a, b) => a.oldestEndDate - b.oldestEndDate,
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{fmtDate(v)}</span> },
+                        { title: 'Days Overdue', dataIndex: 'daysOverdue', key: 'daysOverdue', width: 120, align: 'right',
+                            render: v => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{v}d</span> },
+                    ]}
+                />
+            )}
+        </Card>
     );
 };
 
@@ -1847,6 +1916,11 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [drillDown, setDrillDown] = useState(null);
     const [healthChecks, setHealthChecks] = useState(null);
     const [empProjectFilter, setEmpProjectFilter] = useState(null); // null = all projects
+    const [showInternalProjects, setShowInternalProjects] = useState(false); // Project Level tab: Client projects only by default
+    // Project Level chart Y-axis: raw hours skew badly by team size/FTE (a
+    // 5-person project always dwarfs a 1-person one), so default to % of
+    // each project's own allocation, with Hours still available as a toggle.
+    const [projectChartMetric, setProjectChartMetric] = useState('pct'); // 'pct' | 'hours'
     const [initializing, setInitializing] = useState(true);   // true only until the very first DB fetch resolves
     const [refreshing, setRefreshing] = useState(false);       // a subsequent fetch (date range change / Refresh button)
     const [hasSavedData, setHasSavedData] = useState(null);    // null = unknown yet; does ANY report exist in the DB at all
@@ -1856,6 +1930,24 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const [lastSyncedAt, setLastSyncedAt] = useState(null);    // when rawRows last reflected the database
     const [dateRange, setDateRange] = useState(() => [dayjs().startOf('month'), dayjs().endOf('month')]);
     const [backlogRows, setBacklogRows] = useState([]); // ALL not-done tasks, any End Date — independent of dateRange
+
+    // A Zymmr-synced or Excel-uploaded row's raw `project` string can differ
+    // from the canonical HRMS Project name (e.g. Zymmr's "OnPepper Leverage
+    // Modelling" vs. the HRMS Project tagged with that same "Zymmr Project
+    // Name" alias) — resolve every row through the same tag map
+    // TimesheetAnalyser.jsx uses, at read time, so charts/tables/reports
+    // always group by one canonical name instead of fragmenting into
+    // duplicate project buckets. `rawRows`/`backlogRows` themselves stay
+    // unresolved (they're what was actually stored) — only these derived
+    // copies, used for grouping/charting/reporting, are canonicalized.
+    const resolvedRows = useMemo(
+        () => rawRows.map(r => (r.project ? { ...r, project: resolveProjectName(r.project, projectNameMap) } : r)),
+        [rawRows, projectNameMap]
+    );
+    const resolvedBacklogRows = useMemo(
+        () => backlogRows.map(r => (r.project ? { ...r, project: resolveProjectName(r.project, projectNameMap) } : r)),
+        [backlogRows, projectNameMap]
+    );
 
     // Maps DB-persisted task rows (services/api getEffortTasks shape) back into
     // the same row shape the Excel parser produces, so every chart/table below
@@ -1949,11 +2041,11 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 allocations,
                 employeeProjectChartData,
                 hrmsProjects,
-                rawRows
+                resolvedRows
             );
         }
         if (setHasEffortsData) {
-            setHasEffortsData(rawRows && rawRows.length > 0);
+            setHasEffortsData(resolvedRows && resolvedRows.length > 0);
         }
     });
 
@@ -2243,20 +2335,56 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     // `rawRows` is already scoped to the selected date range — filtered
     // server-side by task End Date (see syncFromDatabase) — so nothing else
     // needs to re-filter it client-side.
-    const doneRows    = useMemo(() => rawRows.filter(r =>  isDone(r.state)), [rawRows]);
-    const plannedRows = useMemo(() => rawRows.filter(r => !isDone(r.state)), [rawRows]);
+    const doneRows    = useMemo(() => resolvedRows.filter(r =>  isDone(r.state)), [resolvedRows]);
+    const plannedRows = useMemo(() => resolvedRows.filter(r => !isDone(r.state)), [resolvedRows]);
 
     const getPeriod = useCallback(row =>
         periodMode === 'weekly' ? getWeekLabel(row.endDate) : getMonthLabel(row.endDate),
     [periodMode]);
 
     const allPeriods = useMemo(() => {
-        const s = new Set(rawRows.map(r => getPeriod(r)));
+        const s = new Set(resolvedRows.map(r => getPeriod(r)));
         return sortPeriods([...s]);
-    }, [rawRows, getPeriod]);
+    }, [resolvedRows, getPeriod]);
 
-    const allProjects  = useMemo(() => [...new Set(rawRows.map(r => r.project))].sort(),  [rawRows]);
-    const allEmployees = useMemo(() => [...new Set(rawRows.map(r => r.assignee))].sort(), [rawRows]);
+    const allProjects  = useMemo(() => [...new Set(resolvedRows.map(r => r.project))].sort(),  [resolvedRows]);
+    const allEmployees = useMemo(() => [...new Set(resolvedRows.map(r => r.assignee))].sort(), [resolvedRows]);
+
+    // Client Project vs Internal — same HRMS `Project.category` field
+    // TimesheetAnalyser.jsx's Category view uses, keyed by lowercased project
+    // name so it can be looked up straight from a (already-resolved) project name.
+    const projectCategoryIndex = useMemo(() => {
+        const idx = {};
+        (hrmsProjects || []).forEach(p => {
+            const key = String(p.project_name || '').trim().toLowerCase();
+            if (key) idx[key] = p;
+        });
+        return idx;
+    }, [hrmsProjects]);
+
+    const isInternalProject = useCallback((name) => {
+        const hrmsName = resolveProjectName(name, projectNameMap);
+        return projectCategoryIndex[String(hrmsName || '').trim().toLowerCase()]?.category === 'Internal';
+    }, [projectCategoryIndex, projectNameMap]);
+
+    // Every currently-Active HRMS project (Client, or Internal too once toggled
+    // on) — including ones with zero rows in the selected range/dataset, so a
+    // project with no logged or planned work still shows up as a 0-hour bar
+    // instead of silently disappearing from the chart.
+    const activeHrmsProjectNames = useMemo(() => (hrmsProjects || [])
+        .filter(p => p.project_status === 'Active')
+        .filter(p => showInternalProjects || p.category !== 'Internal')
+        .map(p => p.project_name)
+        .filter(Boolean),
+    [hrmsProjects, showInternalProjects]);
+
+    // Project Level tab: Client projects only by default (Internal excluded),
+    // toggled via the "Show Internal projects" switch on that tab — plus every
+    // Active HRMS project even if it has no rows at all (see above).
+    const visibleProjects = useMemo(() => {
+        const fromRows = showInternalProjects ? allProjects : allProjects.filter(p => !isInternalProject(p));
+        return [...new Set([...fromRows, ...activeHrmsProjectNames])].sort();
+    }, [allProjects, showInternalProjects, isInternalProject, activeHrmsProjectNames]);
 
     // ── chart data builders ────────────────────────────────────────────
     // rowFilter: optional (row) => bool applied on top of the entity filter
@@ -2289,6 +2417,12 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 entry[`${period}__plannedPct`] = plannedPct;
                 entry[`${period}__totalPct`]   = totalPct;
                 entry[`${period}__efficiency`] = efficiency;
+                // Unrounded % of allocation, used for the "% of Allocation" chart
+                // metric so the two stacked segments sum exactly to the rounded
+                // totalPct label above the bar (rounding donePct/plannedPct
+                // independently before stacking can be off by a point).
+                entry[`${period}__donePctRaw`]    = allocated > 0 ? (done    / allocated * 100) : 0;
+                entry[`${period}__plannedPctRaw`] = allocated > 0 ? (planned / allocated * 100) : 0;
 
                 const total = done + planned;
                 const labelText = total <= 0 ? ''
@@ -2303,25 +2437,25 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
     // Project chart: allocated = project-level FTE from HRMS Projects module → hours
     const projectChartData = useMemo(() => buildChartData(
-        allProjects, r => r.project,
+        visibleProjects, r => r.project,
         (proj) => getProjectAllocHrs(proj) ?? 0
-    ), [buildChartData, allProjects, getProjectAllocHrs]);
+    ), [buildChartData, visibleProjects, getProjectAllocHrs]);
 
     // Employee chart — full (all projects)
     const employeeChartData = useMemo(() => buildChartData(
         allEmployees, r => r.assignee,
         (emp) => {
-            const projects = [...new Set(rawRows.filter(r => r.assignee === emp).map(r => r.project))];
+            const projects = [...new Set(resolvedRows.filter(r => r.assignee === emp).map(r => r.project))];
             return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
         }
-    ), [buildChartData, allEmployees, rawRows, getAllocHrs]);
+    ), [buildChartData, allEmployees, resolvedRows, getAllocHrs]);
 
     // Employee chart — filtered by selected project, PLUS any HRMS employee who
     // has logged nothing in the uploaded Excel at all (so missing timesheets are
     // visible rather than silently absent from the list).
     const { filteredEmployees, missingEmployeeSet } = useMemo(() => {
         const excelNames = empProjectFilter
-            ? [...new Set(rawRows.filter(r => r.project === empProjectFilter).map(r => r.assignee))]
+            ? [...new Set(resolvedRows.filter(r => r.project === empProjectFilter).map(r => r.assignee))]
             : allEmployees;
 
         const representedHrmsNames = new Set(
@@ -2338,7 +2472,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             filteredEmployees: [...new Set([...excelNames, ...missingNames])].sort(),
             missingEmployeeSet: new Set(missingNames.map(n => n.toLowerCase().trim())),
         };
-    }, [rawRows, empProjectFilter, allEmployees, allocations, getHrmsEmployeesForProject]);
+    }, [resolvedRows, empProjectFilter, allEmployees, allocations, getHrmsEmployeesForProject]);
 
     const filteredEmployeeChartData = useMemo(() => {
         const rowFilter = empProjectFilter ? (r => r.project === empProjectFilter) : null;
@@ -2351,7 +2485,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                     const h = getAllocHrs(emp, empProjectFilter);
                     return h !== null ? h : 0;
                 }
-                let projects = [...new Set(rawRows.filter(r => r.assignee === emp).map(r => r.project))];
+                let projects = [...new Set(resolvedRows.filter(r => r.assignee === emp).map(r => r.project))];
                 if (projects.length === 0) {
                     // No Excel rows for this employee (e.g. missing timesheet, or all of
                     // their rows fall outside the selected date range) — fall back to
@@ -2365,13 +2499,13 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             },
             rowFilter
         );
-    }, [buildChartData, filteredEmployees, rawRows, getAllocHrs, empProjectFilter, employeeAllocationsMap]);
+    }, [buildChartData, filteredEmployees, resolvedRows, getAllocHrs, empProjectFilter, employeeAllocationsMap]);
 
     // Employee-by-project breakdown — for the Excel "Employee by Project" sheet
     // One entry per unique (employee, project) pair, with same period structure
     const employeeProjectChartData = useMemo(() => {
         const pairs = [...new Set(
-            rawRows.map(r => `${r.assignee}\x00${r.project}`)
+            resolvedRows.map(r => `${r.assignee}\x00${r.project}`)
         )].sort();
 
         return pairs.map(pair => {
@@ -2395,7 +2529,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             });
             return entry;
         });
-    }, [rawRows, doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
+    }, [resolvedRows, doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
 
     // ── summary ────────────────────────────────────────────────────────
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
@@ -2409,10 +2543,13 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
     // Every HRMS project (not just ones with rows in the current date range)
     // so a project with zero tasks loaded still surfaces as needing planning.
+    // Respects the same Client-only-by-default filter as the chart/table above.
     const allProjectNamesForPlannedCheck = useMemo(() => {
-        const hrmsNames = (hrmsProjects || []).map(p => p.project_name).filter(Boolean);
-        return [...new Set([...allProjects, ...hrmsNames])];
-    }, [allProjects, hrmsProjects]);
+        const hrmsNames = (hrmsProjects || [])
+            .filter(p => showInternalProjects || p.category !== 'Internal')
+            .map(p => p.project_name).filter(Boolean);
+        return [...new Set([...visibleProjects, ...hrmsNames])];
+    }, [visibleProjects, hrmsProjects, showInternalProjects]);
 
     // Sourced from `backlogRows` (all-time, unscoped by dateRange) — not
     // `plannedRows` — so the low-planned-backlog check doesn't change just
@@ -2420,16 +2557,40 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     // whether its due date falls inside the currently-selected range.
     const projectPlannedTotals = useMemo(() => {
         const map = {};
-        backlogRows.forEach(r => { map[r.project] = (map[r.project] || 0) + r.estimateEffort; });
+        resolvedBacklogRows.forEach(r => { map[r.project] = (map[r.project] || 0) + r.estimateEffort; });
         return map;
-    }, [backlogRows]);
+    }, [resolvedBacklogRows]);
 
     const employeePlannedTotals = useMemo(() => {
-        const rows = empProjectFilter ? backlogRows.filter(r => r.project === empProjectFilter) : backlogRows;
+        const rows = empProjectFilter ? resolvedBacklogRows.filter(r => r.project === empProjectFilter) : resolvedBacklogRows;
         const map = {};
         rows.forEach(r => { map[r.assignee] = (map[r.assignee] || 0) + r.estimateEffort; });
         return map;
-    }, [backlogRows, empProjectFilter]);
+    }, [resolvedBacklogRows, empProjectFilter]);
+
+    // ── Overdue backlog: not-done tasks whose End Date has already passed ──
+    // The opposite risk signal from "low planned work" — a project can have
+    // plenty of backlog hours (never trips the low-planned check below) while
+    // all of it is stale, overdue, and hasn't moved.
+    const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+
+    const overdueProjects = useMemo(() => {
+        const map = {};
+        resolvedBacklogRows.forEach(r => {
+            if (!r.endDate || r.endDate >= today) return;
+            if (showInternalProjects === false && isInternalProject(r.project)) return;
+            if (!map[r.project]) map[r.project] = { overdueHrs: 0, overdueCount: 0, oldestEndDate: r.endDate };
+            map[r.project].overdueHrs += r.estimateEffort;
+            map[r.project].overdueCount += 1;
+            if (r.endDate < map[r.project].oldestEndDate) map[r.project].oldestEndDate = r.endDate;
+        });
+        return Object.entries(map)
+            .map(([name, v]) => ({
+                name, ...v,
+                daysOverdue: Math.round((today - v.oldestEndDate) / 86400000),
+            }))
+            .sort((a, b) => b.overdueHrs - a.overdueHrs);
+    }, [resolvedBacklogRows, today, showInternalProjects, isInternalProject]);
 
     const buildLowPlannedList = (names, plannedTotals, getDailyAllocHrs) => names
         .map(name => {
@@ -2700,7 +2861,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                                 allocations,
                                                 employeeProjectChartData,
                                                 hrmsProjects,
-                                                rawRows
+                                                resolvedRows
                                             )}
                                         >
                                             Download Summary
@@ -2770,11 +2931,16 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                     {/* Charts + Raw Data */}
                     <Tabs defaultActiveKey="project" type="card">
                         <TabPane tab={<span><ProjectOutlined /> Project Level</span>} key="project">
+                            <OverdueBacklogPanel items={overdueProjects} entityLabel="Project"
+                                onEntityClick={(name) => setDrillDown({
+                                    type: 'project', name,
+                                    rows: resolvedBacklogRows.filter(r => r.project === name && r.endDate < today),
+                                })} />
                             <LowPlannedEffortPanel items={lowPlannedProjects} entityLabel="Project"
                                 thresholdDays={LOW_PLANNED_THRESHOLD_DAYS}
                                 onEntityClick={(name) => setDrillDown({
                                     type: 'project', name,
-                                    rows: rawRows.filter(r => r.project === name),
+                                    rows: resolvedRows.filter(r => r.project === name),
                                 })} />
                             <Card bordered={false}
                                 style={{ borderRadius: 10, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
@@ -2789,19 +2955,37 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         </Tag>
                                     </span>
                                 }
-                                extra={<span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a {viewMode === 'chart' ? 'bar' : 'row'} to inspect tasks</span>}
+                                extra={
+                                    <Space size={16}>
+                                        {viewMode === 'chart' && (
+                                            <Space size={6}>
+                                                <span style={{ fontSize: 12, color: '#888' }}>Y-axis</span>
+                                                <Segmented size="small" value={projectChartMetric} onChange={setProjectChartMetric}
+                                                    options={[
+                                                        { label: '% of Allocation', value: 'pct' },
+                                                        { label: 'Hours', value: 'hours' },
+                                                    ]} />
+                                            </Space>
+                                        )}
+                                        <Space size={6}>
+                                            <span style={{ fontSize: 12, color: '#888' }}>Show Internal projects</span>
+                                            <Switch size="small" checked={showInternalProjects} onChange={setShowInternalProjects} />
+                                        </Space>
+                                        <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>🖱 Click a {viewMode === 'chart' ? 'bar' : 'row'} to inspect tasks</span>
+                                    </Space>
+                                }
                                 >
                                 {viewMode === 'chart' ? (
-                                    <GroupedBarChart data={projectChartData} periods={allPeriods}
+                                    <GroupedBarChart data={projectChartData} periods={allPeriods} metric={projectChartMetric}
                                         onBarClick={(name) => setDrillDown({
                                             type: 'project', name,
-                                            rows: rawRows.filter(r => r.project === name),
+                                            rows: resolvedRows.filter(r => r.project === name),
                                         })} />
                                 ) : (
                                     <SummaryTable data={projectChartData} periods={allPeriods} entityLabel="Project"
                                         onRowClick={(name) => setDrillDown({
                                             type: 'project', name,
-                                            rows: rawRows.filter(r => r.project === name),
+                                            rows: resolvedRows.filter(r => r.project === name),
                                         })} />
                                 )}
                             </Card>
@@ -2813,8 +2997,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                 onEntityClick={(name) => setDrillDown({
                                     type: 'employee', name,
                                     rows: (empProjectFilter
-                                        ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
-                                        : rawRows.filter(r => r.assignee === name)
+                                        ? resolvedRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                        : resolvedRows.filter(r => r.assignee === name)
                                     ),
                                 })} />
                             <Card bordered={false}
@@ -2854,8 +3038,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         onBarClick={(name) => setDrillDown({
                                             type: 'employee', name,
                                             rows: (empProjectFilter
-                                                ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
-                                                : rawRows.filter(r => r.assignee === name)
+                                                ? resolvedRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                                : resolvedRows.filter(r => r.assignee === name)
                                             ),
                                         })} />
                                 ) : (
@@ -2864,8 +3048,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                                         onRowClick={(name) => setDrillDown({
                                             type: 'employee', name,
                                             rows: (empProjectFilter
-                                                ? rawRows.filter(r => r.assignee === name && r.project === empProjectFilter)
-                                                : rawRows.filter(r => r.assignee === name)
+                                                ? resolvedRows.filter(r => r.assignee === name && r.project === empProjectFilter)
+                                                : resolvedRows.filter(r => r.assignee === name)
                                             ),
                                         })} />
                                 )}
