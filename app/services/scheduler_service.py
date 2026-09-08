@@ -215,7 +215,7 @@ def register_jobs(app):
                 db.session.rollback()
                 Logger.error("Error in scheduled Zymmr timelog sync job", error=str(e), error_type=type(e).__name__)
 
-    @scheduler.task('cron', id='zymmr_effort_sync', hour=9, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='zymmr_effort_sync', hour=9, minute=15, timezone='Asia/Kolkata')
     def zymmr_effort_sync_job():
         """Daily job at 9:00 AM IST – pulls Work Items from Zymmr with an End
         Date between (today - 2 months) and (today + 2 months), using the
