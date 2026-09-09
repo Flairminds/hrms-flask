@@ -361,7 +361,13 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [drillDown, setDrillDown] = useState(null); // { employee: name } — opens the per-employee detail modal
 
     // ── Database persistence (employee-wise, monthly) ───────────────────────
-    const [dateRange, setDateRange] = useState(() => [dayjs().startOf('month'), dayjs().endOf('month')]);
+    const [dateRange, setDateRange] = useState(() => {
+        const start = dayjs().startOf('month');
+        const yesterday = dayjs().subtract(1, 'day');
+        // On the 1st of the month "yesterday" falls in the prior month —
+        // clamp to the 1st itself rather than producing an inverted range.
+        return [start, yesterday.isBefore(start) ? start : yesterday];
+    });
     const [initializing, setInitializing] = useState(true);    // true only until the very first DB fetch resolves
     const [refreshing, setRefreshing] = useState(false);       // a subsequent fetch (date range change / Refresh)
     const [hasSavedData, setHasSavedData] = useState(null);    // null = unknown yet; does ANY report exist at all
