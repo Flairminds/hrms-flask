@@ -40,6 +40,11 @@ const getDateRangePresets = () => {
 const DONE_STATES = ['done', 'completed', 'complete', 'closed', 'resolved', 'canceled'];
 const isTaskDone = (state) => DONE_STATES.includes(String(state || '').toLowerCase().trim());
 
+// % of required/expected effort actually logged — used on the Employee and
+// Project tables so under-logging is visible at a glance, not just flagged.
+const pctOfRequired = (logged, required) => (required > 0 ? Math.round((logged / required) * 100) : null);
+const pctColor = (pct) => pct === null ? '#999' : pct >= 90 ? '#389e0d' : pct >= 60 ? '#d46b08' : '#cf1322';
+
 // Matches an employee name across the two features' differing conventions —
 // exact (case-insensitive) or "Last, First" reordering, either direction.
 const employeeNamesMatch = (a, b) => {
@@ -863,11 +868,22 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const formatData = (map) => {
             return Object.values(map).map(item => {
                 let total = 0;
+                let totalTarget = 0;
                 sortedPeriods.forEach(p => {
                     if (item[p]) item[p] = Number(item[p].toFixed(2));
                     total += (item[p] || 0);
+                    // Employees: per-period target already accounts for holidays/leaves/
+                    // out-of-bounds days (see targetHours above). Projects: no such
+                    // per-day breakdown exists, so it's a flat 40 hrs × allocation per
+                    // period — same basis the existing per-period "isLow" highlight uses.
+                    if (item.targetHours) {
+                        totalTarget += (item.targetHours[p] || 0);
+                    } else if (item.allocation != null) {
+                        totalTarget += 40 * item.allocation;
+                    }
                 });
                 item.Total = Number(total.toFixed(2));
+                item.TotalTarget = Number(totalTarget.toFixed(2));
                 return item;
             }).sort((a, b) => b.Total - a.Total);
         };
@@ -1630,7 +1646,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 render: (val, record) => {
                     const num = val || 0;
                     const content = val ? val.toFixed(2) : '-';
-                    
+
                     let isLow = false;
                     let target = 40;
                     if (viewMode === 'employee') {
@@ -1672,6 +1688,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             });
         }
 
+        // Total, with its % of the whole range's required effort right next to
+        // it, both color-coded (green ≥90%, orange ≥60%, red below) — no
+        // separate % column, no shortfall line, just this one cell.
         base.push({
             title: 'Total (hrs)',
             dataIndex: 'Total',
@@ -1679,7 +1698,16 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             fixed: 'right',
             width: 120,
             align: 'right',
-            render: val => <b>{val.toFixed(2)}</b>,
+            render: (val, record) => {
+                const pct = pctOfRequired(record.Total, record.TotalTarget);
+                const color = pct !== null ? pctColor(pct) : undefined;
+                return (
+                    <b style={{ color }}>
+                        {val.toFixed(2)}
+                        {pct !== null && <span style={{ fontWeight: 600, marginLeft: 6 }}>({pct}%)</span>}
+                    </b>
+                );
+            },
             sorter: (a, b) => a.Total - b.Total
         });
 
