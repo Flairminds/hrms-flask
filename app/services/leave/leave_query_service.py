@@ -191,15 +191,31 @@ class LeaveQueryService:
                 func.extract('month', LeaveTransaction.from_date)
             ).all()
 
+            wfh_by_month = {(int(r.yr), int(r.mo)): float(r.monthly_wfh) for r in wfh_monthly_rows}
+
+            # Walk every month from the FY start (April) through the current month,
+            # so months with no WFH usage still count as a zero month in the cumulative total.
+            all_months = []
+            yr, mo = start_date.year, start_date.month
+            while (yr, mo) <= (today.year, today.month):
+                all_months.append((yr, mo))
+                mo += 1
+                if mo > 12:
+                    mo = 1
+                    yr += 1
+
             cumulative_wfh = 0.0
             wfh_charged_used = 0.0
             wfh_this_month = 0.0
-            for m_row in sorted(wfh_monthly_rows, key=lambda r: (int(r.yr), int(r.mo))):
-                if int(m_row.yr) == today.year and int(m_row.mo) == today.month:
-                    wfh_this_month = float(m_row.monthly_wfh)
+            for yr, mo in all_months:
+                monthly_wfh = wfh_by_month.get((yr, mo), 0.0)
+                if yr == today.year and mo == today.month:
+                    wfh_this_month = monthly_wfh
                     continue
-                cumulative_wfh += float(m_row.monthly_wfh)
-                wfh_charged_used = max(0.0, cumulative_wfh - 3.0)
+                if monthly_wfh >= 3:
+                    cumulative_wfh += max(0, monthly_wfh - 3.0)
+                elif cumulative_wfh > 3:
+                    cumulative_wfh = cumulative_wfh + monthly_wfh - 3.0
 
             result = []
             for row in query:
@@ -207,7 +223,7 @@ class LeaveQueryService:
                 used = abs(float(row.total_used_leaves))
 
                 if row.leave_name == LeaveTypeName.WFH:
-                    used = wfh_charged_used + wfh_this_month
+                    used = cumulative_wfh + wfh_this_month
 
                 result.append({
                     'employee': row.employee,
