@@ -46,6 +46,10 @@ def delete_allocation(project_id, employee_id):
 def get_employee_allocations():
     return ProjectController.get_employee_allocations()
 
+@project_bp.route('/allocation-timeline', methods=['GET'])
+def get_allocation_timeline():
+    return ProjectController.get_allocation_timeline()
+
 @project_bp.route('/my-projects-team', methods=['GET'])
 @jwt_required()
 def get_my_projects_team():
