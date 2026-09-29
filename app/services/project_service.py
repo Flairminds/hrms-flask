@@ -285,6 +285,57 @@ class ProjectService:
             return []
 
     @staticmethod
+    def get_allocation_timeline():
+        """Retrieves every known allocation snapshot (current + history) per
+        employee/project pair, so callers can resolve the % that was in effect
+        on any past date instead of only the current one.
+
+        Each snapshot carries the start_date/end_date window it claims to be
+        valid for, plus effective_at (when that snapshot was written). Callers
+        should resolve "allocation on date D" by picking, among snapshots whose
+        own window covers D, the one with the latest effective_at.
+        """
+        try:
+            current_rows = db.session.query(
+                ProjectAllocation.employee_id,
+                ProjectAllocation.project_id,
+                ProjectAllocation.project_allocation,
+                ProjectAllocation.is_billing,
+                ProjectAllocation.start_date,
+                ProjectAllocation.end_date,
+                func.coalesce(ProjectAllocation.modified_at, ProjectAllocation.created_at).label('effective_at')
+            ).all()
+
+            history_rows = db.session.query(
+                ProjectAllocationHistory.employee_id,
+                ProjectAllocationHistory.project_id,
+                ProjectAllocationHistory.project_allocation,
+                ProjectAllocationHistory.is_billing,
+                ProjectAllocationHistory.start_date,
+                ProjectAllocationHistory.end_date,
+                ProjectAllocationHistory.modified_on.label('effective_at')
+            ).all()
+
+            snapshots = []
+            for row in list(current_rows) + list(history_rows):
+                if row.project_allocation is None or row.start_date is None:
+                    continue
+                snapshots.append({
+                    'employee_id': row.employee_id,
+                    'project_id': row.project_id,
+                    'project_allocation': float(row.project_allocation),
+                    'is_billing': bool(row.is_billing),
+                    'start_date': row.start_date.strftime('%Y-%m-%d'),
+                    'end_date': row.end_date.strftime('%Y-%m-%d') if row.end_date else None,
+                    'effective_at': row.effective_at.isoformat() if row.effective_at else None,
+                })
+
+            return snapshots
+        except Exception as e:
+            Logger.error("Error fetching allocation timeline", error=str(e))
+            return []
+
+    @staticmethod
     def get_my_projects_team(employee_id):
         """Retrieves projects for a specific employee with all team members."""
         try:

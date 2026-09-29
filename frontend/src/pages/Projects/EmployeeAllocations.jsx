@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress, Segmented } from 'antd';
-import { SearchOutlined, CopyOutlined, TeamOutlined, DownloadOutlined } from '@ant-design/icons';
-import { getEmployeeAllocations, getProjects } from '../../services/api';
+import { Table, Button, Input, message, Card, Tag, InputNumber, Tooltip, Col, Row, Statistic, Progress, Segmented, Modal, Empty } from 'antd';
+import { SearchOutlined, CopyOutlined, TeamOutlined, DownloadOutlined, LineChartOutlined } from '@ant-design/icons';
+import { getEmployeeAllocations, getProjects, getAllocationTimeline } from '../../services/api';
 import XLSXStyle from 'xlsx-js-style';
-import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { buildAllocationIndex, resolveAllocationAsOf } from '../../util/allocationTimeline.jsx';
 
-// Classifies one employee-project allocation the same way the Timesheet
-// Analyser's Category Breakdown does, so the two screens agree: Client
-// Project splits into Billable/Non-billable (by that allocation's own
-// is_billing flag), Internal uses the project's configured sub-category, and
-// a project with no category configured falls under Uncategorized.
-const classifyAllocation = (projectName, isBilling, projectCategoryIndex) => {
-    const proj = projectCategoryIndex[String(projectName || '').toLowerCase().trim()];
+// Classifies one project + billing flag into the same taxonomy the Timesheet
+// Analyser's Category Breakdown uses: Client Project splits into
+// Billable/Non-billable (by that allocation's own is_billing flag), Internal
+// uses the project's configured sub-category, and a project with no category
+// configured (or no longer found) falls under Uncategorized.
+const classifyProject = (proj, isBilling) => {
     if (proj?.category === 'Internal') {
         return { category: 'Internal', subCategory: proj.sub_category || 'Other Internal Work' };
     }
@@ -19,6 +19,30 @@ const classifyAllocation = (projectName, isBilling, projectCategoryIndex) => {
         return { category: 'Client Project', subCategory: isBilling ? 'Billable' : 'Non-billable' };
     }
     return { category: 'Uncategorized', subCategory: 'Uncategorized' };
+};
+
+// Classifies one employee-project allocation the same way the Timesheet
+// Analyser's Category Breakdown does, so the two screens agree.
+const classifyAllocation = (projectName, isBilling, projectCategoryIndex) => {
+    const proj = projectCategoryIndex[String(projectName || '').toLowerCase().trim()];
+    return classifyProject(proj, isBilling);
+};
+
+// Fixed categorical order (never re-cycled per dataset) — validated palette,
+// see references/palette.md in the dataviz skill. Assigned to trend series
+// by each series' position in a deterministic sort, not by data content.
+const TREND_PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const TREND_CATEGORY_PRIORITY = ['Client Project', 'Internal', 'Uncategorized'];
+const sortTrendSeriesKeys = (keys, level) => {
+    return [...keys].sort((a, b) => {
+        if (level === 'category') {
+            return TREND_CATEGORY_PRIORITY.indexOf(a) - TREND_CATEGORY_PRIORITY.indexOf(b);
+        }
+        const [catA] = a.split(' — ');
+        const [catB] = b.split(' — ');
+        const catDiff = TREND_CATEGORY_PRIORITY.indexOf(catA) - TREND_CATEGORY_PRIORITY.indexOf(catB);
+        return catDiff !== 0 ? catDiff : a.localeCompare(b);
+    });
 };
 
 // Roles that aren't really available for project assignment in the first
@@ -34,6 +58,16 @@ const EmployeeAllocations = () => {
     const [billableAllocationFilter, setBillableAllocationFilter] = useState(null);
     const [summaryCategoryFilter, setSummaryCategoryFilter] = useState(null); // null | a summary row's key — set by clicking an Allocation Summary row
     const [summaryLevel, setSummaryLevel] = useState('category'); // 'category' or 'subcategory'
+    const [allocationTimeline, setAllocationTimeline] = useState([]);
+    const [trendModalOpen, setTrendModalOpen] = useState(false);
+    const [trendLevel, setTrendLevel] = useState('category'); // 'category' or 'subcategory'
+    const [trendSelectedSeries, setTrendSelectedSeries] = useState(null); // null = show all; else isolate one series key
+
+    // Reset the isolated-series selection whenever the modal is (re)opened or
+    // the category/sub-category level changes, since series keys differ per level.
+    useEffect(() => {
+        setTrendSelectedSeries(null);
+    }, [trendModalOpen, trendLevel]);
 
     useEffect(() => {
         fetchEmployeeAllocations();
@@ -43,6 +77,9 @@ const EmployeeAllocations = () => {
                 setHrmsProjects(data);
             })
             .catch(e => console.error('Failed to load projects for allocation categorization', e));
+        getAllocationTimeline()
+            .then(res => setAllocationTimeline(Array.isArray(res.data) ? res.data : []))
+            .catch(e => console.error('Failed to load allocation timeline for trend chart', e));
     }, []);
 
     const fetchEmployeeAllocations = async () => {
@@ -65,6 +102,91 @@ const EmployeeAllocations = () => {
         });
         return idx;
     }, [hrmsProjects]);
+
+    const projectByIdIndex = useMemo(() => {
+        const idx = {};
+        hrmsProjects.forEach(p => { idx[p.project_id] = p; });
+        return idx;
+    }, [hrmsProjects]);
+
+    const allocationIndex = useMemo(() => buildAllocationIndex(allocationTimeline), [allocationTimeline]);
+
+    // Same roster the visible table/summary cards use (already filtered to
+    // active employees, minus excluded sub-roles/emails — see
+    // ProjectService.get_employee_allocations on the backend). The trend
+    // chart must only ever roll up these employees too, or it'll disagree
+    // with the table by counting people the table doesn't show (e.g. someone
+    // who has since left, but still has old rows in the allocation history).
+    const validEmployeeIds = useMemo(
+        () => new Set(employeeAllocations.map(emp => emp.employee_id)),
+        [employeeAllocations]
+    );
+
+    // Last 6 calendar months (oldest first), capped at today for the current
+    // month since it hasn't ended yet.
+    const trendMonths = useMemo(() => {
+        const today = new Date();
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0);
+            const asOf = monthEnd > today ? today : monthEnd;
+            months.push({
+                label: asOf.toLocaleString('en-GB', { month: 'short', year: '2-digit' }),
+                date: asOf,
+                isCurrent: i === 0,
+            });
+        }
+        return months;
+    }, []);
+
+    // For each of the last 5 completed months, resolves every employee-project
+    // pair's allocation AS OF that month's date (via the allocation history
+    // timeline, not today's snapshot) and rolls it up by category/sub-category
+    // — restricted to the same employees the table shows. The CURRENT month
+    // is instead read directly off `employeeAllocations` (the exact same data
+    // backing the Allocation Summary table/cards above), so the chart's last
+    // point always matches the table exactly rather than a re-resolved value.
+    const trendData = useMemo(() => {
+        const currentMonthBuckets = {};
+        employeeAllocations.forEach(emp => {
+            (emp.projects || []).forEach(p => {
+                const { category, subCategory } = classifyAllocation(p.project_name, p.is_billing, projectCategoryIndex);
+                const bucketKey = trendLevel === 'subcategory' ? `${category} — ${subCategory}` : category;
+                currentMonthBuckets[bucketKey] = (currentMonthBuckets[bucketKey] || 0) + (p.allocation || 0) / 100;
+            });
+        });
+
+        const perMonthBuckets = trendMonths.map(({ date, isCurrent }) => {
+            if (isCurrent) return currentMonthBuckets;
+
+            const buckets = {};
+            for (const key of allocationIndex.keys()) {
+                const [employeeId, projectIdStr] = key.split('::');
+                if (!validEmployeeIds.has(employeeId)) continue;
+                const projectId = Number(projectIdStr);
+                const snap = resolveAllocationAsOf(allocationIndex, employeeId, projectId, date);
+                if (!snap || !snap.project_allocation) continue;
+                const proj = projectByIdIndex[projectId];
+                const { category, subCategory } = classifyProject(proj, snap.is_billing);
+                const bucketKey = trendLevel === 'subcategory' ? `${category} — ${subCategory}` : category;
+                buckets[bucketKey] = (buckets[bucketKey] || 0) + snap.project_allocation / 100;
+            }
+            return buckets;
+        });
+
+        const seriesKeys = sortTrendSeriesKeys(
+            [...new Set(perMonthBuckets.flatMap(b => Object.keys(b)))],
+            trendLevel
+        );
+
+        const rows = trendMonths.map(({ label }, idx) => {
+            const row = { month: label };
+            seriesKeys.forEach(k => { row[k] = Number((perMonthBuckets[idx][k] || 0).toFixed(2)); });
+            return row;
+        });
+
+        return { rows, seriesKeys };
+    }, [trendMonths, allocationIndex, projectByIdIndex, trendLevel, employeeAllocations, projectCategoryIndex, validEmployeeIds]);
 
     const downloadExcel = () => {
         const wb = XLSXStyle.utils.book_new();
@@ -444,6 +566,15 @@ const EmployeeAllocations = () => {
                                         { label: 'Sub-category', value: 'subcategory' },
                                     ]}
                                 />
+                                <Tooltip title="View 6-month trend">
+                                    <Button
+                                        size="small"
+                                        icon={<LineChartOutlined />}
+                                        onClick={() => setTrendModalOpen(true)}
+                                    >
+                                        Trend
+                                    </Button>
+                                </Tooltip>
                             </div>
                         }>
                         <Table
@@ -529,6 +660,124 @@ const EmployeeAllocations = () => {
                     scroll={{ x: 'max-content' }}
                 />
             </Card>
+
+            <Modal
+                title={
+                    <div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: '#0b0b0b' }}>Allocation Trend</div>
+                        <div style={{ fontSize: 12, fontWeight: 400, color: '#898781', marginTop: 2 }}>
+                            FTE allocated per month, last 6 months
+                        </div>
+                    </div>
+                }
+                open={trendModalOpen}
+                onCancel={() => setTrendModalOpen(false)}
+                footer={null}
+                width={820}
+                styles={{ body: { paddingTop: 20 } }}
+            >
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: '#52514e' }}>
+                        Resolved from historical allocation records, so past months stay accurate even if allocations change later.
+                        {' '}Click a line in the legend to isolate it.
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {trendSelectedSeries && (
+                            <Tag color="blue" closable onClose={() => setTrendSelectedSeries(null)}>
+                                {trendSelectedSeries}
+                            </Tag>
+                        )}
+                        <Segmented
+                            size="small"
+                            value={trendLevel}
+                            onChange={setTrendLevel}
+                            options={[
+                                { label: 'Category', value: 'category' },
+                                { label: 'Sub-category', value: 'subcategory' },
+                            ]}
+                        />
+                    </div>
+                </div>
+                {trendData.seriesKeys.length === 0 ? (
+                    <Empty description="No allocation history available yet" style={{ padding: '48px 0' }} />
+                ) : (
+                    <div style={{ height: 380, background: '#fcfcfb', borderRadius: 8, padding: '16px 8px 4px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData.rows} margin={{ top: 4, right: 24, left: 8, bottom: 0 }}>
+                                <CartesianGrid stroke="#e1e0d9" vertical={false} />
+                                <XAxis
+                                    dataKey="month"
+                                    tick={{ fill: '#52514e', fontSize: 12 }}
+                                    axisLine={{ stroke: '#c3c2b7' }}
+                                    tickLine={false}
+                                    padding={{ left: 12, right: 12 }}
+                                />
+                                <YAxis
+                                    tick={{ fill: '#52514e', fontSize: 12 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    width={56}
+                                    label={{ value: 'FTE', angle: -90, position: 'insideLeft', fill: '#52514e', fontSize: 12, style: { textAnchor: 'middle' } }}
+                                />
+                                <RechartsTooltip
+                                    formatter={(val, name) => [Number(val).toFixed(2), name]}
+                                    labelFormatter={(label) => <span style={{ fontWeight: 600 }}>{label}</span>}
+                                    contentStyle={{ borderRadius: 8, border: '1px solid #e1e0d9', fontSize: 12 }}
+                                />
+                                <Legend
+                                    verticalAlign="bottom"
+                                    align="center"
+                                    content={() => (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 20px', paddingTop: 20 }}>
+                                            {trendData.seriesKeys.map((key, idx) => {
+                                                const color = TREND_PALETTE[idx % TREND_PALETTE.length];
+                                                const isActive = !trendSelectedSeries || trendSelectedSeries === key;
+                                                return (
+                                                    <span
+                                                        key={key}
+                                                        onClick={() => setTrendSelectedSeries(prev => (prev === key ? null : key))}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 6,
+                                                            fontSize: 12,
+                                                            color: isActive ? '#0b0b0b' : '#c3c2b7',
+                                                            fontWeight: trendSelectedSeries === key ? 600 : 400,
+                                                        }}
+                                                    >
+                                                        <span style={{ width: 14, height: 2, borderRadius: 1, background: isActive ? color : '#c3c2b7', display: 'inline-block' }} />
+                                                        {key}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                />
+                                {trendData.seriesKeys
+                                    .filter((key) => !trendSelectedSeries || trendSelectedSeries === key)
+                                    .map((key) => {
+                                        const idx = trendData.seriesKeys.indexOf(key);
+                                        const color = TREND_PALETTE[idx % TREND_PALETTE.length];
+                                        return (
+                                            <Line
+                                                key={key}
+                                                type="linear"
+                                                dataKey={key}
+                                                name={key}
+                                                stroke={color}
+                                                strokeWidth={2}
+                                                dot={{ r: 4, strokeWidth: 2, stroke: '#fcfcfb', fill: color }}
+                                                activeDot={{ r: 6, strokeWidth: 2, stroke: '#fcfcfb' }}
+                                                isAnimationActive={false}
+                                            />
+                                        );
+                                    })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

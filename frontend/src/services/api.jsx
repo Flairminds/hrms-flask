@@ -1217,6 +1217,11 @@ export const getEmployeeAllocations = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/employee-allocations`);
 };
 
+// Get every allocation snapshot (current + history) for point-in-time resolution
+export const getAllocationTimeline = () => {
+  return axiosInstance.get(`${API_BASE_URL}/project/allocation-timeline`);
+};
+
 // Get my projects with team members
 export const getMyProjectsTeam = () => {
   return axiosInstance.get(`${API_BASE_URL}/project/my-projects-team`);

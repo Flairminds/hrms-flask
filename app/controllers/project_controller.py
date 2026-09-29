@@ -138,6 +138,16 @@ class ProjectController:
             return jsonify({"error": str(e)}), 500
 
     @staticmethod
+    def get_allocation_timeline():
+        """Get every allocation snapshot (current + history) for point-in-time resolution."""
+        try:
+            timeline = ProjectService.get_allocation_timeline()
+            return jsonify(timeline), 200
+        except Exception as e:
+            Logger.error("Error in get_allocation_timeline", error=str(e))
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
     def get_my_projects_team():
         """Get current user's projects with team members."""
         try:

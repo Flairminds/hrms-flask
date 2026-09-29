@@ -15,9 +15,10 @@ import Cookies from 'js-cookie';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
     getProjects, getLeaveTransactionsByApprover, holidayListData, getEmployeeAllocations, getEffortTasks,
-    saveTimelogReport, getTimelogEntries, getTimelogReports, getZymmrLastSync,
+    saveTimelogReport, getTimelogEntries, getTimelogReports, getZymmrLastSync, getAllocationTimeline,
 } from '../../services/api';
 import ZymmrSyncModal from './ZymmrSyncModal.jsx';
+import { buildAllocationIndex, resolveAllocationAsOf } from '../../util/allocationTimeline.jsx';
 
 const { RangePicker } = DatePicker;
 
@@ -353,6 +354,33 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     const [holidays, setHolidays] = useState([]);
     const [leaves, setLeaves] = useState([]);
     const [allocations, setAllocations] = useState([]);
+    const [allocationTimeline, setAllocationTimeline] = useState([]); // full history of allocation snapshots
+    const allocationIndex = useMemo(() => buildAllocationIndex(allocationTimeline), [allocationTimeline]);
+    // hrmsProjects.project_name (lower) → project_id, needed since the
+    // allocation timeline/index is keyed by project_id, not by name.
+    const projIdByName = useMemo(() => {
+        const map = {};
+        hrmsProjects.forEach(p => {
+            const key = p.project_name?.toLowerCase().trim();
+            if (key) map[key] = p.project_id;
+        });
+        return map;
+    }, [hrmsProjects]);
+    // Sums the project_allocation % across every employee allocated to
+    // `projectId`, as of `dateStr` (raw 0-100 scale). Returns null if the
+    // timeline has no snapshots at all for this project (e.g. still loading).
+    const resolveProjectAllocationPctAsOf = useCallback((projectId, dateStr) => {
+        if (projectId == null) return null;
+        let total = 0;
+        let found = false;
+        for (const key of allocationIndex.keys()) {
+            const [empId, projId] = key.split('::');
+            if (String(projId) !== String(projectId)) continue;
+            const snap = resolveAllocationAsOf(allocationIndex, empId, projId, dateStr);
+            if (snap) { total += snap.project_allocation; found = true; }
+        }
+        return found ? total : null;
+    }, [allocationIndex]);
     const [backlogTasks, setBacklogTasks] = useState([]); // persisted, not-done Effort Analyser tasks
     const [trendEntity, setTrendEntity] = useState('ALL'); // 'ALL' or a specific employee/project name
     const [hideCurrentWeek, setHideCurrentWeek] = useState(true); // weekly analytics: skip the still-in-progress week
@@ -462,6 +490,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         getEmployeeAllocations()
             .then(res => setAllocations(res.data || []))
             .catch(e => console.error('Failed to load employee allocations', e));
+
+        getAllocationTimeline()
+            .then(res => setAllocationTimeline(res.data || []))
+            .catch(e => console.error('Failed to load allocation timeline', e));
 
         // The saved Effort Analyser backlog — used only by the Trend view to
         // project future weeks. Fetched once, unfiltered by date (a backlog
@@ -863,9 +895,23 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             // Determine HRMS name to match
             const hrmsName = p.name;
             const match = hrmsProjects.find(hp => String(hp.project_name).trim().toLowerCase() === hrmsName.toLowerCase());
+            // Current-snapshot allocation — kept as the fallback for periods the
+            // timeline has no history for, and for any "as of today" UI.
             p.allocation = match && match.total_allocation != null ? Number(match.total_allocation) / 100 : 0;
             p.category = match?.category || null;
             p.subCategory = match?.sub_category || null;
+            // Per-period allocation (FTE), resolved from the allocation timeline
+            // as of EACH period's own start date — so a project's target hours
+            // for an old month reflect the allocation that was actually in
+            // effect back then, not today's value. Falls back to the flat
+            // current snapshot above when the timeline has nothing for a
+            // given period (e.g. still loading, or no history recorded yet).
+            const projectId = match ? projIdByName[hrmsName.toLowerCase()] : null;
+            p.allocationByPeriod = {};
+            Object.keys(periodStartDates).forEach(period => {
+                const pct = resolveProjectAllocationPctAsOf(projectId, periodStartDates[period]);
+                p.allocationByPeriod[period] = pct !== null ? pct / 100 : p.allocation;
+            });
         });
 
         // Sort periods chronologically
@@ -881,11 +927,14 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     // Employees: per-period target already accounts for holidays/leaves/
                     // out-of-bounds days (see targetHours above). Projects: no such
                     // per-day breakdown exists, so it's a flat 40 hrs × allocation per
-                    // period — same basis the existing per-period "isLow" highlight uses.
+                    // period — using that period's OWN allocation (as of its start
+                    // date), not today's — same basis the existing per-period "isLow"
+                    // highlight uses.
                     if (item.targetHours) {
                         totalTarget += (item.targetHours[p] || 0);
                     } else if (item.allocation != null) {
-                        totalTarget += 40 * item.allocation;
+                        const periodAlloc = item.allocationByPeriod?.[p] ?? item.allocation;
+                        totalTarget += 40 * periodAlloc;
                     }
                 });
                 item.Total = Number(total.toFixed(2));
@@ -907,7 +956,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
             allPeriods: sortedPeriods,
             timesheetRange: { min: minTime, max: maxTime }
         };
-    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType, dateRange, projectNameMap]);
+    }, [rawRows, hrmsProjects, leaves, holidays, allocations, periodType, dateRange, projectNameMap, projIdByName, resolveProjectAllocationPctAsOf]);
 
     // ── Trend view: past logged hours (always week-wise) + a capacity-based
     // projection of the remaining planned backlog into future weeks ─────────
@@ -1394,7 +1443,9 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
     }, [weeklyGrid, weeklyCheckEmployees, hideCurrentWeek, currentWeekLabel]);
 
     // Per-employee-project weekly allocation target, in hours (allocation is
-    // stored as a whole-number percentage, e.g. 50 = 50%).
+    // stored as a whole-number percentage, e.g. 50 = 50%). Current snapshot —
+    // used as-is for the "Total" column caps below (which cap the whole
+    // displayed range, not one specific past period).
     const allocPctByKey = useMemo(() => {
         const map = {};
         allocations.forEach(emp => {
@@ -1403,6 +1454,15 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                 map[key] = p.allocation || 0;
             });
         });
+        return map;
+    }, [allocations]);
+
+    // employee_name (trimmed) → employee_id, for resolving this same
+    // employee-project allocation via the timeline (which is id-keyed) on a
+    // specific historical week, instead of only today's flat % above.
+    const empIdByName = useMemo(() => {
+        const map = {};
+        allocations.forEach(emp => { if (emp.employee_name) map[emp.employee_name.trim()] = emp.employee_id; });
         return map;
     }, [allocations]);
 
@@ -1415,16 +1475,26 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
         const { empProjWeekHours, weekList, weekMeta } = weeklyGrid;
         const rows = [];
 
-        Object.entries(allocPctByKey).forEach(([key, pct]) => {
-            if (!pct || pct <= 0) return;
+        Object.entries(allocPctByKey).forEach(([key, flatPct]) => {
+            if (!flatPct || flatPct <= 0) return;
             const [empName, projName] = key.split('\x00');
-            const targetHrs = Number(((pct / 100) * 40).toFixed(1));
             const projHours = empProjWeekHours[empName]?.[projName];
+            const empId = empIdByName[empName];
+            const projId = projIdByName[projName.toLowerCase().trim()];
 
             weekList.forEach(week => {
                 if (hideCurrentWeek && week === currentWeekLabel) return;
                 const hours = projHours?.[week] || 0;
                 const weekStart = weekMeta[week].startTime;
+                // Resolve the allocation % as it stood on THIS week (via the
+                // timeline), not today's flat snapshot — falls back to the
+                // flat % when the timeline has no history for this pair yet.
+                let pct = flatPct;
+                if (empId != null && projId != null) {
+                    const snap = resolveAllocationAsOf(allocationIndex, empId, projId, weekStart);
+                    if (snap) pct = snap.project_allocation;
+                }
+                const targetHrs = Number(((pct / 100) * 40).toFixed(1));
                 if (hours === targetHrs) return;
                 const status = hours < targetHrs ? 'under' : 'over';
                 rows.push({
@@ -1437,7 +1507,7 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
 
         return rows.sort((a, b) =>
             a.employee.localeCompare(b.employee) || a.weekStart - b.weekStart || a.project.localeCompare(b.project));
-    }, [weeklyGrid, allocPctByKey, hideCurrentWeek, currentWeekLabel]);
+    }, [weeklyGrid, allocPctByKey, hideCurrentWeek, currentWeekLabel, empIdByName, projIdByName, allocationIndex]);
 
     // ── Drill-down: the OTHER dimension's effort (same period granularity as
     // the page) + individual log entries grouped by it, for the currently
@@ -2268,7 +2338,10 @@ const TimesheetAnalyser = ({ effortsExportRef, hasEffortsData }) => {
                     if (item.allocation > 0) {
                         allPeriods.forEach((p, cIdx) => {
                             const val = item[p] || 0;
-                            if (val < (40 * item.allocation)) {
+                            // Use that period's own allocation (as of its start date),
+                            // not today's flat snapshot — see allocationByPeriod above.
+                            const periodAlloc = item.allocationByPeriod?.[p] ?? item.allocation;
+                            if (val < (40 * periodAlloc)) {
                                 const cellRef = XLSXStyle.utils.encode_cell({ r: rIdx + 2, c: cIdx + 1 });
                                 if (ws[cellRef]) {
                                     ws[cellRef].s = {

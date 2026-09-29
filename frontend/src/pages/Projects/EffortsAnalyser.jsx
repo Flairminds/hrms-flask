@@ -19,10 +19,11 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
     getEmployeeAllocations, getProjects, saveEffortReport, getEffortTasks, getEffortReports,
-    getEffortZymmrLastSync,
+    getEffortZymmrLastSync, getAllocationTimeline,
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext.jsx';
 import EffortZymmrSyncModal from './EffortZymmrSyncModal.jsx';
+import { buildAllocationIndex, resolveAllocationAsOf } from '../../util/allocationTimeline.jsx';
 
 dayjs.extend(relativeTime);
 
@@ -1893,8 +1894,10 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const { user } = useAuth();
     const isHRorAdmin = user?.roleName === 'HR' || user?.roleName === 'Admin';
     const [rawRows, setRawRows] = useState([]);
-    const [allocations, setAllocations] = useState([]);      // per-employee allocations
-    const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module
+    const [allocations, setAllocations] = useState([]);      // per-employee allocations (current snapshot)
+    const [hrmsProjects, setHrmsProjects] = useState([]);    // project-level data from Projects module (current snapshot)
+    const [allocationTimeline, setAllocationTimeline] = useState([]); // full history of allocation snapshots
+    const allocationIndex = useMemo(() => buildAllocationIndex(allocationTimeline), [allocationTimeline]);
     const projectNameMap = useMemo(() => buildProjectNameMap(hrmsProjects), [hrmsProjects]);
     const [uploading, setUploading] = useState(false);
     const [zymmrSyncOpen, setZymmrSyncOpen] = useState(false);
@@ -2060,6 +2063,9 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 setHrmsProjects(data);
             })
             .catch(e => console.error('Failed to load projects', e));
+        getAllocationTimeline()
+            .then(res => setAllocationTimeline(res.data || []))
+            .catch(e => console.error('Failed to load allocation timeline', e));
     }, []);
 
     // ── upload validation ──────────────────────────────────────────────
@@ -2279,6 +2285,8 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
 
     // ── Project-level allocation map: hrmsName_lower → FTE (total_allocation / 100) ──
     // total_allocation in HRMS is stored ×100 (e.g. 335 = 3.35 FTE)
+    // This is the CURRENT snapshot — used as-is for "as of today" UI, and as a
+    // fallback for historical resolution below when the timeline has no data.
     const projectAllocMap = useMemo(() => {
         const map = {};
         hrmsProjects.forEach(p => {
@@ -2288,26 +2296,88 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         return map;
     }, [hrmsProjects]);
 
+    // Name → id lookups, needed because the allocation timeline (and its index)
+    // is keyed by employee_id/project_id, while the rest of this file works in
+    // terms of resolved HRMS names.
+    const empIdByName = useMemo(() => {
+        const map = {};
+        allocations.forEach(emp => {
+            const key = emp.employee_name?.toLowerCase().trim();
+            if (key) map[key] = emp.employee_id;
+        });
+        return map;
+    }, [allocations]);
+
+    const projIdByName = useMemo(() => {
+        const map = {};
+        hrmsProjects.forEach(p => {
+            const key = p.project_name?.toLowerCase().trim();
+            if (key) map[key] = p.project_id;
+        });
+        return map;
+    }, [hrmsProjects]);
+
+    // Sums the project_allocation % across every employee allocated to
+    // `projectId`, as of `dateStr` — the timeline-aware equivalent of
+    // `projectAllocMap`'s current total_allocation. Returns null if the
+    // timeline has no snapshots at all for this project.
+    const resolveProjectAllocationAsOf = useCallback((projectId, dateStr) => {
+        if (projectId == null) return null;
+        let total = 0;
+        let found = false;
+        for (const key of allocationIndex.keys()) {
+            const [empId, projId] = key.split('::');
+            if (String(projId) !== String(projectId)) continue;
+            const snap = resolveAllocationAsOf(allocationIndex, empId, projId, dateStr);
+            if (snap) { total += snap.project_allocation; found = true; }
+        }
+        return found ? total : null;
+    }, [allocationIndex]);
+
     const WEEKS_PER_MONTH = 4.33;
 
-    // Per-project allocation: FTE from Projects module → hours
-    const getProjectAllocHrs = useCallback((excelProjName) => {
+    // Per-project allocation: FTE from Projects module → hours.
+    // When `dateStr` is given, resolves the allocation % as it stood on that
+    // date via the allocation timeline; falls back to the current snapshot
+    // (`projectAllocMap`) when no `dateStr` is passed, or the timeline has no
+    // history for this project yet.
+    const getProjectAllocHrs = useCallback((excelProjName, dateStr = null) => {
         const hrmsProj = resolveProjectName(excelProjName, projectNameMap).toLowerCase().trim();
-        const fte = projectAllocMap[hrmsProj] ?? null;
+        let fte = null;
+        if (dateStr) {
+            const projId = projIdByName[hrmsProj];
+            const totalPct = resolveProjectAllocationAsOf(projId, dateStr);
+            if (totalPct !== null) fte = totalPct / 100;
+        }
+        if (fte === null) fte = projectAllocMap[hrmsProj] ?? null;
         if (fte === null) return null;
         const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
         return fte * 40 * weeks;
-    }, [projectAllocMap, periodMode, projectNameMap]);
+    }, [projectAllocMap, periodMode, projectNameMap, projIdByName, resolveProjectAllocationAsOf]);
 
-    // Per-employee allocation: used only for the Employee chart
-    const getAllocHrs = useCallback((assignee, project) => {
+    // Per-employee allocation: used only for the Employee chart.
+    // When `dateStr` is given, resolves via the allocation timeline (the %
+    // that was actually in effect for this employee+project on that date);
+    // falls back to the current snapshot (`allocationMap`) otherwise.
+    const getAllocHrs = useCallback((assignee, project, dateStr = null) => {
         const hrmsEmployee = resolveEmployeeName(assignee);
         const hrmsProject  = resolveProjectName(project, projectNameMap);
-        const pct = allocationMap[hrmsEmployee?.toLowerCase().trim()]?.[hrmsProject?.toLowerCase().trim()] ?? null;
+        const empKey = hrmsEmployee?.toLowerCase().trim();
+        const projKey = hrmsProject?.toLowerCase().trim();
+        let pct = null;
+        if (dateStr) {
+            const empId = empIdByName[empKey];
+            const projId = projIdByName[projKey];
+            if (empId != null && projId != null) {
+                const snap = resolveAllocationAsOf(allocationIndex, empId, projId, dateStr);
+                if (snap) pct = snap.project_allocation;
+            }
+        }
+        if (pct === null) pct = allocationMap[empKey]?.[projKey] ?? null;
         if (pct === null) return null;
         const weeks = periodMode === 'weekly' ? 1 : WEEKS_PER_MONTH;
         return (pct / 100) * 40 * weeks;
-    }, [allocationMap, periodMode, projectNameMap]);
+    }, [allocationMap, periodMode, projectNameMap, empIdByName, projIdByName, allocationIndex]);
 
     // Period-independent "hours per working day" rates (8hr/5-day week), used
     // for the low-planned-backlog check below — a fixed "N working days" bar
@@ -2345,6 +2415,21 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
     const allPeriods = useMemo(() => {
         const s = new Set(resolvedRows.map(r => getPeriod(r)));
         return sortPeriods([...s]);
+    }, [resolvedRows, getPeriod]);
+
+    // Representative calendar date for each period bucket, used to resolve
+    // "the allocation % that was in effect at the time" via the allocation
+    // timeline — the latest task End Date seen within that period (periods
+    // are themselves bucketed by End Date, so this stays consistent with
+    // how rows land in each bucket).
+    const periodDateMap = useMemo(() => {
+        const map = {};
+        resolvedRows.forEach(r => {
+            if (!r.endDate) return;
+            const period = getPeriod(r);
+            if (!map[period] || r.endDate.getTime() > map[period].getTime()) map[period] = r.endDate;
+        });
+        return map;
     }, [resolvedRows, getPeriod]);
 
     const allProjects  = useMemo(() => [...new Set(resolvedRows.map(r => r.project))].sort(),  [resolvedRows]);
@@ -2402,7 +2487,9 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 const filteredPlannedForPeriod = filteredPlanned
                     .filter(r => getKey(r) === entity && getPeriod(r) === period);
                 const planned = filteredPlannedForPeriod.reduce((s, r) => s + r.estimateEffort, 0);
-                const allocated = getAllocForEntity(entity);
+                // Resolve allocation as of THIS period's own date, not a single
+                // flat snapshot reused for every period — see periodDateMap.
+                const allocated = getAllocForEntity(entity, periodDateMap[period] || null);
 
                 const donePct    = allocated > 0 ? Math.round(done    / allocated * 100) : null;
                 const plannedPct = allocated > 0 ? Math.round(planned / allocated * 100) : null;
@@ -2433,20 +2520,21 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             });
             return entry;
         }),
-    [doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
+    [doneRows, plannedRows, allPeriods, getPeriod, periodDateMap]);
 
-    // Project chart: allocated = project-level FTE from HRMS Projects module → hours
+    // Project chart: allocated = project-level FTE from HRMS Projects module → hours,
+    // resolved as of each period's own date.
     const projectChartData = useMemo(() => buildChartData(
         visibleProjects, r => r.project,
-        (proj) => getProjectAllocHrs(proj) ?? 0
+        (proj, dateStr) => getProjectAllocHrs(proj, dateStr) ?? 0
     ), [buildChartData, visibleProjects, getProjectAllocHrs]);
 
     // Employee chart — full (all projects)
     const employeeChartData = useMemo(() => buildChartData(
         allEmployees, r => r.assignee,
-        (emp) => {
+        (emp, dateStr) => {
             const projects = [...new Set(resolvedRows.filter(r => r.assignee === emp).map(r => r.project))];
-            return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
+            return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj, dateStr); return h !== null ? s + h : s; }, 0);
         }
     ), [buildChartData, allEmployees, resolvedRows, getAllocHrs]);
 
@@ -2479,10 +2567,10 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
         return buildChartData(
             filteredEmployees,
             r => r.assignee,
-            (emp) => {
+            (emp, dateStr) => {
                 if (empProjectFilter) {
                     // Allocation for this specific project only
-                    const h = getAllocHrs(emp, empProjectFilter);
+                    const h = getAllocHrs(emp, empProjectFilter, dateStr);
                     return h !== null ? h : 0;
                 }
                 let projects = [...new Set(resolvedRows.filter(r => r.assignee === emp).map(r => r.project))];
@@ -2495,7 +2583,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                         || employeeAllocationsMap[emp.toLowerCase().trim()];
                     projects = (hrmsEmp?.projects || []).map(p => p.project_name);
                 }
-                return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj); return h !== null ? s + h : s; }, 0);
+                return projects.reduce((s, proj) => { const h = getAllocHrs(emp, proj, dateStr); return h !== null ? s + h : s; }, 0);
             },
             rowFilter
         );
@@ -2519,7 +2607,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
                 const planned = plannedRows
                     .filter(r => r.assignee === emp && r.project === proj && getPeriod(r) === period)
                     .reduce((s, r) => s + r.estimateEffort, 0);
-                const allocated = getAllocHrs(emp, proj) ?? 0;
+                const allocated = getAllocHrs(emp, proj, periodDateMap[period] || null) ?? 0;
                 const totalPct  = allocated > 0 ? Math.round((done + planned) / allocated * 100) : null;
 
                 entry[`${period}__done`]      = parseFloat(done.toFixed(1));
@@ -2529,7 +2617,7 @@ const EffortsAnalyser = ({ exportRef, setHasEffortsData }) => {
             });
             return entry;
         });
-    }, [resolvedRows, doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs]);
+    }, [resolvedRows, doneRows, plannedRows, allPeriods, getPeriod, getAllocHrs, periodDateMap]);
 
     // ── summary ────────────────────────────────────────────────────────
     const totalLogged  = doneRows.reduce((s, r) => s + r.loggedTime, 0);
