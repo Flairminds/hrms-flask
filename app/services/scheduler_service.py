@@ -105,7 +105,7 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in anniversary greetings job", error=str(e))
 
-    @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=0, minute=0, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='monthly_leave_allocation', day=1, hour=6, minute=0, timezone='Asia/Kolkata')
     @weekday_only
     def monthly_leave_allocation():
         """Automatically allocates leaves on the 1st of every month."""
@@ -249,7 +249,7 @@ def register_jobs(app):
                 db.session.rollback()
                 Logger.error("Error in scheduled Zymmr effort sync job", error=str(e), error_type=type(e).__name__)
 
-    @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=0, minute=5, timezone='Asia/Kolkata')
+    @scheduler.task('cron', id='monthly_leave_deduction', day=1, hour=7, minute=5, timezone='Asia/Kolkata')
     @weekday_only
     def monthly_leave_deduction():
         """Automatically deducts monthly WFH leaves on the 1st of every month."""

@@ -214,8 +214,8 @@ class LeaveQueryService:
                     continue
                 if monthly_wfh >= 3:
                     cumulative_wfh += max(0, monthly_wfh - 3.0)
-                elif cumulative_wfh > 3:
-                    cumulative_wfh = cumulative_wfh + monthly_wfh - 3.0
+                elif cumulative_wfh > 0:
+                    cumulative_wfh = max(0.0, cumulative_wfh + monthly_wfh - 3.0)
 
             result = []
             for row in query:
