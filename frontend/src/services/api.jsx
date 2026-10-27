@@ -862,8 +862,9 @@ export const getReports = async (reportType) => {
   return response.data;
 };
 
-export const generateReport = async (month, year, reportType) => {
-  const response = await axiosInstance.post(`${API_BASE_URL}/reports/generate`, { month, year, report_type: reportType });
+export const generateReport = async (month, year, reportType, range) => {
+  // range (optional): { start_date: 'YYYY-MM-DD', end_date: 'YYYY-MM-DD', frequency: 'Weekly' | 'Custom' }
+  const response = await axiosInstance.post(`${API_BASE_URL}/reports/generate`, { month, year, report_type: reportType, ...range });
   return response.data;
 };
 

@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { Table, Select, Space, Button, Tabs, Modal, Upload, message, Card, Tag } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Table, Select, Space, Button, Tabs, Modal, Upload, message, Card, Tag, DatePicker, Spin, Empty } from "antd";
+import moment from "moment";
+import dayjs from "dayjs";
 import { getReports, getReportDetails, generateReport, deleteReport, uploadDoorEntryReport, getDoorEntryMappingStats, saveDoorEntryMapping, deleteDoorEntryMapping, generateAttendanceReport } from "../../services/api";
-import { ReloadOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LabelList, Legend, Cell } from "recharts";
+import { ReloadOutlined, BarChartOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import styles from "./MonthlyReport.module.css";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -39,6 +42,105 @@ const handleDelete = (id, refreshCallbacks) => {
     });
 };
 
+// Statuses that mean the employee is actually away
+const ON_LEAVE_STATUSES = [LEAVE_STATUS.APPROVED, LEAVE_STATUS.PARTIAL_APPROVED];
+
+// Chart categories, in stack order (bottom to top)
+const LEAVE_CATEGORIES = [
+    { key: 'wfh', label: 'WFH', color: '#1677ff' },
+    { key: 'privilege', label: 'Privilege Leave', color: '#52c41a' },
+    { key: 'sick', label: 'Sick/Emergency Leave', color: '#f5222d' },
+    { key: 'others', label: 'Others', color: '#faad14' },
+];
+
+const getLeaveCategory = (leaveType) => {
+    switch (leaveType) {
+        case 'Work From Home':
+        case 'Customer Approved Work From Home':
+            return 'wfh';
+        case 'Privilege Leave':
+            return 'privilege';
+        case 'Sick/Emergency Leave':
+            return 'sick';
+        default:
+            return 'others';
+    }
+};
+
+// Builds [{ week, wfh, privilege, sick, others, total, names: { category: [names] } }] (weeks run
+// Monday-Sunday, clipped to the selected range) from the rows of one or more monthly leave reports.
+// Each category counts leave days (half day = 0.5); names maps to "Name (days)".
+const buildWeeklyLeaveData = (rows, start, end) => {
+    const seen = new Set();
+    const weeks = new Map();
+    rows.forEach((r) => {
+        if (!ON_LEAVE_STATUSES.includes(r['Leave Status'])) return;
+        const day = moment(r.Date, 'DD-MM-YYYY');
+        if (!day.isValid() || day.isBefore(start, 'day') || day.isAfter(end, 'day')) return;
+        const key = `${r['Employee ID']}|${r.Date}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const wk = day.clone().startOf('isoWeek').format('YYYY-MM-DD');
+        if (!weeks.has(wk)) weeks.set(wk, {});
+        const cat = getLeaveCategory(r['Type of Leave Approved']);
+        const w = weeks.get(wk);
+        if (!w[cat]) w[cat] = new Map();
+        const name = r['Employee Name'];
+        w[cat].set(name, (w[cat].get(name) || 0) + (r['Working Day'] === 0.5 ? 0.5 : 1));
+    });
+
+    // Include weeks with no leave so the x-axis is continuous
+    const result = [];
+    for (let w = start.clone().startOf('isoWeek'); !w.isAfter(end, 'day'); w.add(1, 'week')) {
+        const entry = weeks.get(w.format('YYYY-MM-DD')) || {};
+        const from = moment.max(w, start);
+        const to = moment.min(w.clone().endOf('isoWeek'), end);
+        const row = { week: `${from.format('DD MMM')} - ${to.format('DD MMM')}`, weekStart: from.format('YYYY-MM-DD'), weekEnd: to.format('YYYY-MM-DD'), total: 0, names: {} };
+        LEAVE_CATEGORIES.forEach(({ key }) => {
+            row[key] = entry[key] ? [...entry[key].values()].reduce((a, b) => a + b, 0) : 0;
+            row.names[key] = entry[key] ? [...entry[key]].sort((a, b) => a[0].localeCompare(b[0])).map(([n, d]) => `${n} (${d})`) : [];
+            row.total += row[key];
+        });
+        result.push(row);
+    }
+    return result;
+};
+
+// Builds the per-employee leave list for the side panel: one entry per employee and leave type,
+// with consecutive days merged into a date range. Sorted by first leave date, then name.
+const buildLeaveEntries = (rows, start, end) => {
+    const seen = new Set();
+    const groups = new Map();
+    rows.forEach((r) => {
+        if (!ON_LEAVE_STATUSES.includes(r['Leave Status'])) return;
+        const day = moment(r.Date, 'DD-MM-YYYY');
+        if (!day.isValid() || day.isBefore(start, 'day') || day.isAfter(end, 'day')) return;
+        const key = `${r['Employee ID']}|${r.Date}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const type = r['Type of Leave Approved'];
+        const gk = `${r['Employee ID']}|${type}`;
+        if (!groups.has(gk)) groups.set(gk, { id: r['Employee ID'], name: r['Employee Name'], type, category: getLeaveCategory(type), days: [] });
+        groups.get(gk).days.push({ day, value: r['Working Day'] === 0.5 ? 0.5 : 1 });
+    });
+
+    const entries = [];
+    groups.forEach((g) => {
+        g.days.sort((a, b) => a.day.valueOf() - b.day.valueOf());
+        let run = null;
+        g.days.forEach(({ day, value }) => {
+            if (run && day.diff(run.to, 'days') === 1) {
+                run.to = day;
+                run.total += value;
+            } else {
+                run = { id: g.id, name: g.name, type: g.type, category: g.category, from: day, to: day, total: value };
+                entries.push(run);
+            }
+        });
+    });
+    return entries.sort((a, b) => a.from.valueOf() - b.from.valueOf() || a.name.localeCompare(b.name));
+};
+
 // Leave Report Tab Content
 const LeaveReportTab = () => {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
@@ -51,6 +153,15 @@ const LeaveReportTab = () => {
     // Month/Year for Generation
     const [genInMonth, setGenInMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
     const [genInYear, setGenInYear] = useState(new Date().getFullYear());
+
+    // Weekly chart modal
+    const [chartOpen, setChartOpen] = useState(false);
+    const [chartRange, setChartRange] = useState(null);
+    const [chartLoading, setChartLoading] = useState(false);
+    const [chartRows, setChartRows] = useState([]);
+    const [chartEmployees, setChartEmployees] = useState([]); // selected Employee IDs; empty = everyone
+    const [chartReports, setChartReports] = useState([]);
+    const [selectedWeek, setSelectedWeek] = useState(null); // { start, end } as YYYY-MM-DD; null = whole range
 
     useEffect(() => {
         if (viewMode === 'list') {
@@ -90,6 +201,80 @@ const LeaveReportTab = () => {
             toast.error("Failed to generate report");
         } finally {
             setListLoading(false);
+        }
+    };
+
+    const chartEmployeeOptions = useMemo(() => {
+        const names = new Map();
+        chartRows.forEach((r) => names.set(r['Employee ID'], r['Employee Name']));
+        return [...names].map(([id, name]) => ({ value: id, label: `${name} (${id})` }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }, [chartRows]);
+
+    const filteredChartRows = useMemo(
+        () => (chartEmployees.length ? chartRows.filter((r) => chartEmployees.includes(r['Employee ID'])) : chartRows),
+        [chartRows, chartEmployees]
+    );
+
+    const chartData = useMemo(() => {
+        if (!chartReports.length || !chartRange || !chartRange[0] || !chartRange[1]) return [];
+        return buildWeeklyLeaveData(filteredChartRows, moment(chartRange[0].toDate()).startOf('day'), moment(chartRange[1].toDate()).startOf('day'));
+    }, [filteredChartRows, chartRange, chartReports]);
+
+    // Leave list for the side panel: the clicked week, or the whole selected range
+    const leaveEntries = useMemo(() => {
+        if (!chartReports.length || !chartRange || !chartRange[0] || !chartRange[1]) return [];
+        const start = selectedWeek ? moment(selectedWeek.start) : moment(chartRange[0].toDate()).startOf('day');
+        const end = selectedWeek ? moment(selectedWeek.end) : moment(chartRange[1].toDate()).startOf('day');
+        return buildLeaveEntries(filteredChartRows, start, end);
+    }, [filteredChartRows, chartRange, chartReports, selectedWeek]);
+
+    // Opens the modal defaulting to the current month
+    const openChart = () => {
+        setChartOpen(true);
+        handleChartRangeChange([dayjs().startOf('month'), dayjs().endOf('month')]);
+    };
+
+    // For each month in the range, use the most recently generated monthly report, then chart by week
+    const handleChartRangeChange = async (dates) => {
+        setChartRange(dates);
+        setChartRows([]);
+        setChartReports([]);
+        setSelectedWeek(null);
+        if (!dates || !dates[0] || !dates[1]) return;
+
+        const start = moment(dates[0].toDate()).startOf('day');
+        const end = moment(dates[1].toDate()).startOf('day');
+
+        // reports are already sorted newest first by the API
+        const latestByMonth = new Map();
+        reports.forEach((r) => {
+            if (r.report_frequency !== 'Monthly') return;
+            const m = moment(r.report_for, 'MMMM YYYY');
+            if (m.isValid() && !latestByMonth.has(m.format('YYYY-MM'))) latestByMonth.set(m.format('YYYY-MM'), r);
+        });
+
+        const needed = [];
+        const missing = [];
+        for (let m = start.clone().startOf('month'); !m.isAfter(end, 'day'); m.add(1, 'month')) {
+            const rep = latestByMonth.get(m.format('YYYY-MM'));
+            if (rep) needed.push(rep);
+            else missing.push(m.format('MMMM YYYY'));
+        }
+        if (missing.length) toast.warn(`No monthly report generated for: ${missing.join(', ')}`);
+        if (!needed.length) return;
+
+        setChartLoading(true);
+        try {
+            const responses = await Promise.all(needed.map((r) => getReportDetails(r.id)));
+            const rows = responses.flatMap((res) => (res.success && Array.isArray(res.data.data) ? res.data.data : []));
+            setChartReports(needed);
+            setChartRows(rows);
+            setChartEmployees((prev) => prev.filter((id) => rows.some((r) => r['Employee ID'] === id)));
+        } catch (error) {
+            toast.error("Failed to load report data for chart");
+        } finally {
+            setChartLoading(false);
         }
     };
 
@@ -235,6 +420,7 @@ const LeaveReportTab = () => {
                             Generate & Save
                         </Button>
                         <Button onClick={fetchReportList} icon={<ReloadOutlined />}>Refresh List</Button>
+                        <Button icon={<BarChartOutlined />} onClick={openChart}>Weekly Leave Chart</Button>
                     </div>
                 </div>
 
@@ -249,6 +435,130 @@ const LeaveReportTab = () => {
                         scroll={{ x: 'max-content' }}
                     />
                 </div>
+
+                <Modal
+                    title="Leave Days - Weekly"
+                    open={chartOpen}
+                    onCancel={() => setChartOpen(false)}
+                    footer={null}
+                    width={1250}
+                    style={{top: '10px'}}
+                >
+                    <DatePicker.RangePicker
+                        format="DD MMM YYYY"
+                        value={chartRange}
+                        onChange={handleChartRangeChange}
+                        style={{ marginBottom: 16, marginRight: 12 }}
+                    />
+                    <Select
+                        mode="multiple"
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        placeholder="All employees"
+                        value={chartEmployees}
+                        onChange={setChartEmployees}
+                        options={chartEmployeeOptions}
+                        maxTagCount="responsive"
+                        style={{ minWidth: 280, marginBottom: 16 }}
+                    />
+                    {chartReports.length > 0 && (
+                        <div style={{ color: '#555', marginBottom: 12 }}>
+                            Based on: {chartReports.map((r) => `${r.report_for} (generated ${convertDate(r.generated_at, true)})`).join('; ')}
+                        </div>
+                    )}
+                    <Spin spinning={chartLoading}>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '3 1 560px', minWidth: 0 }}>
+                        {chartData.length === 0 ? (
+                            <Empty description={chartRange ? "No data for the selected range" : "Select a date range"} />
+                        ) : (
+                            <ResponsiveContainer width="100%" height={400}>
+                                <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="week" />
+                                    <YAxis allowDecimals label={{ value: 'Leave days', angle: -90, position: 'insideLeft' }} />
+                                    <RechartsTooltip
+                                        content={({ active, payload }) => {
+                                            if (!active || !payload || !payload.length) return null;
+                                            const d = payload[0].payload;
+                                            return (
+                                                <div style={{ background: '#fff', border: '1px solid #ddd', padding: 10, maxWidth: 300 }}>
+                                                    <strong>{d.week}</strong>
+                                                    {LEAVE_CATEGORIES.filter((c) => d[c.key] > 0).map((c) => (
+                                                        <div key={c.key} style={{ marginTop: 4, fontSize: 12 }}>
+                                                            <span style={{ color: c.color, fontWeight: 600 }}>{c.label} ({d[c.key]}):</span> {d.names[c.key].join(', ')}
+                                                        </div>
+                                                    ))}
+                                                    {d.total === 0 && <div style={{ fontSize: 12 }}>No one on leave</div>}
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                    <Legend />
+                                    {LEAVE_CATEGORIES.map((c) => (
+                                        <Bar
+                                            key={c.key}
+                                            dataKey={c.key}
+                                            stackId="leave"
+                                            fill={c.color}
+                                            name={c.label}
+                                            cursor="pointer"
+                                            onClick={(bar) => {
+                                                const d = bar.payload || bar;
+                                                setSelectedWeek((prev) => (prev && prev.start === d.weekStart ? null : { start: d.weekStart, end: d.weekEnd, label: d.week }));
+                                            }}
+                                        >
+                                            {chartData.map((d) => (
+                                                <Cell key={d.weekStart} fillOpacity={!selectedWeek || selectedWeek.start === d.weekStart ? 1 : 0.35} />
+                                            ))}
+                                            <LabelList dataKey={c.key} position="center" fill="#fff" formatter={(v) => (v > 0 ? v : '')} />
+                                        </Bar>
+                                    ))}
+                                    {/* Invisible series sitting at each stack's top, only used to carry the total label */}
+                                    <Line dataKey="total" stroke="none" dot={false} activeDot={false} legendType="none" isAnimationActive={false}>
+                                        <LabelList dataKey="total" position="top" style={{ fontWeight: 700 }} />
+                                    </Line>
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                    <div style={{ flex: '2 1 340px', minWidth: 0, border: '1px solid #e8e8e8', borderRadius: 8, padding: 12 }}>
+                        {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <strong>
+                                {selectedWeek
+                                    ? `Leaves: ${selectedWeek.label}`
+                                    : chartRange && chartRange[0] && chartRange[1]
+                                        ? `Leaves: ${chartRange[0].format('DD MMM')} - ${chartRange[1].format('DD MMM YYYY')}`
+                                        : 'Leaves'}
+                            </strong>
+                            {selectedWeek && <Button size="small" onClick={() => setSelectedWeek(null)}>Show full range</Button>}
+                        </div> */}
+                        {/* {!selectedWeek && chartData.length > 0 && (
+                            <div style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>Click a bar to see only that week</div>
+                        )} */}
+                        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                            {leaveEntries.length === 0 ? (
+                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No leaves" />
+                            ) : leaveEntries.map((e) => {
+                                const cat = LEAVE_CATEGORIES.find((c) => c.key === e.category);
+                                const sameDay = e.from.isSame(e.to, 'day');
+                                return (
+                                    <div key={`${e.id}-${e.type}-${e.from.valueOf()}`} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0', borderLeft: `3px solid ${cat.color}`, paddingLeft: 8 }}>
+                                        <div style={{ fontWeight: 600 }}>{e.name}</div>
+                                        <div style={{ fontSize: 12, color: '#555' }}>
+                                            {sameDay ? e.from.format('ddd, DD MMM YYYY') : `${e.from.format('ddd, DD MMM')} - ${e.to.format('ddd, DD MMM YYYY')}`}
+                                            {` (${e.total} ${e.total === 1 ? 'day' : 'days'})`}
+                                            <span style={{ fontSize: 12, color: cat.color }}> | {e.type}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    </div>
+                    </Spin>
+                </Modal>
             </div>
         );
     }
@@ -1215,7 +1525,7 @@ const AttendanceReportTab = () => {
                                 value={selectedLeaveReport}
                                 onChange={setSelectedLeaveReport}
                             >
-                                {leaveReports.map(r => (
+                                {leaveReports.filter(r => r.report_frequency === 'Monthly').map(r => (
                                     <Select.Option key={r.id} value={r.id}>
                                         {r.report_for} ({convertDate(r.generated_at, true)})
                                     </Select.Option>

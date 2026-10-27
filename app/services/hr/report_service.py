@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pytz
 from calendar import monthrange
 from sqlalchemy import and_, or_
@@ -13,25 +13,30 @@ from ...models.leave import LeaveTransaction, MasterLeaveTypes
 class ReportService:
     @staticmethod
     def get_monthly_report(month: int, year: int) -> List[Dict[str, Any]]:
+        """Monthly report for attendance/payroll (full calendar month)."""
+        _, num_days = monthrange(year, month)
+        return ReportService.get_leave_report_for_range(date(year, month, 1), date(year, month, num_days))
+
+    @staticmethod
+    def get_leave_report_for_range(start: date, end: date) -> List[Dict[str, Any]]:
         """
-        Generates a monthly report for attendance/payroll.
+        Generates a per-employee, per-day leave report for an inclusive date range.
         Converted from SQL stored procedure to Python implementation.
-        
+
         Args:
-            month: Month number (1-12)
-            year: Year (e.g., 2026)
-            
+            start: First day of the report (inclusive)
+            end: Last day of the report (inclusive)
+
         Returns:
-            List of dictionaries containing monthly report data for each employee
+            List of dictionaries containing report data for each employee for each day
         """
         try:
-            Logger.info("Fetching monthly report", month=month, year=year)
-            
-            # Convert month/year to dates
-            start_date = datetime(year, month, 1)
-            _, num_days = monthrange(year, month)
-            end_date = datetime(year, month, num_days)
-            
+            Logger.info("Fetching leave report", start_date=str(start), end_date=str(end))
+
+            start_date = datetime.combine(start, datetime.min.time())
+            end_date = datetime.combine(end, datetime.min.time())
+            num_days = (end - start).days + 1
+
             # --- DB CALL 1: Get all active employees ---
             employees_query = db.session.query(
                 Employee.employee_id,
@@ -170,20 +175,21 @@ class ReportService:
 
             report_data.sort(key=get_emp_name)
             
-            Logger.info("Monthly report generated successfully", 
-                       month=month, 
-                       year=year,
-                       employee_count=len(report_data))
+            Logger.info("Leave report generated successfully",
+                       start_date=str(start),
+                       end_date=str(end),
+                       row_count=len(report_data))
             
             return report_data
             
         except Exception as e:
-            Logger.error("Error fetching monthly report", error=str(e))
+            Logger.error("Error fetching leave report", error=str(e))
             raise
 
 
     @staticmethod
-    def generate_monthly_leave_report(month: int, year: int, user_id: str, reference_reports: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def generate_monthly_leave_report(month: int, year: int, user_id: str, reference_reports: List[Dict[str, Any]] = None,
+                                      start_date: date = None, end_date: date = None, frequency: str = 'Monthly') -> Dict[str, Any]:
         """
         Generates monthly leave report, saves as CSV to Azure Blob, and creates DB record.
         
@@ -192,7 +198,9 @@ class ReportService:
             year: Year
             user_id: ID of employee generating the report
             reference_reports: Optional list of reports used as reference
-            
+            start_date, end_date: Optional inclusive range; overrides month/year when both given
+            frequency: 'Monthly', 'Weekly' or 'Custom'
+
         Returns:
             Created Report object as dictionary
         """
@@ -204,8 +212,12 @@ class ReportService:
         
         try:
             # 1. Fetch Report Data
-            report_data = ReportService.get_monthly_report(month, year)
-            
+            is_range = start_date is not None and end_date is not None
+            if is_range:
+                report_data = ReportService.get_leave_report_for_range(start_date, end_date)
+            else:
+                report_data = ReportService.get_monthly_report(month, year)
+
             # 2. Generate CSV
             output = io.StringIO()
             if report_data:
@@ -215,13 +227,16 @@ class ReportService:
                 dict_writer.writerows(report_data)
             else:
                 # Handle empty report case
-                output.write("No data found for this month.")
+                output.write("No data found for this period.")
                 
             csv_content = output.getvalue().encode('utf-8')
             
             # 3. Upload to Azure Blob Storage
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"monthly_leave_report_{year}_{month:02d}_{timestamp}.csv"
+            if is_range:
+                filename = f"leave_report_{start_date:%Y%m%d}_{end_date:%Y%m%d}_{timestamp}.csv"
+            else:
+                filename = f"monthly_leave_report_{year}_{month:02d}_{timestamp}.csv"
             blob_path = f"reports/monthly_reports/{filename}"
             
             blob_url = ""
@@ -239,16 +254,17 @@ class ReportService:
                 pass
 
             # 4. Save to Database
-            from datetime import date
-            month_name = date(year, month, 1).strftime('%B')
-            report_for_str = f"{month_name} {year}"
-            
+            if is_range:
+                report_for_str = f"{start_date:%d %b %Y} - {end_date:%d %b %Y}"
+            else:
+                report_for_str = f"{date(year, month, 1).strftime('%B')} {year}"
+
             ist = pytz.timezone('Asia/Kolkata')
             generated_at_ist = datetime.now(ist)
 
             new_report = Reports(
                 report_type='Monthly Leave Report',
-                report_frequency='Monthly',
+                report_frequency=frequency if is_range else 'Monthly',
                 report_for=report_for_str,
                 generated_by=user_id,
                 data=report_data,  # storing JSON data directly as requested

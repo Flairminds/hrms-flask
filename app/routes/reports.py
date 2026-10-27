@@ -56,6 +56,7 @@ def generate_report():
     """
     Generate a new report.
     Body: { "month": MM, "year": YYYY, "report_type": "Monthly Leave Report" }
+    or, for a custom period: { "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "frequency": "Weekly|Custom", ... }
     """
     try:
         data = request.get_json()
@@ -63,7 +64,18 @@ def generate_report():
         year = data.get('year')
         report_type = data.get('report_type', 'Monthly Leave Report') # Default for backward compatibility
         
-        if not month or not year:
+        start_date = end_date = None
+        if data.get('start_date') or data.get('end_date'):
+            try:
+                start_date = datetime.strptime(data.get('start_date', ''), '%Y-%m-%d').date()
+                end_date = datetime.strptime(data.get('end_date', ''), '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'success': False, 'message': "start_date and end_date must be in YYYY-MM-DD format"}), 400
+            if end_date < start_date:
+                return jsonify({'success': False, 'message': "End date cannot be before start date"}), 400
+            if (end_date - start_date).days > 366:
+                return jsonify({'success': False, 'message': "Date range cannot exceed one year"}), 400
+        elif not month or not year:
             return jsonify({'success': False, 'message': "Month and Year are required"}), 400
             
         current_user_id = get_jwt_identity()
@@ -71,9 +83,12 @@ def generate_report():
         report = None
         if report_type == 'Monthly Leave Report':
             report = ReportService.generate_monthly_leave_report(
-                month=int(month), 
-                year=int(year), 
-                user_id=current_user_id
+                month=int(month) if month else None,
+                year=int(year) if year else None,
+                user_id=current_user_id,
+                start_date=start_date,
+                end_date=end_date,
+                frequency=data.get('frequency') if data.get('frequency') in ('Weekly', 'Custom') else 'Custom'
             )
         else:
             # Placeholder for other report types
