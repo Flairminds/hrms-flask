@@ -1235,7 +1235,7 @@ class EmployeeService:
             m2, d2 = one_month_from_now.month, one_month_from_now.day
 
             # Employees must have joined at least 1 year ago
-            one_year_ago = today - relativedelta(years=1)
+            one_year_ago = one_month_from_now - relativedelta(years=1)
 
             query = db.session.query(
                 Employee.employee_id,
