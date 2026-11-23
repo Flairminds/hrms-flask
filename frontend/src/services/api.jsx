@@ -153,6 +153,10 @@ export const holidayListData = () => {
   return res;
 }
 
+// Remaining leaves of all active employees (HR/Admin only).
+export const getAllLeaveBalances = () =>
+  axiosInstance.get(`${API_BASE_URL}/leave/all-leave-balances`);
+
 // Holiday Management APIs (HR/Admin only)
 export const getAllHolidays = () =>
   axiosInstance.get(`${API_BASE_URL}/leave/get-all-holidays`);

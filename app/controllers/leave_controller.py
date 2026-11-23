@@ -504,3 +504,19 @@ class LeaveController:
             return jsonify({
                 "Message": "An error occurred while fetching team transactions. Please try again."
             }), 500
+
+    @staticmethod
+    def get_all_leave_balances():
+        """Retrieves remaining leave balances of all active employees (HR/Admin only)."""
+        Logger.info("Get all leave balances request received")
+
+        try:
+            result = LeaveService.get_all_leave_balances()
+            Logger.info("All leave balances retrieved successfully", employee_count=len(result))
+            return jsonify(result), 200
+
+        except Exception as e:
+            Logger.error("Unexpected error fetching all leave balances",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return jsonify({"Message": "Failed to fetch leave balances. Please try again."}), 500

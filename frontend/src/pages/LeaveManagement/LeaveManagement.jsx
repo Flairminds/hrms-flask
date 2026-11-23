@@ -4,6 +4,7 @@ import styles from './LeaveManagement.module.css';
 import { LeaveManagementPage } from '../leaveMangament/LeaveMangament.jsx';
 import { TeamLeaves } from '../teamLeaves/TeamLeaves.jsx';
 import { HRApplyLeaveModal } from '../../components/modal/hrApplyLeaveModal/HRApplyLeaveModal.jsx';
+import { LeaveBalancesTable } from './LeaveBalancesTable.jsx';
 import { Button } from 'antd';
 import { UserAddOutlined } from '@ant-design/icons';
 
@@ -55,6 +56,7 @@ const LeaveManagement = () => {
                             advance-notice validations are bypassed — balance and overlap checks still apply.
                             The leave will record your Employee ID in the <strong>Applied By</strong> field.
                         </p>
+                        <LeaveBalancesTable />
                         <HRApplyLeaveModal
                             open={isHRModalOpen}
                             onClose={() => setIsHRModalOpen(false)}

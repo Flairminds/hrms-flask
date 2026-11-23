@@ -10,7 +10,7 @@ from ...models.leave import (LeaveTransaction, CompOffTransaction, Holiday, Mast
                            CustomerHoliday)
 from ...models.hr import Employee, LateralAndExempt, EmployeeRole, MasterRole
 from ...utils.logger import Logger
-from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig, LeaveConfiguration, LeaveTypeName
+from ...utils.constants import LeaveStatus, LeaveTypeID, EmployeeStatus, EmailConfig, LeaveConfiguration, LeaveTypeName, ActiveEmployees
 from .leave_utils import LeaveUtils
 
 class LeaveQueryService:
@@ -252,6 +252,60 @@ class LeaveQueryService:
             Logger.critical("Unexpected error getting leave cards",
                            employee_id=employee_id, error=str(e))
             raise
+
+    @staticmethod
+    def get_all_leave_balances() -> List[Dict[str, Any]]:
+        """
+        Remaining leaves (allotted - used, current financial year) of every active employee.
+        Reuses get_employee_leave_cards per employee so the numbers match what each employee sees
+        on their own leave cards (including the WFH monthly-charge logic).
+        """
+        Logger.info("Fetching leave balances for all active employees")
+
+        employees = db.session.query(
+            Employee.employee_id,
+            Employee.first_name,
+            Employee.last_name,
+            Employee.employment_status,
+            Employee.date_of_joining
+        ).filter(
+            Employee.employment_status.notin_(ActiveEmployees.STATUS_NOT_IN)
+        ).order_by(Employee.first_name.asc(), Employee.last_name.asc()).all()
+
+        from dateutil.relativedelta import relativedelta
+        one_year_ago = datetime.now().date() - relativedelta(years=1)
+
+        result = []
+        for emp in employees:
+            try:
+                cards = LeaveQueryService.get_employee_leave_cards(emp.employee_id)
+            except Exception as e:
+                # One bad employee shouldn't blank the whole table
+                Logger.error("Failed to get leave cards for balance table",
+                             employee_id=emp.employee_id, error=str(e))
+                cards = []
+
+            balances = {}
+            for card in cards:
+                allotted = card['total_alloted_leaves']
+                used = card['total_used_leaves']
+                balances[card['leave_name']] = {
+                    'allotted': allotted,
+                    'used': used,
+                    'remaining': allotted - used
+                }
+
+            result.append({
+                'employee_id': emp.employee_id,
+                'employee_name': f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                'employment_status': emp.employment_status or '',
+                'date_of_joining': emp.date_of_joining.isoformat() if emp.date_of_joining else None,
+                # True when the employee has not yet completed one year
+                'joined_less_than_year': bool(emp.date_of_joining and emp.date_of_joining > one_year_ago),
+                'balances': balances
+            })
+
+        return result
 
     @staticmethod
     def get_leave_details(employee_id: str, year: Optional[int] = None) -> List[Dict[str, Any]]:
