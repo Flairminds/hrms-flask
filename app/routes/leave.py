@@ -80,3 +80,9 @@ def delete_holiday(holiday_id):
 @roles_required(*ROLE_PERMISSIONS['leave']['hr_apply_leave'])
 def hr_apply_leave():
     return LeaveController.hr_apply_leave()
+
+
+@leave_bp.route('/all-leave-balances', methods=['GET'])
+@roles_required(*ROLE_PERMISSIONS['leave']['all_leave_balances'])
+def get_all_leave_balances():
+    return LeaveController.get_all_leave_balances()

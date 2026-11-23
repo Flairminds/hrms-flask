@@ -99,6 +99,10 @@ class LeaveService:
         return LeaveQueryService.get_employee_leave_cards(employee_id)
 
     @staticmethod
+    def get_all_leave_balances():
+        return LeaveQueryService.get_all_leave_balances()
+
+    @staticmethod
     def get_leave_transaction_details(leave_tran_id: int, approved_by: str):
         return LeaveQueryService.get_leave_transaction_details(leave_tran_id, approved_by)
 

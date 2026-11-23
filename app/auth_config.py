@@ -59,7 +59,8 @@ ROLE_PERMISSIONS = {
         "leave_records_mail": ["Admin", "HR", "Lead"],  # Email reports
         "people_on_leave": ["Admin", "HR", "Lead", "Employee"],  # Dashboard widget
         "manage_holidays": ["Admin", "HR"],  # Add/Edit/Delete holidays
-        "hr_apply_leave": ["Admin", "HR"]   # HR applies leave on behalf of employee (override)
+        "hr_apply_leave": ["Admin", "HR"],   # HR applies leave on behalf of employee (override)
+        "all_leave_balances": ["Admin", "HR"]  # Remaining leaves of every active employee
     },
     
     # ===========================
