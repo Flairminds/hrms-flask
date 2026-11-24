@@ -83,6 +83,18 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in daily review alert job", error=str(e))
             
+    @scheduler.task('cron', id='daily_review_submission_reminder', hour=9, minute=0, timezone='Asia/Kolkata')
+    @weekday_only
+    def daily_review_submission_reminder():
+        """Daily 9:00 AM IST - reminds self/reviewers/HR who haven't submitted an in-progress performance review."""
+        with app.app_context():
+            Logger.info("Running performance review submission reminder job")
+            try:
+                sent = EmailService.send_review_submission_reminders()
+                Logger.info("Performance review submission reminder job completed", emails_sent=sent)
+            except Exception as e:
+                Logger.error("Error in performance review submission reminder job", error=str(e))
+
     @scheduler.task('cron', id='birthday_greetings', hour=0, minute=5, timezone='Asia/Kolkata')
     @weekday_only
     def birthday_greetings_job():

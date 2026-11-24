@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table, Button, Modal, Form, Input, DatePicker, Select, Space,
-    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty, Row, Col, Card, Statistic
+    Popconfirm, Typography, Tag, message, Spin, Tooltip, Empty, Row, Col, Card, Statistic, Segmented
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
-    LinkOutlined, ExclamationCircleOutlined
+    LinkOutlined, ExclamationCircleOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../context/AuthContext';
 import {
-    getEmployeeReviews, createEmployeeReview, updateEmployeeReview, deleteEmployeeReview,
+    getEmployeeReviews,
     getAllEmployees
 } from '../../../services/api';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
-import ReviewSummaryModal from './ReviewSummaryModal';
 import { convertDate } from '../../../util/helperFunctions';
 
 dayjs.extend(isBetween);
@@ -29,17 +28,22 @@ const STATUS_COLOR = {
     'Extended': 'blue'
 };
 
-const EmployeeReviewTab = () => {
+// Reviews are only scheduled for people currently on the team — exclude
+// employees who've left (Relieved/Absconding/Terminated) from the pickers.
+const INACTIVE_STATUSES = ['relieved', 'absconding', 'terminated'];
+
+const EmployeeReviewTab = ({ onOpenPerformanceReview } = {}) => {
     const { user } = useAuth();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [summaryModalOpen, setSummaryModalOpen] = useState(false);
-    const [editingReview, setEditingReview] = useState(null);
-    const [form] = Form.useForm();
     const [employees, setEmployees] = useState([]);
+    const activeEmployees = useMemo(
+        () => employees.filter(e => !INACTIVE_STATUSES.includes((e.employmentStatus || '').toLowerCase())),
+        [employees]
+    );
     const [search, setSearch] = useState('');
     const [loadingEmployees, setLoadingEmployees] = useState(false);
+
 
     // RBAC: HR/Admin/Lead can edit/delete/add
     const canManage = ['admin', 'hr', 'lead'].includes(user?.roleName?.toLowerCase());
@@ -70,58 +74,6 @@ const EmployeeReviewTab = () => {
     useEffect(() => {
         fetchData();
     }, [user, canManage]);
-
-    // Handle Submit
-    const handleSubmit = async (values) => {
-        try {
-            const payload = {
-                ...values,
-                review_date: values.review_date.format('YYYY-MM-DD'),
-                reviewed_date: values.reviewed_date ? values.reviewed_date.format('YYYY-MM-DD') : null
-            };
-
-            if (editingReview) {
-                await updateEmployeeReview(editingReview.review_id, payload);
-                message.success("Review updated successfully");
-            } else {
-                await createEmployeeReview(payload);
-                message.success("Review created successfully");
-            }
-            setModalOpen(false);
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            message.error("Failed to save review");
-        }
-    };
-
-    // Handle Delete
-    const handleDelete = async (id) => {
-        try {
-            await deleteEmployeeReview(id);
-            message.success("Review deleted");
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            message.error("Failed to delete review");
-        }
-    };
-
-    // Open Modal
-    const openModal = (review = null) => {
-        setEditingReview(review);
-        if (review) {
-            form.setFieldsValue({
-                ...review,
-                review_date: review.review_date ? dayjs(review.review_date) : null,
-                reviewed_date: review.reviewed_date ? dayjs(review.reviewed_date) : null
-            });
-        } else {
-            form.resetFields();
-            form.setFieldsValue({ status: 'Pending' });
-        }
-        setModalOpen(true);
-    };
 
     // Filtered Reviews
     const filteredReviews = useMemo(() => {
@@ -188,6 +140,22 @@ const EmployeeReviewTab = () => {
             },
         },
         {
+            title: 'Period',
+            dataIndex: 'period',
+            key: 'period',
+            filters: [...new Set(reviews.map(e => e.period).filter(Boolean))].map(s => ({ text: s, value: s })),
+            onFilter: (value, record) => record.period === value,
+            filterSearch: true,
+            render: (period, record) => period ? (
+                <div>
+                    <Tag>{period}</Tag>
+                    {record.period_range && record.period_range !== period && (
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{record.period_range}</div>
+                    )}
+                </div>
+            ) : '-'
+        },
+        {
             title: 'Scheduled Date',
             dataIndex: 'review_date',
             key: 'review_date',
@@ -238,22 +206,20 @@ const EmployeeReviewTab = () => {
             key: 'actions',
             render: (_, record) => (
                 <Space>
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => openModal(record)}
-                    />
-                    <Popconfirm
-                        title="Delete review?"
-                        onConfirm={() => handleDelete(record.review_id)}
-                        okText="Yes" cancelText="No"
-                    >
-                        <Button
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            danger
-                        />
-                    </Popconfirm>
+                    {record.perf_cycle_id && onOpenPerformanceReview && (
+                        <Tooltip title="Fill in / view the Self, Lead & HR scored review">
+                            <Button
+                                size="small"
+                                icon={<FileTextOutlined />}
+                                onClick={() => onOpenPerformanceReview({
+                                    cycleId: record.perf_cycle_id,
+                                    employeeId: record.employee_id,
+                                })}
+                            >
+                                Review
+                            </Button>
+                        </Tooltip>
+                    )}
                 </Space>
             )
         }] : [])
@@ -281,16 +247,6 @@ const EmployeeReviewTab = () => {
                         <div style={{background: 'white', padding: '12px', borderRadius: '12px'}}><span style={{fontSize: 'larger', fontWeight: '600', color: 'green'}}>{monthlyStats.completed}</span> completed</div>
                     </div>
                 </Space>
-                {canManage && (
-                    <Space>
-                        <Button onClick={() => setSummaryModalOpen(true)}>
-                            Review Summary
-                        </Button>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                            Add Review
-                        </Button>
-                    </Space>
-                )}
             </div>
 
             <Table
@@ -301,104 +257,6 @@ const EmployeeReviewTab = () => {
                 pagination={{ pageSize: 10 }}
                 scroll={{ x: 'max-content' }}
             />
-
-            <ReviewSummaryModal
-                visible={summaryModalOpen}
-                onClose={() => setSummaryModalOpen(false)}
-            />
-
-            <Modal
-                title={editingReview ? "Edit Review" : "Add Review"}
-                open={modalOpen}
-                onCancel={() => setModalOpen(false)}
-                footer={null}
-                style={{ top: 15 }}
-            >
-                <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                    {/* Row 1: Employee (full width) */}
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item
-                                name="employee_id"
-                                label="Employee"
-                                rules={[{ required: true, message: 'Please select employee' }]}
-                            >
-                                <Select
-                                    showSearch
-                                    placeholder="Select Employee"
-                                    optionFilterProp="label"
-                                    filterOption={(input, option) =>
-                                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                                    }
-                                    disabled={!!editingReview}
-                                >
-                                    {employees.map(e => (
-                                        <Option key={e.employeeId} value={e.employeeId} label={`${e.employeeName} (${e.employeeId})`}>
-                                            {e.employeeName} ({e.employeeId})
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item
-                                name="review_date"
-                                label="Scheduled Review Date"
-                                rules={[{ required: true, message: 'Required' }]}
-                            >
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    {/* Row 2: Dates */}
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item name="status" label="Status" initialValue="Pending">
-                                <Select>
-                                    <Option value="Pending">Pending</Option>
-                                    <Option value="Reviewed">Reviewed</Option>
-                                    <Option value="Extended">Extended</Option>
-                                    <Option value="Scheduled">Scheduled</Option>
-                                    <Option value="Cancelled">Cancelled</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="reviewed_date" label="Actual Reviewed Date">
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <Form.Item name="file_link" label="Document/File Link">
-                        <Input prefix={<LinkOutlined />} placeholder="https://..." />
-                    </Form.Item>
-
-                    {/* Row 4: Comments */}
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item name="review_comment" label="Review Key Comments">
-                                <TextArea rows={3} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="other_comments" label="Other Comments">
-                                <TextArea rows={3} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button onClick={() => setModalOpen(false)} style={{ marginRight: 8 }}>
-                            Cancel
-                        </Button>
-                        <Button type="primary" htmlType="submit">
-                            Save
-                        </Button>
-                    </div>
-                </Form>
-            </Modal>
         </div>
     );
 };

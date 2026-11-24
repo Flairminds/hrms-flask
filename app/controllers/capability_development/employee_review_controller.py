@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from ...services.capability_development.employee_review_service import EmployeeReviewService
@@ -98,3 +100,21 @@ class EmployeeReviewController:
         except Exception as e:
             Logger.error(f"Error getting review summaries: {str(e)}")
             return jsonify({'message': 'Error fetching review summaries'}), 500
+
+    @staticmethod
+    @jwt_required()
+    def get_review_matrix():
+        """Per-employee quarterly (or monthly, for Interns/Probationers)
+        review-status grid for a given year (HR/Admin/Lead only)."""
+        claims = get_jwt()
+        role = claims.get('role', '').lower()
+        if role not in ['admin', 'hr', 'lead']:
+            return jsonify({'message': 'Unauthorized'}), 403
+
+        year = request.args.get('year', type=int) or date.today().year
+        try:
+            matrix = EmployeeReviewService.get_review_matrix(year)
+            return jsonify({'year': year, 'matrix': matrix}), 200
+        except Exception as e:
+            Logger.error(f"Error getting review matrix: {str(e)}")
+            return jsonify({'message': 'Error fetching review matrix'}), 500

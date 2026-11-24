@@ -1393,6 +1393,102 @@ export const getAllEmployees = () =>
 export const getReviewSummaries = () =>
   axiosInstance.get(`${API_BASE_URL}/capability-dev/employee-review/summaries`);
 
+// Per-employee quarterly (Confirmed, etc.) / monthly (Intern, Probation)
+// review-status grid for a given year.
+export const getReviewMatrix = (year) =>
+  axiosInstance.get(`${API_BASE_URL}/capability-dev/employee-review/summaries/matrix`, { params: { year } });
+
+// ── Performance Review (multi-role weighted config-driven review) ──────────
+// Sections/questions config in effect on `asOf` (YYYY-MM-DD); defaults to today.
+export const getPerfReviewConfig = (asOf) =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/config`, { params: asOf ? { asOf } : {} });
+
+// Config edits — every call inserts a new versioned snapshot rather than
+// updating in place. `data` must include `applicableDate` (YYYY-MM-DD, not
+// in the past) and may include `comments` explaining the change.
+export const getPerfReviewConfigVersions = () =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/config/versions`);
+
+export const createPerfSection = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/config/sections`, data);
+
+export const updatePerfSection = (sectionId, data) =>
+  axiosInstance.put(`${API_BASE_URL}/performance-review/config/sections/${sectionId}`, data);
+
+export const deletePerfSection = (sectionId, data) =>
+  axiosInstance.delete(`${API_BASE_URL}/performance-review/config/sections/${sectionId}`, { data });
+
+export const addPerfSectionQuestions = (sectionId, data) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/config/sections/${sectionId}/questions`, data);
+
+export const distributePerfWeightageEqually = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/config/weightage/distribute-equal`, data);
+
+export const savePerfWrittenQuestion = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/config/written-questions`, data);
+
+export const deletePerfWrittenQuestion = (questionId, data) =>
+  axiosInstance.delete(`${API_BASE_URL}/performance-review/config/written-questions/${questionId}`, { data });
+
+export const getPerfConfigActivityLog = () =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/config/activity`);
+
+// Who would review this employee (Self/Lead(s)/HR) — read-only preview, creates nothing.
+// `period` (optional) is {periodType, month} or {periodType, quarter, year} — without
+// it, resolves against today's current project lead/leave approver only.
+export const previewPerfReviewers = (employeeId, period) =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/reviewers/preview`, { params: { employeeId, ...period } });
+
+// Sets up the review period (monthly/quarterly), resolves/creates its cycle, and
+// creates the employee's review + Self/Lead(s)/HR reviewer rows.
+export const initiatePerfReview = (data) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/reviews/initiate`, data);
+
+// Without `employeeId`, every cycle that exists. With it, only the cycles
+// this employee actually has an initiated review for — used by the
+// review-taking screen so its cycle picker can't be used to browse into (and
+// thereby silently auto-create) a review for a period nobody ever initiated.
+export const getPerfReviewCycles = (employeeId) =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/cycles`, { params: employeeId ? { employeeId } : {} });
+
+// Fetches (creating if it doesn't exist yet) the review + its Self/Lead(s)/HR
+// reviewer rows for one employee in one cycle.
+// Non-HR users: themselves + everyone they're an assigned reviewer for.
+// HR: record the meeting date/notes and complete (lock) a fully-submitted review.
+export const completePerfReview = (payload) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/review/complete`, payload);
+
+// Initiated reviews with per-reviewer status (HR: all; others: own + team).
+export const getPerfReviewList = () =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/review-list`);
+
+export const getMyPerfReviewees = () =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/my-reviewees`);
+
+export const getPerfReview = (cycleId, employeeId) =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/review`, { params: { cycleId, employeeId } });
+
+export const getPerfReviewSummary = (cycleId, employeeId) =>
+  axiosInstance.get(`${API_BASE_URL}/performance-review/summary`, { params: { cycleId, employeeId } });
+
+export const savePerfScore = (reviewerId, questionId, score) =>
+  axiosInstance.put(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/scores`, { questionId, score });
+
+export const savePerfAnswer = (reviewerId, questionId, text) =>
+  axiosInstance.put(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/answers`, { questionId, text });
+
+export const savePerfComment = (reviewerId, sectionId, text) =>
+  axiosInstance.put(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/comments`, { sectionId, text });
+
+export const resetPerfReviewer = (reviewerId) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/reset`);
+
+export const submitPerfReviewer = (reviewerId) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/submit`);
+
+export const unlockPerfReviewer = (reviewerId) =>
+  axiosInstance.post(`${API_BASE_URL}/performance-review/reviewers/${reviewerId}/unlock`);
+
 // ── Capability Groups ──────────────────────────────────────────────
 // Master groups — HR/Admin only
 export const getCapabilityGroups = () =>

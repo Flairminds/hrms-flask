@@ -158,7 +158,12 @@ class EmployeeReview(BaseModel):
     
     review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     employee_id = db.Column(db.String(20), db.ForeignKey('employee.employee_id'), nullable=False, index=True)
-    
+
+    # Links this legacy scheduling row to the actual multi-role scored review
+    # (self/lead/HR) created alongside it via the "Initiate Review" wizard.
+    # Null for rows created before that link existed.
+    perf_cycle_id = db.Column(db.Integer, db.ForeignKey('perf_review_cycle.cycle_id'))
+
     # Review Schedule
     review_date = db.Column(db.Date, nullable=False) # Scheduled date
     reviewed_date = db.Column(db.Date) # Actual reviewed date

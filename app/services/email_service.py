@@ -1393,6 +1393,224 @@ class EmailService:
 
     # ==================================================================
 
+    # ==================================================================
+    # PERFORMANCE REVIEW NOTIFICATIONS (initiated + daily submission reminder)
+    # ==================================================================
+
+    # Whether the shared HR slot's users get performance review emails. Off:
+    # self and reviewers are notified; HR is not.
+    REVIEW_NOTIFY_HR = False
+
+    @staticmethod
+    def _send_html_emails(emails: List[Dict[str, str]]) -> int:
+        """Sends each {'to', 'subject', 'html'} as its own message over one
+        SMTP connection. Returns how many were sent; a failure on one
+        recipient doesn't stop the rest."""
+        # Testing safeguard: when REVIEW_EMAIL_ALLOWLIST is set, only those
+        # addresses receive performance review emails (everyone else is skipped).
+        allowlist = current_app.config.get('REVIEW_EMAIL_ALLOWLIST')
+        if allowlist:
+            skipped = [e['to'] for e in emails if e['to'].lower() not in allowlist]
+            emails = [e for e in emails if e['to'].lower() in allowlist]
+            if skipped:
+                Logger.info("Performance review emails skipped by REVIEW_EMAIL_ALLOWLIST", skipped=len(skipped))
+        if not emails:
+            return 0
+        from_address = current_app.config.get('MAIL_USERNAME')
+        from_password = current_app.config.get('MAIL_PASSWORD')
+        if not from_address or not from_password:
+            Logger.error("SMTP credentials not configured for performance review emails")
+            return 0
+
+        server = smtplib.SMTP(
+            current_app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+            current_app.config.get('MAIL_PORT', 587)
+        )
+        sent = 0
+        try:
+            server.starttls()
+            server.login(from_address, from_password)
+            for item in emails:
+                try:
+                    msg = MIMEMultipart()
+                    msg['From'] = EmailService._get_from_string(from_address)
+                    msg['To'] = item['to']
+                    msg['Subject'] = item['subject']
+                    msg.attach(MIMEText(item['html'], 'html'))
+                    server.sendmail(from_address, [item['to']], msg.as_string())
+                    sent += 1
+                except Exception as e:
+                    Logger.error("Error sending performance review email", to=item.get('to'), error=str(e))
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
+        return sent
+
+    @staticmethod
+    def _review_email_html(title: str, intro_html: str, rows_html: str, closing_html: str) -> str:
+        styles = EmailService._get_common_styles()
+        header = EmailService._get_email_header(title)
+        footer = EmailService._get_email_footer()
+        return f"""
+            <html><head>{styles}</head><body><div class='container'>{header}
+                <div class="content">
+                    {intro_html}
+                    {rows_html}
+                    {closing_html}
+                    <a href="https://hrms.flairminds.com/login" class="button">Submit review in HRMS</a>
+                </div>
+            {footer}</div></body></html>
+        """
+
+    @staticmethod
+    def _cycle_range_text(cycle) -> str:
+        if cycle.start_date and cycle.end_date:
+            return f"{cycle.name} ({EmailService._format_date(cycle.start_date)} - {EmailService._format_date(cycle.end_date)})"
+        return cycle.name
+
+    @staticmethod
+    def send_review_initiated_notification(cycle_id: int, employee_id: str, review_date: Any) -> int:
+        """
+        Tells everyone on a freshly initiated review — the employee (self),
+        each reviewer/lead and HR — that it has started, when the review
+        meeting is, and to submit their review in HRMS.
+
+        Returns the number of emails sent.
+        """
+        import html as html_lib
+        from ..models.performance_review import PerfReview, PerfReviewCycle
+        from .performance_review_service import PerformanceReviewService
+
+        review = PerfReview.query.filter_by(cycle_id=cycle_id, employee_id=employee_id).first()
+        cycle = PerfReviewCycle.query.get(cycle_id)
+        employee = Employee.query.filter_by(employee_id=employee_id).first()
+        if not review or not cycle or not employee:
+            Logger.warning("Review initiated notification skipped - review/cycle/employee not found",
+                           cycle_id=cycle_id, employee_id=employee_id)
+            return 0
+
+        employee_name = html_lib.escape(f"{employee.first_name or ''} {employee.last_name or ''}".strip())
+        period = html_lib.escape(EmailService._cycle_range_text(cycle))
+        meeting_date = EmailService._format_date(review_date)
+
+        role_lines = {
+            'self': "Your performance review has been initiated. Please complete your <strong>self-review</strong>.",
+            'lead': f"A performance review has been initiated for <strong>{employee_name}</strong>, and you are one of their reviewers. Please submit your <strong>review</strong>.",
+            'hr': f"A performance review has been initiated for <strong>{employee_name}</strong>. Please submit the <strong>HR review</strong>.",
+        }
+        role_labels = {'self': 'Self', 'lead': 'Reviewer', 'hr': 'HR'}
+
+        emails = []
+        for p in PerformanceReviewService.get_review_participants(review, include_hr=EmailService.REVIEW_NOTIFY_HR):
+            rows = f"""
+                <table>
+                    <tr><th>Employee</th><td>{employee_name} ({employee.employee_id})</td></tr>
+                    <tr><th>Review period</th><td>{period}</td></tr>
+                    <tr><th>Review meeting date</th><td><strong>{meeting_date}</strong></td></tr>
+                    <tr><th>Your role</th><td>{role_labels[p['role']]}</td></tr>
+                </table>
+            """
+            emails.append({
+                'to': p['email'],
+                'subject': f"Performance Review Initiated - {employee_name} ({html_lib.escape(cycle.name)})",
+                'html': EmailService._review_email_html(
+                    "Performance Review Initiated",
+                    f"<p>Hello {html_lib.escape(p['name'] or '')},</p><p>{role_lines[p['role']]}</p>",
+                    rows,
+                    f"<p>The review meeting is scheduled for <strong>{meeting_date}</strong>. Please submit your review in HRMS before then.</p>",
+                ),
+            })
+
+        sent = EmailService._send_html_emails(emails)
+        Logger.info("Performance review initiated emails sent",
+                    employee_id=employee_id, cycle=cycle.name, recipients=len(emails), sent=sent)
+        return sent
+
+    @staticmethod
+    def send_review_submission_reminders() -> int:
+        """
+        Daily reminder to everyone who still has to submit a review —
+        self, reviewers and HR — for each in-progress review (the employee's
+        review isn't Reviewed/Cancelled and its cycle isn't closed). A
+        person with several pending reviews gets one email listing them all.
+        Stops on its own once they submit (or the review is completed).
+
+        Returns the number of emails sent.
+        """
+        import html as html_lib
+        from sqlalchemy import and_
+        from ..models.performance_review import PerfReview, PerfReviewCycle
+        from ..models.capability_development import EmployeeReview
+        from .performance_review_service import PerformanceReviewService
+
+        Logger.info("Running performance review submission reminder")
+
+        rows = (
+            db.session.query(PerfReview, PerfReviewCycle, EmployeeReview.review_date, Employee)
+            .join(PerfReviewCycle, PerfReviewCycle.cycle_id == PerfReview.cycle_id)
+            .join(EmployeeReview, and_(
+                EmployeeReview.perf_cycle_id == PerfReview.cycle_id,
+                EmployeeReview.employee_id == PerfReview.employee_id,
+            ))
+            .join(Employee, Employee.employee_id == PerfReview.employee_id)
+            .filter(
+                EmployeeReview.status.notin_(['Reviewed', 'Cancelled']),
+                PerfReviewCycle.status != 'closed',
+                Employee.employment_status.notin_(ActiveEmployees.STATUS_INACTIVE),
+            )
+            .all()
+        )
+
+        role_labels = {'self': 'Self review', 'lead': 'Reviewer', 'hr': 'HR review'}
+        pending_by_email: Dict[str, Dict[str, Any]] = {}
+        seen_reviews = set()
+        for review, cycle, review_date, employee in rows:
+            if review.review_id in seen_reviews:
+                continue
+            seen_reviews.add(review.review_id)
+            for p in PerformanceReviewService.get_review_participants(review, pending_only=True, include_hr=EmailService.REVIEW_NOTIFY_HR):
+                entry = pending_by_email.setdefault(p['email'], {'name': p['name'], 'items': []})
+                entry['items'].append({
+                    'role': p['role'],
+                    'employee': f"{employee.first_name or ''} {employee.last_name or ''}".strip(),
+                    'period': EmailService._cycle_range_text(cycle),
+                    'meeting': review_date,
+                })
+
+        emails = []
+        for email, info in pending_by_email.items():
+            info['items'].sort(key=lambda i: (i['meeting'] or date.max, i['employee']))
+            table_rows = "".join(
+                f"<tr><td>{html_lib.escape(i['employee'])}</td><td>{html_lib.escape(i['period'])}</td>"
+                f"<td>{EmailService._format_date(i['meeting'])}</td><td>{role_labels[i['role']]}</td></tr>"
+                for i in info['items']
+            )
+            table = f"""
+                <table>
+                    <tr><th style="width:auto">Employee</th><th style="width:auto">Review period</th>
+                        <th style="width:auto">Review meeting</th><th style="width:auto">Your role</th></tr>
+                    {table_rows}
+                </table>
+            """
+            count = len(info['items'])
+            emails.append({
+                'to': email,
+                'subject': f"Reminder: {count} performance review{'s' if count != 1 else ''} pending your submission",
+                'html': EmailService._review_email_html(
+                    "Performance Review Reminder",
+                    f"<p>Hello {html_lib.escape(info['name'] or '')},</p>"
+                    f"<p>You have not yet submitted the following performance review{'s' if count != 1 else ''}:</p>",
+                    table,
+                    "<p>Please submit your review in HRMS before the review meeting. This reminder is sent daily until you submit.</p>",
+                ),
+            })
+
+        sent = EmailService._send_html_emails(emails)
+        Logger.info("Performance review reminders completed", recipients=len(emails), sent=sent)
+        return sent
+
     @staticmethod
     def send_review_status_alert() -> bool:
         """

@@ -84,6 +84,8 @@ class LeaveConfiguration:
 class ActiveEmployees:
     STATUS_NOT_IN = ['Relieved', 'Absconding']
     STATUS_NOT_IN_FOR_REVIEW = ['Relieved', 'Absconding', 'Leave Without Pay']
+    # Anyone no longer actively working here (used to skip notifications)
+    STATUS_INACTIVE = ['Relieved', 'Absconding', 'Leave Without Pay']
 
 class EmailConfig:
     """Email service configuration constants."""

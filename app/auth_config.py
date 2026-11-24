@@ -220,6 +220,19 @@ ROLE_PERMISSIONS = {
     },
 
     # ===========================
+    # Performance Review Module - multi-role weighted employee review
+    # ===========================
+    "performance_review": {
+        "get_config": ["Admin", "HR", "Lead", "Employee"],   # Sections/questions, read-only for everyone
+        "manage_config": ["Admin", "HR"],                    # Add/edit/remove sections, questions, weightage
+        "get_cycles": ["Admin", "HR", "Lead", "Employee"],
+        "manage_cycles": ["Admin", "HR"],
+        "get_review": ["Admin", "HR", "Lead", "Employee"],    # Own review (Employee) or any (HR/Lead/Admin)
+        "complete_review": ["Admin", "HR"],                   # Record meeting date/notes and lock the scorecard
+        "submit_review": ["Admin", "HR", "Lead", "Employee"], # Score/answer/submit — restricted to own reviewer row in the service layer
+    },
+
+    # ===========================
     # Feedback Module (Legacy routes - may need review)
     # ===========================
     "feedback": {
