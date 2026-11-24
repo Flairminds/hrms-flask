@@ -30,6 +30,17 @@ class PerformanceReviewController:
             return jsonify({'Message': 'Error fetching config versions'}), 500
 
     @staticmethod
+    def save_config():
+        data = request.get_json() or {}
+        try:
+            return jsonify(PerformanceReviewService.save_config_version(data, g.get('employee_id'))), 200
+        except ValueError as e:
+            return jsonify({'Message': str(e)}), 400
+        except Exception as e:
+            Logger.error(f'Error saving config: {e}')
+            return jsonify({'Message': 'Error saving config'}), 500
+
+    @staticmethod
     def create_section():
         data = request.get_json() or {}
         try:

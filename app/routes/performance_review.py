@@ -15,6 +15,12 @@ def get_config():
     return PerformanceReviewController.get_config()
 
 
+@performance_review_bp.route('/config', methods=['PUT'])
+@roles_required(*_P['manage_config'])
+def save_config():
+    return PerformanceReviewController.save_config()
+
+
 @performance_review_bp.route('/config/versions', methods=['GET'])
 @roles_required(*_P['manage_config'])
 def get_config_versions():

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Card, Row, Col, Select, Input, InputNumber, Button, Tag, Modal, Form,
-    DatePicker, Alert, Tabs, Tooltip, Empty, Spin, Space, Typography, Popconfirm, Table, message, Timeline, Segmented, Collapse
+    DatePicker, Alert, Dropdown, Tabs, Tooltip, Empty, Spin, Space, Typography, Popconfirm, Table, message, Timeline, Segmented, Collapse
 } from 'antd';
 import {
     SettingOutlined, PlusOutlined, EditOutlined, DeleteOutlined,
     UserOutlined, TeamOutlined, BankOutlined, UnlockOutlined,
-    MinusCircleOutlined, HistoryOutlined, LockOutlined, CheckCircleOutlined, CalendarOutlined, DownloadOutlined, QuestionCircleOutlined, ClearOutlined
+    MinusCircleOutlined, HistoryOutlined, LockOutlined, CheckCircleOutlined, CalendarOutlined, ClockCircleOutlined, MoreOutlined, DownloadOutlined, QuestionCircleOutlined, ClearOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../context/AuthContext';
 import {
-    getAllEmployees, getMyPerfReviewees, getPerfReviewList, updateEmployeeReview, getPerfReviewCycles, getPerfReviewConfig,
+    getAllEmployees, getMyPerfReviewees, getPerfReviewList, updateEmployeeReview, getPerfReviewCycles, getPerfReviewConfig, getPerfReviewConfigVersions, getPerfConfigActivityLog, savePerfReviewConfig,
     getPerfReview, savePerfScore, savePerfAnswer, submitPerfReviewer, unlockPerfReviewer, resetPerfReviewer, completePerfReview,
 } from '../../../services/api';
 import dayjs from 'dayjs';
@@ -380,81 +380,108 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
         );
     }, [reviewList, listSearch, listStatus]);
 
+    const confirmCancel = (row) => Modal.confirm({
+        title: 'Cancel this review?',
+        content: 'The employee will no longer be reviewed for this scheduled date.',
+        okText: 'Yes, cancel', okButtonProps: { danger: true }, cancelText: 'No',
+        onOk: () => cancelReview(row),
+    });
+
     const listColumns = [
         {
-            title: 'Employee', key: 'employee',
+            title: 'Employee', key: 'employee', width: 200,
             render: (_, r) => (
-                <div>
-                    <div style={{ fontWeight: 500 }}>{r.employeeName}{r.employeeId === user?.employeeId && <Tag style={{ marginLeft: 6 }}>You</Tag>}</div>
+                <div className={styles.listEmployee}>
+                    <div className={styles.listEmployeeName}>
+                        {r.employeeName}
+                        {r.employeeId === user?.employeeId && <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>You</Tag>}
+                    </div>
                     <Text type="secondary" style={{ fontSize: 12 }}>{r.employeeId}</Text>
                 </div>
             ),
         },
         {
-            title: 'Review Cycle', key: 'cycle',
+            title: 'Review Cycle', key: 'cycle', width: 160,
             defaultSortOrder: 'descend',
             sortDirections: ['descend', 'ascend'],
             sorter: (a, b) => (a.startDate || '').localeCompare(b.startDate || '') || (a.endDate || '').localeCompare(b.endDate || '') || a.cycleId - b.cycleId,
             render: (_, r) => {
                 const range = formatCycleRange(r);
-                return <div><div>{r.cycleName}</div>{range && <Text type="secondary" style={{ fontSize: 12 }}>{range}</Text>}</div>;
+                return (
+                    <div className={styles.listNoWrap}>
+                        <div style={{ fontWeight: 500 }}>{r.cycleName}</div>
+                        {range && <Text type="secondary" style={{ fontSize: 12 }}>{range}</Text>}
+                    </div>
+                );
             },
         },
         {
-            title: 'Meeting Date', dataIndex: 'meetingDate', key: 'meetingDate',
-            render: d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+            title: 'Meeting', dataIndex: 'meetingDate', key: 'meetingDate', width: 120,
+            render: d => (
+                <span className={styles.listNoWrap}>
+                    {d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                </span>
+            ),
         },
         {
-            title: 'Status', dataIndex: 'status', key: 'status',
+            title: 'Status', dataIndex: 'status', key: 'status', width: 190,
             render: (st, r) => (
-                <Space direction="vertical" size={2}>
-                    <Tag color={st === 'Completed' ? 'green' : st === 'In Progress' ? 'blue' : 'default'}>{st}</Tag>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        {st === 'Completed'
-                            ? (r.completedDate ? `Meeting held ${r.completedDate}` : 'Locked')
-                            : r.allSubmitted
-                                ? 'All submitted · awaiting HR to complete'
-                                : `${r.submittedCount}/${r.totalCount} submitted`}
-                    </Text>
-                </Space>
+                <div className={styles.listNoWrap}>
+                    <Tag color={st === 'Completed' ? 'green' : st === 'In Progress' ? 'blue' : 'default'} style={{ marginRight: 0 }}>{st}</Tag>
+                    <div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {st === 'Completed'
+                                ? (r.completedDate ? `Meeting held ${new Date(r.completedDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Locked')
+                                : r.allSubmitted
+                                    ? 'All in · awaiting HR'
+                                    : `${r.submittedCount} of ${r.totalCount} submitted`}
+                        </Text>
+                    </div>
+                </div>
             ),
         },
         {
-            title: 'Reviewers', key: 'reviewers',
+            title: 'Reviewers', key: 'reviewers', width: 360,
             render: (_, r) => (
-                <Space size={[4, 4]} wrap>
+                <div className={styles.reviewerChips}>
                     {r.reviewers.map((v, i) => (
-                        <Tag key={i} color={v.submitted ? 'green' : 'orange'} style={{ margin: 0 }}>
-                            {v.label}: {v.submitted ? 'Submitted' : 'Pending'}
-                        </Tag>
+                        <Tooltip key={i} title={`${v.label} — ${v.submitted ? 'submitted' : 'pending'}`}>
+                            <span className={`${styles.reviewerChip} ${v.submitted ? styles.reviewerChipDone : ''}`}>
+                                {v.submitted ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+                                {v.label.replace(/^Lead: /, '')}
+                                {v.label.startsWith('Lead: ') && <span className={styles.reviewerChipRole}>Lead</span>}
+                            </span>
+                        </Tooltip>
                     ))}
-                </Space>
+                </div>
             ),
         },
         {
-            title: '', key: 'action',
-            render: (_, r) => (
-                <Space size={6} wrap>
-                    <Button type={r.myPending && r.status !== 'Completed' ? 'primary' : 'default'} size="small" onClick={() => openFromList(r)}>
-                        {r.myPending && r.status !== 'Completed' ? 'Submit review' : 'Open'}
-                    </Button>
-                    {isHR && (
-                        <>
-                            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Edit</Button>
-                            {r.status !== 'Completed' && (
-                                <Popconfirm
-                                    title="Cancel this review?"
-                                    description="The employee will no longer be reviewed for this scheduled date."
-                                    okText="Yes, cancel" okType="danger" cancelText="No"
-                                    onConfirm={() => cancelReview(r)}
-                                >
-                                    <Button size="small" danger>Cancel</Button>
-                                </Popconfirm>
-                            )}
-                        </>
-                    )}
-                </Space>
-            ),
+            title: '', key: 'action', width: isHR ? 190 : 130, align: 'right',
+            render: (_, r) => {
+                const submitNow = r.myPending && r.status !== 'Completed';
+                return (
+                    <div className={styles.listActions}>
+                        <Button type={submitNow ? 'primary' : 'default'} size="small" onClick={() => openFromList(r)}>
+                            {submitNow ? 'Submit review' : 'Open'}
+                        </Button>
+                        {isHR && (
+                            <Dropdown
+                                trigger={['click']}
+                                menu={{
+                                    items: [
+                                        { key: 'edit', icon: <EditOutlined />, label: 'Edit schedule' },
+                                        ...(r.status !== 'Completed' ? [{ key: 'cancel', danger: true, label: 'Cancel review' }] : []),
+                                    ],
+                                    onClick: ({ key }) => (key === 'edit' ? openEdit(r) : confirmCancel(r)),
+                                }}
+                            >
+                                <Button size="small" type="text" icon={<MoreOutlined />} aria-label="More actions" />
+                            </Dropdown>
+                        )}
+                    </div>
+                );
+            },
         },
     ];
 
@@ -567,15 +594,66 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
     // since. Only falls back to the live config when no review is loaded
     // yet (e.g. before an employee/cycle is picked), so the Configure
     // modal still has something sensible to show.
-    useEffect(() => {
-        if (review) {
-            setParameters(withOthersLast(review.sections || []));
+    const [configBaseline, setConfigBaseline] = useState('');
+    const [configVersions, setConfigVersions] = useState([]);
+    const [draftChanges, setDraftChanges] = useState([]);
+    const [applicableDate, setApplicableDate] = useState(null);
+    const [configComment, setConfigComment] = useState('');
+    const [savingConfig, setSavingConfig] = useState(false);
+
+    // Loads the LIVE saved config (never a review's frozen copy) plus its
+    // version list and activity trail — each time the modal opens, and after
+    // a save — and resets the draft to match what's saved.
+    const loadConfig = () => Promise.all([
+        getPerfReviewConfig(),
+        getPerfReviewConfigVersions().catch(() => ({ data: {} })),
+        getPerfConfigActivityLog().catch(() => ({ data: [] })),
+    ]).then(([cfg, versions, activity]) => {
+        const sections = withOthersLast(cfg.data?.sections || []);
+        setParameters(sections);
+        setConfigBaseline(JSON.stringify(sections));
+        setConfigVersions(Array.isArray(versions.data?.versions) ? versions.data.versions : []);
+        setActivityLog(Array.isArray(activity.data) ? activity.data : []);
+        setDraftChanges([]);
+        setApplicableDate(dayjs());
+        setConfigComment('');
+    }).catch(err => { console.error('Failed to load review config', err); message.error('Failed to load review config'); });
+
+    useEffect(() => { if (configOpen) loadConfig(); }, [configOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const configDirty = configBaseline !== '' && JSON.stringify(withOthersLast(parameters)) !== configBaseline;
+
+    const requestCloseConfig = () => {
+        const close = () => { setConfigOpen(false); closeSectionEditors(); setActiveSectionKey(null); };
+        if (!configDirty) { close(); return; }
+        Modal.confirm({
+            title: 'Discard unsaved changes?',
+            content: 'Your edits to the review parameters have not been saved.',
+            okText: 'Discard', okButtonProps: { danger: true }, cancelText: 'Keep editing',
+            onOk: close,
+        });
+    };
+
+    const saveConfigVersion = () => {
+        if (!applicableDate) { message.warning('Choose the date these changes apply from.'); return; }
+        if (totalScoredQuestions && totalWeightage !== 100) {
+            message.warning(`Weightage must add up to 100% (currently ${totalWeightage}%).`);
             return;
         }
-        getPerfReviewConfig()
-            .then(res => setParameters(withOthersLast(res.data?.sections || [])))
-            .catch(err => { console.error('Failed to load review config', err); setParameters([]); });
-    }, [review]);
+        setSavingConfig(true);
+        savePerfReviewConfig({
+            sections: withOthersLast(parameters),
+            applicableDate: applicableDate.format('YYYY-MM-DD'),
+            comments: configComment,
+            activity: draftChanges,
+        })
+            .then(() => {
+                message.success(`Saved — applies to reviews from ${applicableDate.format('DD MMM YYYY')}`);
+                return loadConfig();
+            })
+            .catch(err => message.error(err?.response?.data?.Message || 'Failed to save config'))
+            .finally(() => setSavingConfig(false));
+    };
 
     // Applies a score/answer edit to local state immediately (so typing and
     // rating feel instant), then persists it — reverting and surfacing an
@@ -625,7 +703,15 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
         return reviewer.employeeId === user?.employeeId;
     };
 
-    const totalQuestions = questionCount(parameters);
+    // What the scorecard is scored against: the sections frozen into this
+    // review when it was initiated. `parameters` (below) is only ever the
+    // live config being edited in the Configure modal.
+    const sheetParameters = useMemo(
+        () => (review ? withOthersLast(review.sections || []) : []),
+        [review]
+    );
+
+    const totalQuestions = questionCount(sheetParameters);
 
     const summary = useMemo(() => {
         if (!review) {
@@ -638,7 +724,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
         const roleParamAvg = (reviewers, param) =>
             mean(reviewers.map(r => parameterAvg(r, param)));
 
-        const rows = parameters.flatMap((p, i) => {
+        const rows = sheetParameters.flatMap((p, i) => {
             if (!(p.questions || []).length) return [];
             const self = selfOfficial ? parameterAvg(selfOfficial, p) : null;
             const lead = submittedLeads.length ? roleParamAvg(submittedLeads, p) : null;
@@ -655,9 +741,9 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
             }];
         });
 
-        const selfAvg = selfOfficial ? reviewerAvg(selfOfficial, parameters) : null;
-        const leadAvg = submittedLeads.length ? mean(submittedLeads.map(l => reviewerAvg(l, parameters))) : null;
-        const hrAvg = hrOfficial ? reviewerAvg(hrOfficial, parameters) : null;
+        const selfAvg = selfOfficial ? reviewerAvg(selfOfficial, sheetParameters) : null;
+        const leadAvg = submittedLeads.length ? mean(submittedLeads.map(l => reviewerAvg(l, sheetParameters))) : null;
+        const hrAvg = hrOfficial ? reviewerAvg(hrOfficial, sheetParameters) : null;
 
         return {
             selfAvg,
@@ -671,23 +757,16 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
             leadSubmitted: submittedLeads.length,
             leadTotal: review.leads.length,
         };
-    }, [review, parameters]);
+    }, [review, sheetParameters]);
 
     const actorName = user?.fullName || getEmpName(user || {}) || user?.email || 'You';
 
+    // Edits are collected as a draft; they're only logged (and the new
+    // version saved) when HR hits "Save as new version".
     const pushActivity = (entries) => {
         const list = Array.isArray(entries) ? entries : [entries];
         if (!list.length) return;
-        const now = Date.now();
-        setActivityLog(prev => [
-            ...list.map((e, i) => ({
-                id: `a${now}_${i}`,
-                at: new Date(now).toISOString(),
-                actor: actorName,
-                ...e,
-            })),
-            ...prev,
-        ]);
+        setDraftChanges(prev => [...prev, ...list.map(e => ({ action: e.action, ref: e.ref, summary: e.summary }))]);
     };
 
     const commitSections = (updater) => {
@@ -972,7 +1051,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
     };
 
     const submitReviewer = (reviewer) => {
-        const unanswered = parameters.flatMap(p => (p.questions || []).filter(q => !reviewer.scores[q.id]));
+        const unanswered = sheetParameters.flatMap(p => (p.questions || []).filter(q => !reviewer.scores[q.id]));
         const doSubmit = () => {
             submitPerfReviewer(reviewer.reviewerId)
                 .then(() => { message.success('Review submitted'); loadReview(); })
@@ -1095,7 +1174,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
     // header rows since qualitative ones carry no 1–5 average).
     const detailRows = useMemo(() => {
         const rows = [];
-        parameters.forEach((p, si) => {
+        sheetParameters.forEach((p, si) => {
             const scored = p.questions || [];
             const written = p.writtenQuestions || [];
             if (scored.length) {
@@ -1120,7 +1199,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
             }
         });
         return rows;
-    }, [parameters]);
+    }, [sheetParameters]);
 
     const filteredDetailRows = useMemo(() => {
         if (!review) return [];
@@ -1150,12 +1229,12 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
         return result;
     }, [detailRows, detailSearch, detailFilter, review, myReviewer]);
 
-    const selfRatedCount = review ? ratedCount(review.self, parameters) : 0;
+    const selfRatedCount = review ? ratedCount(review.self, sheetParameters) : 0;
     const leadRatedCount = review
-        ? parameters.reduce((n, p) => n + (p.questions || []).filter(q => review.leads.some(l => l.scores[q.id])).length, 0)
+        ? sheetParameters.reduce((n, p) => n + (p.questions || []).filter(q => review.leads.some(l => l.scores[q.id])).length, 0)
         : 0;
-    const hrRatedCount = review ? ratedCount(review.hr, parameters) : 0;
-    const myRatedCount = myReviewer ? ratedCount(myReviewer.reviewer, parameters) : 0;
+    const hrRatedCount = review ? ratedCount(review.hr, sheetParameters) : 0;
+    const myRatedCount = myReviewer ? ratedCount(myReviewer.reviewer, sheetParameters) : 0;
 
     // Before everyone's submitted there's only one column to filter by (your
     // own); the Self/Lead/HR breakdown only makes sense once the full
@@ -1380,6 +1459,9 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                     <Table
                         size="small"
                         rowKey={r => `${r.cycleId}-${r.employeeId}`}
+                        className={styles.reviewListTable}
+                        tableLayout="fixed"
+                        scroll={{ x: 1220 }}
                         columns={listColumns}
                         dataSource={filteredList}
                         loading={loadingList}
@@ -1534,11 +1616,11 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                             <Text type="secondary" className={styles.sheetHeadSub}>
                                 {allSubmitted
                                     ? <>Unified comparison across Self, Project Lead(s), and HR · {totalQuestions} scored questions
-                                        across {parameters.filter(p => (p.questions || []).length).length} sections plus
+                                        across {sheetParameters.filter(p => (p.questions || []).length).length} sections plus
                                         qualitative subjective feedback (comments only · no numeric rating).</>
                                     : myReviewer
                                         ? <>Filling in as {myReviewer.label} · {totalQuestions} scored questions across{' '}
-                                            {parameters.filter(p => (p.questions || []).length).length} sections plus qualitative feedback.
+                                            {sheetParameters.filter(p => (p.questions || []).length).length} sections plus qualitative feedback.
                                             Other reviewers&apos; answers are hidden until everyone has submitted.</>
                                         : 'You are not a reviewer on this review.'}
                             </Text>
@@ -1638,11 +1720,11 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                                         <Table.Summary.Cell index={0} colSpan={2}>
                                             <Text strong>
                                                 Overall Average ({totalQuestions} questions across{' '}
-                                                {parameters.filter(p => (p.questions || []).length).length} sections)
+                                                {sheetParameters.filter(p => (p.questions || []).length).length} sections)
                                             </Text>
                                         </Table.Summary.Cell>
                                         {visibleReviewers.map((v, i) => {
-                                            const avg = v.reviewer.submitted ? reviewerAvg(v.reviewer, parameters) : null;
+                                            const avg = v.reviewer.submitted ? reviewerAvg(v.reviewer, sheetParameters) : null;
                                             return (
                                                 <Table.Summary.Cell key={v.key} index={i + 1} align="center">
                                                     <span style={{ fontWeight: 700, color: scoreColor(avg) }}>
@@ -1661,7 +1743,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                                 <>
                                     <span>Rated: {myRatedCount} of {totalQuestions}</span>
                                     {(() => {
-                                        const avg = reviewerAvg(myReviewer.reviewer, parameters);
+                                        const avg = reviewerAvg(myReviewer.reviewer, sheetParameters);
                                         return typeof avg === 'number' && Number.isFinite(avg) && myRatedCount > 0
                                             ? <span>Average: {avg.toFixed(2)}</span>
                                             : null;
@@ -1673,6 +1755,8 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                         </div>
                     </Card>
                 </>
+            )}
+            </>
             )}
 
             <Modal
@@ -1686,8 +1770,30 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
 
             <Modal
                 open={configOpen}
-                onCancel={() => { setConfigOpen(false); closeSectionEditors(); setActiveSectionKey(null); }}
-                footer={null}
+                onCancel={requestCloseConfig}
+                footer={configDirty ? (
+                    <div className={styles.configSaveBar}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {draftChanges.length || 'Some'} unsaved change{draftChanges.length === 1 ? '' : 's'} — applies to reviews initiated from the date chosen
+                        </Text>
+                        <Space wrap>
+                            <DatePicker
+                                value={applicableDate}
+                                onChange={setApplicableDate}
+                                allowClear={false}
+                                format="DD MMM YYYY"
+                                disabledDate={d => d && d.isBefore(dayjs().startOf('day'))}
+                                placeholder="Applicable from"
+                            />
+                            <Input
+                                style={{ width: 220 }} placeholder="Reason for change (optional)"
+                                value={configComment} onChange={e => setConfigComment(e.target.value)}
+                            />
+                            <Button onClick={() => { closeSectionEditors(); loadConfig(); }}>Discard</Button>
+                            <Button type="primary" loading={savingConfig} onClick={saveConfigVersion}>Save as new version</Button>
+                        </Space>
+                    </div>
+                ) : null}
                 title="Configure Review Parameters & Questions"
                 width={900}
                 className={styles.configModal}
@@ -1706,6 +1812,20 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                             label: 'Parameters & Questions',
                             children: (
                                 <>
+                                    {configVersions.length > 0 && (
+                                        <Alert
+                                            type="info" showIcon style={{ marginBottom: 8 }}
+                                            message={(() => {
+                                                const cur = configVersions.find(v => v.isCurrent);
+                                                const upcoming = configVersions.filter(v => !v.isCurrent).map(v => dayjs(v.applicableDate).format('DD MMM YYYY'));
+                                                return <>
+                                                    Active version applies from <b>{cur ? dayjs(cur.applicableDate).format('DD MMM YYYY') : 'the default setup'}</b>.
+                                                    {upcoming.length > 0 && <> Scheduled: {upcoming.join(', ')}.</>}
+                                                    {' '}Reviews already initiated keep the questions they were created with.
+                                                </>;
+                                            })()}
+                                        />
+                                    )}
                                     <Text type="secondary" className={styles.configHint}>
                                         Each section holds its own scored questions (rated 1–5) and written comments. Add a new section below, or add questions directly to an existing one.
                                     </Text>
@@ -1935,12 +2055,12 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                             children: (
                                 <>
                                     <Text type="secondary" className={styles.configHint}>
-                                        Who changed which section or question, and when. This trail is for this session only — it clears on refresh.
+                                        Every saved change to the review parameters, who made it and when.
                                     </Text>
                                     {activityLog.length === 0 ? (
                                         <Empty
                                             image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                            description="No changes yet. Add, edit, or remove a question to see it here."
+                                            description="No saved changes yet."
                                         />
                                     ) : (
                                         <Timeline
@@ -1966,8 +2086,6 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                     ]}
                 />
             </Modal>
-            </>
-            )}
             <ReviewSummaryModal
                 visible={summaryOpen}
                 onClose={() => setSummaryOpen(false)}

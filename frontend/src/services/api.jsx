@@ -1409,6 +1409,10 @@ export const getPerfReviewConfig = (asOf) =>
 export const getPerfReviewConfigVersions = () =>
   axiosInstance.get(`${API_BASE_URL}/performance-review/config/versions`);
 
+// Saves the whole edited config as ONE new version: { sections, applicableDate, comments, activity }.
+export const savePerfReviewConfig = (data) =>
+  axiosInstance.put(`${API_BASE_URL}/performance-review/config`, data);
+
 export const createPerfSection = (data) =>
   axiosInstance.post(`${API_BASE_URL}/performance-review/config/sections`, data);
 

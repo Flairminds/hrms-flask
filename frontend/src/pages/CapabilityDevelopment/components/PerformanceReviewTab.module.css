@@ -594,3 +594,79 @@
 .sheetTable .qualCardMeta {
     min-height: 26px;
 }
+
+.configSaveBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+/* Review list */
+.reviewListTable :global(.ant-table-thead > tr > th) {
+    background: #fafafa;
+    font-weight: 600;
+    font-size: 12px;
+    color: #595959;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.reviewListTable :global(.ant-table-tbody > tr > td) {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    vertical-align: middle;
+}
+
+.listNoWrap { white-space: nowrap; }
+
+.listEmployeeName {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.reviewerChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.reviewerChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid #f0d9b5;
+    background: #fff9ee;
+    color: #ad6800;
+    font-size: 12px;
+    line-height: 20px;
+    white-space: nowrap;
+}
+
+.reviewerChipDone {
+    border-color: #c9e7b4;
+    background: #f4fbee;
+    color: #3f7d1c;
+}
+
+.reviewerChipRole {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+}
+
+.listActions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    white-space: nowrap;
+}
