@@ -72,17 +72,18 @@ def register_jobs(app):
             except Exception as e:
                 Logger.error("Error in period end date alert job", error=str(e))
 
-    @scheduler.task('cron', id='daily_review_alert', hour=8, minute=30, timezone='Asia/Kolkata')
-    @weekday_only
-    def daily_review_alert():
-        """Sends daily digest of employee review statuses requiring attention."""
+    @scheduler.task('cron', id='weekly_review_overdue_alert', day_of_week='mon', hour=8, minute=30, timezone='Asia/Kolkata')
+    def weekly_review_overdue_alert():
+        """Monday 8:30 AM IST - lists employees whose last review was more than 3 months ago
+        (to the employee, their lead, and HR)."""
         with app.app_context():
-            Logger.info("Running daily review alert job")
+            Logger.info("Running weekly review overdue alert job")
             try:
-                EmailService.send_review_status_alert()
+                sent = EmailService.send_review_overdue_alert()
+                Logger.info("Weekly review overdue alert job completed", emails_sent=sent)
             except Exception as e:
-                Logger.error("Error in daily review alert job", error=str(e))
-            
+                Logger.error("Error in weekly review overdue alert job", error=str(e))
+
     @scheduler.task('cron', id='daily_review_submission_reminder', hour=9, minute=0, timezone='Asia/Kolkata')
     @weekday_only
     def daily_review_submission_reminder():
