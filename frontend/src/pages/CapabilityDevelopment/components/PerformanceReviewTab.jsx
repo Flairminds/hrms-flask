@@ -10,10 +10,12 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../../context/AuthContext';
 import {
-    getAllEmployees, getMyPerfReviewees, getPerfReviewList, getPerfReviewCycles, getPerfReviewConfig,
+    getAllEmployees, getMyPerfReviewees, getPerfReviewList, updateEmployeeReview, getPerfReviewCycles, getPerfReviewConfig,
     getPerfReview, savePerfScore, savePerfAnswer, submitPerfReviewer, unlockPerfReviewer, resetPerfReviewer, completePerfReview,
 } from '../../../services/api';
 import dayjs from 'dayjs';
+import ReviewFormModal from './ReviewFormModal';
+import ReviewSummaryModal from './ReviewSummaryModal';
 import styles from './PerformanceReviewTab.module.css';
 
 const { TextArea } = Input;
@@ -284,6 +286,11 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
     const [view, setView] = useState('list');
     const [reviewList, setReviewList] = useState([]);
     const [loadingList, setLoadingList] = useState(true);
+    const [initiateOpen, setInitiateOpen] = useState(false);
+    const [initiatePrefill, setInitiatePrefill] = useState(null);
+    const [summaryOpen, setSummaryOpen] = useState(false);
+    // Review being edited in ReviewFormModal's edit mode (null = initiate mode).
+    const [editingSchedule, setEditingSchedule] = useState(null);
     const [listSearch, setListSearch] = useState('');
     const [listStatus, setListStatus] = useState('all');
 
@@ -335,6 +342,34 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
         setSelectedEmployeeId(row.employeeId);
         setSelectedCycleId(row.cycleId);
         setView('review');
+    };
+
+    // The list row -> the shape ReviewFormModal's edit mode expects.
+    const openEdit = (row) => {
+        setEditingSchedule({
+            review_id: row.scheduleId,
+            employee_id: row.employeeId,
+            review_date: row.meetingDate,
+            reviewed_date: row.reviewedDate,
+            status: row.scheduleStatus,
+            file_link: row.fileLink,
+            review_comment: row.reviewComment,
+            other_comments: row.otherComments,
+            period: row.cycleName,
+            period_range: formatCycleRange(row),
+        });
+        setInitiatePrefill(null);
+        setInitiateOpen(true);
+    };
+
+    const cancelReview = (row) => {
+        updateEmployeeReview(row.scheduleId, { status: 'Cancelled' })
+            .then(() => {
+                message.success('Review cancelled');
+                if (view === 'review') { setView('list'); setSelectedCycleId(null); setReview(null); }
+                loadReviewList();
+            })
+            .catch(err => message.error(err?.response?.data?.Message || 'Failed to cancel review'));
     };
 
     const filteredList = useMemo(() => {
@@ -397,11 +432,28 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
             ),
         },
         {
-            title: '', key: 'action', width: 130,
+            title: '', key: 'action',
             render: (_, r) => (
-                <Button type={r.myPending && r.status !== 'Completed' ? 'primary' : 'default'} size="small" onClick={() => openFromList(r)}>
-                    {r.myPending && r.status !== 'Completed' ? 'Submit review' : 'Open'}
-                </Button>
+                <Space size={6} wrap>
+                    <Button type={r.myPending && r.status !== 'Completed' ? 'primary' : 'default'} size="small" onClick={() => openFromList(r)}>
+                        {r.myPending && r.status !== 'Completed' ? 'Submit review' : 'Open'}
+                    </Button>
+                    {isHR && (
+                        <>
+                            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Edit</Button>
+                            {r.status !== 'Completed' && (
+                                <Popconfirm
+                                    title="Cancel this review?"
+                                    description="The employee will no longer be reviewed for this scheduled date."
+                                    okText="Yes, cancel" okType="danger" cancelText="No"
+                                    onConfirm={() => cancelReview(r)}
+                                >
+                                    <Button size="small" danger>Cancel</Button>
+                                </Popconfirm>
+                            )}
+                        </>
+                    )}
+                </Space>
             ),
         },
     ];
@@ -1003,6 +1055,10 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
     // practice always just their own single slot (see myReviewer above).
     const editableReviewers = myReviewer && !review?.completed ? [myReviewer.reviewer] : [];
 
+    const currentScheduleRow = reviewList.find(
+        r => r.cycleId === selectedCycleId && r.employeeId === selectedEmployeeId
+    ) || null;
+
     // HR closes the review after the meeting — locks the scorecard for everyone.
     const [completeOpen, setCompleteOpen] = useState(false);
     const [completing, setCompleting] = useState(false);
@@ -1275,15 +1331,24 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
 
     return (
         <div>
-            <Segmented
-                style={{ marginBottom: 16 }}
-                value={view}
-                onChange={setView}
-                options={[
-                    { value: 'list', label: `${isHR ? 'All Reviews' : 'My Reviews'} (${reviewList.length})` },
-                    { value: 'review', label: 'Review Sheet' },
-                ]}
-            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                <Segmented
+                    value={view}
+                    onChange={setView}
+                    options={[
+                        { value: 'list', label: `${isHR ? 'All Reviews' : 'My Reviews'} (${reviewList.length})` },
+                        { value: 'review', label: 'Review Sheet' },
+                    ]}
+                />
+                {isHR && (
+                    <Space>
+                        <Button onClick={() => setSummaryOpen(true)}>Review Summary</Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSchedule(null); setInitiatePrefill(null); setInitiateOpen(true); }}>
+                            Initiate Review
+                        </Button>
+                    </Space>
+                )}
+            </div>
             {view === 'list' ? (
                 <Card
                     size="small"
@@ -1377,7 +1442,7 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                     ? 'No performance review has been initiated for you or your team yet'
                     : 'Select an employee to view their review'} />
             ) : !loadingCycles && !cycles.length ? (
-                <Empty description="No review has been initiated for this employee yet — use Initiate Review on the Employee Review tab first." />
+                <Empty description="No review has been initiated for this employee yet — use Initiate Review above." />
             ) : !selectedCycleId ? (
                 <Empty description="Select a review cycle to view their review" />
             ) : loadingEmployees || reviewLoading || !review ? (
@@ -1507,6 +1572,19 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
                                             </Button>
                                         </React.Fragment>
                                     ))}
+                                    {isHR && currentScheduleRow && (
+                                        <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(currentScheduleRow)}>Edit</Button>
+                                    )}
+                                    {isHR && currentScheduleRow && !review.completed && (
+                                        <Popconfirm
+                                            title="Cancel this review?"
+                                            description="The employee will no longer be reviewed for this scheduled date."
+                                            okText="Yes, cancel" okType="danger" cancelText="No"
+                                            onConfirm={() => cancelReview(currentScheduleRow)}
+                                        >
+                                            <Button size="small" danger>Cancel Review</Button>
+                                        </Popconfirm>
+                                    )}
                                     {isHR && allSubmitted && !review.completed && (
                                         <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={openComplete}>
                                             Complete Review
@@ -1890,6 +1968,18 @@ const PerformanceReviewTab = ({ initialTarget, onInitialTargetConsumed } = {}) =
             </Modal>
             </>
             )}
+            <ReviewSummaryModal
+                visible={summaryOpen}
+                onClose={() => setSummaryOpen(false)}
+                onInitiate={(prefill) => { setSummaryOpen(false); setEditingSchedule(null); setInitiatePrefill(prefill); setInitiateOpen(true); }}
+            />
+            <ReviewFormModal
+                open={initiateOpen}
+                prefill={initiatePrefill}
+                editingReview={editingSchedule}
+                onClose={() => { setInitiateOpen(false); setEditingSchedule(null); }}
+                onDone={() => { loadReviewList(); if (selectedCycleId) loadReview(); setCycles([]); if (selectedEmployeeId) getPerfReviewCycles(selectedEmployeeId).then(res => setCycles(res.data?.cycles || [])).catch(() => {}); }}
+            />
             <Modal
                 title="Complete Review"
                 open={completeOpen}
