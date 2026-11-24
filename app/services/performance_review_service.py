@@ -121,6 +121,90 @@ class PerformanceReviewService:
         return others
 
     @staticmethod
+    def save_config_version(data, actor_id):
+        """Saves the whole edited sections/questions tree from the Configure
+        screen as ONE new version, taking effect from `applicableDate`.
+        `activity` (optional) is the list of human-readable change entries the
+        screen collected while editing; they go into the activity trail."""
+        applicable_date = PerformanceReviewService._parse_applicable_date(data)
+        raw = data.get('sections')
+        if not isinstance(raw, list) or not raw:
+            raise ValueError("'sections' is required")
+
+        def num(v):
+            try:
+                f = float(v or 0)
+            except (TypeError, ValueError):
+                raise ValueError('Question weightage must be a number')
+            if f < 0:
+                raise ValueError('Question weightage cannot be negative')
+            return int(f) if f.is_integer() else f
+
+        sections, seen = [], set()
+        for s in raw:
+            is_others = bool(s.get('isOthers'))
+            title = (s.get('title') or '').strip()
+            if not title and not is_others:
+                raise ValueError('Every section needs a title')
+            questions, written = [], []
+            for q in s.get('questions') or []:
+                text = (q.get('text') or '').strip()
+                if text:
+                    questions.append({'id': q.get('id') or PerformanceReviewService._new_id('q'),
+                                      'text': text, 'weight': num(q.get('weight'))})
+            for q in s.get('writtenQuestions') or []:
+                text = (q.get('text') or '').strip()
+                if text:
+                    written.append({'id': q.get('id') or PerformanceReviewService._new_id('w'), 'text': text})
+            sec_id = s.get('id') or PerformanceReviewService._new_id('sec')
+            if sec_id in seen:
+                raise ValueError('Duplicate section id')
+            seen.add(sec_id)
+            sections.append({
+                'id': sec_id, 'title': OTHERS_TITLE if is_others else title,
+                'description': (s.get('description') or '').strip(),
+                'isOthers': is_others, 'questions': questions, 'writtenQuestions': written,
+            })
+        # "Others" always exists and is always last.
+        sections.sort(key=lambda s: s['isOthers'])
+        PerformanceReviewService._find_or_create_others(sections)
+        sections.sort(key=lambda s: s['isOthers'])
+
+        scored = [q for s in sections for q in s['questions']]
+        if not scored:
+            raise ValueError('Add at least one scored question.')
+        total = sum(q['weight'] for q in scored)
+        if abs(total - 100) > 0.01:
+            raise ValueError(f'Weightage must add up to 100% (currently {total:g}%).')
+        def fingerprint(secs):
+            # An empty "Others" section is housekeeping, not a real change.
+            secs = [x for x in secs if not (x.get('isOthers') and not x.get('questions') and not x.get('writtenQuestions'))]
+            return [
+                (x['id'], x['title'], bool(x.get('isOthers')), (x.get('description') or '').strip(),
+                 [(q['id'], q['text'], q.get('weight')) for q in x.get('questions') or []],
+                 [(q['id'], q['text']) for q in x.get('writtenQuestions') or []])
+                for x in secs
+            ]
+        current = PerformanceReviewService._load_sections(applicable_date)
+        current.sort(key=lambda x: bool(x.get('isOthers')))
+        if fingerprint(current) == fingerprint(sections):
+            raise ValueError('No changes to save.')
+
+        suffix = f' (effective {applicable_date.strftime("%d %b %Y")})'
+        entries = [e for e in (data.get('activity') or []) if isinstance(e, dict) and e.get('summary')][:100]
+        if not entries:
+            entries = [{'action': 'updated', 'ref': 'Config', 'summary': 'Saved a new version of the review config'}]
+        for e in entries:
+            action = e.get('action') if e.get('action') in ('added', 'updated', 'removed') else 'updated'
+            PerformanceReviewService._log_activity(
+                actor_id, action, str(e.get('ref') or '')[:50], str(e['summary'])[:900] + suffix,
+            )
+        row = PerformanceReviewService._save_new_version(sections, applicable_date, data.get('comments'), actor_id)
+        db.session.commit()
+        Logger.info('Performance review config saved', config_id=row.config_id, applicable=applicable_date.isoformat())
+        return {'id': row.config_id, 'applicableDate': applicable_date.isoformat()}
+
+    @staticmethod
     def get_config(as_of=None):
         """`as_of` (a date, or an ISO 'YYYY-MM-DD' string) resolves the config
         that will be in effect on that date — e.g. when previewing what a
@@ -742,7 +826,7 @@ class PerformanceReviewService:
             {'name': name, 'startDate': start.isoformat(), 'endDate': end.isoformat()}, actor_id,
         )
         review = PerformanceReviewService.get_or_create_review(
-            cycle.cycle_id, employee_id, override_leads=data.get('leads'),
+            cycle.cycle_id, employee_id, override_leads=data.get('leads'), as_of=data.get('reviewDate'),
         )
         return {
             'cycle': {
@@ -760,7 +844,7 @@ class PerformanceReviewService:
         }
 
     @staticmethod
-    def get_or_create_review(cycle_id, employee_id, override_leads=None):
+    def get_or_create_review(cycle_id, employee_id, override_leads=None, as_of=None):
         """`override_leads`, when given, is what HR edited the auto-resolved
         reviewer list down to in the Initiate Review wizard (a list of
         {employeeId, name}) — used as-is instead of re-resolving from
@@ -794,11 +878,19 @@ class PerformanceReviewService:
             # Freezes a copy of the sections/questions config as it stands
             # right now — later edits to perf_review_config must not change
             # what this review is scored against.
+            if isinstance(as_of, str):
+                try:
+                    as_of = datetime.strptime(as_of, '%Y-%m-%d').date()
+                except ValueError:
+                    as_of = None
+            if as_of is None:
+                row = PerformanceReviewService._schedule_row(cycle_id, employee_id)
+                as_of = row.review_date if row else None
             review = PerfReview(
                 cycle_id=cycle_id,
                 employee_id=employee_id,
                 review={
-                    'sections': PerformanceReviewService._load_sections(),
+                    'sections': PerformanceReviewService._load_sections(as_of),
                     'self': PerformanceReviewService._blank_reviewer(employee_id, _employee_name(employee)),
                     'leads': lead_entries,
                     'hr': PerformanceReviewService._blank_reviewer(None, 'HR'),
