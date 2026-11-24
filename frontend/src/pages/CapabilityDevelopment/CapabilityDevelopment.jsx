@@ -8,12 +8,22 @@ import TeamGoalsTab from './components/TeamGoalsTab';
 import ReviewsFeedbackTab from './components/ReviewsFeedbackTab';
 import ScorecardTab from './components/ScorecardTab';
 import EmployeeReviewTab from './components/EmployeeReviewTab';
+import PerformanceReviewTab from './components/PerformanceReviewTab';
 import CapabilityGroupTab from './components/CapabilityGroupTab';
 import { useAuth } from '../../context/AuthContext';
 
 export const CapabilityDevelopment = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('skills');
+
+    // Set by EmployeeReviewTab's "Review" row action to jump straight into
+    // PerformanceReviewTab pre-loaded to that employee + cycle. Consumed
+    // (cleared) by PerformanceReviewTab once applied, so it only fires once.
+    const [perfReviewTarget, setPerfReviewTarget] = useState(null);
+    const openPerformanceReview = (target) => {
+        setPerfReviewTarget(target);
+        setActiveTab('performance_review');
+    };
 
     const tabs = [
         { id: 'skills', label: 'My Skills', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
@@ -23,6 +33,7 @@ export const CapabilityDevelopment = () => {
         { id: 'teamgoals', label: 'Team Goals', allowedRoles: ['admin', 'hr', 'lead'] },
         // { id: 'feedback', label: 'Reviews & Feedback', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'employee_review', label: 'Employee Review', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
+        { id: 'performance_review', label: 'Performance Review', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         { id: 'capability_group', label: 'Capability Group', allowedRoles: ['admin', 'hr', 'lead', 'employee'] },
         // { id: 'scorecard', label: 'Scorecard', allowedRoles: ['admin', 'hr', 'lead', 'employee'] }
     ];
@@ -44,7 +55,14 @@ export const CapabilityDevelopment = () => {
             case 'scorecard':
                 return <ScorecardTab />;
             case 'employee_review':
-                return <EmployeeReviewTab />;
+                return <EmployeeReviewTab onOpenPerformanceReview={openPerformanceReview} />;
+            case 'performance_review':
+                return (
+                    <PerformanceReviewTab
+                        initialTarget={perfReviewTarget}
+                        onInitialTargetConsumed={() => setPerfReviewTarget(null)}
+                    />
+                );
             case 'capability_group':
                 return <CapabilityGroupTab />;
             default:

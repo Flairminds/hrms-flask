@@ -22,3 +22,7 @@ def delete_review(review_id):
 @employee_review_bp.route('/summaries', methods=['GET'])
 def get_review_summaries():
     return EmployeeReviewController.get_review_summaries()
+
+@employee_review_bp.route('/summaries/matrix', methods=['GET'])
+def get_review_matrix():
+    return EmployeeReviewController.get_review_matrix()

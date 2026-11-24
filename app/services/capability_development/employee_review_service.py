@@ -1,3 +1,5 @@
+import calendar
+
 from app.utils.constants import ActiveEmployees, IgnoreEmployees
 from ...models.capability_development import EmployeeReview, db
 from ...models.hr import Employee, Project, ProjectAllocation, ProjectAllocationHistory, EmployeeHistory
@@ -7,6 +9,9 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, case, func, distinct
 from sqlalchemy.orm import aliased
 from sqlalchemy.dialects.postgresql import array
+
+# Employment statuses reviewed monthly rather than quarterly.
+MONTHLY_REVIEW_STATUSES = ('Intern', 'Probation')
 
 class EmployeeReviewService:
     @staticmethod
@@ -19,24 +24,39 @@ class EmployeeReviewService:
         try:
             from sqlalchemy.orm import aliased
             from ...models.hr import Employee
-            
+            from ...models.performance_review import PerfReviewCycle
+
             query = db.session.query(
                 EmployeeReview,
-                (Employee.first_name + ' ' + 
+                (Employee.first_name + ' ' +
                  Employee.last_name).label('emp_name'),
-                Employee.employment_status
+                Employee.employment_status,
+                PerfReviewCycle.name.label('cycle_name'),
+                PerfReviewCycle.start_date.label('cycle_start'),
+                PerfReviewCycle.end_date.label('cycle_end'),
             ).join(
                 Employee, EmployeeReview.employee_id == Employee.employee_id
+            ).outerjoin(
+                PerfReviewCycle, EmployeeReview.perf_cycle_id == PerfReviewCycle.cycle_id
             )
-            
+
             if employee_id:
                 query = query.filter(EmployeeReview.employee_id == employee_id)
-            
+
             # Sort by review_date descending
             results = query.order_by(EmployeeReview.review_date.desc()).all()
-            
+
             reviews_list = []
-            for r, emp_name, employment_status in results:
+            for r, emp_name, employment_status, cycle_name, cycle_start, cycle_end in results:
+                # The review period this was scheduled for: the linked
+                # cycle's name (e.g. "Q4 2026") when initiated via the
+                # wizard, else the scheduled date's month as a fallback for
+                # older rows that predate that link.
+                period = cycle_name or (r.review_date.strftime('%b %Y') if r.review_date else None)
+                period_range = None
+                if cycle_start and cycle_end:
+                    a, b = cycle_start.strftime('%b %Y'), cycle_end.strftime('%b %Y')
+                    period_range = a if a == b else f'{a} - {b}'
                 reviews_list.append({
                     'review_id': r.review_id,
                     'employee_id': r.employee_id,
@@ -48,9 +68,12 @@ class EmployeeReviewService:
                     'other_comments': r.other_comments,
                     'file_link': r.file_link,
                     'status': r.status,
-                    'created_by': r.created_by
+                    'created_by': r.created_by,
+                    'perf_cycle_id': r.perf_cycle_id,
+                    'period': period,
+                    'period_range': period_range,
                 })
-            
+
             return reviews_list
         except Exception as e:
             Logger.error("Error fetching reviews", error=str(e))
@@ -81,7 +104,8 @@ class EmployeeReviewService:
                 other_comments=data.get('other_comments'),
                 file_link=data.get('file_link'),
                 status=data.get('status', 'Pending'),
-                created_by=created_by_id
+                created_by=created_by_id,
+                perf_cycle_id=data.get('perf_cycle_id'),
             )
             db.session.add(review)
             db.session.commit()
@@ -356,3 +380,112 @@ class EmployeeReviewService:
         except Exception as e:
             Logger.error("Error fetching review summaries", error=str(e))
             raise e
+
+    @staticmethod
+    def get_review_matrix(year):
+        """Per-employee grid of review status across every period of `year`:
+        quarterly (fiscal Q1=Nov(year-1)-Jan(year), Q2=Feb-Apr, Q3=May-Jul,
+        Q4=Aug-Oct(year) — the same convention PerformanceReviewService uses
+        for cycle names) for everyone except Interns/Probationers, who are
+        reviewed monthly instead (calendar Jan-Dec of `year`)."""
+        from ..performance_review_service import PerformanceReviewService
+
+        employees = (
+            Employee.query
+            .filter(
+                Employee.employment_status.notin_(ActiveEmployees.STATUS_NOT_IN_FOR_REVIEW),
+                Employee.email.notin_(IgnoreEmployees.IGNORE_FOR_REVIEWS),
+            )
+            .order_by(Employee.first_name)
+            .all()
+        )
+        if not employees:
+            return []
+
+        employee_ids = [e.employee_id for e in employees]
+        reviews = (
+            EmployeeReview.query
+            .filter(
+                EmployeeReview.employee_id.in_(employee_ids),
+                EmployeeReview.review_date.isnot(None),
+            )
+            .order_by(EmployeeReview.review_id.asc())
+            .all()
+        )
+        reviews_by_employee = {}
+        for r in reviews:
+            reviews_by_employee.setdefault(r.employee_id, []).append(r)
+
+        today = date.today()
+
+        def pick_review(rows, start, end):
+            # Rows are ascending by review_id, so the last match is the most
+            # recently created review covering this period.
+            matches = [r for r in rows if start <= r.review_date <= end]
+            return matches[-1] if matches else None
+
+        def period_status(row, start, end):
+            if row is None:
+                if end < today:
+                    return 'missed'
+                # The period containing today but with no review yet is
+                # "due" rather than just "not scheduled" — distinct so HR
+                # can initiate it directly from the grid the same as a
+                # missed one, without waiting for the period to end first.
+                if start <= today <= end:
+                    return 'due'
+                return 'not_scheduled'
+            if row.status == 'Reviewed':
+                return 'reviewed'
+            if row.status == 'Cancelled':
+                return 'cancelled' if end >= today else 'missed'
+            return 'pending'
+
+        def build_cell(key, label, start, end, row, period_spec):
+            return {
+                'key': key,
+                'label': label,
+                'range': f"{start.strftime('%d %b %Y')} – {end.strftime('%d %b %Y')}",
+                'startDate': start.isoformat(),
+                'endDate': end.isoformat(),
+                'status': period_status(row, start, end),
+                'reviewId': row.review_id if row else None,
+                'reviewDate': row.review_date.isoformat() if row and row.review_date else None,
+                'reviewedDate': row.reviewed_date.isoformat() if row and row.reviewed_date else None,
+                'perfCycleId': row.perf_cycle_id if row else None,
+                # Enough for the frontend to call initiate_review directly
+                # (e.g. the "Initiate" action on a Missed cell) without
+                # re-deriving the period from the label.
+                'period': period_spec,
+            }
+
+        matrix = []
+        for emp in employees:
+            rows = reviews_by_employee.get(emp.employee_id, [])
+            is_monthly = emp.employment_status in MONTHLY_REVIEW_STATUSES
+            periods = []
+            if is_monthly:
+                for m in range(1, 13):
+                    start = date(year, m, 1)
+                    end = date(year, m, calendar.monthrange(year, m)[1])
+                    row = pick_review(rows, start, end)
+                    period_spec = {'periodType': 'monthly', 'month': f'{year}-{m:02d}'}
+                    periods.append(build_cell(f'm{m}', start.strftime('%b'), start, end, row, period_spec))
+            else:
+                for q in (1, 2, 3, 4):
+                    _, start, end = PerformanceReviewService._period_to_cycle_spec(
+                        'quarterly', quarter=q, year=year,
+                    )
+                    row = pick_review(rows, start, end)
+                    period_spec = {'periodType': 'quarterly', 'quarter': q, 'year': year}
+                    periods.append(build_cell(f'q{q}', f'Q{q}', start, end, row, period_spec))
+
+            matrix.append({
+                'employeeId': emp.employee_id,
+                'employeeName': ' '.join(filter(None, [emp.first_name, emp.last_name])).strip(),
+                'status': emp.employment_status,
+                'reviewType': 'monthly' if is_monthly else 'quarterly',
+                'periods': periods,
+            })
+
+        return matrix

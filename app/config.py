@@ -51,6 +51,14 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
 
+    # Testing safeguard for performance review emails: comma-separated addresses.
+    # When set, ONLY these addresses get review initiated/reminder emails.
+    # Leave unset in production so everyone involved is notified.
+    REVIEW_EMAIL_ALLOWLIST = {
+        a.strip().lower()
+        for a in os.environ.get('REVIEW_EMAIL_ALLOWLIST', '').split(',') if a.strip()
+    }
+
     # JWT settings
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)) # 1 hour

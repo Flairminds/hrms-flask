@@ -1,0 +1,596 @@
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.legendItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legendNum {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.roleCards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+    .roleCards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.roleCard {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+}
+
+.roleCardCombined {
+    background: #f0f5ff;
+    border-color: #adc6ff;
+}
+
+.roleCardLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.roleCardValue {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.roleCardHint {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+.muted {
+    color: #bbb;
+}
+
+.sectionNo {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1d4ed8;
+    letter-spacing: 0.2px;
+    margin-right: 8px;
+    text-transform: uppercase;
+}
+
+.ratingSelect {
+    flex-shrink: 0;
+    width: 220px;
+}
+
+.ratingOption {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.questionIndex {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 8px;
+    vertical-align: 1px;
+}
+
+
+.configWritten {
+    margin: 6px 0 0;
+    padding-left: 10px;
+    border-left: 2px solid #ffd591;
+}
+
+.sectionLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.configModal :global(.ant-tabs-content-holder) {
+    padding-right: 8px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.configParam {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.configParamHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.configParamTitle {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.configParamMeta {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+    font-weight: 400;
+}
+
+.sectionsCollapse :global(.ant-collapse-item) {
+    margin-bottom: 8px;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.sectionsCollapse :global(.ant-collapse-item:last-child) {
+    margin-bottom: 0;
+}
+
+.sectionsCollapse :global(.ant-collapse-header) {
+    align-items: center !important;
+}
+
+.sectionsCollapse :global(.ant-collapse-content) {
+    border-top: 1px solid #f0f0f0;
+}
+
+.configParamDesc {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+    line-height: 1.35;
+}
+
+.configParamActions {
+    flex-shrink: 0;
+}
+
+.configQuestions {
+    margin: 6px 0 0;
+    padding-left: 10px;
+    border-left: 2px solid #d6e4ff;
+}
+
+.configQuestion {
+    font-size: 13px;
+    color: #374151;
+    padding: 3px 0;
+    line-height: 1.4;
+}
+
+.configQuestionWithWeight {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.weightageBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.configQuestionRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+}
+
+.configHint {
+    display: block;
+    margin-bottom: 8px !important;
+    font-size: 12px;
+}
+
+.configForm {
+    margin-top: 10px;
+}
+
+.configForm :global(.ant-form-item) {
+    margin-bottom: 10px;
+}
+
+.configOpenQ {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.activityItem {
+    padding-bottom: 2px;
+}
+
+.activitySummary {
+    font-size: 13px;
+    color: #1f2937;
+    line-height: 1.4;
+}
+
+.activityMeta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.scoreBox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid;
+    font-weight: 700;
+    font-size: 13px;
+    background: #fff;
+}
+
+.sectionRow td {
+    background: #f5f8fd !important;
+}
+
+.sectionRowTag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.sectionRowTitle {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1f2937;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.sectionRowDesc {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 400;
+    text-transform: none;
+    margin-top: 2px;
+}
+
+.qualCard {
+    text-align: left;
+    padding: 6px 2px;
+}
+
+.qualCardMeta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.qualCardText {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.qualTextArea {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+}
+
+.columnTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.columnTitleTag {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    padding: 0 6px;
+    margin: 0;
+}
+
+/* ---------- Excel-style sheet ---------- */
+.sheetCard {
+    border-radius: 2px !important;
+    border: 1px solid #bfbfbf !important;
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+}
+
+.sheetCard :global(.ant-card-head) {
+    background: #f3f3f3;
+    border-bottom: 2px solid #217346;
+    border-radius: 0;
+    min-height: 0;
+}
+
+.sheetCard :global(.ant-card-body) {
+    padding: 8px;
+}
+
+.sheetCard :global(.ant-input),
+.sheetCard :global(.ant-input-affix-wrapper),
+.sheetCard :global(.ant-btn),
+.sheetCard :global(.ant-segmented),
+.sheetCard :global(.ant-segmented-item),
+.sheetCard :global(.ant-tag) {
+    border-radius: 2px;
+}
+
+.sheet {
+    border: 1px solid #a6a6a6;
+    background: #fff;
+}
+
+.sheetTable {
+    font-size: 13px;
+}
+
+.sheetTable :global(.ant-table-container),
+.sheetTable :global(.ant-table-container table > thead > tr:first-child > *:first-child) {
+    border-radius: 0 !important;
+}
+
+.sheetTable :global(.ant-table-container),
+.sheetTable :global(.ant-table-cell) {
+    border-color: #d0d0d0 !important;
+}
+
+.sheetTable :global(.ant-table-thead > tr > th) {
+    background: #f3f3f3 !important;
+    color: #262626;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #a6a6a6 !important;
+}
+
+.sheetTable :global(.ant-table-tbody > tr > td) {
+    padding: 4px 8px;
+    background: #fff;
+    vertical-align: middle;
+}
+
+.sheetTable :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
+    background: #fff !important;
+}
+
+/* Row-number gutter, like the grey column of row numbers in a spreadsheet */
+.sheetTable :global(.ant-table-tbody > tr > td).rowHeader {
+    background: #f3f3f3 !important;
+    color: #444;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sheetTable .questionIndex,
+.sheetTable .sectionRowTag {
+    background: none;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    border-radius: 0;
+}
+
+/* Section rows act like a merged heading band */
+.sheetTable :global(.ant-table-tbody > tr.ant-table-row) > td:global(.ant-table-cell) {
+    transition: none;
+}
+
+.sheetTable :global(.ant-table-tbody > tr).sectionRow > td,
+.sheetTable :global(.ant-table-tbody > tr.ant-table-row:hover).sectionRow > td {
+    background: #d9e1f2 !important;
+    font-weight: 600;
+}
+
+/* Input cells fill the whole cell and get the green selection outline on focus */
+.sheetTable :global(.ant-table-tbody > tr > td).editCell {
+    padding: 0;
+}
+
+
+.ratingSelect {
+    width: 100%;
+}
+
+.sheetTable .ratingSelect :global(.ant-select-selector) {
+    padding: 4px 12px !important;
+    min-height: 32px;
+}
+
+.qualTextArea {
+    border-radius: 0 !important;
+    padding: 6px 10px !important;
+    resize: none;
+}
+
+.sheetTable .qualCard {
+    padding: 0;
+}
+
+.sheetTable .qualCardMeta {
+    padding: 4px 10px 0;
+}
+
+.sheetTable .qualCardText {
+    padding: 6px 10px;
+}
+
+/* Total row */
+.sheetTable :global(.ant-table-summary) > tr > td,
+.sheetTable :global(.ant-table-summary) tr > td {
+    background: #f3f3f3 !important;
+    border-top: 2px solid #217346 !important;
+    font-weight: 700;
+}
+
+/* Bottom status bar + sheet tab */
+.statusBar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 3px 10px;
+    background: #f3f3f3;
+    border-top: 1px solid #a6a6a6;
+    font-size: 12px;
+    color: #444;
+}
+
+.sheetTab {
+    margin-left: auto;
+    padding: 1px 16px;
+    background: #fff;
+    color: #217346;
+    font-weight: 600;
+    border: 1px solid #a6a6a6;
+    border-bottom: 2px solid #217346;
+}
+
+/* ---------- Column letters, formula bar, conditional formatting ---------- */
+.colLetter {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: #8c8c8c;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.sheetTable .columnTitle {
+    display: inline-block;
+}
+
+.sheetTable :global(.ant-table-tbody > tr > td) {
+    cursor: cell;
+}
+
+
+.sheetTable .scoreBox {
+    border: none;
+    background: transparent !important;
+    font-size: 14px;
+}
+
+/* Sheet header: title + status tags, description, then utility / primary actions */
+.sheetCard :global(.ant-card-body) { padding: 0 8px 8px; }
+
+.sheetHead {
+    background: #f3f3f3;
+    border-bottom: 2px solid #217346;
+    margin: 0 -8px 12px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sheetHeadTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.sheetHeadTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f1f1f;
+}
+
+.sheetHeadSub {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sheetHeadActions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Written-answer cells: read-only and editable variants share one layout —
+   top-aligned, same padding and same minimum height (4 text rows). */
+.sheetTable td:has(.qualCard) {
+    vertical-align: top !important;
+}
+
+.sheetTable .qualCardText {
+    min-height: 84px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.sheetTable .qualCardEmpty {
+    color: #999;
+}
+
+.sheetTable .qualCardMeta {
+    min-height: 26px;
+}
